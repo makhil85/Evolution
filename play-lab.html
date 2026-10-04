@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Play-mode Lab</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #0d1420; overflow: hidden; }
+    canvas { display: block; }
+    #labBar {
+      position: fixed; left: 8px; bottom: 8px; z-index: 5; display: flex; flex-wrap: wrap; gap: 4px; max-width: 60vw;
+      font: 11px system-ui, sans-serif;
+    }
+    #labBar button { font: inherit; padding: 3px 7px; border-radius: 6px; border: 1px solid #456; background: #1c2838; color: #dfe9f7; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <!-- Dev-only review page for the shared play-mode pieces in src/play/ (not part
+       of the build). WASD moves the stand-in player, E mines the nearest cube.
+       ?mode=easy|medium|hard  sets the navigation help (default easy)
+       window.__lab: choose(level), setMode(id), place(x,z), mine(), hunt(), tryHere(x,z), shot(name) -->
+  <div id="labBar"></div>
+  <script type="module" src="/src/play/lab.js"></script>
+</body>
+</html>

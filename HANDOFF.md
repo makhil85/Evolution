@@ -1,0 +1,372 @@
+# Rocket Village: handoff
+
+Updated 2026-09-29. Start here, then `PLAN.md` for the list of items (done
+and next). Rules for working in this repo (models, folders, sound parked):
+`CLAUDE.md`. Everything is committed on `master`.
+
+## The game in one screen
+
+A kids' science game in the browser (Three.js + Vite), two question Levels
+(Level 1 = 1st-2nd grade, Level 4 = 4th-6th grade), keyboard and mouse.
+
+| Part | Page / code | State |
+|---|---|---|
+| Launcher + girl builder | `index.html`, `character.html` (`src/launcher/`, `src/character/`) | Name and build the girl once (wardrobe, face, hair); she appears in every chapter, smiling. |
+| Chapter 1 Science Village | `chapter1.html` -> `src/science/` | 3-D, plays end to end at both Levels and all play modes. |
+| Chapter 2 City Engineering | `chapter2.html` -> `src/city/` | 3-D, same. Built structures and bridges are solid/walkable. |
+| Chapter 3 Rocket Village | `chapter3.html` -> `src/gameScene.js`, `src/game/` | Same. |
+| Chapter 4 Voyage to Europa | `chapter4.html` -> `src/space/` | Flight game; plays end to end at Level 4 Easy/Medium/Hard and Level 1. |
+| Play modes (Ch1-3) | `src/play/` | Easy arrow + glow, Medium/Hard mining by E, Hard treasure hunt. |
+| Fun moves (Ch1-3) | `src/game/emotes.js`, clips in `src/character/clips.js` | H handstand, J jumping jacks, K dance, L forward roll, U moonwalk, I splits, B back walkover. |
+| Chapter openings / endings (Ch1-3) | `src/game/chapterStory.js` | Opening camera sweep + title card (full once per chapter and Level, then a short card); ending with confetti and a "Chapter complete" card with Next. |
+
+Controls (Ch1-3): WASD/arrows move, Shift run, Space jump, E use, M mission
+card, mouse drag turns the camera, H/J/K/L/U/I/B fun moves. Chapter 4: W thrust, S
+reverse thrust, A/D turn, Shift fine control, Space steady (Easy: auto-aim),
+1-4 time warp, E interact/scan, R rewind, C camera, J mission card.
+
+Tests (all must pass before a commit): `node scripts/test-science.mjs`,
+`test-city.mjs`, `test-play.mjs`, `test-ch3-hunt.mjs`,
+`test-space-physics.mjs`, `test-space-questions.mjs`, and `npx vite build`.
+Browser QA helper for Chapters 1-3: `src/lab/qa.js` (`playChapter1/2/3`,
+`probeSolids`); Chapter 4 autopilot: see "Testing (the lab)" below.
+
+## Chapter 4 detail (from the 2026-09-28 build session)
+
+Chapter 4 is **built and plays from a fresh save to the end card** in every
+flying mode, at both question levels, verified by the autopilot (see Testing).
+
+| Area | State |
+|---|---|
+| Level 4 (4th grade) Easy / Medium / Hard | Play through end to end, 0 crashes. Hard proven with the cues forced on for the test (players on Hard see no hints). |
+| Level 1 (1st grade) | Easy plays through end to end with Level 1 questions and wording. Medium/Hard reuse Level 4 Easy/Medium flight settings (not re-run since the last changes). |
+| Questions | 31 per level (25 original + 6 hard maths/pattern ones). Level 1 is an overlay of the same ids. 875 test checks pass. |
+| Fuel | Engine 3x more efficient than first tuned: every leg uses well under half a tank. Level 1 Easy has 2x Easy's range. |
+| Top-down inset map | Bottom right, always on (N hides, click opens the M map). |
+| Orbit transfer panel | Bottom centre on every transfer step, all modes: WHEN (countdown), POINT (dial, degrees off, which key), PUSH (bar filling while W is held). Hard shows the panel but no banner and no auto engine cut-off. |
+| Easy transfers | Ship steers itself (no Space); one tap of W starts the booster and it stops itself when the push is done; S stops it early. |
+| Touch controls | Tablets (tested at 1024x768 with simulated touch). Not tried on a real device. |
+| Sound | Deliberately skipped (lead's call). |
+
+## How to run
+
+- **Desktop shortcut:** `C:\Users\dipal\OneDrive\Desktop\Rocket Village.bat` calls
+  `RUN_GAME.bat` in this folder, which starts the Vite dev server on port 5173
+  (serves live source, so edits show on reload).
+- Chapter menu: `http://localhost:5173/` (all chapters unlocked by "grown-up
+  mode": `?unlock=all` / `?unlock=off`). Difficulty buttons pick Level 1 or 4.
+- Chapter 4 directly: `http://localhost:5173/chapter4.html` (`?touch=1` forces
+  the touch pad on a desktop, `?touch=0` hides it).
+- Build: `npx vite build`. Tests: `node scripts/test-space-physics.mjs` (23),
+  `node scripts/test-space-questions.mjs` (875 checks).
+
+## Saves and settings (localStorage)
+
+- `level4_voyage_europa_v1`: Level 4 save. `level4_voyage_europa_v1_L1`: Level 1 save.
+- `rocket_village_profile`: launcher profile; `difficulty: 1` means Level 1.
+- `rocket_village_ch4_flight_mode`: easy / medium / hard.
+- `ch4_ckpt_<stepId>`: lab checkpoints the autopilot writes at each step (copy
+  one into the save key and reload to replay a leg).
+
+## Code map (src/space)
+
+- `contracts.js`: shared constants: bodies, ship (thrust 70, fuelBurn 0.29),
+  `FLIGHT_MODES` (Level 4) and `FLIGHT_MODES_L1` (one notch gentler; Level 1
+  Easy uses `burnScale: 0.5` for 2x range without a heavier tank).
+- `level.js`: `LEVEL`, `IS_LEVEL1`, and `t(level4Text, level1Text)`, used by
+  every player-facing string. Keep Level 1 lines short and keep the fixed
+  commands (BURN NOW, hold W, Let go, Coast, Too fast): the autopilot matches them.
+- `main.js`: loop, camera, cues (the green/orange banners: capture, landing,
+  escape, impact, transfer), crash rescue, tow-back, touch pad wiring.
+- `transferPlanner.js`: burn planner. Grid search, precise closest pass
+  (golden section), target-gravity periapsis, sibling-moon avoidance, capture
+  cost in the score, forward-only Jupiter arrival, **ring target** for the belt.
+- `physics.js`: patched-conic flight, burn computer (`burnBudget`), flight
+  assist (spin cap), warp rules (`safeBody` allows warp closer on safe orbits).
+- `missions.js` + `acts/act1..5.js`: story steps. A step can have `beat` (its
+  question) and `bonusBeats` (extra maths questions at that moment).
+- `acts/mining.js`: belt claw and rock markers (only in `MINING_STEPS`).
+- `questions.space.js`: Level 4 bank, `LEVEL1_SPACE_QUESTIONS` overlay, `level1Bank()`.
+- `hud/`: `transferPanel.js` (orbit transfer help; fed by `xfer` in main.js `updateBurnCue`), `minimap.js` (inset), `touch.js` (touch pad), `markers.js`
+  (on-screen markers, layout-thrash fix), `questionModal.js`, `instruments.js`.
+- `controls.js`: key state; `press(code, down)` lets the touch pad press keys.
+- `surface.js`: Moon and Europa walks.
+
+## Testing (the lab)
+
+In the browser console on `chapter4.html`:
+
+```js
+const P = await import('/src/space/lab/playtest.js');
+await P.skipIntro();            // fresh save only
+await P.autoplay(30);           // flies by the cues for 30 s real time; returns a step log
+P.cueLog                        // every banner change with time, fuel, step
+window.__space.debugCues = true // force banners on (to test Hard)
+const S = await import('/src/space/lab/fullshot.js');
+await S.fullShot('name')        // full in-game screenshot (3D + HUD + inset) -> docs/progress/name.png
+```
+
+A full run takes ~6-10 autoplay slices. Keep each call under ~30 s (the
+browser tool times out at 45 s; the run keeps going in the page).
+
+## Pending
+
+Moved to `PLAN.md` ("Next items"), the one list for the whole game.
+
+## Gotchas learned the hard way
+
+- **Python edits:** `'\b'` in a normal Python string writes a backspace
+  character into JS (it happened once, in `lab/fullshot.js`, fixed). Use raw
+  strings or the editor. Scan: `grep -rlP '[\x00-\x08]' src`.
+- **Bash heredocs** with many quotes and apostrophes break; write long text
+  with a file tool instead.
+- Question choices must not be bare numbers ("3"): the answer checker reads a
+  bare number as a choice index. Use "3 parts".
+- Banners are matched by keyword in the autopilot (`playtest.js`): if wording
+  changes, keep BURN NOW / hold W / Let go / Coast / On course / Too fast /
+  Turn to point, and never start a waiting banner with "BURN NOW".
+- The browser pane only renders when visible; tests drive frames with
+  `window.__space.debugRun(seconds, dt)`.
+- Fuel has mass in the physics (the Mass lesson): for "more fuel" prefer
+  `burnScale` / engine efficiency over a bigger tank, or the ship gets sluggish.
+
+## Chapter 2 (City Engineering), 3-D version (2026-09-29)
+
+Plan and design: `CHAPTER2_PLAN.md`. Page `chapter2.html` -> `src/city/main.js`;
+the launcher now opens it (the old 2-D files stay in `docs/legacy-chapters/`).
+
+- `src/city/contracts.js` (tile <-> world, 1 old tile = 2.5 units), `layout.js`
+  (the old map, 1:1), `rules.js` + `questions.js` (old logic, wording and save
+  format; same save keys, so old saves load and `builtFinal` still unlocks
+  Chapter 3), `world*.js` (the 3-D town, built by a Sonnet agent), `main.js`
+  (girl, controller, camera, E to use, questions, piece-by-piece building).
+- Tests: `node scripts/test-city.mjs` (354 checks). Played through at Level 4
+  and Level 1 in the browser (all pickups, quests, bridge, crossing, workshop).
+- Lab: `city-lab.html` (orbit camera, `?built=all|none`, `?level=1`).
+- Test hooks: `window.__city` (rules, world, controller, interact),
+  `__cityRun(seconds)`, `__citySetYaw(radians)`; `?reset` wipes the save.
+- (The rank chip and marker legend were later turned off for Chapters 1-2 via
+  Hud options `rank` / `signpostKey`.) Touch controls not added (lead: not yet).
+
+## Chapter 1 (Science Village), 3-D version (2026-09-29)
+
+Same method and shape as Chapter 2 (`CHAPTER1_PLAN.md`). Page `chapter1.html`
+-> `src/science/main.js`; the launcher opens it (old files stay in
+`docs/legacy-chapters/`). Modules in `src/science/`: contracts, layout (1:1 map),
+rules + questions (old logic/wording/save keys; `built` still unlocks
+Chapter 2), world*.js (3-D village), lab/shot.js (in-game screenshots).
+Tests: `node scripts/test-science.mjs` (364 checks). Played through: Level 4
+smart path (3 boards + labs, locked iron refused, walls and closed gate
+block) and Level 1 key path (gate opens, walk into the iron room, rich iron,
+brute recipe). Hooks: `window.__science`, `__scienceRun`, `__scienceSetYaw`,
+`?reset`. Lab: `science-lab.html`. No touch controls (lead: not yet).
+
+## Session 2026-09-29 (later): girl v2, Chapter 3 refresh, HUD cleanup
+
+- The girl (src/character/girl.js) is version 2: smooth-skinned, slimmer,
+  layered face, strand hair, wardrobe (uniform, dress, hoodie, dungarees...),
+  shoes, eye colour, freckles, accessories. Preview tool:
+  `src/character/lab/shot.js` (girlShot(name, choices, {view, toon})).
+  Thin layers (face features, panels, linings, skirts) are left out of the
+  toon outline hull. ~45k triangles; frame-time cost below measurement noise.
+- Chapter 3: name signs over buildings and the pad (src/game/nameSigns.js),
+  one colour per building (structures.js PAINT), test hooks `__gameRun`,
+  `__gameSetYaw`, screenshot tool `src/game/lab/shot.js`.
+- Chapters 1-2: girl at 1.4 units (townsfolk height), HUD without the rank
+  chip and signpost key (Hud options `rank`, `signpostKey`), short board signs.
+- Frame times at 1024x768 (in-page, incl. GPU finish): Ch1 ~4-9 ms, Ch2
+  ~4-8 ms, Ch3 ~11 ms (145 calls, 446k tris). All under 16.7 ms.
+
+(Open items from this session are tracked in `PLAN.md`.)
+
+## Session 2026-09-29 (evening): smile, fun moves, Chapter 4 time warp
+
+- **Smile:** `girl.js` lip decals lift toward the corners (`SMILE`, `lift()`),
+  plus two small smile tucks. Shared girl, so it shows everywhere.
+- **Fun moves (Chapters 1-3):** J = jumping jacks, K = dance, L = forward roll.
+  Clips in `src/character/clips.js` (`jumpingJacks`, `dance`, `roll`; also on
+  the character page's clip buttons). Keys and the roll's forward slide live in
+  `src/game/emotes.js`; each chapter wraps its input with `emotes.input()`.
+  Jacks/dance stop when she walks (`interruptible` one-shots in `avatar.js`).
+  A toast after 9 s tells the player about J/K/L. Blocked while any
+  question/card is open. Debug: `window.__science|__city|__game .emotes`.
+- **Rig sign gotcha (checked on renders):** she faces +Z. Limbs (hang down):
+  NEGATIVE X swings forward; shins fold the knee with POSITIVE X. Hips/spine/
+  chest/head (point up): POSITIVE X bends forward. The old comment in `rig.js`
+  says the opposite for arms; trust the renders.
+- **Chapter 4 time warp (keys 1-4):** on Medium/Hard Earth's 12-radii no-warp
+  zone (Hard: ~370 u) covered nearly all of Earth's space, so the keys silently
+  did nothing. Now, while the dotted path shows no crash, the body whose pull
+  she is in shrinks to 3 radii (`pathClear` in `stepWorld`). The destination
+  (`game.target`) and every other moon keep their full zone: shrinking those
+  made the autopilot sail past the Moon at x16 and hit Europa at x64. A refused
+  warp shows a toast saying why.
+- **Missed a moon on a capture step:** she used to fall back round the planet
+  with a frozen "BURN NOW" banner. `activeTransferTarget()` in `main.js` now
+  runs the normal transfer help back to that moon. Verified: L4 Medium and L4
+  Hard autopilot runs reach the end card.
+
+## Session 2026-09-29 (night): blank screen, planner hitch, tidy, two new moves
+
+- **Blank screen, three causes handled:**
+  1. *Server stopped.* A server started from inside a Claude tool session dies
+     with that session (that is what blanked the game after a "deploy").
+     `RUN_GAME.bat` now starts `scripts/serve.bat`, which restarts the server
+     if it stops. When deploying from a session, start it detached, e.g.
+     PowerShell `Invoke-CimMethod Win32_Process Create` running the Desktop
+     shortcut, and do NOT leave the game on a `preview_start` server.
+  2. *Lost 3-D picture (GPU reset).* `src/game/contextGuard.js` in all four
+     chapters: save, show "The picture needs a moment...", reload to the same
+     spot. Tested with `WEBGL_lose_context`.
+  3. *File watcher.* `vite.config.js` ignores docs/, *.md, scripts/, dist/:
+     editing a note no longer reloads a chapter mid-flight.
+- **Planner hitch:** `planTransferSteps()` (generator) in
+  `src/space/transferPlanner.js`; `main.js` runs a full search as `planJob`,
+  4 ms per frame (`PLAN_SLICE_MS`). Quick and tracking searches use
+  `gridCands()` (coarse, then the neighbours of the best 6). Debug:
+  `window.__space.prof` = worst ms per part (predict, cue, plan-*, render)
+  and where (`at`). Numbers taken with the window hidden overstate render.
+- **Tidy:** `docs/progress/` is git-ignored (already-committed shots stay);
+  old 2-D chapters live in `docs/legacy-chapters/` (spec only).
+- **New moves:** H handstand (the body moves over planted hands; no root
+  motion), U moonwalk (controller options `speedScale` / `keepFacing` in
+  `src/game/physics.js`; avatar `stop()`).
+- **Planner accuracy guard:** the in-window (quick) check deliberately keeps
+  the FULL fine grid (it sets the engine cut-off); a run with the coarse grid
+  there missed the Moon once. Only tracking uses `gridCands()`.
+- **Moon coast cap:** after a correction burn toward a moon, "coast" now waits
+  at most 400 s (3000 s kept for trips between planets).
+- **Verified this session:** Level 4 Medium autopilot runs reach the end card
+  with 0 crashes (last one: 9,039 flight-seconds). Tests and build clean.
+  Chapter 1 in-game: H and U work (moonwalk glides 2 u backward in 2 s, no
+  turning; W ends it).
+
+### Where the session stopped
+
+- **Item 4 (Level 1 Chapter 4 re-runs) was STARTED, not finished:** a Level 1
+  Easy autopilot run had just begun when the session closed; Medium and Hard
+  not run. To do it: in the browser, set `rocket_village_profile.difficulty`
+  to 1, clear `level4_voyage_europa_v1_L1`, set
+  `rocket_village_ch4_flight_mode`, reload `chapter4.html`, then the
+  autopilot loop from "Testing (the lab)" until step `a5_end`.
+- The game server is NOT running (the test server was stopped at close).
+  Start the game with the Desktop shortcut `Rocket Village.bat`.
+
+## Session 2026-09-30: unlock chain, chapter openings/endings, knees, markers, moves
+
+- **Unlock chain (item 3) passed** from an empty browser at Level 4 and Level 1:
+  first-run naming box -> builder (`?from=launcher` shows its Done button) ->
+  Chapters 1-4 each unlock only after the previous is done; both Levels end
+  with "All four chapters finished". Level 1 Chapter 4 Easy flew to the end
+  card on the way (part of item 4). Note for scripts: the Chapter 3 QA helper
+  can try the launch before the bridge has finished opening (the sealed bank
+  puts her back); wait for `village.bridgeOpen`, then retry. Not a game bug.
+- **Openings and endings (Chapters 1-3):** `src/game/chapterStory.js`.
+  Wiring per chapter: `chasePose()` (the camera's wanted pose), `tick`:
+  `if (!story?.update(dt)) updateCamera(dt)`, `await story.intro(...)` after
+  load (before the play-mode chooser), `story.outro(...)` when the last goal
+  completes (Ch1 Science Center rise end, Ch2 workshop rise end, Ch3 launch
+  finished). While active it sets `body[data-play-modal]` (no walking, no E)
+  and hides the HUD. "Seen" flags: `rocket_village_seen_ch{n}_L{level}`
+  (`SEEN_PREFIX` in `src/launcher/profile.js`; the reset clears them).
+  Overlays use timers, not rAF (rAF never fires in a hidden tab). The
+  in-game shot tools don't draw these DOM overlays; check them in the DOM.
+- **Reset fix:** `resetEverything()` also removes `rocket_village_play_mode`,
+  every `<save>_hunt`, and the seen flags.
+- **Knees (item 5):** `stridePose` shins and `cheerPose` legs had the old sign
+  (knees bent backward); fixed and checked on side renders.
+- **Markers (item 8):** `src/space/hud/markers.js` - an on-screen target
+  under a HUD panel (padded by the label width) is drawn as an edge arrow.
+- **Frame monitor (for item 9):** `src/game/frameMonitor.js`, used by
+  Chapter 4: `?fps` or F9, `window.__frames.summary()`. Item 9 itself still
+  needs the game on screen (the pane was hidden all session).
+- **New moves:** I splits, B back walkover (in place: the clip steps back to
+  the start after landing).
+- **Game server at close:** the test server was stopped and the game server
+  was started detached with `scripts/serve.bat 5173` (no browser window), so
+  `http://localhost:5173/` keeps working and the Desktop shortcut reuses it.
+
+## Session 2026-09-30 (later): wing fix, autopilot, two tries, Chapter 3 pre-solved bug
+
+- **Wing fix (Act 1, `a1_satellite_fix`):** `src/space/acts/act1.js`
+  `dockAlongside()` holds her 3 u from the satellite until the puzzle starts
+  (also on entering the step, e.g. after a reload); the puzzle opens by itself
+  after 8 s. `src/space/satellite.js`: turning is a third as fast within 25
+  degrees of the Sun, `HOLD_NEEDED` 1.0 s, hint lines in the overlay.
+- **Autopilot:** `src/space/autopilot.js` (button `.sp-autopilot`, key P;
+  real W/A/S/D/Space/arrows switch it off). Presses keys via
+  `controls.press()`; sets `game.debugCues` while on (Hard shows banners).
+  Never touches question/fact/dialogue cards; handles only the upgrade bay.
+  Test hook `game.autopilot.useFrame(fn)` (the hidden pane draws no frames):
+  `useFrame(() => { g.debugRun(1/30, 1/30); return new Promise(r => setTimeout(r, 0)); })`.
+- **Two tries, no skipping:** village HUD `src/game/hud.js` (`maxTries`,
+  `onOutOfTries`; Close hidden, Escape only after an answer); Chapter 4
+  `src/space/hud/questionModal.js` (`MAX_TRIES`, result `failed`),
+  `src/space/hud/hud.js` calls `onOutOfTries`. Chapter 4 restart:
+  `missions.restartAct()` puts back `<save>_act` (written when the first step
+  of each act starts) and reloads. Chapters 1-3: `hud.onOutOfTries` removes the
+  chapter save (+ `_hunt`) and reloads; Chapter 3 sets `restarting` so its
+  beforeunload save doesn't write it back.
+- **Chapter 3 pre-solved bug:** `START_SOLVED` in `src/gameScene.js` is now
+  `false` (was `import.meta.env.DEV`; the Desktop shortcut plays on the dev
+  server). NOTE for children who already played: their Chapter 3 save may be
+  the "solved" one (99%, Press LAUNCH). "Start everything over", or two misses,
+  gives them a real start. Test tip: remove a Chapter 3 save with
+  `chapter3.html?reset` - deleting the key and reloading doesn't work, the page
+  saves again on the way out.
+
+## Session 2026-09-30 (late)
+
+- Launcher remembers finished chapters (`rocket_village_done_ch{n}_L{level}`), so a two-tries restart on a replayed chapter can't re-lock the next one.
+- Chapter 2: **Newton's apple tree** (`src/city/newtonTree.js`), on the grass a few metres from her start. E drops an apple (real ½gt² fall and a bounce), then a short conversation: why did it fall down (3 answers, each gets its own reply), young Isaac Newton in his garden, "does Earth pull the Moon too?" (orbit = falling and missing, a nod to Chapter 4), then one gravity question (L4 big vs small apple, L1 which way does it go). It's a bonus: two tries, and a second miss just explains, with no restart. First time gives +1 Science; the flag is `<save>_apple` (cleared by reset and by the chapter restart). Mission card shows a "Bonus: apple tree" line until it's heard. Trunk is solid.
+- Frame monitor (`?fps` / F9) is now in Chapters 1-3 too. The real-screen check (PLAN item 9) still needs the game on a visible screen: the Claude browser pane is hidden, so it draws 0 frames.
+- **Mining tools + haul chain** (`src/play/tools.js`, Chapters 1-3). Each E on a resource puts a tool in her right hand (`handR` bone) and plays the new `chop` clip facing the resource: axe for wood, pickaxe for stone/gems, hammer for iron/metal, wrench for energy/fuel/circuits. Science gets a magnifying glass and the new `inspect` clip. Blueprints get no tool. On collect, 3-6 copies of the resource's icon fly in an arc into its Supplies cell (`hud.resourceCell(key)`), and the cell pulses as each one lands (skipped with reduced motion or a hidden panel). Chapter 3 Easy (walk-over pickup) gets the chain but no swing (`Pickups.onCollect`). The tool is tilted 1.05 rad in the grip, so the head comes down on the strike (checked with bone positions: overhead on the wind-up, forward-down at the hit).
+
+## Session 2026-10-01: autopilot at real-screen pace, fun moves in space, cheers
+
+- **Autopilot stalls (lead: "doesn't take us to the next destination on Easy/Medium").** The lab tests drove it with `debugRun` from a timer, which runs far more sim time per second than a real screen, so real-time waits never showed. Re-tested at real pace (`useFrame(() => { g.debugRun(1/60, 1/60); frames++ })`, real seconds = frames/60). Found and fixed:
+  1. The game dropped warp to 1x 45 s before every burn window; now skipped while the autopilot flies, and the autopilot paces the warp from the countdown (>120 s x64, >30 x16, >5 x4, then 1x).
+  2. No-warp zones (Jupiter's moons: 400 u each) made it coast in real time for minutes. `stepWorld(..., { autopilot })` now allows x16 in the wide zones and x4 within 3 radii while the predicted path is clear.
+  3. Medium steering damped her own spin, not the spin relative to the turning prograde aim, so she trailed about 15 degrees behind and "steering" kept the warp off. It now damps relative to the aim's turn rate.
+  4. Keys are re-pressed every frame (focus loss or a card clears the game's held keys).
+  5. No "time warp is off" toasts while it flies.
+  Real-pace results: Easy, Jupiter orbit to landing on Europa in 34 s; Medium, satellite meet-up to Moon landing 80 s, Moon liftoff to the Mars burn about 35 s.
+- **Fun moves on the Moon/Europa walks:** K dance, I splits, B back walkover (`surface.js` `FUN_KEYS`; `walker.playOneShot(name, { soft: true })`, which walking or a jump ends). A hint after 8 s of walking.
+- **Right answers (Chapters 1-3):** `hud.onCorrect` makes her cheer, with 1.8 s of confetti (`confetti` exported from chapterStory.js).
+
+## Session 2026-10-02: Easy flies itself, Medium slow motion, smaller side panels
+
+- **Easy = autopilot flies** (`autopilot.js` `easyAuto`): on Easy it switches itself on and does every flight task: burns, captures, landings, mining, the bay and the satellite wing repair. The Moon and Europa walks stay hers. Her flying keys don't turn it off on Easy. P once hands over the walks too (full autopilot); P again turns it off for the session (`userOff`).
+- **Banner narrates while the autopilot flies** (`narrate()` in main.js): "Autopilot: firing the engine!", "engine off. Coasting.", "braking for a gentle landing.", countdowns without "keys 1 to 4" or "point" orders. The raw order is kept in `burnCue.dataset.raw`; the autopilot, realpace.js and anything else steering by the banner must read that.
+- **Medium slow motion** (`SLOW_MO` 0.4, `slowMoNow()`): the last 3 s before a burn window, the burn ("BURN NOW") and "Let go of W" run at 0.4x, with a turtle on the banner. Medium only, never while the autopilot flies. Measured: 0.2 s of game time per 0.5 s.
+- **Side panels** (hud.css end): instruments and the mission card at `--hud-scale: 1` (rest of the HUD 1.3), 190/236 px wide (178/224 under 1366 px).
+- **Real-pace autopilot runs to the end card** (`src/space/lab/realpace.js`): L4 Medium; L4 Hard 7.7 min; L1 Medium 6.6 min; L1 Hard 9.2 min (L4 Easy legs earlier). Chapter 3 Medium mining swing checked (3 presses, axe each time, 3 icons fly).
+- The autopilot's frame wait has a 250 ms timer fallback (a hidden tab draws no frames; a wait begun there hung the loop).
+
+## Session 2026-10-03/04: satellite, flight school, landing, calmer HUD (branch feature/satellite-lesson, merged)
+
+Built in a lab copy (git worktree `.claude/worktrees/sat`, own server on port 5174, own deps cache `.vite-lab`; vite.config's `.claude` watch-ignore is relative so the copy watches its own files) by opus-medium builders, a critic round and a final check round.
+- **Satellite** (`satellite.js` `satelliteRig`, act1/act2): docking camera + creep-in, thin Starlink-like model with a dark array, attaches on the ship's back after `panelFixed` (0.55 scale), charges fuel while coasting (540 s from empty, stops at 80%), released into Moon orbit after `a2_capture` (or at liftoff after a touchdown-capture). Save field `satellite`.
+- **Flight school** (`src/space/lesson/`, step `a1_lesson` between `a1_satellite_fix` and `a1_raise`): 4 canvas films + a question each (two tries, no restart), reading-paced captions, pause. Test hook `window.__space.lesson`, right answers `data-correct="1"`.
+- **Saves restore by step id** (`missions.js` resolveStepIndex); saves without one at or past index 5 are shifted +1.
+- **Landing**: safe touchdown speed raised (Easy 2.5x, Medium 1.35x); "Getting fast" heads-up with hysteresis; no thrust on the ground except liftoff steps, banner cleared when a walk starts, no rewind while landed; smoother climb-down (walker bones reset to rest each frame). **Aim dial** `hud/aimDial.js`: POINT BACKWARDS (L1 "Face the way you came"), grey motion arrow, green target matching the green 3-D chevron (its tip pointed back at the ship before: `rotateX(+PI/2)`).
+- **HUD**: side panels `--hud-scale: 0.85`; focus mode (`hud.setFocus`, `.is-focus`) while she must act; toasts spaced 1.5 s, stretched lifetimes, held during focus (warnings pass), dropped after 8 s; planet labels avoid the banner; banner swaps to a different message at most every 0.7 s (data-raw never held back); slow-motion chip.
+- **No spinning under warp**: auto-aim off and camera yaw held while `warpIndex > 0`; gentler camera on the autopilot. **Z / X side thrusters** (`SIDE_THRUST` 0.1 of the engine).
+- Known/open: the lesson is long (~4-5 min); a Medium child pulsing W may still see capture lines alternate (now at most every 0.7 s); L4 "backwards" wording varies slightly between banner and dial.
+- **2026-10-04: auto-steered landings + warp only for long waits.** Easy and Medium landings: while the landing guidance is up (`landSteerOn()`, set by `updateLandingCue`), the ship keeps itself pointed backwards with the Easy P-controller (until she touches A/D herself) and the banner just says hold W. Checked: a Medium Moon landing from low orbit pressing only W landed in ~5 s. The time-warp panel shows only when `waitAhead()` (next burn window or closest approach) is over 100 s, or warp is on; the warp hints in the banner, transfer panel and aim dial use the same 100 s. Keys 1-4 always work.
+
+## Session 2026-10-05: steady transfers, Retry, auto-turn, belt polish, play-test fixes
+
+- **Steady transfers** (`transferPlanner.js`, `predictor.js`, new `pathFrames.js`): fixed sim-time search grid, lap-average span, 8 s lead, margin from band edges, exact-burn tracking; dots on fixed sim times; the path stays in her frame across zone exits; a faint gold planned path. Lab tools `scripts/_lab_*.mjs`, `src/space/lab/xferwatch.js`.
+- **Retry** (`src/space/retry.js`, `missions.retryFromCheckpoint`, save copy `<save>_ckpt` after every question): "↺ Retry" button (bottom right above the minimap) and Esc → pause menu → "Try again from my last question". The pause menu's Flying-mode button had been misplaced into showEnd (Esc threw): fixed.
+- **Auto-turn toggle** (`src/space/aimToggle.js`, T): `game.manualAim` stops Easy auto-aim and the landing auto-steer.
+- **Landings (Easy/Medium)**: the engine only brakes and only down to 60% of the safe speed (holding W the whole way: Moon landing 8.4 s, 0.5 t; it used to hover for minutes); no "Ease off W" there.
+- **Belt polish** (PLAN 11): rocks break apart, pieces fly into the ship and a MINED tally (`hud/tally.js`, needed for the next build), U / button opens the upgrade bay, clickable warp pips, build animation (`beltFx.js`); white flash on every mine fixed.
+- **Play-test fixes**: end card shows real minutes (`game.stats.played`) plus "Days in space"; chooser blurbs describe the new Easy/Medium; the transfer panel narrates while the autopilot flies; radiation warning knows about a built shield; two premature story toasts reworded; repeated toasts within 10 s dropped.
+- **Open from the play-test**: one Medium countdown jump of 778 s (a2_coast) and dv sign flips after the Europa burn; long waits on Easy (x256 for the autopilot?); minimap green wedge during the Moon landing and the minimap above the pause dim; labels over the banner at times; Europa walk camera (drill hides her, Jupiter not in view); 1024x768 rock-chip clutter; possible frame cost at x64 (check with ?fps on a real screen).
+
+## Session 2026-10-05 (later): steady plans, calm screens in every chapter
+
+- **Chapter 4 flight** (flight agent): no burns planned past a dip into another zone (`clearUntil`), the 8 s lead counted from now (`clock`), quick re-checks never later than the window (`maxTau`), stale searches dropped (`sameCoast`); closest pass = first pass through the target zone (Europa flips gone); autopilot-only x256 cruise warp in the Sun's pull (`AUTOPILOT_WARP`); cheaper high-warp frames (fewer predictor/coast refreshes, zone search skipped when provably out of reach, 1,200-step cap). Medium real-pace run: 0 plan jumps on a2_coast / a3_depart / a4_europa_orbit. a3_depart shows no burn window until the shield is built. Lab: `src/space/lab/labrun.js`, `game.planLog`.
+- **Chapter 4 screen** (screen agent + main): the "minimap wedge" was the 3-D aim arrow (now kept small and in view); labels avoid every panel/banner/button (`markers.js` keep-out boxes); rock markers: nearest needed of each kind, max 4; Europa walk frames Jupiter on its line, drill fades when it hides her, icy ground; pause menu centred; the one-line banner now sits bottom centre and hides under the bottom panels (`bottomPanelUp`, cached 4x/s); the autopilot reads `burnCue.dataset.raw` even while hidden.
+- **Chapters 1-3 + launcher** (theme agent): calm toasts like Chapter 4 (2 visible, 1.5 s apart, 5 s min, stale 8 s, dupes 10 s, held during cards); focus during question cards; slim top row; smaller side panels (`--side-scale`); one font stack everywhere; shorter pickup/answer/mission lines (rules-module strings pinned by tests unchanged; shortened where shown). Lab: `src/lab/shot.js`, `src/lab/themeShots.js`.

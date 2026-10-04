@@ -1,0 +1,213 @@
+/* The launcher.
+ *
+ * Shares the palette of the character page so the three screens a child moves
+ * through - name, build, choose a chapter - read as one thing, even though the
+ * chapters behind them are three separate games written months apart.
+ */
+
+:root {
+  --ink: #e8eef7;
+  --muted: #92a2b6;
+  --panel: #161c25;
+  --panel-2: #1d2532;
+  --line: #2b3542;
+  --accent: #ffd166;
+  --accent-ink: #1b2430;
+  --focus: #6fb4ff;
+  --good: #63d29b;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background:
+    radial-gradient(1100px 600px at 50% -10%, #1d3350 0%, transparent 60%),
+    #0d1420;
+  color: var(--ink);
+  font: 16px/1.5 'Segoe UI', 'Trebuchet MS', system-ui, Arial, Helvetica, sans-serif;
+}
+
+#app {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 56px 20px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  min-height: 100vh;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: 12px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+#greeting { margin: 0; font-size: 34px; line-height: 1.1; text-wrap: balance; }
+.lede { margin: 8px 0 0; color: var(--muted); }
+
+/* --- chapters ------------------------------------------------------------ */
+#chapters { display: flex; flex-direction: column; gap: 12px; }
+
+.chapter {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  color: inherit;
+  text-decoration: none;
+}
+a.chapter:hover { border-color: #3d4a5c; background: var(--panel-2); }
+a.chapter:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+
+.chapter__n {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-content: center;
+  border-radius: 11px;
+  background: var(--panel-2);
+  font-weight: 800;
+  font-size: 17px;
+  color: var(--muted);
+}
+.chapter__body { flex: 1 1 auto; min-width: 0; }
+.chapter__body h2 { margin: 0; font-size: 17px; }
+.chapter__body p { margin: 3px 0 0; font-size: 13.5px; color: var(--muted); }
+
+.chapter__state {
+  flex: 0 0 auto;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Locked is greyed and inert, and says WHY in its own body text rather than
+   relying on the padlock alone - a child who cannot read the state pill can
+   still read the sentence. */
+.chapter.is-locked { opacity: .5; }
+.chapter.is-locked .chapter__state { background: var(--panel-2); color: var(--muted); }
+
+.chapter.is-done .chapter__n { background: rgba(99, 210, 155, .16); color: var(--good); }
+.chapter.is-done .chapter__state { background: rgba(99, 210, 155, .16); color: var(--good); }
+
+/* --- footer -------------------------------------------------------------- */
+#foot {
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.muted { color: var(--muted); margin: 0; font-size: 13px; }
+.error { color: #ff9a8a; margin: 6px 0 0; font-size: 13px; min-height: 1.2em; }
+
+button {
+  font: inherit;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  padding: 9px 14px;
+  cursor: pointer;
+  background: var(--panel-2);
+  color: var(--ink);
+}
+button:hover { border-color: #3d4a5c; }
+button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.ghost { font-size: 13.5px; }
+.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+  padding: 12px 18px;
+  font-size: 15.5px;
+}
+
+/* --- naming -------------------------------------------------------------- */
+#naming {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-content: center;
+  padding: 24px;
+  background: rgba(8, 12, 20, .92);
+}
+#naming[hidden] { display: none; }
+#naming-form {
+  width: min(420px, 92vw);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 26px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+}
+#naming-form h2 { margin: 0; font-size: 22px; }
+#name-input {
+  margin-top: 12px;
+  padding: 13px 14px;
+  font: inherit;
+  font-size: 18px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #0f151f;
+  color: var(--ink);
+}
+#name-input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+#naming-form .primary { margin-top: 12px; }
+
+@media (max-width: 520px) {
+  #app { padding: 32px 14px 28px; }
+  #greeting { font-size: 27px; }
+  .chapter { padding: 13px 14px; gap: 12px; }
+  .chapter__body p { display: none; }
+}
+
+/* --- difficulty ---------------------------------------------------------- */
+.section-title {
+  margin: 0 0 8px;
+  font-size: 11px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+#levels { display: flex; flex-wrap: wrap; gap: 8px; }
+.opt input { position: absolute; opacity: 0; width: 0; height: 0; }
+.opt {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 15px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  cursor: pointer;
+  font-size: 13.5px;
+  user-select: none;
+}
+.opt:hover { border-color: #3d4a5c; }
+.opt:has(input:checked) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+.opt:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Destructive, so it reads as destructive - but muted until hovered, because
+   it sits next to two harmless buttons and must not invite a curious tap. */
+button.danger { color: #ff9a8a; border-color: #43303a; }
+button.danger:hover { border-color: #ff9a8a; background: #2a1c20; }

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rocket Village — Level 4</title>
+    <link rel="stylesheet" href="/src/launcher/launcher.css" />
+  </head>
+  <body>
+    <main id="app">
+      <header id="top">
+        <p class="eyebrow">Science Adventures <span id="difficulty"></span></p>
+        <h1 id="greeting">Rocket Village</h1>
+        <p class="lede" id="lede">Three chapters. Build your scientist, then start at the beginning.</p>
+      </header>
+
+      <section id="level-pick" aria-label="Difficulty">
+        <h2 class="section-title">Difficulty</h2>
+        <div id="levels" class="opts"></div>
+      </section>
+
+      <section id="chapters" aria-label="Chapters"></section>
+
+      <footer id="foot">
+        <button type="button" id="edit-look" class="ghost">Change how she looks</button>
+        <button type="button" id="rename" class="ghost">Change her name</button>
+        <button type="button" id="hard-reset" class="ghost danger">Start everything over</button>
+        <p id="hint" class="muted"></p>
+      </footer>
+    </main>
+
+    <!-- First run: name her before anything else. -->
+    <div id="naming" hidden>
+      <form id="naming-form">
+        <h2>What is your scientist called?</h2>
+        <p class="muted">She keeps this name through every chapter.</p>
+        <input id="name-input" type="text" maxlength="18" autocomplete="off"
+               spellcheck="false" placeholder="Zara" aria-label="Her name" />
+        <p id="name-error" class="error" role="alert"></p>
+        <button type="submit" class="primary">Next: build her</button>
+      </form>
+    </div>
+
+    <script type="module" src="/src/launcher/main.js"></script>
+  </body>
+</html>

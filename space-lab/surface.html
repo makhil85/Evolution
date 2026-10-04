@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Surface Lab</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; color: #cfd3de; font: 13px system-ui, sans-serif; }
+    canvas { display: block; }
+    #hud-root { position: fixed; inset: 0; pointer-events: none; }
+    #info { position: fixed; left: 8px; bottom: 8px; z-index: 20; white-space: pre; text-shadow: 0 1px 2px #000; pointer-events: none; }
+    body.shot #info { display: none; }
+  </style>
+</head>
+<body>
+  <!-- Dev-only review page for the surface scenes (not part of the build).
+       ?body=moon|europa &view=ladder|walk|jump|sample|drill|sky|checklist|play
+       &mode=easy|medium|hard  &shot=1 renders 1600x900 and saves
+       docs/progress/surface_<body>_<view>.png. view=play is interactive. -->
+  <div id="hud-root"></div>
+  <div id="info"></div>
+  <script type="module" src="/src/space/lab/surfaceLab.js"></script>
+</body>
+</html>

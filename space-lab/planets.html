@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Planets Lab</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #030306; overflow: hidden; color: #cfd3de; font: 13px system-ui, sans-serif; }
+    canvas { display: block; }
+    #bar { position: fixed; left: 8px; top: 8px; display: flex; gap: 4px; flex-wrap: wrap; z-index: 2; }
+    #bar a { color: #cfd3de; background: #15161c; border: 1px solid #2c2e38; padding: 4px 8px; border-radius: 6px; text-decoration: none; }
+    #bar a.on { border-color: #ffb347; }
+    body.shot #bar { display: none; }
+  </style>
+</head>
+<body>
+  <!-- Dev-only review page for part B (Sun, planets, moons, rings).
+       ?view=<name>  camera setup;  &shot=1 saves docs/progress/planets_<view>.png
+       &live=1 keeps animating. Not part of the build. -->
+  <div id="bar"></div>
+  <script type="module" src="/src/space/lab/planetsLab.js"></script>
+</body>
+</html>

@@ -1,0 +1,203 @@
+/* The character page.
+ *
+ * Deliberately NOT the game's HUD styling: this is a tool an adult uses once,
+ * not an overlay a child plays through. It borrows the palette so the two feel
+ * related, and nothing else.
+ */
+
+:root {
+  --ink: #e8eef7;
+  --muted: #92a2b6;
+  --panel: #161c25;
+  --panel-2: #1d2532;
+  --line: #2b3542;
+  --sky: #8ed0f5;
+  --accent: #ffd166;
+  --accent-ink: #1b2430;
+  --focus: #6fb4ff;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #0d1420;
+  color: var(--ink);
+  font: 15px/1.5 'Segoe UI', 'Trebuchet MS', system-ui, Arial, Helvetica, sans-serif;
+}
+
+#app {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  height: 100%;
+}
+
+/* --- preview ------------------------------------------------------------ */
+#stage {
+  position: relative;
+  background: linear-gradient(#a9dcf7 0%, #cfeafb 55%, #dfeee2 100%);
+}
+#canvas-host { position: absolute; inset: 0; }
+#canvas-host canvas { display: block; width: 100%; height: 100%; }
+
+#stage-controls {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+#stage-controls .muted { color: #46586c; font-size: 12px; }
+
+/* The clip picker. Same pill vocabulary as the choices in the panel, because
+   picking "Walk" is the same kind of act as picking "Bob". */
+#anim { gap: 4px; }
+#anim .opt { padding: 6px 12px; }
+
+.rate { display: inline-flex; align-items: center; gap: 7px; }
+.rate #rate-value {
+  color: #46586c;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  min-width: 3.2em;
+}
+#rate {
+  width: 92px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+#rate:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* --- panel -------------------------------------------------------------- */
+#panel {
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+  overflow-y: auto;
+  padding: 22px 20px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+#panel header { display: flex; flex-direction: column; gap: 6px; }
+.eyebrow {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+#panel h1 { margin: 0; font-size: 26px; line-height: 1.1; }
+.lede { margin: 0; color: var(--muted); font-size: 13.5px; }
+.lede code { color: #cfe0f5; font-size: 12px; }
+
+#choices { display: flex; flex-direction: column; gap: 16px; }
+
+fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+legend {
+  padding: 0;
+  font-size: 11px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Face / Hair / Clothes / Extras: headings over the groups of choices. */
+.section-title {
+  margin: 10px 0 -6px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, .1);
+  font-size: 15px;
+  font-weight: 700;
+  color: #e8eef7;
+}
+#choices > .section-title:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+
+.opts { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* A choice is a radio underneath; the label is what you see and click, so
+   keyboard focus and arrow-key groups keep working for free. */
+.opt input { position: absolute; opacity: 0; width: 0; height: 0; }
+.opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel-2);
+  cursor: pointer;
+  font-size: 13px;
+  user-select: none;
+}
+.opt:hover { border-color: #3d4a5c; }
+.opt:has(input:checked) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.opt:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Colour choices show the colour rather than naming it twice. */
+.opt.swatch { padding: 5px; border-radius: 10px; }
+.opt.swatch .chip {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .35);
+  display: block;
+}
+.opt.swatch .name { display: none; }
+
+/* --- buttons ------------------------------------------------------------ */
+button, .as-button {
+  font: inherit;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  padding: 9px 14px;
+  cursor: pointer;
+  background: var(--panel-2);
+  color: var(--ink);
+}
+button:hover, .as-button:hover { border-color: #3d4a5c; }
+button:focus-visible, .as-button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+  width: 100%;
+  padding: 12px;
+  font-size: 15px;
+}
+.ghost { font-size: 13px; padding: 7px 11px; }
+
+footer { display: flex; flex-direction: column; gap: 10px; margin-top: auto; }
+.row { display: flex; flex-wrap: wrap; gap: 6px; }
+.muted { color: var(--muted); margin: 0; font-size: 13px; }
+.small { font-size: 12px; line-height: 1.45; }
+
+@media (max-width: 860px) {
+  #app { grid-template-columns: 1fr; grid-template-rows: 46vh 1fr; }
+  #panel { border-left: 0; border-top: 1px solid var(--line); }
+}

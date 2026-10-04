@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chapter 4 — Voyage to Europa</title>
+    <style>
+      /* Touch screens: a finger drag turns the camera, it must not scroll or zoom the page. */
+      canvas { touch-action: none; }
+      /* On foot the instrument column is hidden: the pad moves to the thumb's natural spot. */
+      body.in-scene .sp-hud .sp-touch__dpad { left: 16px; }
+      html, body { overscroll-behavior: none; }
+      html, body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #030306;
+        color: #e6e9f2;
+        font-family: "Segoe UI", "Trebuchet MS", system-ui, Arial, Helvetica, sans-serif;
+      }
+      #stage { position: absolute; inset: 0; }
+      #hud-root { position: absolute; inset: 0; pointer-events: none; z-index: 10; }
+      /* While a mini-scene (cabin, Moon walk, Europa) has the screen, the flight
+         instruments are meaningless, so they step aside. Cards, toasts,
+         dialogue and questions stay. */
+      body.in-scene .sp-instruments,
+      body.in-scene .sp-orbit,
+      body.in-scene .sp-landing,
+      body.in-scene .sp-markers,
+      body.in-scene .sp-minimap,
+      body.in-scene .sp-touch__small .is-warp,
+      body.in-scene .sp-touch__small .is-rewind,
+      body.in-scene .sp-touch__small .is-cam,
+      body.in-scene .sp-radiation { display: none !important; }
+
+      /* Shown until the solar system has finished loading. */
+      #boot {
+        position: absolute; inset: 0; z-index: 50;
+        display: grid; place-content: center; gap: 10px; text-align: center;
+        background: #030306; color: #e6e9f2;
+      }
+      #boot h1 { margin: 0; font-size: 22px; font-weight: 700; }
+      #boot p  { margin: 0; font-size: 13px; color: #9a9fb0; }
+      #boot.done { display: none; }
+
+      #rvBackToChapters{
+        position:fixed; top:8px; right:10px; z-index:99999;
+        display:inline-flex; align-items:center; gap:6px;
+        padding:7px 13px; border-radius:999px;
+        background:#15161c; color:#e8eef7; border:1px solid #2c2e38;
+        font:600 13px/1 "Segoe UI","Trebuchet MS",system-ui,Arial,Helvetica,sans-serif;
+        text-decoration:none;
+      }
+      #rvBackToChapters:hover{ border-color:#ffb347; }
+      #rvBackToChapters:focus-visible{ outline:2px solid #ffb347; outline-offset:2px; }
+    </style>
+  </head>
+  <body>
+    <div id="stage"></div>
+    <div id="hud-root"></div>
+    <div id="boot">
+      <h1>Voyage to Europa</h1>
+      <p>Warming up the engines…</p>
+    </div>
+    <script type="module" src="/src/space/main.js"></script>
+    <a id="rvBackToChapters" href="index.html" title="Your progress is saved">&#8592; Chapters</a>
+  </body>
+</html>

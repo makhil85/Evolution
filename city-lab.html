@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>City Lab</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #0d1420; overflow: hidden; }
+    canvas { display: block; }
+    #hud {
+      position: fixed; left: 12px; top: 10px; color: #0d1420; pointer-events: none;
+      font: 12px/1.45 ui-monospace, Consolas, monospace; white-space: pre;
+      background: rgba(255, 255, 255, .72); padding: 6px 9px; border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Dev-only review page for the Chapter 2 3-D world (not part of the build).
+       ?built=all|none   show every structure / none (default none)
+       ?level=1|4        Level 1 has no solar / magnet (default 4)
+       ?view=overview|town|north|south|island|vault|eye
+       ?labels=0         hide the floating signs
+       window.cityShot(name) saves docs/progress/<name>.png through /__shot -->
+  <div id="hud"></div>
+  <script type="module" src="/src/city/lab/worldLab.js"></script>
+</body>
+</html>

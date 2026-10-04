@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HUD Lab — Chapter 4</title>
+    <style>
+      /* Mirrors chapter4.html's own structure exactly: full-viewport, no
+         extra wrapper — because hud.css's .sp-hud root is `position: fixed;
+         inset: 0`, it sizes itself to the REAL browser viewport, not to any
+         ancestor box. An artificial fixed-size frame here would only make the
+         lab disagree with the actual game and misreport bugs that are really
+         just a size mismatch between this page and the browser window. Resize
+         the browser tab itself (resize_window) to test 1600x900 / 1280x720 /
+         1920x1080 — don't scale content inside a fixed box. */
+      html, body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #030306;
+        color: #e6e9f2;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      #bg {
+        position: fixed;
+        inset: 0;
+        background-size: cover;
+        background-position: center;
+        background-color: #050608;
+      }
+      #hud-root {
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+      }
+      /* Lab-only chrome: a tiny view picker, not part of the HUD itself. Off
+         by default (?chrome=1 to show) so a plain screenshot is always clean;
+         when shown it floats small in a corner rather than reflowing the page. */
+      #labBar {
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        z-index: 999;
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        padding: 6px 8px;
+        background: rgba(0,0,0,0.7);
+        font: 12px system-ui, sans-serif;
+      }
+      #labBar a {
+        color: #cdbfa9;
+        text-decoration: none;
+        padding: 3px 9px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,0.18);
+      }
+      #labBar a.is-active { background: #ff7847; color: #241207; border-color: #ff7847; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <div id="bg"></div>
+    <div id="hud-root"></div>
+    <div id="labBar"></div>
+    <script type="module" src="/src/space/lab/hudLab.js"></script>
+  </body>
+</html>

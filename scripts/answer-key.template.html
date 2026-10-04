@@ -1,0 +1,300 @@
+<title>Rocket Village Answer Key</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  :root {
+    --paper:   #faf8f4;
+    --panel:   #ffffff;
+    --ink:     #1b2430;
+    --muted:   #5d6672;
+    --rule:    #e5dfd5;
+    --gold:    #a8760f;
+    --gold-bg: #f7eed6;
+    --violet:  #6a4da5;
+    --violet-bg:#ece6f7;
+    --ember:   #b23a2e;
+    --shadow:  0 1px 2px rgba(27,36,48,.06), 0 8px 24px -16px rgba(27,36,48,.28);
+
+    --display: "Fraunces", Georgia, "Times New Roman", serif;
+    --body: "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:   #12161c;
+      --panel:   #1a2028;
+      --ink:     #edf1f6;
+      --muted:   #97a2af;
+      --rule:    #2b333d;
+      --gold:    #e2b65c;
+      --gold-bg: #302614;
+      --violet:  #bb9ff0;
+      --violet-bg:#251f33;
+      --ember:   #e2776a;
+      --shadow:  0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:   #12161c;
+    --panel:   #1a2028;
+    --ink:     #edf1f6;
+    --muted:   #97a2af;
+    --rule:    #2b333d;
+    --gold:    #e2b65c;
+    --gold-bg: #302614;
+    --violet:  #bb9ff0;
+    --violet-bg:#251f33;
+    --ember:   #e2776a;
+    --shadow:  0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 17px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 50rem; margin: 0 auto; padding: 0 1.25rem 5rem; }
+
+  /* ---------- masthead ---------- */
+  header.top { padding: 3rem 0 1.5rem; border-bottom: 2px solid var(--ink); }
+  .eyebrow {
+    font-family: var(--mono); font-size: .72rem; font-weight: 600;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--muted);
+    margin: 0 0 .6rem;
+  }
+  h1 {
+    font-family: var(--display); font-weight: 700;
+    font-size: clamp(2.1rem, 6vw, 3.1rem); line-height: 1.05;
+    margin: 0 0 .7rem; text-wrap: balance; letter-spacing: -.015em;
+  }
+  .standfirst { margin: 0; max-width: 40rem; color: var(--muted); font-size: 1.05rem; }
+  .counts { display: flex; flex-wrap: wrap; gap: 1.5rem; margin: 1.4rem 0 0; }
+  .count { display: flex; align-items: baseline; gap: .45rem; }
+  .count b { font-family: var(--mono); font-size: 1.45rem; font-weight: 600; }
+  .count span { font-size: .92rem; color: var(--muted); }
+  .count.main b { color: var(--gold); }
+  .count.bonus b { color: var(--violet); }
+
+  /* ---------- controls ---------- */
+  .controls {
+    position: sticky; top: 0; z-index: 5;
+    display: flex; flex-wrap: wrap; gap: .6rem; align-items: center;
+    padding: .75rem 0; margin-bottom: 1.5rem;
+    background: var(--paper); border-bottom: 1px solid var(--rule);
+  }
+  .controls input[type="search"] {
+    flex: 1 1 12rem; min-width: 0;
+    font-family: var(--body); font-size: .95rem; color: var(--ink);
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 7px;
+    padding: .5rem .7rem;
+  }
+  .controls input[type="search"]::placeholder { color: var(--muted); }
+  .toggle {
+    display: inline-flex; align-items: center; gap: .45rem;
+    font-size: .9rem; color: var(--muted); cursor: pointer;
+    border: 1px solid var(--rule); background: var(--panel);
+    border-radius: 7px; padding: .45rem .7rem; white-space: nowrap;
+  }
+  .toggle input { accent-color: var(--ember); margin: 0; }
+  :where(input, button, a, summary):focus-visible {
+    outline: 2px solid var(--ember); outline-offset: 2px;
+  }
+
+  /* ---------- quick tables ---------- */
+  h2 {
+    font-family: var(--display); font-weight: 600;
+    font-size: 1.45rem; margin: 2.5rem 0 .4rem; letter-spacing: -.01em;
+  }
+  .section-note { margin: 0 0 1rem; color: var(--muted); font-size: .95rem; max-width: 38rem; }
+  .table-scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: .95rem; }
+  th, td { text-align: left; padding: .55rem .7rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th {
+    font-family: var(--mono); font-size: .68rem; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+    border-bottom: 1px solid var(--ink);
+  }
+  td.num { font-family: var(--mono); color: var(--muted); width: 2.5rem; font-variant-numeric: tabular-nums; }
+  td.where { color: var(--muted); white-space: nowrap; }
+  td.ans { font-family: var(--mono); font-weight: 600; font-size: .88rem; }
+  .main td.ans { color: var(--gold); }
+  .bonus td.ans { color: var(--violet); }
+  tbody tr:last-child td { border-bottom: none; }
+
+  /* ---------- detail cards ---------- */
+  .card { padding: 1.6rem 0; border-bottom: 1px solid var(--rule); }
+  .card:last-child { border-bottom: none; }
+  .card-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .6rem; margin-bottom: .35rem; }
+  .card h3 { font-family: var(--display); font-weight: 600; font-size: 1.2rem; margin: 0; letter-spacing: -.005em; }
+  .chip {
+    font-family: var(--mono); font-size: .66rem; font-weight: 600;
+    letter-spacing: .08em; text-transform: uppercase;
+    padding: .2rem .5rem; border-radius: 999px; white-space: nowrap;
+  }
+  .chip.main { background: var(--gold-bg); color: var(--gold); }
+  .chip.bonus { background: var(--violet-bg); color: var(--violet); }
+  .meta { font-size: .85rem; color: var(--muted); margin: 0 0 .9rem; }
+  .prompt {
+    margin: 0 0 1rem; padding-left: .95rem;
+    border-left: 3px solid var(--rule);
+    font-size: 1.02rem;
+  }
+  .answer {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem;
+    padding: .7rem .85rem; border-radius: 9px; background: var(--panel);
+    box-shadow: var(--shadow); margin-bottom: .9rem;
+  }
+  .answer .label {
+    font-family: var(--mono); font-size: .66rem; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+  }
+  .answer .value { font-family: var(--mono); font-weight: 600; font-size: .98rem; }
+  .main .answer .value { color: var(--gold); }
+  .bonus .answer .value { color: var(--violet); }
+  body.hide-answers .answer .value,
+  body.hide-answers td.ans {
+    filter: blur(6px); user-select: none; cursor: pointer;
+  }
+  body.hide-answers .answer .value:hover,
+  body.hide-answers td.ans:hover { filter: none; }
+  .alt { font-size: .82rem; color: var(--muted); font-family: var(--mono); }
+  .distractors { font-size: .88rem; color: var(--muted); margin: 0 0 .9rem; }
+  .distractors b {
+    font-family: var(--mono); font-size: .66rem; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase; display: block; margin-bottom: .15rem;
+  }
+  .why, .ask { margin: 0 0 .8rem; font-size: .96rem; }
+  .why b, .ask b {
+    font-family: var(--mono); font-size: .66rem; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+    display: block; margin-bottom: .15rem;
+  }
+  .ask { border-left: 3px solid var(--ember); padding-left: .95rem; }
+  .empty { color: var(--muted); padding: 2rem 0; display: none; }
+  body.no-results .empty { display: block; }
+  body.no-results .card, body.no-results h2, body.no-results .section-note,
+  body.no-results .table-scroll { display: none; }
+
+  footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--rule); color: var(--muted); font-size: .88rem; }
+  footer code { font-family: var(--mono); font-size: .85em; }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <p class="eyebrow">Level 3 · Rocket Village</p>
+    <h1>Answer Key</h1>
+    <p class="standfirst">
+      For the adult sitting next to her. Wrong answers cost nothing and are always
+      retryable — there is no timer, no attempt limit and no penalty anywhere in the
+      game. So when she is stuck, the useful move is the <em>Ask her</em> line, not
+      the answer.
+    </p>
+    <div class="counts">
+      <span class="count main"><b id="n-main">0</b><span>on the main path</span></span>
+      <span class="count bonus"><b id="n-bonus">0</b><span>bonus puzzles</span></span>
+    </div>
+  </header>
+
+  <div class="controls">
+    <input type="search" id="q" placeholder="Search questions, answers, stations…" aria-label="Search the answer key">
+    <label class="toggle"><input type="checkbox" id="blur"> Hide answers</label>
+  </div>
+
+  <h2>The main path</h2>
+  <p class="section-note">Numbered because it <em>is</em> a sequence: each one unlocks the next thing she can build.</p>
+  <div class="table-scroll">
+    <table class="main"><thead><tr><th>#</th><th>Question</th><th>Where</th><th>Answer</th></tr></thead>
+    <tbody id="t-main"></tbody></table>
+  </div>
+
+  <h2>Bonus puzzles</h2>
+  <p class="section-note">
+    Unnumbered on purpose — these gate nothing and can be done in any order, or skipped
+    entirely. A <strong style="color:var(--violet)">violet</strong> signpost in game means a station
+    has one. Gold still means “go here next”.
+  </p>
+  <div class="table-scroll">
+    <table class="bonus"><thead><tr><th></th><th>Question</th><th>Where</th><th>Answer</th></tr></thead>
+    <tbody id="t-bonus"></tbody></table>
+  </div>
+
+  <h2>Every question in full</h2>
+  <p class="section-note">In the order she meets them.</p>
+  <div id="cards"></div>
+
+  <p class="empty">Nothing matches that.</p>
+
+  <footer>
+    Generated from the game itself, so it cannot drift from what she is actually asked.
+    Rebuild after any change to the questions with <code>node scripts/answer-key.mjs</code>.
+  </footer>
+</div>
+
+<script type="application/json" id="data">__DATA__</script>
+<script>
+  const DATA = JSON.parse(document.getElementById('data').textContent);
+  const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+
+  const main = DATA.filter((d) => !d.optional);
+  const bonus = DATA.filter((d) => d.optional);
+  document.getElementById('n-main').textContent = main.length;
+  document.getElementById('n-bonus').textContent = bonus.length;
+
+  const row = (d, i, numbered) => `<tr>
+    <td class="num">${numbered ? i + 1 : '★'}</td>
+    <td>${esc(d.title)}</td>
+    <td class="where">${esc(d.where)}</td>
+    <td class="ans">${esc(d.answer)}</td></tr>`;
+  document.getElementById('t-main').innerHTML = main.map((d, i) => row(d, i, true)).join('');
+  document.getElementById('t-bonus').innerHTML = bonus.map((d, i) => row(d, i, false)).join('');
+
+  document.getElementById('cards').innerHTML = DATA.map((d) => `
+    <article class="card ${d.optional ? 'bonus' : 'main'}"
+             data-hay="${esc((d.title + ' ' + d.prompt + ' ' + d.answer + ' ' + d.where + ' ' + d.subject).toLowerCase())}">
+      <div class="card-head">
+        <h3>${esc(d.title)}</h3>
+        <span class="chip ${d.optional ? 'bonus' : 'main'}">${d.optional ? 'Bonus' : 'Main path'}</span>
+      </div>
+      <p class="meta">${esc(d.where)} · ${esc(d.subject)} · ${esc(d.difficulty)}</p>
+      <p class="prompt">${esc(d.prompt)}</p>
+      <div class="answer">
+        <span class="label">Answer</span>
+        <span class="value">${esc(d.answer)}</span>
+        ${d.also.length ? `<span class="alt">also accepts ${esc(d.also.join(', '))}</span>` : ''}
+      </div>
+      ${d.wrong.length ? `<p class="distractors"><b>Other options shown</b>${d.wrong.map(esc).join(' · ')}</p>` : ''}
+      <p class="why"><b>Why</b>${esc(d.why)}</p>
+      <p class="ask"><b>Ask her</b>${esc(d.ask)}</p>
+    </article>`).join('');
+
+  // Search. Filters the detail cards and the quick tables together, so the page
+  // never shows a row whose card has been hidden.
+  const q = document.getElementById('q');
+  const cards = [...document.querySelectorAll('.card')];
+  const rows = [...document.querySelectorAll('tbody tr')];
+  q.addEventListener('input', () => {
+    const term = q.value.trim().toLowerCase();
+    let hits = 0;
+    cards.forEach((c) => {
+      const on = !term || c.dataset.hay.includes(term);
+      c.hidden = !on;
+      if (on) hits++;
+    });
+    rows.forEach((r) => { r.hidden = !!term && !r.textContent.toLowerCase().includes(term); });
+    document.body.classList.toggle('no-results', term && hits === 0);
+  });
+
+  // Blur toggle, for a parent who wants to read the question aloud and think
+  // first. Hover or tap any blurred answer to reveal just that one.
+  const blur = document.getElementById('blur');
+  try { blur.checked = localStorage.getItem('rv-hide-answers') === '1'; } catch (e) { /* private mode */ }
+  const applyBlur = () => {
+    document.body.classList.toggle('hide-answers', blur.checked);
+    try { localStorage.setItem('rv-hide-answers', blur.checked ? '1' : '0'); } catch (e) { /* ignore */ }
+  };
+  blur.addEventListener('change', applyBlur);
+  applyBlur();
+</script>

@@ -1,0 +1,63 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+
+# Untouched original textures, kept out of public/ so they never ship.
+# Restore with: cp asset-originals/medieval/*.png public/assets/models/medieval/
+asset-originals/
+dist-hosted/
+dist/artifact-page.html
+dist/artifact-files.json
+dist/artifact-map.json
+
+# Build outputs, like dist/ and dist-hosted/ above.
+dist-single/
+
+dist-solo/
+dist-solo-hosted/
+
+# Scratch exports from the character page; the real drop-in slot is
+# public/assets/models/characters/girl_scientist.glb
+/girl_scientist.glb
+
+# Test and review screenshots (the /__shot sink and the lab shot tools write
+# here constantly). Files already committed stay tracked; new ones are local.
+docs/progress/
+
+# Lab copy dependency cache (vite.config.js cacheDir)
+.vite-lab/
+
+# Lab copies of the project (git worktrees, e.g. a second dev server on 5174)
+.claude/worktrees/
+
+# --- Local-only (kept on the lead's PC, not in the GitHub repo) -------------
+# Progress screenshots, old 2-D chapters, answer-key pages
+docs/
+# Old plans and logs (the current ones are CLAUDE.md, HANDOFF.md, PLAN.md, LESSONS_PLAN.md)
+PLAN_V2.md
+PLAN_V3.md
+DEVLOG.md
+CHAPTER1_PLAN.md
+CHAPTER2_PLAN.md
+CHAPTER4_PLAN.md
+PLAYMODES_PLAN.md
+ASSETS.md
+# Windows desktop launcher (the Desktop shortcut runs these)
+RUN_GAME.bat
+scripts/serve.bat
+# Asset pipeline and single-file builds (need asset-originals/, which stays local)
+vite.config.single.js
+scripts/prepare-assets.mjs
+scripts/imagejs-texture-pipeline.mjs
+scripts/optimise-textures.mjs
+scripts/strip-unused-maps.mjs
+scripts/embed-models.mjs
+scripts/generate-water-pbr-imagejs.mjs
+scripts/artifact-bundle.mjs
+scripts/bundle-single-file.mjs
+scripts/save-shot.mjs
+# Other-model agent definition (the project rule is opus-medium)
+.claude/agents/luna_worker.md
+# Lab caches
+.vite-lab/

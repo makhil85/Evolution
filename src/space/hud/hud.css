@@ -1,0 +1,841 @@
+/* Chapter 4 HUD styling. Imported by hud.js so Vite bundles it.
+ *
+ * Palette: warm glassy instrument panels — cream text, a single orange accent,
+ * deep charcoal glass panels (NOT cyan-on-black, NOT blue-tinted). Colours
+ * below are pulled from contracts.js SHIP_PALETTE / SPACE_LIGHT by eye so the
+ * HUD sits on the same shelf as the ship and the sky; nothing here invents a
+ * competing brand.
+ *
+ * TYPE SCALE. Every font-size in this file is `calc(<design-px> * var(--hud-scale))`.
+ * The design-px numbers are what the sizes would be at scale 1; --hud-scale is
+ * set once, below, and is the one knob a reviewer tunes to make the whole HUD
+ * bigger or smaller for a 9-year-old at a glance. Shipped at 1.3 so that:
+ *   - nothing renders under 13px anywhere,
+ *   - uppercase labels / titles land at 14px+,
+ *   - body lines and mission steps land at 15-16px,
+ *   - the question prompt and choice buttons land at 17px.
+ *
+ * ===========================================================================
+ * THE POINTER-EVENTS RULE (same discipline as Chapter 3's hud.css)
+ * ===========================================================================
+ * This overlay covers the whole viewport above the WebGL canvas, and the
+ * camera is dragged with the mouse ON that canvas. So:
+ *
+ *   .sp-hud and every descendant default to pointer-events: none. Exactly the
+ *   controls listed in the ".sp-hud .opts-in" block below get it back.
+ *
+ * Every selector is scoped under .sp-hud and prefixed sp-, so nothing outside
+ * this overlay can collide with it.
+ * ===========================================================================
+ */
+
+.sp-hud.is-hidden { display: none; }
+
+.sp-hud {
+  --hud-scale: 1.3;
+
+  --sp-glass: rgba(28, 23, 19, 0.74);
+  --sp-glass-strong: rgba(20, 16, 13, 0.9);
+  --sp-glass-soft: rgba(40, 33, 27, 0.55);
+  --sp-line: rgba(255, 238, 214, 0.16);
+  --sp-line-strong: rgba(255, 238, 214, 0.3);
+  --sp-text: #f7efe2;
+  --sp-muted: #cdbfa9;
+  --sp-accent: #ff7847;
+  --sp-accent-soft: rgba(255, 120, 71, 0.22);
+  --sp-amber: #ffcf5c;
+  --sp-good: #8fd66b;
+  --sp-bad: #ff6b5c;
+  --sp-cool-glass: #bfe9ff;
+  --sp-ink: #14100c;
+
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  color: var(--sp-text);
+  font-family: 'Segoe UI', 'Trebuchet MS', system-ui, Arial, Helvetica, sans-serif;
+  font-size: calc(12px * var(--hud-scale));
+  line-height: 1.3;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+.sp-hud * { pointer-events: none; box-sizing: border-box; }
+
+.sp-hud [hidden] { display: none !important; }
+
+/* --- the only interactive surfaces -------------------------------------- */
+.sp-hud .sp-btn,
+.sp-hud .sp-choice,
+.sp-hud .sp-answer__input,
+.sp-hud .sp-card__toggle,
+.sp-hud .sp-mission__toggle,
+.sp-hud .sp-modal.is-open,
+.sp-hud .sp-map.is-open .sp-map__canvas,
+.sp-hud .sp-map.is-open .sp-map__controls,
+.sp-hud .sp-map.is-open .sp-map__close,
+.sp-hud .sp-upgrade,
+.sp-hud .sp-warp__pip,
+.sp-hud .sp-dialogue__next {
+  pointer-events: auto;
+}
+
+.sp-hud .tabular { font-variant-numeric: tabular-nums; }
+
+/* --- shared panel look ---------------------------------------------------- */
+.sp-hud .sp-panel {
+  background: var(--sp-glass);
+  border: 1px solid var(--sp-line);
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  padding: 10px 13px;
+}
+
+.sp-hud .sp-panel__title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 6px;
+  font-size: calc(10.8px * var(--hud-scale));  /* -> 14px */
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--sp-amber);
+}
+
+.sp-hud .sp-panel__title svg { width: calc(13px * var(--hud-scale)); height: calc(13px * var(--hud-scale)); flex: none; }
+
+/* --- instrument cluster: left column -------------------------------------
+ * ONE flex column flowing top-to-bottom (speed, pull, solar, fuel+cargo,
+ * warp) so five panels can never overlap each other the way two
+ * independently top/bottom-anchored blocks could at 900px tall. Widened (was
+ * 216px) to give the bigger type room to breathe instead of wrapping. */
+.sp-hud .sp-instruments {
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  bottom: 14px;
+  width: 250px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+}
+
+/* Speed */
+.sp-hud .sp-speed__value {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.sp-hud .sp-speed__num { font-size: calc(26px * var(--hud-scale)); font-weight: 900; }  /* -> ~34px, kept big */
+.sp-hud .sp-speed__unit { font-size: calc(11.5px * var(--hud-scale)); color: var(--sp-muted); font-weight: 700; }  /* -> 15px */
+.sp-hud .sp-speed__rel { margin-top: 2px; font-size: calc(12.3px * var(--hud-scale)); color: var(--sp-muted); }  /* -> 16px */
+.sp-hud .sp-speed__alt { margin-top: 6px; display: flex; align-items: center; gap: 6px; font-size: calc(12.3px * var(--hud-scale)); color: #e4d8c6; border-top: 1px solid var(--sp-line); padding-top: 6px; }  /* -> 16px */
+.sp-hud .sp-speed__alt svg { width: calc(11.5px * var(--hud-scale)); height: calc(11.5px * var(--hud-scale)); color: var(--sp-muted); flex: none; }
+
+/* Generic bar gauge, reused by fuel / cargo / power / pull / solar */
+.sp-hud .sp-bar {
+  position: relative;
+  height: 13px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.38);
+  border: 1px solid var(--sp-line);
+  overflow: hidden;
+}
+.sp-hud .sp-bar__fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ffb347, var(--sp-accent));
+  transition: width 220ms ease, background 220ms ease;
+}
+.sp-hud .sp-bar__fill.is-good { background: linear-gradient(90deg, #b7e88a, var(--sp-good)); }
+.sp-hud .sp-bar__fill.is-warn { background: linear-gradient(90deg, #ffe08a, var(--sp-amber)); }
+.sp-hud .sp-bar__fill.is-bad { background: linear-gradient(90deg, #ff9a7f, var(--sp-bad)); }
+
+.sp-hud .sp-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: calc(11.5px * var(--hud-scale));  /* -> 15px */
+  color: var(--sp-muted);
+  margin-bottom: 4px;
+}
+.sp-hud .sp-row b { color: var(--sp-text); font-size: calc(12.3px * var(--hud-scale)); }  /* -> 16px */
+
+/* Fuel + cargo */
+.sp-hud .sp-gauge + .sp-gauge { margin-top: 8px; }
+.sp-hud .sp-gauge__note { margin-top: 5px; font-size: calc(10.8px * var(--hud-scale)); color: var(--sp-muted); }  /* -> 14px */
+.sp-hud .sp-accel {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sp-hud .sp-accel__label { font-size: calc(10.8px * var(--hud-scale)); color: var(--sp-muted); white-space: nowrap; }  /* -> 14px */
+.sp-hud .sp-accel__track { flex: 1; height: 9px; border-radius: 999px; background: rgba(0,0,0,.35); border: 1px solid var(--sp-line); overflow: hidden; }
+.sp-hud .sp-accel__fill { height: 100%; background: linear-gradient(90deg, var(--sp-good), #ffe08a, var(--sp-bad)); border-radius: 999px; transform-origin: left; transition: transform 220ms ease; }
+
+/* Pull meter (gravity) */
+.sp-hud .sp-pull__body { font-size: calc(12.3px * var(--hud-scale)); font-weight: 800; margin-bottom: 3px; }  /* -> 16px */
+.sp-hud .sp-pull__mini { display: flex; align-items: flex-end; gap: 10px; margin-top: 6px; }
+.sp-hud .sp-pull__slot { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+.sp-hud .sp-pull__dot { width: 9px; height: 9px; border-radius: 50%; background: var(--sp-accent); box-shadow: 0 0 8px rgba(255,120,71,.7); }
+.sp-hud .sp-pull__dot.is-far { width: 6px; height: 6px; opacity: 0.7; }
+.sp-hud .sp-pull__stem { width: 100%; height: 22px; border-radius: 5px 5px 0 0; background: linear-gradient(180deg, var(--sp-accent), rgba(255,120,71,.15)); }
+.sp-hud .sp-pull__capt { font-size: calc(10px * var(--hud-scale)); color: var(--sp-muted); text-align: center; line-height: 1.15; }  /* -> 13px, the floor */
+
+/* Solar meter */
+.sp-hud .sp-solar__pct { font-size: calc(20px * var(--hud-scale)); font-weight: 900; }  /* -> 26px */
+.sp-hud .sp-solar__of { font-size: calc(10.8px * var(--hud-scale)); color: var(--sp-muted); margin-bottom: 6px; }  /* -> 14px */
+.sp-hud .sp-solar__status { margin-top: 6px; font-size: calc(11.5px * var(--hud-scale)); padding: 5px 8px; border-radius: 8px; background: rgba(0,0,0,.28); line-height: 1.35; }  /* -> 15px */
+.sp-hud .sp-solar__status.is-low { color: var(--sp-bad); }
+.sp-hud .sp-solar__status.is-ok { color: var(--sp-good); }
+
+/* Warp indicator */
+.sp-hud .sp-warp { display: flex; align-items: center; gap: 6px; }
+.sp-hud .sp-warp__pip {
+  flex: 1;
+  height: 24px;
+  border-radius: 6px;
+  background: rgba(0,0,0,.32);
+  border: 1px solid var(--sp-line);
+  display: flex; align-items: center; justify-content: center;
+  font-size: calc(10.8px * var(--hud-scale)); font-weight: 800; color: var(--sp-muted);  /* -> 14px */
+}
+.sp-hud button.sp-warp__pip { font-family: inherit; padding: 0; cursor: pointer; transition: border-color 120ms ease, color 120ms ease; }
+.sp-hud button.sp-warp__pip:hover { border-color: var(--sp-accent); color: var(--sp-text); }
+.sp-hud button.sp-warp__pip:focus-visible { outline: 2px solid var(--sp-cool-glass); outline-offset: 1px; }
+.sp-hud .sp-warp__pip.is-active { background: var(--sp-accent-soft); border-color: var(--sp-accent); color: var(--sp-text); }
+.sp-hud .sp-warp__reason { margin-top: 6px; font-size: calc(11.5px * var(--hud-scale)); color: var(--sp-bad); display: flex; gap: 5px; line-height: 1.35; }  /* -> 15px */
+.sp-hud .sp-warp__reason svg { width: calc(11.5px * var(--hud-scale)); height: calc(11.5px * var(--hud-scale)); flex: none; margin-top: 1px; }
+.sp-hud .sp-warp__reason.is-hidden { display: none; }
+
+/* --- right column: mission + orbit ---------------------------------------
+ * Widened (was 262px) to match the instrument column's breathing room. */
+.sp-hud .sp-sidebar {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sp-hud .sp-mission__toggle {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  margin: 0 0 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.sp-hud .sp-mission__toggle .sp-panel__title { margin: 0; flex: 0 0 auto; }
+.sp-hud .sp-mission__chev { margin-left: auto; flex: none; width: calc(12px * var(--hud-scale)); height: calc(12px * var(--hud-scale)); color: var(--sp-amber); transition: transform 140ms ease; }
+.sp-hud .sp-mission.is-collapsed .sp-mission__chev { transform: rotate(-90deg); }
+.sp-hud .sp-mission__peek {
+  display: none;
+  font-size: calc(11.5px * var(--hud-scale));  /* -> 15px */
+  font-weight: 600;
+  color: var(--sp-text);
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sp-hud .sp-mission.is-collapsed .sp-mission__peek { display: block; }
+.sp-hud .sp-mission.is-collapsed .sp-mission__body { display: none; }
+.sp-hud .sp-mission.is-new { box-shadow: 0 0 0 2px var(--sp-accent) inset, 0 12px 30px rgba(0,0,0,.4); }
+
+.sp-hud .sp-mission__act { font-size: calc(10.8px * var(--hud-scale)); text-transform: uppercase; letter-spacing: .5px; color: var(--sp-muted); margin-bottom: 2px; }  /* -> 14px */
+.sp-hud .sp-mission__objective { font-size: calc(12.3px * var(--hud-scale)); font-weight: 700; margin-bottom: 6px; line-height: 1.3; }  /* -> 16px */
+.sp-hud .sp-mission__steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.sp-hud .sp-mission__step { font-size: calc(12.3px * var(--hud-scale)); padding-left: 22px; position: relative; color: var(--sp-muted); line-height: 1.32; }  /* -> 16px */
+.sp-hud .sp-mission__step::before {
+  content: '○';
+  position: absolute; left: 0; top: -1px;
+  color: var(--sp-muted);
+}
+.sp-hud .sp-mission__step.is-done { color: var(--sp-text); text-decoration: line-through; text-decoration-color: rgba(247,239,226,.35); }
+.sp-hud .sp-mission__step.is-done::before { content: '●'; color: var(--sp-good); }
+.sp-hud .sp-mission__hint { margin-top: 6px; font-size: calc(10.8px * var(--hud-scale)); color: rgba(205,191,169,.7); }  /* -> 14px */
+
+/* Orbit readout */
+.sp-hud .sp-orbit__state { font-size: calc(12.3px * var(--hud-scale)); font-weight: 800; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }  /* -> 16px */
+.sp-hud .sp-orbit__state svg { width: calc(13px * var(--hud-scale)); height: calc(13px * var(--hud-scale)); color: var(--sp-amber); flex: none; }
+.sp-hud .sp-orbit__row { display: flex; justify-content: space-between; font-size: calc(11.5px * var(--hud-scale)); padding: 4px 0; border-top: 1px solid var(--sp-line); }  /* -> 15px */
+.sp-hud .sp-orbit__row:first-of-type { border-top: 0; }
+.sp-hud .sp-orbit__row span:first-child { color: var(--sp-muted); }
+
+/* Radiation banner */
+.sp-hud .sp-radiation {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border-radius: 999px;
+  background: rgba(255, 107, 92, 0.16);
+  border: 1px solid rgba(255, 107, 92, 0.6);
+  color: #ffd9d1;
+  font-size: calc(12.3px * var(--hud-scale));  /* -> 16px */
+  font-weight: 800;
+  animation: sp-pulse-rad 1.6s ease-in-out infinite;
+  max-width: min(46vw, 620px);
+  text-align: center;
+}
+.sp-hud .sp-radiation svg { width: calc(13.8px * var(--hud-scale)); height: calc(13.8px * var(--hud-scale)); color: var(--sp-bad); flex: none; }
+
+/* --- landing panel --------------------------------------------------------- */
+.sp-hud .sp-landing {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  width: 380px;
+}
+.sp-hud .sp-landing__head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.sp-hud .sp-landing__body { font-size: calc(12.3px * var(--hud-scale)); font-weight: 800; }  /* -> 16px */
+.sp-hud .sp-landing__zone {
+  position: relative;
+  height: 32px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: linear-gradient(90deg, var(--sp-good) 0%, var(--sp-good) 55%, var(--sp-amber) 72%, var(--sp-bad) 100%);
+  border: 1px solid var(--sp-line);
+}
+.sp-hud .sp-landing__needle {
+  position: absolute;
+  top: -3px;
+  width: 3px;
+  height: 38px;
+  background: #fff;
+  box-shadow: 0 0 6px rgba(0,0,0,.6);
+  transform: translateX(-50%);
+  transition: left 160ms linear;
+}
+.sp-hud .sp-landing__labels { display: flex; justify-content: space-between; font-size: calc(10px * var(--hud-scale)); color: var(--sp-muted); margin-top: 4px; }  /* -> 13px, the floor */
+.sp-hud .sp-landing__verdict { margin-top: 8px; text-align: center; font-size: calc(12.3px * var(--hud-scale)); font-weight: 800; }  /* -> 16px */
+.sp-hud .sp-landing__verdict.is-good { color: var(--sp-good); }
+.sp-hud .sp-landing__verdict.is-bad { color: var(--sp-bad); }
+
+/* --- markers layer ---------------------------------------------------------- */
+.sp-hud .sp-markers { position: absolute; inset: 0; }
+.sp-hud .sp-marker { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 3px; transform: translate(-50%, -50%); }
+.sp-hud .sp-marker__arrow {
+  width: 24px; height: 24px;
+  color: var(--sp-amber);
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,.6));
+}
+.sp-hud .sp-marker__label {
+  font-size: calc(10.8px * var(--hud-scale));  /* -> 14px */
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(20,16,13,.78);
+  border: 1px solid var(--sp-line);
+  white-space: nowrap;
+}
+.sp-hud .sp-marker.is-onscreen .sp-marker__bracket {
+  width: 46px; height: 46px;
+  border: 2px solid var(--sp-accent);
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(255,120,71,.4);
+}
+.sp-hud .sp-marker.is-hazard .sp-marker__arrow,
+.sp-hud .sp-marker.is-hazard .sp-marker__bracket { color: var(--sp-bad); border-color: var(--sp-bad); }
+.sp-hud .sp-marker.is-resource .sp-marker__arrow,
+.sp-hud .sp-marker.is-resource .sp-marker__bracket { color: var(--sp-good); border-color: var(--sp-good); }
+
+/* --- toasts -------------------------------------------------------------
+ * left offset matches the instrument column's width + gutter (see
+ * markers.js SAFE_MARGIN, same numbers) so a toast can never sit under the
+ * fuel/cargo/warp panels. */
+.sp-hud .sp-toasts {
+  position: absolute;
+  left: 280px;
+  bottom: 14px;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 7px;
+  max-width: min(40vw, 480px);
+  z-index: 3;
+}
+.sp-hud .sp-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 11px 14px;
+  border-radius: 13px;
+  background: var(--sp-glass-strong);
+  border: 1px solid var(--sp-line);
+  border-left: 4px solid var(--sp-accent);
+  box-shadow: 0 10px 26px rgba(0,0,0,.4);
+  font-size: calc(12.3px * var(--hud-scale));  /* -> 16px */
+  line-height: 1.35;
+  animation: sp-rise 200ms ease-out 1;
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+.sp-hud .sp-toast.is-good { border-left-color: var(--sp-good); }
+.sp-hud .sp-toast.is-warn { border-left-color: var(--sp-amber); }
+.sp-hud .sp-toast.is-out { opacity: 0; transform: translateY(6px); }
+.sp-hud .sp-toast__count { flex: none; align-self: center; padding: 1px 7px; border-radius: 999px; background: rgba(255,255,255,.12); font-size: calc(10.8px * var(--hud-scale)); font-weight: 800; }  /* -> 14px */
+
+/* --- modal host (question / fact / dialogue / upgrades / controls / end) ---- */
+.sp-hud .sp-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(10, 7, 5, 0.62);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+.sp-hud .sp-modal__card {
+  width: min(740px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  padding: 24px 26px;
+  border-radius: 20px;
+  background: #241d17;
+  border: 1px solid var(--sp-line-strong);
+  box-shadow: 0 30px 80px rgba(0,0,0,.6);
+  pointer-events: auto;
+  animation: sp-rise 200ms ease-out 1;
+}
+.sp-hud .sp-modal__card.is-wide { width: min(940px, 100%); }
+.sp-hud .sp-modal__eyebrow { font-size: calc(10.8px * var(--hud-scale)); text-transform: uppercase; letter-spacing: .6px; color: var(--sp-amber); font-weight: 800; margin-bottom: 4px; }  /* -> 14px */
+.sp-hud .sp-modal__title { margin: 0 0 8px; font-size: calc(20px * var(--hud-scale)); font-weight: 900; line-height: 1.25; }  /* -> 26px */
+.sp-hud .sp-modal__body { font-size: calc(13.1px * var(--hud-scale)); line-height: 1.55; color: #f1e6d6; }  /* -> 17px */
+.sp-hud .sp-modal__image { width: 100%; border-radius: 14px; margin: 10px 0; display: block; }
+.sp-hud .sp-modal__actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+
+.sp-hud .sp-btn {
+  padding: 13px 22px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffb883, var(--sp-accent));
+  color: #241207;
+  font-weight: 900;
+  font-size: calc(11.5px * var(--hud-scale));  /* -> 15px */
+  line-height: 1;
+  font-family: inherit;
+  cursor: pointer;
+}
+.sp-hud .sp-btn--ghost { background: rgba(255,255,255,.08); color: var(--sp-text); border: 1px solid var(--sp-line-strong); }
+.sp-hud .sp-btn--secondary { background: rgba(255,255,255,.05); color: var(--sp-muted); border: 1px solid var(--sp-line); font-weight: 700; padding: 11px 18px; }
+.sp-hud .sp-btn--secondary:hover { color: var(--sp-text); border-color: var(--sp-line-strong); }
+.sp-hud .sp-btn:disabled { opacity: .45; cursor: not-allowed; }
+.sp-hud .sp-btn:focus-visible,
+.sp-hud .sp-choice:focus-visible,
+.sp-hud .sp-upgrade:focus-visible { outline: 3px solid var(--sp-cool-glass); outline-offset: 2px; }
+
+/* Question modal specifics — prompt & choices are the 17px tier, and choice
+ * buttons are padded up to a ~48px tap target. */
+.sp-hud .sp-visual { margin: 14px 0 4px; padding: 12px; border-radius: 14px; background: rgba(255,255,255,.05); border: 1px solid var(--sp-line); }
+.sp-hud .sp-visual__row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 7px 0; }
+.sp-hud .sp-visual__label { min-width: 100px; font-size: calc(11.5px * var(--hud-scale)); font-weight: 800; color: #e9dcc7; }  /* -> 15px */
+.sp-hud .sp-visual__arrow { margin: 2px 0 2px 108px; color: var(--sp-amber); font-size: calc(15px * var(--hud-scale)); line-height: 1; }  /* -> ~19.5px */
+.sp-hud .sp-tile { display: inline-flex; align-items: center; justify-content: center; min-width: 42px; min-height: 42px; padding: 0 7px; border-radius: 11px; background: #3a2f26; border: 1px solid var(--sp-line-strong); font-size: calc(14.6px * var(--hud-scale)); font-weight: 900; }  /* -> ~19px */
+.sp-hud .sp-choices { display: grid; gap: 10px; margin-top: 15px; }
+.sp-hud .sp-choice {
+  display: block; width: 100%; padding: 14px 16px; min-height: 48px; border-radius: 13px; text-align: left;
+  background: #33291f; border: 2px solid var(--sp-line-strong); color: var(--sp-text);
+  font-weight: 700; font-size: calc(13.1px * var(--hud-scale)); line-height: 1.35; font-family: inherit;  /* -> 17px */
+  cursor: pointer; transition: background 120ms ease, border-color 120ms ease;
+}
+/* Hover is the accent, never green: green means "correct" once she answers. */
+.sp-hud .sp-choice:hover, .sp-hud .sp-choice:focus-visible { background: #3d3124; border-color: var(--sp-accent); }
+.sp-hud .sp-choice.is-wrong { border-color: rgba(255,107,92,.7); background: rgba(255,107,92,.14); opacity: .8; }
+.sp-hud .sp-choice.is-right { border-color: var(--sp-good); background: rgba(143,214,107,.18); opacity: 1; }
+.sp-hud .sp-choice.is-shake { animation: sp-shake 320ms ease-in-out 1; }
+.sp-hud .sp-choices.is-done .sp-choice { opacity: .5; cursor: default; }
+.sp-hud .sp-choices.is-done .sp-choice.is-right { opacity: 1; }
+.sp-hud .sp-answer { display: flex; gap: 10px; margin-top: 16px; }
+.sp-hud .sp-answer__input { flex: 1 1 auto; min-width: 0; padding: 13px; min-height: 48px; border-radius: 12px; border: 2px solid var(--sp-line-strong); background: #14100c; color: #fff; font-size: calc(14.6px * var(--hud-scale)); font-weight: 700; user-select: text; -webkit-user-select: text; }  /* -> ~19px */
+.sp-hud .sp-answer__input:focus { border-color: var(--sp-accent); outline: none; }
+.sp-hud .sp-feedback { margin-top: 15px; padding: 12px 14px; border-radius: 12px; font-size: calc(13.1px * var(--hud-scale)); line-height: 1.5; background: rgba(255,255,255,.06); border-left: 4px solid var(--sp-accent); }  /* -> 17px */
+.sp-hud .sp-feedback.is-warn { background: rgba(255,207,92,.12); border-left-color: var(--sp-amber); color: #ffe7aa; }
+.sp-hud .sp-feedback.is-good { background: rgba(143,214,107,.14); border-left-color: var(--sp-good); color: #dcffce; }
+
+/* Dialogue */
+.sp-hud .sp-dialogue__who { font-size: calc(10.8px * var(--hud-scale)); font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: var(--sp-amber); margin-bottom: 5px; }  /* -> 14px */
+.sp-hud .sp-dialogue__text { font-size: calc(15.4px * var(--hud-scale)); line-height: 1.5; min-height: 3.4em; }  /* -> 20px */
+.sp-hud .sp-dialogue__dots { display: flex; gap: 6px; margin-top: 15px; }
+.sp-hud .sp-dialogue__dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.22); }
+.sp-hud .sp-dialogue__dot.is-active { background: var(--sp-accent); }
+
+/* Upgrades */
+.sp-hud .sp-upgrades { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; margin-top: 9px; }
+.sp-hud .sp-upgrade {
+  text-align: left; padding: 14px; border-radius: 14px; cursor: pointer;
+  background: #33291f; border: 2px solid var(--sp-line-strong); color: var(--sp-text); font-family: inherit;
+}
+.sp-hud .sp-upgrade__name { font-size: calc(13.1px * var(--hud-scale)); font-weight: 800; margin-bottom: 5px; }  /* -> 17px */
+.sp-hud .sp-upgrade__req { font-size: calc(10.8px * var(--hud-scale)); color: var(--sp-amber); margin-bottom: 7px; }  /* -> 14px */
+.sp-hud .sp-upgrade__cost { display: flex; gap: 8px; flex-wrap: wrap; font-size: calc(11.5px * var(--hud-scale)); }  /* -> 15px */
+.sp-hud .sp-upgrade__chip { padding: 3px 9px; border-radius: 999px; background: rgba(0,0,0,.3); }
+.sp-hud .sp-upgrade__chip.is-short { color: var(--sp-bad); }
+.sp-hud .sp-upgrade:disabled, .sp-hud .sp-upgrade.is-unaffordable { opacity: .5; cursor: not-allowed; }
+.sp-hud .sp-upgrade.is-built .sp-upgrade__req { color: var(--sp-green, #6fdc8c); }
+.sp-hud .sp-upgrade:not(:disabled):hover { border-color: var(--sp-accent); }
+
+/* Controls table */
+.sp-hud .sp-controls-table { width: 100%; border-collapse: collapse; margin-top: 9px; }
+.sp-hud .sp-controls-table td { padding: 8px 6px; font-size: calc(12.3px * var(--hud-scale)); line-height: 1.35; border-top: 1px solid var(--sp-line); }  /* -> 16px */
+.sp-hud .sp-controls-table td:first-child { width: 150px; }
+.sp-hud .sp-key { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 28px; padding: 0 9px; border-radius: 7px; background: linear-gradient(180deg,#ffe0b0,var(--sp-amber)); color: var(--sp-ink); font-weight: 900; font-size: calc(11.5px * var(--hud-scale)); font-family: inherit; margin-right: 3px; }  /* -> 15px */
+
+/* End card */
+.sp-hud .sp-end__stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0; }
+.sp-hud .sp-end__stat { background: rgba(255,255,255,.05); border: 1px solid var(--sp-line); border-radius: 12px; padding: 11px; text-align: center; }
+.sp-hud .sp-end__stat b { display: block; font-size: calc(18.5px * var(--hud-scale)); }  /* -> 24px */
+.sp-hud .sp-end__stat span { font-size: calc(10.8px * var(--hud-scale)); color: var(--sp-muted); }  /* -> 14px */
+.sp-hud .sp-end__samples { display: flex; flex-wrap: wrap; gap: 7px; margin: 9px 0; }
+.sp-hud .sp-end__sample { padding: 5px 11px; border-radius: 999px; background: rgba(143,214,107,.14); border: 1px solid rgba(143,214,107,.4); font-size: calc(11.5px * var(--hud-scale)); }  /* -> 15px */
+.sp-hud .sp-end__credits { margin-top: 15px; font-size: calc(10.8px * var(--hud-scale)); line-height: 1.45; color: var(--sp-muted); border-top: 1px solid var(--sp-line); padding-top: 11px; }  /* -> 14px */
+
+/* --- pause menu ----------------------------------------------------------- */
+/* (pauseMenu puts .sp-pause on the card itself, so the card rule needs both forms:
+ * only the descendant one never matched - a 740px card, "Back to chapters" left.) */
+.sp-hud .sp-modal__card.sp-pause,
+.sp-hud .sp-pause .sp-modal__card { width: min(420px, 100%); text-align: center; }
+.sp-hud .sp-pause .sp-btn { width: 100%; margin-bottom: 10px; }
+
+/* --- map overlay -----------------------------------------------------------
+ * A dark warm sky (not blue-black), a glowing Sun, coloured planets with a
+ * lit side toward the Sun, a dusty asteroid-belt band, a heading-facing ship
+ * arrow, a fading predicted path, a dashed ghost-target circle, and a hover
+ * tooltip with a one-line fact per body. All the drawing lives in map.js;
+ * this is just the DOM chrome around the canvas. */
+.sp-hud .sp-map {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  background: rgba(6, 5, 4, 0.86);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sp-hud .sp-map__canvas { border-radius: 18px; border: 1px solid var(--sp-line-strong); background: #0a0704; cursor: grab; pointer-events: auto; }
+.sp-hud .sp-map__canvas:active { cursor: grabbing; }
+.sp-hud .sp-map__controls {
+  position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 8px; background: var(--sp-glass-strong); border: 1px solid var(--sp-line); border-radius: 999px; padding: 6px; pointer-events: auto;
+}
+.sp-hud .sp-map__zoom {
+  padding: 8px 16px; border-radius: 999px; border: 0; background: transparent; color: var(--sp-muted);
+  font-weight: 700; font-size: calc(11.5px * var(--hud-scale)); font-family: inherit; cursor: pointer;  /* -> 15px */
+}
+.sp-hud .sp-map__zoom.is-active { background: var(--sp-accent); color: #241207; }
+.sp-hud .sp-map__close {
+  position: absolute; top: 18px; right: 18px;
+  width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--sp-line-strong);
+  background: var(--sp-glass-strong); color: var(--sp-text); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  pointer-events: auto;
+}
+.sp-hud .sp-map__close svg { width: 18px; height: 18px; }
+.sp-hud .sp-map__legend { position: absolute; bottom: 18px; left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: calc(10.8px * var(--hud-scale)); line-height: 1.4; color: var(--sp-muted); background: var(--sp-glass-strong); border: 1px solid var(--sp-line); border-radius: 12px; padding: 9px 13px; }  /* -> 14px */
+.sp-hud .sp-map__tooltip {
+  position: absolute;
+  z-index: 2;
+  max-width: 260px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--sp-glass-strong);
+  border: 1px solid var(--sp-line-strong);
+  color: var(--sp-text);
+  font-size: calc(11.5px * var(--hud-scale));  /* -> 15px */
+  line-height: 1.4;
+  box-shadow: 0 10px 24px rgba(0,0,0,.5);
+  transform: translate(-50%, -100%);
+  margin-top: -10px;
+}
+.sp-hud .sp-map__tooltip b { color: var(--sp-amber); }
+
+/* --- animations ------------------------------------------------------------ */
+@keyframes sp-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes sp-shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+@keyframes sp-pulse-rad { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,107,92,.5); } 50% { box-shadow: 0 0 0 6px rgba(255,107,92,0); } }
+@keyframes sp-pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-hud .sp-toast, .sp-hud .sp-modal__card, .sp-hud .sp-choice.is-shake, .sp-hud .sp-radiation { animation: none; }
+}
+
+/* --- narrower desktop widths (1280x720) ------------------------------------
+ * Same type scale (readability does not shrink at the smaller reference
+ * resolution) — only the panel chrome tightens: narrower columns, smaller
+ * gaps and padding, and a shrunk pull-meter mini-visual, so five stacked
+ * instrument panels plus the mission+orbit sidebar still fit inside 720px
+ * of height without clipping or overlapping. Verified live at 1280x720. */
+@media (max-width: 1366px) {
+  .sp-hud .sp-instruments { width: 224px; gap: 3px; }
+  .sp-hud .sp-sidebar { width: 268px; gap: 5px; }
+  .sp-hud .sp-landing { width: 340px; }
+  .sp-hud .sp-toasts { left: 254px; }
+  .sp-hud .sp-panel { padding: 5px 9px; }
+  .sp-hud .sp-panel__title { margin-bottom: 3px; }
+  .sp-hud .sp-gauge + .sp-gauge { margin-top: 5px; }
+  .sp-hud .sp-speed__alt { margin-top: 4px; padding-top: 4px; }
+  .sp-hud .sp-pull__body { margin-bottom: 1px; }
+  .sp-hud .sp-pull__stem { height: 14px; }
+  /* The inverse-square mini-visual is the one purely decorative element in
+     the cluster (the numeric readout above it already states the same pull
+     and distance) — hiding it at this narrower reference height is what
+     buys five stacked panels + a full-length warp-refusal message room to
+     never clip, instead of chasing single pixels through six other rules. */
+  .sp-hud .sp-pull__mini { display: none; }
+  .sp-hud .sp-solar__of { margin-bottom: 4px; }
+  .sp-hud .sp-solar__status { margin-top: 4px; padding: 4px 7px; }
+  .sp-hud .sp-warp__reason { margin-top: 4px; }
+  .sp-hud .sp-speed__num { font-size: calc(23px * var(--hud-scale)); }
+}
+
+/* Flying-mode picker: three cards side by side, the current one outlined. */
+.sp-hud .sp-modes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.sp-hud .sp-mode { text-align: left; align-content: start; }
+.sp-hud .sp-mode.is-current { border-color: var(--sp-accent); box-shadow: 0 0 0 1px var(--sp-accent) inset; }
+.sp-hud .sp-mode__blurb { font-size: calc(12px * var(--hud-scale)); line-height: 1.45; color: var(--sp-muted); margin-top: 6px; }
+@media (max-width: 900px) { .sp-hud .sp-modes { grid-template-columns: 1fr; } }
+
+/* --- top-down inset (minimap.js) -------------------------------------------
+ * Bottom-right: the one corner nothing else uses (instruments run down the
+ * left, the mission/orbit sidebar sits top-right and ends ~480px down, toasts
+ * and the landing panel are bottom-left/centre). Sized to the viewport so it
+ * never reaches up into the sidebar on a short screen. */
+.sp-hud .sp-minimap {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  width: clamp(150px, min(26vh, 22vw), 250px);
+  cursor: pointer;
+  pointer-events: auto;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.45));
+}
+.sp-hud .sp-minimap__canvas { display: block; }
+.sp-hud .sp-minimap__hint {
+  text-align: center;
+  font-size: calc(9.5px * var(--hud-scale));
+  color: var(--sp-muted);
+  margin-top: 2px;
+  opacity: 0.8;
+}
+.sp-hud .sp-minimap:hover .sp-minimap__canvas { outline: 2px solid var(--sp-accent-soft); outline-offset: -6px; border-radius: 50%; }
+.sp-hud .sp-minimap.is-hidden,
+.sp-hud .sp-minimap.is-off { display: none; }
+
+/* Shape-only answers ("what comes next"): big and spaced like the tiles. */
+.sp-hud .sp-choice.is-symbols { font-size: calc(20px * var(--hud-scale)); letter-spacing: 0.25em; line-height: 1.2; }
+
+/* --- touch controls (touch.js) ----------------------------------------------
+ * Only on touch screens (.is-touch on the HUD). Left thumb: direction pad just
+ * right of the instrument column; right thumb: AIM, E and the small buttons,
+ * just left of the inset map. Translucent so the scene reads through them;
+ * big enough for a child's thumb (64-86px). Pop-ups and the landing gauge
+ * move up clear of them, and the warp panel gives way to the warp button. */
+.sp-hud .sp-touch { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+.sp-hud .sp-touch.is-hidden { display: none; }
+.sp-hud .sp-touch__btn {
+  pointer-events: auto;
+  touch-action: none;
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 18px;
+  background: rgba(20, 16, 13, 0.55);
+  border: 1.5px solid var(--sp-line-strong);
+  color: var(--sp-text);
+  font: 900 22px system-ui, -apple-system, "Segoe UI", sans-serif;
+  backdrop-filter: blur(3px);
+}
+.sp-hud .sp-touch__btn.is-down { background: var(--sp-accent-soft); border-color: var(--sp-accent); transform: scale(0.96); }
+.sp-hud .sp-touch__dpad {
+  position: absolute; left: 280px; bottom: 16px;
+  display: grid; grid-template-columns: repeat(3, 68px); grid-template-rows: repeat(2, 68px); gap: 8px;
+}
+.sp-hud .sp-touch__dpad .is-up { grid-column: 2; grid-row: 1; }
+.sp-hud .sp-touch__dpad .is-left { grid-column: 1; grid-row: 2; }
+.sp-hud .sp-touch__dpad .is-down-arrow { grid-column: 2; grid-row: 2; }
+.sp-hud .sp-touch__dpad .is-right { grid-column: 3; grid-row: 2; }
+.sp-hud .sp-touch__actions {
+  position: absolute; bottom: 16px;
+  right: calc(28px + clamp(150px, min(26vh, 22vw), 250px));
+  display: grid; grid-template-columns: 68px 86px; grid-template-rows: auto 86px; gap: 8px; align-items: end;
+}
+.sp-hud .sp-touch__small { grid-column: 1 / span 2; justify-self: end; width: max-content; display: flex; gap: 6px; }
+.sp-hud .sp-touch__small .sp-touch__btn { height: 44px; min-width: 44px; padding: 0 10px; border-radius: 12px; font-size: 16px; }
+.sp-hud .sp-touch__actions .is-use { width: 68px; height: 68px; font-size: 26px; }
+.sp-hud .sp-touch__actions .is-aim { width: 86px; height: 86px; border-radius: 50%; font-size: 17px; letter-spacing: .04em; background: rgba(255, 120, 71, 0.28); border-color: var(--sp-accent); }
+.sp-hud .sp-touch__btn { position: relative; white-space: nowrap; }
+/* The key the game's text names ("hold W"), small in the corner. */
+.sp-hud .sp-touch__key { position: absolute; right: 6px; bottom: 3px; font-size: 10px; font-weight: 800; color: var(--sp-muted); letter-spacing: 0; }
+.sp-hud .sp-touch__small .sp-touch__key { display: none; }
+.sp-hud .sp-touch__actions .is-aim .sp-touch__key { right: 50%; transform: translateX(50%); bottom: 10px; }
+/* Make room for the pad: pop-ups and the landing gauge sit above it. */
+.sp-hud.is-touch .sp-toasts { bottom: 176px; }
+.sp-hud.is-touch .sp-landing { bottom: 176px; }
+.sp-hud.is-touch .sp-warp-panel { display: none; }
+@media (max-width: 1366px) { .sp-hud .sp-touch__dpad { left: 254px; } }
+
+/* --- orbit transfer help (transferPanel.js) ---------------------------------
+ * Bottom centre, in the band between the instrument column and the inset map
+ * (the landing gauge's spot: the two never show together). While it's up,
+ * pop-ups rise above it. Three cells: WHEN, POINT (dial), PUSH (bar). */
+.sp-hud .sp-xfer {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  width: min(560px, calc(100vw - 540px));
+  min-width: 440px;
+  padding: 9px 12px 10px;
+  z-index: 2;
+}
+.sp-hud .sp-xfer__head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px 10px; margin-bottom: 6px; }
+.sp-hud .sp-xfer__head .sp-panel__title { margin: 0; }
+.sp-hud .sp-xfer__steps { display: flex; gap: 4px; flex: none; }
+.sp-hud .sp-xfer__step {
+  font-size: calc(9.5px * var(--hud-scale)); font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 999px; color: var(--sp-muted); border: 1px solid var(--sp-line);
+}
+.sp-hud .sp-xfer__step.is-done { color: var(--sp-good); border-color: rgba(143, 214, 107, .35); }
+.sp-hud .sp-xfer__step.is-done::before { content: '✓ '; }
+.sp-hud .sp-xfer__step.is-now { color: var(--sp-ink); background: var(--sp-amber); border-color: var(--sp-amber); }
+.sp-hud .sp-xfer[data-phase="burn"] .sp-xfer__step.is-now,
+.sp-hud .sp-xfer[data-phase="fix"] .sp-xfer__step.is-now { background: var(--sp-good); border-color: var(--sp-good); }
+.sp-hud .sp-xfer__grid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.35fr) minmax(0, 1.25fr); gap: 8px; }
+.sp-hud .sp-xfer__cell {
+  background: rgba(255, 255, 255, 0.04); border: 1px solid var(--sp-line); border-radius: 11px;
+  padding: 6px 9px; min-width: 0; transition: opacity 200ms ease;
+}
+.sp-hud .sp-xfer__cell.is-idle { opacity: .5; }
+.sp-hud .sp-xfer__label { font-size: calc(9.5px * var(--hud-scale)); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--sp-muted); margin-bottom: 3px; }
+.sp-hud .sp-xfer__big { font-size: calc(21px * var(--hud-scale)); font-weight: 900; line-height: 1.05; }
+.sp-hud .sp-xfer__sub { font-size: calc(10px * var(--hud-scale)); color: var(--sp-muted); line-height: 1.25; margin-top: 2px; }
+.sp-hud .sp-xfer[data-phase="burn"] .sp-xfer__when .sp-xfer__big,
+.sp-hud .sp-xfer[data-phase="fix"] .sp-xfer__when .sp-xfer__big { color: var(--sp-good); }
+.sp-hud .sp-xfer[data-phase="full"] .sp-xfer__when .sp-xfer__big,
+.sp-hud .sp-xfer[data-phase="over"] .sp-xfer__when .sp-xfer__big { color: var(--sp-accent); }
+.sp-hud .sp-xfer__dialrow { display: flex; align-items: center; gap: 8px; }
+.sp-hud .sp-xfer__dial { width: 64px; height: 64px; flex: none; }
+.sp-hud .sp-xfer__pointtext { min-width: 0; }
+.sp-hud .sp-xfer__way { font-size: calc(10px * var(--hud-scale)); color: var(--sp-cool-glass); font-weight: 700; line-height: 1.2; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-hud .sp-xfer__off { font-size: calc(15px * var(--hud-scale)); font-weight: 900; color: var(--sp-amber); line-height: 1.15; margin-top: 2px; }
+.sp-hud .sp-xfer__off.is-good { color: var(--sp-good); }
+.sp-hud .sp-xfer__off.is-bad { color: var(--sp-bad); }
+.sp-hud .sp-xfer__bar {
+  position: relative; height: 18px; border-radius: 7px; overflow: hidden;
+  background: rgba(255, 255, 255, 0.08); border: 1px solid var(--sp-line-strong); margin: 3px 0 5px;
+}
+.sp-hud .sp-xfer__fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: linear-gradient(90deg, #56c271, var(--sp-good)); }
+/* The spill past 100% sits against the right edge in orange. */
+.sp-hud .sp-xfer__overfill { position: absolute; right: 0; top: 0; bottom: 0; width: 0; background: repeating-linear-gradient(45deg, var(--sp-accent) 0 6px, #ff9f43 6px 12px); }
+.sp-hud .sp-xfer__mark { position: absolute; right: 0; top: -2px; bottom: -2px; width: 3px; background: #fff; box-shadow: 0 0 4px rgba(0, 0, 0, .6); }
+.sp-hud .sp-xfer__pushbig { font-size: calc(14px * var(--hud-scale)); font-weight: 900; line-height: 1.1; }
+.sp-hud .sp-xfer[data-phase="over"] .sp-xfer__pushbig { color: var(--sp-accent); }
+.sp-hud .sp-xfer__say {
+  margin-top: 7px; padding: 6px 10px; border-radius: 10px; background: rgba(0, 0, 0, 0.25);
+  font-size: calc(11.5px * var(--hud-scale)); font-weight: 800; line-height: 1.3; text-wrap: balance;
+}
+.sp-hud .sp-xfer[data-phase="burn"] .sp-xfer__say { background: rgba(86, 194, 113, .22); color: #d9f7cf; }
+.sp-hud .sp-xfer[data-phase="full"] .sp-xfer__say,
+.sp-hud .sp-xfer[data-phase="over"] .sp-xfer__say { background: rgba(255, 159, 67, .25); color: #ffe2c4; }
+.sp-hud .sp-xfer__say.is-flash { animation: sp-xfer-flash 600ms ease-out 1; }
+@keyframes sp-xfer-flash { from { box-shadow: 0 0 0 3px rgba(255, 207, 92, .7); } to { box-shadow: 0 0 0 0 rgba(255, 207, 92, 0); } }
+@media (prefers-reduced-motion: reduce) { .sp-hud .sp-xfer__say.is-flash { animation: none; } }
+/* Pop-ups rise above the panel while it's up. */
+.sp-hud.has-xfer .sp-toasts { bottom: 268px; }
+.sp-hud.is-touch .sp-xfer { bottom: 176px; }
+.sp-hud.is-touch.has-xfer .sp-toasts { bottom: 430px; }
+
+/* Lead 2026-10-02: the left instruments and the right mission card were
+ * distracting from the flying. Smaller type and narrower panels for those two
+ * only (the question cards, the banner and the transfer panel keep their
+ * size). About a quarter smaller than the rest of the HUD (scale 1 vs 1.3): body 12.3px, labels 10.8px, nothing under 10px. */
+.sp-hud .sp-instruments,
+.sp-hud .sp-sidebar { --hud-scale: 0.85; font-size: calc(12px * var(--hud-scale)); }
+.sp-hud .sp-instruments { width: 190px; opacity: 0.92; }
+.sp-hud .sp-sidebar { width: 236px; opacity: 0.94; }
+.sp-hud .sp-toasts { left: 220px; }
+@media (max-width: 1366px) {
+  .sp-hud .sp-instruments { width: 178px; }
+  .sp-hud .sp-sidebar { width: 224px; }
+  .sp-hud .sp-toasts { left: 204px; }
+}
+
+/* Lead 2026-10-02 (second pass): smaller still (0.85: body ~10.5px, labels
+ * ~9px), and FOCUS MODE while she has to act (a burn, "let go", turning to
+ * point, the landing): only what she needs stays - speed/height, fuel, the
+ * map and the objective line. The pull meter, solar power, warp, cargo, the
+ * orbit card and the mission step list come back when she's coasting. */
+.sp-hud.is-focus .sp-pull,
+.sp-hud.is-focus .sp-solar,
+.sp-hud.is-focus .sp-warp-panel,
+.sp-hud.is-focus .sp-orbit,
+.sp-hud.is-focus .sp-mission__steps,
+.sp-hud.is-focus .sp-mission__hint,
+.sp-hud.is-focus .sp-mission__act,
+.sp-hud.is-focus .sp-supplies .sp-gauge + .sp-gauge,
+.sp-hud.is-focus .sp-gauge__note,
+.sp-hud.is-focus .sp-speed__rel { display: none !important; }
+
+/* The rescued satellite's arrays charging the tank (instruments.js setSolarCharge). */
+.sp-hud .sp-gauge__charge { margin-top: 5px; font-size: calc(10.8px * var(--hud-scale)); color: var(--sp-muted); font-weight: 600; }
+.sp-hud .sp-gauge__charge.is-charging { color: #9dffb0; animation: sp-charge-pulse 2.4s ease-in-out infinite; }
+@keyframes sp-charge-pulse { 0%, 100% { opacity: 0.75; } 50% { opacity: 1; } }
+
+/* Focus mode hides the solar-wings line too (lead: no solar details while acting). */
+.sp-hud.is-focus .sp-gauge__charge { display: none !important; }
+
+/* The belt's mined tally (hud/tally.js, PLAN item 11): right column, under the
+ * mission card, same 0.85 scale as the sidebar. Hidden while she must act. */
+.sp-hud .sp-tally__head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+.sp-hud .sp-tally__head .sp-panel__title { margin-bottom: 4px; }
+.sp-hud .sp-tally__cargo { font-size: calc(10.8px * var(--hud-scale)); color: var(--sp-muted); font-weight: 700; }
+.sp-hud .sp-tally__cargo.is-full { color: var(--sp-amber); }
+.sp-hud .sp-tally__for { font-size: calc(10.8px * var(--hud-scale)); color: var(--sp-muted); margin-bottom: 3px; }
+.sp-hud .sp-tally__row {
+  display: flex; align-items: center; gap: 6px; padding: 3px 6px; margin: 2px 0; border-radius: 8px;
+  background: rgba(0, 0, 0, .22); font-size: calc(12.3px * var(--hud-scale)); transform-origin: left center;
+}
+.sp-hud .sp-tally__icon { width: 1.4em; text-align: center; flex: none; }
+.sp-hud .sp-tally__label { flex: 1; color: #e4d8c6; }
+.sp-hud .sp-tally__val { color: var(--sp-text); }
+.sp-hud .sp-tally__row.is-done .sp-tally__val { color: var(--sp-good); }
+.sp-hud .sp-tally__row.is-done .sp-tally__val::after { content: ' ✓'; }
+.sp-hud .sp-tally__row.is-short .sp-tally__val { color: var(--sp-amber); }
+.sp-hud .sp-tally__note { margin-top: 4px; font-size: calc(10.8px * var(--hud-scale)); color: var(--sp-muted); }
+.sp-hud .sp-tally__bay { display: block; width: 100%; margin-top: 7px; padding: 9px 10px; font-size: calc(12.3px * var(--hud-scale)); }
+.sp-hud .sp-tally__bay:not(.is-ready) { background: rgba(255, 255, 255, .08); color: var(--sp-text); border: 1px solid var(--sp-line-strong); }
+.sp-hud .sp-tally__bay.is-ready { animation: sp-bay-pulse 1.6s ease-in-out infinite; }
+@keyframes sp-bay-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 159, 67, .6); } 50% { box-shadow: 0 0 0 7px rgba(255, 159, 67, 0); } }
+@media (prefers-reduced-motion: reduce) { .sp-hud .sp-tally__bay.is-ready { animation: none; } }
+.sp-hud.is-focus .sp-tally { display: none !important; }
+
+/* Focus mode: the landing gauge, aim dial and transfer panel sit bottom
+ * centre; warnings that still get through rise above them instead of
+ * covering them (play-test: toasts over the landing panel at 1366). */
+.sp-hud.is-focus .sp-toasts { bottom: 250px; }
+
+/* The one-line banner now sits bottom centre: messages start just above it. */
+.sp-hud .sp-toasts { bottom: 76px; }
+.sp-hud.is-focus .sp-toasts { bottom: 250px; }

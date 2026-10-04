@@ -1,0 +1,1263 @@
+/* HUD styling. Imported by hud.js so Vite bundles it.
+ *
+ * House style follows level1_vox_science_village.html / level2_city_engineering.html:
+ * dark translucent panels, 12-18px radii, coloured accents, one accent per meaning.
+ * Sized up throughout for a Grade 3-4 reader.
+ *
+ * ===========================================================================
+ * THE POINTER-EVENTS RULE — read before adding any selector
+ * ===========================================================================
+ * This overlay covers the entire viewport on top of the WebGL canvas, and the
+ * camera is dragged with the mouse ON that canvas. So:
+ *
+ *   .rv-hud and EVERY descendant are `pointer-events: none` by default;
+ *   exactly five things opt back in, all listed in one block below:
+ *     - .rv-btn, .rv-choice          (buttons)
+ *     - .rv-answer__input            (the text answer box)
+ *     - .rv-parent, .rv-parent *     (the collapsed parent-hints disclosure)
+ *     - .rv-quests, .rv-quests *     (the collapsed quest-list disclosure)
+ *     - .rv-modal.is-open            (the modal backdrop, ONLY while open)
+ *
+ * Nothing else may take pointer events. A panel that does will silently eat the
+ * camera drag wherever it overlaps, which reads as "the game is broken".
+ *
+ * Every selector here is scoped under .rv-hud and prefixed rv-, so nothing
+ * outside this overlay can collide with it - and nothing in it can reach out.
+ * ===========================================================================
+ */
+
+.rv-hud {
+  --rv-panel: rgba(16, 22, 30, 0.88);
+  --rv-panel-2: rgba(26, 36, 52, 0.92);
+  --rv-line: rgba(255, 255, 255, 0.14);
+  --rv-text: #eef4ff;
+  --rv-muted: #a9b8d2;
+  --rv-good: #7ee787;
+  --rv-warn: #ffd166;
+  --rv-bad: #ff8b8b;
+  --rv-cool: #56d4ff;
+  --rv-gold: #ffcf5c;
+  --rv-ink: #06101c;
+  /* One type family for the whole game (launcher, Chapters 1-4). */
+  --rv-font: 'Segoe UI', 'Trebuchet MS', system-ui, Arial, Helvetica, sans-serif;
+
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  color: var(--rv-text);
+  font-family: var(--rv-font);
+  font-size: 15px;
+  line-height: 1.35;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+/* Inert by default. The four exceptions are the block right after this. */
+.rv-hud * {
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+/* --- the ONLY interactive surfaces ------------------------------------- */
+.rv-hud .rv-btn,
+.rv-hud .rv-choice,
+.rv-hud .rv-answer__input,
+.rv-hud .rv-parent,
+.rv-hud .rv-parent *,
+.rv-hud .rv-quests,
+.rv-hud .rv-quests *,
+.rv-hud .rv-modal.is-open {
+  pointer-events: auto;
+}
+
+/* `hidden` must beat the display:flex/grid rules below, or a "closed" modal
+ * would still cover the canvas with an invisible, click-eating backdrop. */
+.rv-hud [hidden] {
+  display: none !important;
+}
+
+/* --- top bar: title, progress, badges ----------------------------------- */
+
+.rv-hud .rv-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 10px 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rv-hud .rv-top__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rv-hud .rv-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+  white-space: nowrap;
+}
+
+.rv-hud .rv-rank {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(255, 207, 92, 0.16);
+  border: 1px solid rgba(255, 207, 92, 0.5);
+  color: var(--rv-gold);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.rv-hud .rv-rank.is-flash {
+  animation: rv-flash 900ms ease-out 1;
+}
+
+.rv-hud .rv-progress {
+  position: relative;
+  height: 26px;
+  border-radius: 999px;
+  background: rgba(10, 16, 26, 0.86);
+  border: 1px solid var(--rv-line);
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+.rv-hud .rv-progress__fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #7ee787, #56d4ff, #c084fc);
+  transition: width 260ms ease;
+}
+
+.rv-hud .rv-progress__fill.is-complete {
+  background: linear-gradient(90deg, #ffd166, #7ee787, #ffd166);
+}
+
+.rv-hud .rv-progress__text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  text-align: center;
+  /* The bar behind this text is a bright gradient on the left and dark on the
+   * right, so the label needs a halo to stay readable over both. */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95), 0 0 10px rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Row that replaces the old three-row badge wall: the always-visible
+ * signpost legend, and the quest ladder folded behind a native <details> —
+ * see the big comment in hud.js _buildTop() for why. */
+.rv-hud .rv-topline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+
+.rv-hud .rv-quests {
+  position: relative;
+  margin-left: auto;
+}
+
+.rv-hud .rv-quests__summary {
+  cursor: pointer;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: rgba(26, 36, 60, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.rv-hud .rv-quests__summary::-webkit-details-marker {
+  display: none;
+}
+
+.rv-hud .rv-quests__summary::after {
+  content: '▾';
+  margin-left: 2px;
+  font-size: 9px;
+  color: var(--rv-muted);
+}
+
+.rv-hud .rv-quests[open] .rv-quests__summary::after {
+  content: '▴';
+}
+
+.rv-hud .rv-quests__label {
+  color: var(--rv-cool);
+}
+
+.rv-hud .rv-quests__count {
+  color: #dbe7ff;
+}
+
+/* Opens DOWNWARD under the toggle, which sits in the top bar — plenty of
+ * headroom below, unlike the sidebar's parent-hints panel near the bottom. */
+.rv-hud .rv-quests__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 3;
+  width: min(430px, calc(100vw - 24px));
+  max-height: 42vh;
+  overflow-y: auto;
+  padding: 10px;
+  border-radius: 14px;
+  background: var(--rv-panel-2);
+  border: 1px solid var(--rv-line);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+
+.rv-hud .rv-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.rv-hud .rv-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  background: rgba(16, 22, 30, 0.82);
+  border: 1px solid var(--rv-line);
+  color: #cfdcf2;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+.rv-hud .rv-badge__mark {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.rv-hud .rv-badge.is-done {
+  background: rgba(126, 231, 135, 0.14);
+  border-color: rgba(126, 231, 135, 0.45);
+  color: #c9ffd0;
+}
+
+.rv-hud .rv-badge.is-active {
+  background: rgba(255, 209, 102, 0.18);
+  border-color: rgba(255, 209, 102, 0.65);
+  color: #ffe7aa;
+  /* Spec §5.4: the one addition over L1/L2 — a pulsing "you are here" pill, so
+   * a child who put the game down for a week finds their place instantly. */
+  animation: rv-pulse 1.5s ease-in-out infinite;
+}
+
+.rv-hud .rv-badge.is-open {
+  color: #dbe7ff;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.rv-hud .rv-badge.is-locked {
+  opacity: 0.52;
+}
+
+.rv-hud .rv-badge.is-bonus {
+  border-color: rgba(255, 207, 92, 0.55);
+  color: var(--rv-gold);
+}
+
+/* --- sidebar: mission, resources, parent hints -------------------------- */
+
+.rv-hud .rv-side {
+  position: absolute;
+  top: 104px;
+  right: 12px;
+  width: 292px;
+  max-height: calc(100vh - 150px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rv-hud .rv-card {
+  background: var(--rv-panel);
+  border: 1px solid var(--rv-line);
+  border-radius: 14px;
+  padding: 10px 11px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+
+.rv-hud .rv-card__title {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--rv-cool);
+}
+
+.rv-hud .rv-mission__goal {
+  font-size: 12px;
+  color: var(--rv-muted);
+  margin-bottom: 6px;
+}
+
+.rv-hud .rv-mission__lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rv-hud .rv-mission__line {
+  font-size: 14px;
+  padding-left: 14px;
+  position: relative;
+}
+
+.rv-hud .rv-mission__line::before {
+  content: '›';
+  position: absolute;
+  left: 0;
+  top: -1px;
+  color: var(--rv-cool);
+  font-weight: 900;
+}
+
+.rv-hud .rv-mission__line.is-now {
+  font-weight: 700;
+}
+
+.rv-hud .rv-mission__line.is-note {
+  font-size: 13px;
+  color: var(--rv-warn);
+}
+
+.rv-hud .rv-mission__line.is-note::before {
+  color: var(--rv-warn);
+}
+
+.rv-hud .rv-mission__line.is-bonus {
+  font-size: 13px;
+  color: var(--rv-gold);
+}
+
+.rv-hud .rv-mission__line.is-bonus::before {
+  content: '';
+}
+
+.rv-hud .rv-res {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+
+.rv-hud .rv-res__cell {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 7px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.rv-hud .rv-res__cell.is-zero {
+  opacity: 0.55;
+}
+
+.rv-hud .rv-res__cell.is-gain {
+  animation: rv-gain 700ms ease-out 1;
+}
+
+.rv-hud .rv-res__icon {
+  font-size: 17px;
+  line-height: 1;
+}
+
+.rv-hud .rv-res__body {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+  min-width: 0;
+}
+
+.rv-hud .rv-res__label {
+  font-size: 10.5px;
+  color: var(--rv-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.rv-hud .rv-res__value {
+  font-size: 17px;
+  font-weight: 900;
+}
+
+/* Spec §5.6 — 9px, muted, collapsed, deliberately out of the child's eyeline. */
+.rv-hud .rv-parent {
+  align-self: flex-start;
+  position: relative;
+}
+
+.rv-hud .rv-parent__summary {
+  cursor: pointer;
+  list-style: none;
+  display: inline-block;
+  padding: 3px 8px;
+  font-size: 9.5px;
+  line-height: 1.2;
+  color: #c4d0e6;
+  background: rgba(26, 36, 60, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+}
+
+.rv-hud .rv-parent__summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Opens UPWARD, not downward. The summary is the last thing in the sidebar, so
+ * a normal-flow panel pushes straight off the bottom of the viewport and the
+ * hints are unreadable — measured at 1280x800 with the full ten-hint list. */
+.rv-hud .rv-parent__inner {
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 0;
+  width: 280px;
+  max-width: min(280px, calc(100vw - 24px));
+  z-index: 2;
+  padding: 7px 8px;
+  max-height: 30vh;
+  overflow-y: auto;
+  font-size: 10px;
+  line-height: 1.32;
+  color: #b9c7df;
+  background: rgba(10, 16, 26, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+.rv-hud .rv-parent__list {
+  margin: 0;
+  padding-left: 14px;
+}
+
+.rv-hud .rv-parent__list li {
+  margin: 4px 0;
+}
+
+.rv-hud .rv-parent__title {
+  color: #dbe7ff;
+}
+
+.rv-hud .rv-parent__line {
+  margin: 0;
+}
+
+/* --- flight readout ----------------------------------------------------- */
+
+.rv-hud .rv-flight {
+  position: absolute;
+  left: 12px;
+  top: 104px;
+  width: 164px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  border-radius: 14px;
+  background: var(--rv-panel);
+  border: 1px solid var(--rv-line);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+
+.rv-hud .rv-flight.is-burning {
+  border-color: rgba(255, 154, 60, 0.6);
+  box-shadow: 0 0 22px rgba(255, 140, 40, 0.28);
+}
+
+.rv-hud .rv-flight__cell {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rv-hud .rv-flight__label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--rv-muted);
+}
+
+.rv-hud .rv-flight__value {
+  font-size: 17px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.rv-hud .rv-flight__note {
+  margin-top: 2px;
+  font-size: 10.5px;
+  color: var(--rv-warn);
+}
+
+/* --- interact pill ------------------------------------------------------ */
+
+.rv-hud .rv-interact {
+  position: absolute;
+  left: 50%;
+  bottom: 84px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 16px 9px 10px;
+  border-radius: 999px;
+  background: rgba(16, 22, 30, 0.92);
+  border: 1px solid rgba(255, 209, 102, 0.55);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  max-width: min(72vw, 640px);
+  animation: rv-rise 180ms ease-out 1;
+}
+
+.rv-hud .rv-interact__key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 7px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #ffe9a3, #ffd166);
+  color: var(--rv-ink);
+  font: 900 15px/1 var(--rv-font);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+}
+
+.rv-hud .rv-interact__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- spawn direction cue ------------------------------------------------- */
+
+/* One-time nudge: echoes the mission card's own first line, once, big and
+ * central, a beat after load — then fades for good. Never shown again. */
+.rv-hud .rv-onboard {
+  position: absolute;
+  top: 108px;
+  /* Centred on the PLAY area, not the raw viewport: the sidebar (292px wide,
+   * 12px off the right edge) would otherwise sit under the right end of this
+   * banner at normal desktop widths. Shifting the centre point left by half
+   * the sidebar's claimed width keeps the two from ever overlapping. */
+  left: calc((100% - 320px) / 2);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  max-width: min(70vw, 500px);
+  padding: 12px 20px;
+  border-radius: 999px;
+  background: rgba(14, 20, 28, 0.92);
+  border: 1px solid rgba(86, 212, 255, 0.55);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.3;
+  opacity: 0;
+  transform: translate(-50%, -6px);
+  transition: opacity 380ms ease, transform 380ms ease;
+}
+
+.rv-hud .rv-onboard.is-in {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.rv-hud .rv-onboard.is-out {
+  opacity: 0;
+  transform: translate(-50%, -6px);
+}
+
+.rv-hud .rv-onboard__arrow {
+  flex: none;
+  font-size: 22px;
+  color: var(--rv-cool);
+  animation: rv-nudge 1.1s ease-in-out infinite;
+}
+
+/* --- toasts ------------------------------------------------------------- */
+
+.rv-hud .rv-toasts {
+  position: absolute;
+  left: 12px;
+  bottom: 14px;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 7px;
+  max-width: min(62vw, 660px);
+}
+
+.rv-hud .rv-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 13px;
+  border-radius: 13px;
+  background: rgba(8, 12, 23, 0.9);
+  border: 1px solid var(--rv-line);
+  border-left: 4px solid var(--rv-cool);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  font-size: 14px;
+  line-height: 1.34;
+  animation: rv-rise 200ms ease-out 1;
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.rv-hud .rv-toast.is-good { border-left-color: var(--rv-good); }
+.rv-hud .rv-toast.is-warn { border-left-color: var(--rv-warn); }
+.rv-hud .rv-toast.is-bad  { border-left-color: var(--rv-bad); }
+
+.rv-hud .rv-toast.is-out {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.rv-hud .rv-toast__count {
+  flex: none;
+  align-self: center;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* --- the question modal ------------------------------------------------- */
+
+.rv-hud .rv-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(4, 8, 16, 0.66);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+.rv-hud .rv-modal__card {
+  width: min(700px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  padding: 20px;
+  border-radius: 20px;
+  background: #111a2f;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.6);
+  /* The card scrolls, so it must accept the wheel; the backdrop around it is
+   * already interactive while open, so this adds no new canvas-covering area. */
+  pointer-events: auto;
+  animation: rv-rise 200ms ease-out 1;
+}
+
+.rv-hud .rv-modal__title {
+  margin: 0 0 4px;
+  font-size: 21px;
+  font-weight: 900;
+}
+
+.rv-hud .rv-modal__meta {
+  font-size: 12px;
+  color: var(--rv-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 10px;
+}
+
+.rv-hud .rv-modal__prompt {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.5;
+  color: #e6eeff;
+}
+
+.rv-hud .rv-visual {
+  margin: 14px 0 4px;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.rv-hud .rv-visual__row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 6px 0;
+}
+
+.rv-hud .rv-visual__label {
+  min-width: 96px;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #cbd8f4;
+}
+
+.rv-hud .rv-visual__arrow {
+  margin-left: 104px;
+  color: var(--rv-warn);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.rv-hud .rv-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0 6px;
+  border-radius: 11px;
+  background: #26304a;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #f8fbff;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.rv-hud .rv-tile.is-wide {
+  min-width: 96px;
+  padding: 0 12px;
+  font-size: 14px;
+}
+
+.rv-hud .rv-choices {
+  display: grid;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+.rv-hud .rv-choice {
+  display: block;
+  width: 100%;
+  padding: 13px 14px;
+  border-radius: 13px;
+  text-align: left;
+  background: #202b46;
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  color: #eaf3ff;
+  font: 700 17px/1.35 var(--rv-font);
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.rv-hud .rv-choice:hover,
+.rv-hud .rv-choice:focus-visible {
+  background: #273653;
+  border-color: var(--rv-good);
+  outline: none;
+}
+
+/* A wrong choice is marked, never removed — nothing is taken away for trying. */
+.rv-hud .rv-choice.is-wrong {
+  border-color: rgba(255, 139, 139, 0.7);
+  background: rgba(255, 139, 139, 0.12);
+  opacity: 0.78;
+}
+
+.rv-hud .rv-choice.is-right {
+  border-color: var(--rv-good);
+  background: rgba(126, 231, 135, 0.18);
+  opacity: 1;
+}
+
+.rv-hud .rv-choice.is-shake {
+  animation: rv-shake 320ms ease-in-out 1;
+}
+
+/* Once answered, the untried options fade so the correct one stands alone.
+ * NOTE the doubled class on the second selector: `.rv-choices.is-done .rv-choice`
+ * is (0,3,0) and would otherwise outrank the plain `.rv-choice.is-right` rule
+ * above (0,2,0) and grey out the right answer too. */
+.rv-hud .rv-choices.is-done .rv-choice {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.rv-hud .rv-choices.is-done .rv-choice.is-right {
+  opacity: 1;
+}
+
+.rv-hud .rv-choices.is-done .rv-choice.is-wrong {
+  opacity: 0.7;
+}
+
+.rv-hud .rv-answer {
+  display: flex;
+  gap: 9px;
+  margin-top: 16px;
+}
+
+.rv-hud .rv-answer__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 12px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  background: #0c1221;
+  color: #fff;
+  font-size: 19px;
+  font-weight: 700;
+  /* The root sets user-select:none so drags on the overlay never start a text
+   * selection over the canvas. The answer box is the one place that needs it. */
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.rv-hud .rv-answer__input:focus {
+  border-color: var(--rv-cool);
+  outline: none;
+}
+
+.rv-hud .rv-feedback {
+  margin-top: 14px;
+  padding: 11px 13px;
+  border-radius: 12px;
+  font-size: 15px;
+  line-height: 1.42;
+  background: rgba(255, 255, 255, 0.06);
+  border-left: 4px solid var(--rv-cool);
+}
+
+.rv-hud .rv-feedback.is-warn {
+  background: rgba(255, 209, 102, 0.12);
+  border-left-color: var(--rv-warn);
+  color: #ffe7aa;
+}
+
+.rv-hud .rv-feedback.is-good {
+  background: rgba(126, 231, 135, 0.13);
+  border-left-color: var(--rv-good);
+  color: #d6ffdc;
+}
+
+.rv-hud .rv-parent--modal {
+  display: block;
+  margin-top: 14px;
+}
+
+/* The modal's copy sits inside a scrolling card, so it opens in normal flow —
+ * undo the sidebar's "open upward" positioning (0,3,0 beats the 0,2,0 rule). */
+.rv-hud .rv-parent--modal .rv-parent__inner {
+  position: static;
+  width: auto;
+  max-width: none;
+  margin-top: 5px;
+}
+
+.rv-hud .rv-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin-top: 16px;
+}
+
+.rv-hud .rv-btn {
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #9eefff, #5fd5ff);
+  color: var(--rv-ink);
+  font: 900 15px/1 var(--rv-font);
+  cursor: pointer;
+}
+
+.rv-hud .rv-btn--ghost {
+  background: #26304a;
+  color: #eaf3ff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.rv-hud .rv-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.rv-hud .rv-btn:focus-visible,
+.rv-hud .rv-choice:focus-visible {
+  outline: 3px solid var(--rv-cool);
+  outline-offset: 2px;
+}
+
+/* --- animations --------------------------------------------------------- */
+
+@keyframes rv-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 209, 102, 0.5); }
+  50%      { box-shadow: 0 0 0 5px rgba(255, 209, 102, 0); }
+}
+
+@keyframes rv-gain {
+  0%   { transform: scale(1); background: rgba(126, 231, 135, 0.42); }
+  100% { transform: scale(1); background: rgba(255, 255, 255, 0.06); }
+}
+
+@keyframes rv-flash {
+  0%   { transform: scale(1.22); background: rgba(255, 207, 92, 0.55); }
+  100% { transform: scale(1); background: rgba(255, 207, 92, 0.16); }
+}
+
+@keyframes rv-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* The interact pill is centred with a transform, so its entry animation has to
+ * carry that translateX or it jumps to the left edge for one frame. */
+.rv-hud .rv-interact {
+  animation-name: rv-rise-centred;
+}
+
+@keyframes rv-rise-centred {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@keyframes rv-shake {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-5px); }
+  75%      { transform: translateX(5px); }
+}
+
+@keyframes rv-nudge {
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(4px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rv-hud .rv-badge.is-active,
+  .rv-hud .rv-res__cell.is-gain,
+  .rv-hud .rv-rank.is-flash,
+  .rv-hud .rv-choice.is-shake,
+  .rv-hud .rv-toast,
+  .rv-hud .rv-interact,
+  .rv-hud .rv-modal__card,
+  .rv-hud .rv-onboard__arrow {
+    animation: none;
+  }
+
+  .rv-hud .rv-onboard {
+    transition: opacity 120ms linear;
+  }
+}
+
+/* --- narrow screens (this is a mobile build) ---------------------------- */
+
+@media (max-width: 900px) {
+  .rv-hud { font-size: 14px; }
+
+  .rv-hud .rv-side {
+    top: auto;
+    bottom: 12px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-height: none;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 7px;
+  }
+
+  .rv-hud .rv-card--mission { flex: 1 1 220px; }
+  .rv-hud .rv-card--res { flex: 0 1 260px; }
+  .rv-hud .rv-res { grid-template-columns: repeat(4, 1fr); }
+  .rv-hud .rv-res__label { display: none; }
+
+  /* Toasts share the bottom edge with the cards on phones, so lift them clear. */
+  .rv-hud .rv-toasts {
+    bottom: auto;
+    top: 150px;
+    max-width: min(84vw, 520px);
+  }
+
+  .rv-hud .rv-flight {
+    top: auto;
+    bottom: 12px;
+    left: 12px;
+    width: 148px;
+  }
+
+  /* The sidebar moves to the bottom of the screen on a narrow layout (see
+   * .rv-side above), so the desktop-only left offset that dodges it would
+   * just push this off-centre for no reason here. */
+  .rv-hud .rv-onboard {
+    left: 50%;
+    max-width: min(90vw, 420px);
+  }
+
+  /* On a phone the cards claim the bottom of the screen and their height varies
+   * with the mission text, so the pill is parked in the empty middle band
+   * instead of a fixed offset from the bottom that the cards can grow into. */
+  .rv-hud .rv-interact {
+    top: 46%;
+    bottom: auto;
+  }
+  /* The badge grid now lives inside .rv-quests__panel, which already scrolls
+   * itself (max-height: 42vh) — no need to additionally clip it here. */
+  .rv-hud .rv-quests__panel { width: min(92vw, 430px); }
+  .rv-hud .rv-modal__card { padding: 16px; }
+  .rv-hud .rv-modal__prompt { font-size: 16px; }
+  .rv-hud .rv-choice { font-size: 16px; padding: 12px; }
+}
+
+/* ---------------------------------------------------------------------------
+ * Signpost key
+ *
+ * Small and quiet: it is an explanation, not a control. It sits under the
+ * badge row because that is where a reader's eye already is after checking
+ * progress, and it is the first thing that answers "why is that one purple?".
+ * ------------------------------------------------------------------------- */
+.rv-hud .rv-key {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  font-size: 13px;
+  color: rgba(226, 236, 248, 0.72);
+}
+.rv-hud .rv-key__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.rv-hud .rv-key__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  /* The markers in world have a dark outline; matching it here keeps a pale
+     gold dot from disappearing against the panel. */
+  box-shadow: 0 0 0 1px rgba(8, 12, 20, 0.55);
+  flex: none;
+}
+
+/* --- collapsible mission card -------------------------------------------- */
+/* The mission text is needed when deciding where to go and almost never while
+   walking, so it folds down to one line. SUPPLIES deliberately does NOT fold:
+   the middle of this game is hunting for materials, and hiding the count of
+   what she has found would hide the thing she is playing for. */
+
+.rv-hud .rv-card__toggle {
+  pointer-events: auto;              /* the root is inert; controls opt back in */
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rv-hud .rv-card__toggle .rv-card__title { margin: 0; flex: 0 0 auto; }
+.rv-hud .rv-card__toggle:focus-visible {
+  outline: 2px solid var(--rv-cool, #8ed0f5);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.rv-hud .rv-card__chevron {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--rv-cool, #8ed0f5);
+  transition: transform 140ms ease;
+}
+.rv-hud .rv-card--mission.is-collapsed .rv-card__chevron { transform: rotate(-90deg); }
+
+/* The peek line only exists while the card is folded. Two lines maximum, then
+   an ellipsis - a peek that grows to a paragraph is not a peek. */
+.rv-hud .rv-mission__peek { display: none; }
+.rv-hud .rv-card--mission.is-collapsed .rv-mission__peek {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--rv-ink, #e8eef7);
+}
+
+.rv-hud .rv-card--mission.is-collapsed .rv-mission__body { display: none; }
+
+/* A changed objective gets a brief ring, so it reads as new rather than as
+   the card having been open all along. */
+.rv-hud .rv-card--mission.is-new {
+  box-shadow: 0 0 0 2px var(--rv-cool, #8ed0f5) inset;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rv-hud .rv-card__chevron { transition: none; }
+}
+
+/* ===========================================================================
+ * One theme with Chapter 4 (lead 2026-10-05: "less wording ... make the theme
+ * similar with font and resizing"). Same family (--rv-font), the same glass
+ * panel shape as src/space/hud/hud.css (16px radius, 6px blur, a faint top
+ * highlight), and the side column at a smaller scale like Chapter 4's
+ * sidebar. --side-scale is the one knob for the right-hand column; it steps
+ * with the window width at the end of this block, and every size has a 10px
+ * floor so nothing gets unreadable at 1024x768.
+ * ======================================================================== */
+
+.rv-hud {
+  --side-scale: 0.9;
+  --side-w: 236px;
+}
+
+.rv-hud .rv-card,
+.rv-hud .rv-flight,
+.rv-hud .rv-toast,
+.rv-hud .rv-quests__panel {
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.rv-hud .rv-card { background: rgba(16, 22, 30, 0.8); padding: 9px 11px; }
+.rv-hud .rv-answer__input { font-family: inherit; }
+
+/* --- the top: one slim row (title, rank, progress), right side left free
+ *     for the Help / Chapters buttons. The "what next" words are only on the
+ *     mission card now (hud.js setProgress). */
+.rv-hud .rv-top { right: 252px; padding: 8px 12px 0; }
+.rv-hud .rv-top__head { gap: 10px; min-width: 0; }
+.rv-hud .rv-title { font-size: 15px; }
+.rv-hud .rv-rank { font-size: 11.5px; padding: 2px 9px; background: rgba(16, 22, 30, 0.78); }  /* readable on a bright sky */
+.rv-hud .rv-progress {
+  flex: 0 1 380px;
+  min-width: 120px;
+  height: 16px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+.rv-hud .rv-progress__text { font-size: 11px; padding: 0 8px; }
+
+/* --- the right-hand column: quest chip, mission, supplies, key, parents --- */
+.rv-hud .rv-side {
+  top: 48px;
+  width: var(--side-w);
+  max-height: calc(100vh - 60px);
+  gap: 6px;
+  opacity: 0.95;
+}
+.rv-hud .rv-side .rv-topline { justify-content: flex-end; }
+.rv-hud .rv-quests { margin-left: 0; }
+.rv-hud .rv-quests__summary { font-size: max(10px, calc(12px * var(--side-scale))); padding: 3px 10px; }
+.rv-hud .rv-card__title { font-size: max(10px, calc(12px * var(--side-scale))); margin-bottom: 4px; }
+.rv-hud .rv-mission__goal { font-size: max(10px, calc(12px * var(--side-scale))); margin-bottom: 4px; }
+.rv-hud .rv-mission__lines { gap: 4px; }
+.rv-hud .rv-mission__line { font-size: max(11px, calc(14px * var(--side-scale))); line-height: 1.3; }
+.rv-hud .rv-mission__line.is-note,
+.rv-hud .rv-mission__line.is-bonus { font-size: max(10px, calc(12.5px * var(--side-scale))); }
+.rv-hud .rv-card--mission.is-collapsed .rv-mission__peek { font-size: max(10.5px, calc(12.5px * var(--side-scale))); }
+.rv-hud .rv-res { gap: 4px; }
+.rv-hud .rv-res__cell { padding: 4px 6px; gap: 6px; border-radius: 9px; }
+.rv-hud .rv-res__icon { font-size: max(12px, calc(15px * var(--side-scale))); }
+.rv-hud .rv-res__label { font-size: 10px; letter-spacing: 0.2px; }
+.rv-hud .rv-res__value { font-size: max(12px, calc(16px * var(--side-scale))); }
+.rv-hud .rv-side .rv-key {
+  gap: 2px 10px;
+  padding: 0 4px;
+  font-size: max(10px, calc(12px * var(--side-scale)));
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  color: rgba(238, 244, 255, 0.85);
+}
+.rv-hud .rv-side .rv-key__dot { width: 9px; height: 9px; }
+.rv-hud .rv-parent__summary { font-size: 10px; }
+
+/* --- the one-time direction cue moves to the bottom centre (Chapter 4 keeps
+ *     its one-line instruction there), just above the "→ place · 12 m" pill,
+ *     below her (it only lives 9 s, so the rare mining hint may share it). */
+.rv-hud .rv-onboard {
+  top: auto;
+  bottom: 184px;
+  left: 50%;
+  max-width: min(56vw, 540px);
+  padding: 10px 18px;
+  font-size: 15px;
+}
+
+/* --- messages: bottom left, kept clear of the centre pills ------------------ */
+.rv-hud .rv-toasts { max-width: min(36vw, 500px); gap: 6px; }
+.rv-hud .rv-toast { font-size: 15px; padding: 9px 13px; border-radius: 13px; }
+
+/* --- focus mode: while a question card is open only the card matters. The
+ *     interact pill, the cue and ordinary messages step away (warnings stay);
+ *     hud.js holds new messages back until the card closes. */
+.rv-hud.rv-hud--modal .rv-interact,
+.rv-hud.rv-hud--modal .rv-onboard,
+.rv-hud.rv-hud--modal .rv-quests__panel,
+.rv-hud.rv-hud--modal .rv-toast:not(.is-warn):not(.is-bad) { display: none !important; }
+.rv-hud.rv-hud--modal .rv-top,
+.rv-hud.rv-hud--modal .rv-side { opacity: 0.35; }
+
+/* --- resizing: 1024 wide up to 1920 ---------------------------------------- */
+@media (max-width: 1280px) {
+  .rv-hud { --side-scale: 0.85; --side-w: 214px; }
+  .rv-hud .rv-top { right: 240px; }
+  .rv-hud .rv-progress { flex-basis: 260px; }
+  .rv-hud .rv-toasts { max-width: 34vw; }
+  .rv-hud .rv-toast { font-size: 14px; }
+  .rv-hud .rv-modal__card { width: min(640px, 100%); }
+}
+@media (max-height: 800px) {
+  .rv-hud .rv-modal__card { padding: 16px 18px; }
+  .rv-hud .rv-choices { gap: 7px; margin-top: 10px; }
+  .rv-hud .rv-choice { padding: 10px 13px; }
+}
+@media (min-width: 1600px) {
+  .rv-hud { --side-scale: 1; --side-w: 264px; }
+  .rv-hud .rv-title { font-size: 17px; }
+  .rv-hud .rv-progress { height: 18px; flex-basis: 460px; }
+  .rv-hud .rv-progress__text { font-size: 12px; }
+  .rv-hud .rv-toast { font-size: 16px; }
+}

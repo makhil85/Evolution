@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- This page lives one folder below the site root, but contracts.js
+         resolves texture URLs relative to the document ('./space/textures/…').
+         <base href="/"> makes that resolve to /space/textures/... instead of
+         /space-lab/space/textures/..., with no change needed to contracts.js
+         or vite.config.js. It does not affect the ES module graph below -
+         relative `import` specifiers inside modules resolve against the
+         importing module's own URL, per spec, not the document base. -->
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chapter 4 sky/belt/dust lab</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+      canvas { display: block; }
+    </style>
+  </head>
+  <body>
+    <script type="module" src="/src/space/lab/skyLab.js"></script>
+  </body>
+</html>

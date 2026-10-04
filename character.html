@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Build your scientist — Rocket Village</title>
+    <link rel="stylesheet" href="/src/character/character.css" />
+  </head>
+  <body>
+    <main id="app">
+      <section id="stage" aria-label="Preview">
+        <div id="canvas-host"></div>
+        <div id="stage-controls">
+          <div id="anim" class="opts" role="group" aria-label="Animation"></div>
+          <button type="button" id="spin" class="ghost" aria-pressed="true">Pause spin</button>
+          <label class="rate">
+            <span class="sr-only">Playback speed</span>
+            <input type="range" id="rate" min="0.15" max="1.5" step="0.05" value="1" />
+            <span id="rate-value">1.00&times;</span>
+          </label>
+          <span id="tris" class="muted"></span>
+        </div>
+      </section>
+
+      <aside id="panel">
+        <header>
+          <p class="eyebrow">Rocket Village</p>
+          <h1 id="builder-title">Build your scientist</h1>
+          <p class="lede">
+            Pick how she looks. She is the girl you play as in every chapter,
+            and the choices are saved as you make them.
+          </p>
+        </header>
+
+        <div id="choices"></div>
+
+        <footer>
+          <button type="button" id="to-chapters" class="primary" hidden>Done &mdash; go to the chapters</button>
+          <button type="button" id="save" class="primary">Save girl_scientist.glb</button>
+          <div class="row">
+            <button type="button" id="save-json" class="ghost">Save choices</button>
+            <label for="load-json" class="ghost as-button">Load choices</label>
+            <input type="file" id="load-json" accept="application/json,.json" hidden />
+            <button type="button" id="random" class="ghost">Surprise me</button>
+            <button type="button" id="reset" class="ghost">Reset</button>
+          </div>
+          <p id="status" role="status" aria-live="polite" class="muted"></p>
+          <p class="muted small">
+            She saves rigged: an 18-bone skeleton and all five animations travel
+            inside the <code>.glb</code>, so she walks in the game as well as
+            here. One mesh, one draw call &mdash; every joint is driven on the
+            GPU.
+          </p>
+        </footer>
+      </aside>
+    </main>
+    <script type="module" src="/src/character/main.js"></script>
+  </body>
+</html>
