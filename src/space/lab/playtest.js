@@ -37,6 +37,8 @@ export async function skipIntro() {
 export async function clear(max = 12) {
   const log = [];
   for (let k = 0; k < max; k++) {
+    // A src/lesson/ card (the Europa biology lesson): answer it all at once.
+    if (window.__lesson?.open) { window.__lesson.answerAll(); log.push('lesson'); await sleep(200); continue; }
     const choices = [...document.querySelectorAll('.sp-choice')];
     const title = document.querySelector('.sp-modal__title')?.textContent;
     if (choices.length) {

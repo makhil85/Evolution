@@ -388,3 +388,8 @@ Built in a lab copy (git worktree `.claude/worktrees/sat`, own server on port 51
 - **Launch Tuner** (`src/game/launchTuner.js`): before the real launch she picks 1-8 tanks and a nose, test-flies on the real sim (climbs drawn together, the sim's verdict), and "Launch for real" arms once that build reached 100 km. Easy starts on 5 tanks + pointed; Medium/Hard on 2 + flat; Hard has a star challenge (>125 km in 3 tests). The launch flies her build. Hook `window.__tuner` (set, test, launch, close, state).
 - Tests: `scripts/test-lessons.mjs` (in `npm test`). Browser: every film looked at (start, middle, end, question) at Level 4 and Level 1; each chapter's hook played through in the game.
 - Not done yet: lessons 3C-3E and Chapter 4's 4B-4F, the "📖 Lessons" replay list, porting Flight School.
+
+## Session 2026-10-05 (night): Chapter 4 biology lesson
+
+- **4G "What makes something alive?"** (`src/lesson/lessons/ch4.js`), Chapter 4's second lesson: cells (lens zoom into a leaf, a cell splits), DNA (rotating helix, A/T/G/C, unzips and copies), proteins (a builder strings beads from the recipe, the chain folds and chomps sugar). New step `a5_lesson` in `acts/act5.js` between landing on Europa and the drill; once per Level. It uses the `src/lesson/` card (play-mode layer), not Chapter 4's HUD modal; `lab/playtest.js clear()` answers it via `window.__lesson.answerAll()`.
+- Lead's rule: 2 lessons per chapter, each carried by animation. 3C waits.

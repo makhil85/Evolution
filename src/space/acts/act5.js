@@ -10,6 +10,8 @@
 // have missions.js's persist() itself set `complete: index >= <last step>`.
 import { askBeat, ensureStatsTracking, fuelSafetyNet, markSaveComplete, answeredCount, loadSurfaceScene } from './util.js';
 import { t } from '../level.js';
+import { lessonOnce } from '../../lesson/card.js';
+import { LESSON_4G } from '../../lesson/lessons/ch4.js';
 
 export function act5Steps(game) {
   const { hud, shipView } = game;
@@ -30,6 +32,18 @@ export function act5Steps(game) {
         return game.ship.landedOn === 'europa';
       },
       after() { hud.toast(t('Touchdown on Europa! Climb down and look for a crack in the ice.', 'You landed on Europa! Climb down and find the crack in the ice.'), { kind: 'good', ms: 3600 }); },
+    },
+    // Biology lesson (lead 2026-10-05): cells, DNA and proteins, i.e. what
+    // the drill is looking for, before she walks to the crack. Once per Level.
+    {
+      id: 'a5_lesson', act: 5,
+      title: t('What makes something alive?', 'What is life made of?'),
+      objective: t('Watch the Mission Biologist’s lesson on cells, DNA and proteins, and answer a question after each film.', 'Watch the lesson about living things. Then answer the questions.'),
+      markers: ['europa'],
+      async enter() {
+        await lessonOnce(LESSON_4G);
+        hud.toast(t('Now you try! Walk to the crack in the ice and drill for signs of life.', 'Now you try! Walk to the crack and drill.'), { kind: 'good', ms: 4500 });
+      },
     },
     {
       id: 'a5_surface', act: 5,
