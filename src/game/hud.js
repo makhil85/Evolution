@@ -32,6 +32,7 @@ import { checkAnswer, getQuestion, parentHintsFor, wrongAnswerMessage } from './
 import { MARKER_COLOR } from './stations.js';
 import { audio } from './audio.js';
 import { loadProfile } from '../launcher/profile.js';
+import { IS_LEVEL1 as IS_L1 } from '../space/level.js';
 
 /**
  * The child names her scientist in the launcher; eighteen authored strings
@@ -72,7 +73,7 @@ const RESOURCE_ROWS = [
 ];
 
 /** Spec §5.3 — the mission card is never blank, even before the engine speaks. */
-const MISSION_FALLBACK = 'Open the Mission card and follow the glowing marker to your next station.';
+const MISSION_FALLBACK = IS_L1 ? 'Open the Mission card. Follow the glowing marker.' : 'Open the Mission card and follow the glowing marker to your next station.';
 const MISSION_GOAL = 'Build the rocket and launch it.';
 /** Whether the child last left the mission card open. Not game state. */
 const MISSION_OPEN_KEY = 'rocket_village_mission_open';
@@ -1203,7 +1204,7 @@ export class Hud {
     this._flightCells.mass.textContent = Number.isFinite(mass) ? `${group(mass)} kg` : '—';
 
     const note = sample.apogee
-      ? 'Apogee — the highest point of the flight.'
+      ? (IS_L1 ? 'The highest point!' : 'Apogee — the highest point of the flight.')
       : sample.burning
         ? 'Engine burning.'
         : 'Engine cut off — coasting.';

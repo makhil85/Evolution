@@ -129,6 +129,13 @@ async function bankLines() {
   walk(ch3.QUESTIONS, 'ch3 questions', out);
   const sp = await import('../src/space/questions.space.js');
   walk(sp.level1Bank(), 'ch4 questions', out);
+  // Chapter 3's steps and stages, with the Level 1 overlay merged (quests.level1.js).
+  const quests = await import('../src/game/quests.js');
+  for (const st of quests.QUEST_CHAIN) {
+    for (const k of ['title', 'label', 'lockedMessage', 'missionText', 'statusText']) if (st[k]) out.push({ where: `ch3 steps.${st.id}.${k}`, text: st[k] });
+    for (const e of st.effects) if (e.doneMessage) out.push({ where: `ch3 steps.${st.id}.done`, text: e.doneMessage });
+  }
+  for (const sg of quests.ROCKET_STAGES) for (const k of ['title', 'builtMessage']) out.push({ where: `ch3 stages.${sg.id}.${k}`, text: sg[k] });
   for (const [file, ch] of [['../src/science/hunt.js', 'ch1 hunt'], ['../src/city/hunt.js', 'ch2 hunt'], ['../src/game/hunt.js', 'ch3 hunt']]) {
     const m = await import(file);
     const fn = Object.values(m).find((f) => typeof f === 'function' && /huntFor|For$/.test(f.name));
@@ -142,7 +149,7 @@ async function bankLines() {
 /** Files whose sentences a Level 1 child can see (banks are read above). */
 const CODE_DIRS = ['src/science', 'src/city', 'src/game', 'src/play', 'src/space', 'src/lesson', 'src/launcher'];
 const CODE_FILES = ['src/gameScene.js'];
-const SKIP_FILE = /(\/lab\/|questions(\.level1|\.space)?\.js$|\/hunt\.js$|launcher\/profile\.js$|contracts\.js$)/;
+const SKIP_FILE = /(\/lab\/|play\/lab\.js$|game\/quests(\.level1)?\.js$|questions(\.level1|\.space)?\.js$|\/hunt\.js$|launcher\/profile\.js$|contracts\.js$)/;
 
 function listFiles() {
   const files = [...CODE_FILES];

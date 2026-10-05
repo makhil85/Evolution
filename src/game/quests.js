@@ -15,6 +15,8 @@
 //      this file goes through num()/addResource(), which cannot produce NaN.
 
 import { QUESTIONS, getQuestion, checkAnswer, wrongAnswerMessage } from './questions.js';
+import { IS_LEVEL1 } from '../space/level.js';
+import { STEP_TEXT_L1, STAGE_TEXT_L1, BONUS_LINE_L1 } from './quests.level1.js';
 
 // ---------------------------------------------------------------------------
 // Numeric safety
@@ -403,7 +405,7 @@ const rankIndex = (rank) => {
  */
 
 /** @type {RocketStage[]} */
-export const ROCKET_STAGES = [
+const ROCKET_STAGES_L4 = [
   {
     id: 'foundation', order: 1, title: 'Foundation + Frame', need: { wood: 6, stone: 6 },
     requires: ['rocket_scale', 'rocket_materials'], pieces: 2,
@@ -430,6 +432,9 @@ export const ROCKET_STAGES = [
     builtMessage: 'Stage 5 complete. The rocket is finished. LAUNCH is armed.'
   }
 ];
+
+/** The stages, with Level 1's shorter words at Level 1 (quests.level1.js). */
+export const ROCKET_STAGES = IS_LEVEL1 ? ROCKET_STAGES_L4.map((s) => ({ ...s, ...(STAGE_TEXT_L1[s.id] || {}) })) : ROCKET_STAGES_L4;
 
 const STAGE_BY_ID = Object.fromEntries(ROCKET_STAGES.map((s) => [s.id, s]));
 
@@ -929,8 +934,15 @@ const RAW_CHAIN = [
  */
 function sealChain(raw) {
   return Object.freeze(
-    raw.map((node) =>
-      Object.freeze({
+    raw.map((authored) => {
+      // Level 1: the overlay's shorter words (quests.level1.js), nothing else.
+      const l1 = IS_LEVEL1 ? STEP_TEXT_L1[authored.id] : null;
+      const node = l1 ? {
+        ...authored, ...l1,
+        effects: (authored.effects || []).map((e) => (l1.done?.[e.targetId] && e.doneMessage ? { ...e, doneMessage: l1.done[e.targetId] } : e)),
+      } : authored;
+      delete node.done;
+      return Object.freeze({
         ...node,
         requires: Object.freeze(Array.isArray(node.requires) ? node.requires.slice() : []),
         effects: Object.freeze(Array.isArray(node.effects) ? node.effects.map((e) => Object.freeze({ ...e })) : []),
@@ -945,8 +957,8 @@ function sealChain(raw) {
           node.lockedMessage,
           `Finish the step before this one first, then come back to ${node.label || 'this station'}.`
         )
-      })
-    )
+      });
+    })
   );
 }
 
@@ -1332,7 +1344,7 @@ export class QuestEngine {
     const bonusStep = STEP_BY_ID.step_chief;
     const bonus =
       bonusStep && !this.isComplete(bonusStep.id) && this._requirementsMet(bonusStep)
-        ? '★ Bonus: an extra-hard puzzle at the Observatory.'
+        ? (IS_LEVEL1 ? BONUS_LINE_L1 : '★ Bonus: an extra-hard puzzle at the Observatory.')
         : null;
 
     const lines = [now, blocked, bonus].filter(Boolean).slice(0, 3);
