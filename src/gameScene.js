@@ -727,7 +727,7 @@ async function main() {
     ROCKET_VILLAGE.playerStart.z
   );
   say(`spawn: ${ROCKET_VILLAGE.playerStart.x}, ${ROCKET_VILLAGE.playerStart.z}`);
-  say('WASD move | Shift run | Space jump | E interact | drag to turn');
+  say('WASD move | Shift run | Space jump | E use | drag to turn');
   hud.update(engine);
   hud.setInventory(engine.state.inventory);
 

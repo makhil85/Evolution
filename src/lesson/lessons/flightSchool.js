@@ -50,7 +50,7 @@ const QUESTIONS = [
       { text: ['It stopped and hung still in space, right where it was', 'It stopped'] },
     ],
     hint: ['Look at the dotted line after the burn. Did it reach the Moon?', 'Did the dotted line get to the Moon?'],
-    why: ['You are already zooming sideways round Earth, so a push towards the Moon only bends your circle into a lopsided oval. And the Moon keeps moving, too.', 'You are already zooming sideways. A push at the Moon just bends your path.'],
+    why: ['You are already zooming sideways round Earth, so a push towards the Moon only bends your circle into a lopsided oval. And the Moon keeps moving, too.', 'You are going fast sideways. A push at the Moon just bends your path.'],
   },
   {
     prompt: ['To stretch your orbit out to the Moon, which way should the nose point while you hold W?', 'Which way should the nose point to make your path bigger?'],

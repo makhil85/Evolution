@@ -7,6 +7,7 @@
 // nothing and lets a caller `await` them for pacing if it wants to.
 
 import { el, svg, heroName } from './domUtil.js';
+import { t } from '../level.js';
 import { iconInner } from './icons.js';
 import { RESOURCES } from '../contracts.js';
 
@@ -14,16 +15,16 @@ const CONTROL_ROWS = [
   ['W / S', 'Main engine forward / reverse thrust'],
   ['A / D', 'Rotate the ship'],
   ['Z / X', 'Nudge sideways, left / right (lining up on an asteroid)'],
-  ['T', 'Auto-turn on / off: steer the ship yourself, or let it point itself'],
+  ['T', t('Auto-turn on / off: steer the ship yourself, or let it point itself', 'Auto-turn on or off')],
   ['Esc', 'Pause menu (with "Try again from my last question")'],
-  ['Shift', 'Precision (gentle) thrust'],
-  ['Space', 'Hold to stop spinning. On Easy, holding Space also turns the ship to follow the arrow.'],
+  ['Shift', t('Precision (gentle) thrust', 'Gentle push')],
+  ['Space', t('Hold to stop spinning. On Easy, holding Space also turns the ship to follow the arrow.', 'Hold to stop spinning')],
   ['M', 'System map — plan transfers, see where planets will be'],
   ['N', 'Show or hide the small top-down map (bottom right)'],
   ['1 – 4', 'Time warp (only far from planets)'],
-  ['E', 'Interact — claw, scan, land, dock'],
+  ['E', t('Interact — claw, scan, land, dock', 'Use: grab, scan, land')],
   ['U', 'Upgrade bay (in the asteroid belt)'],
-  ['R', 'Rescue — rewind 10 seconds, no penalty'],
+  ['R', t('Rescue — rewind 10 seconds, no penalty', 'Help! Go back 10 seconds')],
   ['J', 'Show / hide the mission card'],
   ['H', 'This help screen'],
   ['Mouse drag / wheel', 'Orbit the camera / zoom'],
@@ -115,7 +116,7 @@ export function createOverlays(host) {
         root.appendChild(el('div', 'sp-modal__eyebrow', 'Build it'));
         root.appendChild(el('h3', 'sp-modal__title', 'Upgrades'));
         if (!entries.length) {
-          root.appendChild(el('p', 'sp-modal__body', 'Nothing to build yet — keep exploring.'));
+          root.appendChild(el('p', 'sp-modal__body', t('Nothing to build yet — keep exploring.', 'Nothing to build yet. Keep going!')));
         }
         const grid = el('div', 'sp-upgrades');
         for (const [id, def] of entries) {

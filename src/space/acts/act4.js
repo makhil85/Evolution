@@ -39,7 +39,7 @@ export function act4Steps(game) {
           title: 'The guardian giant',
           body: t('Jupiter is more than twice as heavy as every other planet put together. '
             + 'Its huge gravity flings comets aside, shepherds the asteroid belt, and wraps the planet in deadly radiation.',
-            'Jupiter is the biggest planet of all. Its strong pull catches comets and pushes rocks around.'),
+            'Jupiter is the biggest planet of all. Its strong pull grabs comets. It pushes rocks around.'),
         });
       },
       beat: 'jupiterImportance',
@@ -47,12 +47,12 @@ export function act4Steps(game) {
     {
       id: 'a4_radiation_warning', act: 4,
       title: t('Danger: radiation zone', 'Danger: radiation!'),
-      objective: t('Between here and the inner moons is a belt of deadly radiation. Build a Radiation Shield before flying in close.', 'Jupiter has dangerous radiation close in. Your Radiation Shield keeps you safe.'),
+      objective: t('Between here and the inner moons is a belt of deadly radiation. Build a Radiation Shield before flying in close.', 'Jupiter has bad rays close in. Your Radiation Shield keeps you safe.'),
       markers: ['jupiter'],
       enter() {
         // Already built (play-test: the warning said "you will need" anyway).
-        if (game.radiationShield) hud.toast(t('Radiation zone ahead around Jupiter. Good thing your Radiation Shield is on!', 'Jupiter has dangerous radiation. Your Radiation Shield keeps you safe!'), { kind: 'info', ms: 5200 });
-        else hud.toast(t('Warning: a radiation zone surrounds Jupiter. You will need a Radiation Shield before diving in close for a slingshot.', 'Careful! There is dangerous radiation close to Jupiter. You need your Radiation Shield.'), { kind: 'warn', ms: 5200 });
+        if (game.radiationShield) hud.toast(t('Radiation zone ahead around Jupiter. Good thing your Radiation Shield is on!', 'Jupiter has bad rays. Your Radiation Shield keeps you safe!'), { kind: 'info', ms: 5200 });
+        else hud.toast(t('Warning: a radiation zone surrounds Jupiter. You will need a Radiation Shield before diving in close for a slingshot.', 'Careful! There are bad rays close to Jupiter. You need a Radiation Shield.'), { kind: 'warn', ms: 5200 });
       },
     },
     {

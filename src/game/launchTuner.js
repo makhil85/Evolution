@@ -236,7 +236,7 @@ export function openLaunchTuner({ mode = 'medium' } = {}) {
     }[f.verdict];
     // A flat top never reaches space, whatever the tanks: say that, not "add a tank".
     const advice = f.verdict === 'short' && f.build.noseCone === 'blunt'
-      ? 'The flat top hits the air like a wall, and the drag holds it back. Try a pointed nose.'
+      ? t('The flat top hits the air like a wall, and the drag holds it back. Try a pointed nose.', 'The flat top hits the air like a wall. The air holds it back. Try a pointed nose.')
       : (FLIGHT_ADVICE[f.verdict] || '');
     result.textContent = `${t(`Test flight: ${km} km.`, `${km} km high.`)} ${t(advice, adviceL1)}`;
     if (good) result.textContent += ` ${t('Press "Launch for real!" when you are ready.', 'Press "Launch!"')}`;

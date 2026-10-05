@@ -93,8 +93,8 @@ export function act1Steps(game) {
       async enter() {
         shipView.setWingsFolded(false, true);
         await hud.showDialogue([
-          { who: 'Mission Control', text: 'Clean separation! You are in orbit around Earth.' },
-          { who: 'girl', text: 'Whoa. I can see the whole Atlantic Ocean!' },
+          { who: 'Mission Control', text: t('Clean separation! You are in orbit around Earth.', 'The parts came off! You are going around Earth.') },
+          { who: 'girl', text: t('Whoa. I can see the whole Atlantic Ocean!', 'Whoa. I can see a whole ocean!') },
           { who: 'Mission Control', text: 'You have left the air behind. Watch your wings.' },
         ]);
         shipView.setWingsFolded(true);

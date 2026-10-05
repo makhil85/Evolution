@@ -698,7 +698,7 @@ export function createSurfaceScene(game, { body = 'moon', onBeat = null } = {}) 
     else placeAtLadder();
     control = true;
     await say([
-      { who: 'girl', text: 'I’m standing on the Moon! Everything is grey, and the sky is black even in the daytime.' },
+      { who: 'girl', text: t('I’m standing on the Moon! Everything is grey, and the sky is black even in the daytime.', 'I’m on the Moon! It is all grey. The sky is black, even in the day.') },
       { who: 'Mission Control', text: t('The Moon pulls on you six times more weakly than Earth does. Try a big jump: press Space!', 'The Moon pulls on you much less than Earth. Try a big jump: press Space!') },
     ]);
     mission(0, t('Press Space to take a big jump. (W A S D to walk, Shift to bound, drag to look around.)', 'Press Space to jump high! (W A S D to walk.)'));
@@ -838,7 +838,7 @@ export function createSurfaceScene(game, { body = 'moon', onBeat = null } = {}) 
     await wait(1.6);
     await say([
       { who: 'girl', text: 'Europa! The ice goes on forever… and look at JUPITER. It fills half the sky!' },
-      { who: 'Mission Control', text: 'You made it, explorer. See the glowing crack in the ice? Walk over to it. That’s where we’ll drill.' },
+      { who: 'Mission Control', text: t('You made it, explorer. See the glowing crack in the ice? Walk over to it. That’s where we’ll drill.', 'You made it! See the glowing crack in the ice? Walk to it. We will drill there.') },
     ]);
     cam.yaw = Math.atan2(jdir.x, jdir.z);
     clearShot(1.3);
@@ -934,10 +934,10 @@ export function createSurfaceScene(game, { body = 'moon', onBeat = null } = {}) 
     // Frame her, the plume and Jupiter.
     const D = L.drill;
     overlay.startChecklist([
-      { text: 'Liquid water', sub: 'Salty ocean under the ice' },
-      { text: 'Energy', sub: 'Jupiter’s squeezing keeps it warm' },
-      { text: 'The right chemicals', sub: 'Salts and minerals from the rocky floor' },
-    ], 'Europa could be habitable!');
+      { text: 'Liquid water', sub: t('Salty ocean under the ice', 'Salty water under the ice') },
+      { text: 'Energy', sub: t('Jupiter’s squeezing keeps it warm', 'Jupiter squeezes it warm') },
+      { text: t('The right chemicals', 'The right food'), sub: t('Salts and minerals from the rocky floor', 'Salt and bits of rock from the floor') },
+    ], t('Europa could be habitable!', 'Life could live on Europa!'));
     const len = overlay.checklistLength(3);
     await wait(len - 1.0);
     walker.playOneShot('cheer', { loops: 5 });

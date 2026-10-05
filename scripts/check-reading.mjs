@@ -66,6 +66,8 @@ const EASY = new Set(`
   open opens opened unlock unlocked unlocks
   eureka skateboard sideways whenever wherever
   engineering continue something counterclockwise anticlockwise
+  basketball ganymede io callisto squeezing squeezes
+  radiation autopilot
 `.split(/\s+/).filter(Boolean));
 
 function syllables(word) {
@@ -92,8 +94,11 @@ export function hardness(text) {
   }
   const long = new Set();
   for (const w of clean.match(WORD) || []) {
-    const lw = w.toLowerCase().replace(/[’'](s|t|re|ll|ve|d)$/, '');
-    if (syllables(lw) >= 3 && !EASY.has(lw) && !/^[A-Z]{2,}$/.test(w)) long.add(lw);
+    // "merry-go-round" is three easy words, not one long one
+    for (const part of w.split('-')) {
+      const lw = part.toLowerCase().replace(/[’'](s|t|re|ll|ve|d)$/, '');
+      if (syllables(lw) >= 3 && !EASY.has(lw) && !/^[A-Z]{2,}$/.test(part)) long.add(lw);
+    }
   }
   if (long.size) why.push(`long words: ${[...long].join(', ')}`);
   if (words >= 12 && sentences.length) {
@@ -165,7 +170,7 @@ function listFiles() {
 }
 
 const prose = (s) => /[a-z]/.test(s) && /\s/.test(s.trim()) && (s.match(WORD) || []).length >= 3 && !/^[\w.-]+\/[\w./-]+$/.test(s)
-  && !/sans-serif|[{};=]|=>|\$\{?[a-z]+\.|^\s*[.#][a-z-]+\s*\{|rgba?\(|px\b|^\s*(const|let|import)\b/.test(s);
+  && !/__|\btabular\b|gradient\(|transition:|CC BY|sans-serif|[{};=]|=>|\$\{?[a-z]+\.|^\s*[.#][a-z-]+\s*\{|rgba?\(|px\b|^\s*(const|let|import)\b/.test(s);
 
 function strOf(node) {
   if (!node) return null;
@@ -202,8 +207,8 @@ function codeLines(file) {
     // `level === 1 ? a : b` (and LEVEL, lvl, IS_LEVEL1): Level 1 reads `a`.
     if (node.type === 'ConditionalExpression') {
       const test = src.slice(node.test.start, node.test.end).replace(/\s+/g, '');
-      if (/^(level|LEVEL|lvl)===1$|^IS_LEVEL1$/.test(test)) { visit(node.consequent, ctx); return; }
-      if (/^(level|LEVEL|lvl)!==1$|^!IS_LEVEL1$|^(level|LEVEL|lvl)===4$/.test(test)) { visit(node.alternate, ctx); return; }
+      if (/^(level|LEVEL|lvl)===1$|^IS_L(EVEL)?1$/.test(test)) { visit(node.consequent, ctx); return; }
+      if (/^(level|LEVEL|lvl)!==1$|^!IS_L(EVEL)?1$|^(level|LEVEL|lvl)===4$/.test(test)) { visit(node.alternate, ctx); return; }
     }
     // Lessons write every line as a [Level 4, Level 1] pair: Level 1 reads [1].
     if (node.type === 'ArrayExpression' && file.startsWith('src/lesson/') && node.elements.length === 2
