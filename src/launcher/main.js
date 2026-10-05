@@ -17,8 +17,19 @@ const naming = $('naming');
 const nameInput = $('name-input');
 const nameError = $('name-error');
 
+/** he/she words for the launcher's own lines (the hero can change on this page). */
+function words() {
+  return loadProfile().hero === 'boy' ? { they: 'he', them: 'him', their: 'his' } : { they: 'she', them: 'her', their: 'her' };
+}
+
 function askForName({ afterwards }) {
   naming.hidden = false;
+  // Girl or boy is the FIRST choice on a fresh start; later the look page
+  // changes it, so a rename only asks for the name.
+  $('hero-pick').hidden = afterwards !== 'builder';
+  $('name-next').textContent = afterwards === 'builder' ? 'Next: choose a look' : 'Save';
+  const hero = loadProfile().hero;
+  for (const r of naming.querySelectorAll('input[name="hero"]')) r.checked = r.value === hero;
   nameInput.value = loadProfile().name;
   nameInput.focus();
   nameInput.select();
@@ -30,12 +41,13 @@ $('naming-form').addEventListener('submit', (e) => {
   const name = nameInput.value.trim();
   // A child typing nothing and pressing Enter must be told why, not ignored.
   if (!name) {
-    nameError.textContent = 'Give her a name first.';
+    nameError.textContent = 'Type a name first.';
     nameInput.focus();
     return;
   }
   nameError.textContent = '';
-  saveProfile({ name });
+  const hero = naming.querySelector('input[name="hero"]:checked')?.value === 'boy' ? 'boy' : 'girl';
+  saveProfile(naming.dataset.afterwards === 'builder' ? { name, hero } : { name });
   if (naming.dataset.afterwards === 'builder') {
     // Straight into the builder on a first run, because a name with no face
     // is not a character yet.
@@ -111,7 +123,7 @@ function render() {
 
   $('hint').textContent = loadLook()
     ? ''
-    : 'She has no look yet — build her so she appears in the game.';
+    : `No look yet. Build ${words().them} so ${words().they} appears in the game.`;
 }
 
 /**
@@ -213,8 +225,8 @@ $('hard-reset').addEventListener('click', () => {
   const status = chapterStatus();
   const done = status.filter((c) => c.done).length;
   const warning = done
-    ? `This erases everything: ${done} finished chapter${done > 1 ? 's' : ''}, her name, her look, and all progress at BOTH Level 1 and Level 4.\n\nStart completely over?`
-    : 'This erases her name, her look and all progress at both Level 1 and Level 4.\n\nStart completely over?';
+    ? `This erases everything: ${done} finished chapter${done > 1 ? 's' : ''}, ${words().their} name, ${words().their} look, and all progress at BOTH Level 1 and Level 4.\n\nStart completely over?`
+    : `This erases ${words().their} name, ${words().their} look and all progress at both Level 1 and Level 4.\n\nStart completely over?`;
   if (!confirm(warning)) return;
   resetEverything();
   location.href = 'index.html';

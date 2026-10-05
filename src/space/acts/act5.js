@@ -56,7 +56,7 @@ export function act5Steps(game) {
         if (scene) {
           await game.runScene(scene);
         } else {
-          await hud.showFact({ title: 'The Europa walk is coming soon', body: 'The drill sequence is still being built. Here is what she found under the ice.' });
+          await hud.showFact({ title: 'The Europa walk is coming soon', body: 'The drill sequence is still being built. Here is what you found under the ice.' });
           await askBeat(game, 'europaWalk');
           await askBeat(game, 'drillResult');
         }

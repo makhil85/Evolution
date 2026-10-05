@@ -23,6 +23,7 @@
 // Every numeric answer is checked in scripts/test-space-questions.mjs.
 
 import { checkAnswer as checkChapter3Answer } from '../game/questions.js';
+import { heroQuestion } from '../launcher/hero.js';
 
 /** @typedef {import('../game/questions.js').Question & {act:number, beat:string}} SpaceQuestion */
 
@@ -1436,7 +1437,7 @@ export function level1Bank() {
   return out;
 }
 
-export const SPACE_QUESTIONS = selectBank();
+export const SPACE_QUESTIONS = Object.fromEntries(Object.entries(selectBank()).map(([id, q]) => [id, heroQuestion(q)])); // a boy hero: he/his
 
 /** The question a story beat asks, or null. */
 export function questionForBeat(beat) {

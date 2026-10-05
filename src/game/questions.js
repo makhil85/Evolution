@@ -14,6 +14,7 @@
 // attempt limit field, so there is nothing for a caller to accidentally honour.
 
 import { LEVEL1_QUESTIONS } from './questions.level1.js';
+import { heroQuestion } from '../launcher/hero.js';
 
 /**
  * Which difficulty the launcher last chose: 1 or 4.
@@ -748,7 +749,7 @@ function selectBank() {
 }
 
 /** The authored question bank for whichever difficulty is in play. */
-export const QUESTIONS = selectBank();
+export const QUESTIONS = Object.fromEntries(Object.entries(selectBank()).map(([id, q]) => [id, heroQuestion(q)])); // a boy hero: he/his
 
 /** Ladder order of the question ids. The ★ bonus sits last: it gates nothing. */
 export const QUESTION_ORDER = [

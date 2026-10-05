@@ -128,6 +128,8 @@ export function loadProfile() {
     // Level 4 is the default because it is the authored original; Level 1 is
     // the overlay. Anything unreadable lands on 4 rather than guessing.
     difficulty: p?.difficulty === 1 ? 1 : 4,
+    // Girl or boy, chosen first on a fresh start (src/launcher/hero.js).
+    hero: p?.hero === 'boy' ? 'boy' : 'girl',
   };
 }
 

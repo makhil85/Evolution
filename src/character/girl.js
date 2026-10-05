@@ -30,6 +30,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { createBones, boneIndex } from './rig.js';
 import { sampleAllClips, toThreeClip } from './clips.js';
+import { HERO_KIND } from '../launcher/hero.js';
 
 const TAU = Math.PI * 2;
 
@@ -38,6 +39,17 @@ const TAU = Math.PI * 2;
  * `section` starts a new heading on the character page.
  */
 export const OPTIONS = {
+  // Girl or boy (lead 2026-10-05): the first choice. A boy starts from
+  // BOY_LOOK below and gets a plainer eye line and lips; every other option
+  // stays open to both.
+  hero: {
+    label: 'Girl or boy',
+    section: 'Who',
+    values: [
+      { id: 'girl', label: 'Girl' },
+      { id: 'boy', label: 'Boy' },
+    ],
+  },
   skin: {
     label: 'Skin',
     section: 'Face',
@@ -214,11 +226,20 @@ export const OPTIONS = {
   },
 };
 
-/** The choices a fresh page starts from: the first value of everything. */
-export function defaultChoices() {
+/** Where a boy starts: short hair, no bow, a hoodie and trainers. */
+export const BOY_LOOK = {
+  hero: 'boy', hairStyle: 'short', hairColor: 'brown', hairAccessory: 'none',
+  outfit: 'hoodie', outfitColor: 'blue', trousers: 'navy', shoes: 'sneakers', accentColor: 'sky',
+};
+
+/**
+ * The choices a fresh page starts from: the first value of everything, or the
+ * boy's start when `kind` (default: the launcher's choice) is 'boy'.
+ */
+export function defaultChoices(kind = HERO_KIND) {
   const out = {};
   for (const [key, group] of Object.entries(OPTIONS)) out[key] = group.values[0].id;
-  return out;
+  return kind === 'boy' ? { ...out, ...BOY_LOOK } : out;
 }
 
 /** Look a choice's colour up, falling back to the group's first value. */
@@ -572,7 +593,8 @@ function rampY(stops) {
  * @param {Record<string,string>} choices  ids from OPTIONS; missing keys default
  */
 export function buildGirlGeometry(choices = {}) {
-  const c = { ...defaultChoices(), ...choices };
+  const c = { ...defaultChoices(choices.hero), ...choices };
+  const BOY = c.hero === 'boy';
   const skin = colorOf('skin', c.skin);
   const hair = colorOf('hairColor', c.hairColor);
   const cloth = colorOf('outfitColor', c.outfitColor);
@@ -693,9 +715,10 @@ export function buildGirlGeometry(choices = {}) {
   // --- torso ------------------------------------------------------------------
   // Hips to neck in one tube, weights blended hips -> spine -> chest -> neck.
   // Elliptical in section, with a waist and a gentle shoulder slope.
+  // A boy's is straighter at the waist (same hips, so every garment still fits).
   const TORSO = [
     [0.000, 0.598], [0.070, 0.602], [0.114, 0.614], [0.136, 0.636], [0.138, 0.664],
-    [0.124, 0.730], [0.110, 0.800], [0.112, 0.860], [0.120, 0.930], [0.126, 0.990],
+    [BOY ? 0.130 : 0.124, 0.730], [BOY ? 0.120 : 0.110, 0.800], [BOY ? 0.120 : 0.112, 0.860], [BOY ? 0.124 : 0.120, 0.930], [0.126, 0.990],
     [0.134, 1.030], [0.150, 1.060], [0.157, 1.080], [0.138, 1.108], [0.098, 1.138], [0.056, 1.158],
     [0.036, 1.166], [0.000, 1.170],
   ];
@@ -937,7 +960,7 @@ export function buildGirlGeometry(choices = {}) {
   const headY = HEAD_Y;
   // The cheeks are warmer than the rest of the face: painted into the skull's
   // own vertices as a soft falloff, which never shows an edge.
-  const BLUSH_C = mix(skin, 0xf07a86, 0.2);
+  const BLUSH_C = mix(skin, 0xf07a86, BOY ? 0.08 : 0.2);
   const headSkin = (x, y, z) => {
     if (z < 0) return skin;
     const d = Math.min(...[-1, 1].map((sd) => Math.hypot((x - sd * 0.058) / 0.024, (y - headY + 0.036) / 0.016)));
@@ -1004,7 +1027,7 @@ export function buildGirlGeometry(choices = {}) {
   const EYE_Y = -0.010;
   const EYE_W = 0.0185;   // half-width of the opening
   const EYE_H = 0.0098;   // half-height of the opening at its tallest
-  const LIP = mix(skin, 0xc4474f, 0.5);
+  const LIP = mix(skin, 0xc4474f, BOY ? 0.24 : 0.5);
   const LIP_DARK = mix(skin, 0x6b2228, 0.55);
   const LASH = mix(hair, 0x120b08, 0.7);
   const BROW = mix(hair, 0x1a120d, 0.25);
@@ -1059,8 +1082,8 @@ export function buildGirlGeometry(choices = {}) {
       const [px, py] = upper(1);
       const k = (t - 0.92) / 0.08;
       return [px + side * 0.004 * k, py + 0.0026 * k];
-    }, (t) => 0.0011 + 0.0026 * Math.sin(Math.PI * Math.min(1, t * 0.8 + 0.1)) * (0.5 + t)), LASH, 0.0046);
-    for (let i = 0; i < 4; i++) {
+    }, (t) => 0.0011 + (BOY ? 0.0012 : 0.0026) * Math.sin(Math.PI * Math.min(1, t * 0.8 + 0.1)) * (0.5 + t)), LASH, 0.0046);
+    for (let i = 0; i < (BOY ? 0 : 4); i++) {
       const t = 0.55 + i * 0.12;
       const [px, py] = upper(t);
       const len = 0.0032 + i * 0.0006;

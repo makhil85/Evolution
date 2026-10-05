@@ -57,7 +57,7 @@ const COLOR = {
 const FACTS = {
   sun: 'Our star. Everything here circles it.',
   earth: 'Home — this is where the journey begins.',
-  moon: 'Her first landing, and the first slingshot.',
+  moon: 'Your first landing, and the first slingshot.',
   mars: 'A quick flyby and scan on the way to the belt.',
   ceres: 'The biggest thing in the asteroid belt — a dwarf planet.',
   jupiter: "The biggest planet — more than twice the mass of every other planet combined.",

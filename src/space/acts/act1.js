@@ -10,6 +10,7 @@ import { heroName } from '../hud/hud.js';
 import { SATELLITE, satelliteState, satelliteRig, buildPanelPuzzleScene } from '../satellite.js';
 import { t } from '../level.js';
 import { lessonOnce } from '../../lesson/card.js';
+import { heroText } from '../../launcher/hero.js';
 import { LESSON_4F } from '../../lesson/lessons/flightSchool.js';
 
 /** Screen-space marker for the satellite, in the same shape main.js's own
@@ -115,9 +116,9 @@ export function act1Steps(game) {
         await playZeroG(ctx);
         await ctx.hud.showFact({
           title: 'Everything is floating!',
-          body: t(`${heroName()}'s pencil drifts past her nose and a drop of water wobbles like jelly. ` +
+          body: heroText(t(`${heroName()}'s pencil drifts past her nose and a drop of water wobbles like jelly. ` +
             'But up here, Earth’s gravity is still almost as strong as on the ground...',
-            `${heroName()}'s pencil floats past her nose. A drop of water wobbles like jelly!`),
+            `${heroName()}'s pencil floats past her nose. A drop of water wobbles like jelly!`)),
         });
       },
       beat: 'cabinFloat',

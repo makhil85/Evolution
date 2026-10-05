@@ -4,7 +4,8 @@
 // and clips.js (motion) - all three imported by the game too. This file is the
 // tool around them: controls, a turntable, a mixer, and the save.
 import * as THREE from 'three';
-import { OPTIONS, defaultChoices, buildGirlRig } from './girl.js';
+import { OPTIONS, BOY_LOOK, defaultChoices, buildGirlRig } from './girl.js';
+import { saveProfile } from '../launcher/profile.js';
 import { CLIPS } from './clips.js';
 import { exportGlb, saveBlob } from './glb.js';
 
@@ -220,6 +221,15 @@ function buildControls() {
       input.value = value.id;
       input.checked = choices[key] === value.id;
       input.addEventListener('change', () => {
+        if (key === 'hero') {
+          // Girl <-> boy starts from that hero's look (hair, outfit), keeping
+          // skin, eyes and the rest; the launcher remembers the choice so the
+          // chapters' text says he or she.
+          const base = defaultChoices(value.id);
+          for (const k of Object.keys(BOY_LOOK)) choices[k] = base[k];
+          saveProfile({ hero: value.id });
+          buildControls();
+        }
         choices[key] = value.id;
         rebuild();
         setStatus('');
@@ -312,6 +322,7 @@ document.getElementById('load-json').addEventListener('change', async (e) => {
 
 document.getElementById('random').addEventListener('click', () => {
   for (const [key, group] of Object.entries(OPTIONS)) {
+    if (key === 'hero') continue; // surprise the look, not who it is
     choices[key] = group.values[Math.floor(Math.random() * group.values.length)].id;
   }
   buildControls();
@@ -319,7 +330,7 @@ document.getElementById('random').addEventListener('click', () => {
 });
 
 document.getElementById('reset').addEventListener('click', () => {
-  choices = defaultChoices();
+  choices = defaultChoices(choices.hero);
   buildControls();
   rebuild();
 });

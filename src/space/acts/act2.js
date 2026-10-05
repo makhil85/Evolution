@@ -93,7 +93,7 @@ export function act2Steps(game) {
         if (scene) {
           await game.runScene(scene);
         } else {
-          await hud.showFact({ title: 'Moon walk coming soon', body: 'The low-gravity walk is still being built. For now, here is what she found out there.' });
+          await hud.showFact({ title: 'Moon walk coming soon', body: 'The low-gravity walk is still being built. For now, here is what you found out there.' });
           await askBeat(game, 'moonWalk');
           await askBeat(game, 'moonSample');
           await askBeat(game, 'moonFootprints');
