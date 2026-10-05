@@ -70,7 +70,7 @@ function render() {
   renderLevels(level);
   $('greeting').textContent = profile.name ? `${profile.name}'s Adventures` : 'Rocket Village';
   $('lede').textContent = status.every((c) => c.done)
-    ? 'All four chapters finished. Replay any of them whenever you like.'
+    ? 'Every chapter finished. Replay any of them whenever you like.'
     : `Chapter ${next.n} is next. Finish a chapter to open the one after it.`;
   // Grown-up unlock (?unlock=all) is on: say so, and how to turn it off.
   let unlockOn = false;

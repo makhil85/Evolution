@@ -17,6 +17,8 @@
 // ship's heliocentric position, so the ship sits near (0,0,0) and float32 on the
 // GPU never sees a number like 20 000. Use toScene() for that, always.
 
+import { IS_CH5 } from './chapter.js';
+
 export const TEXTURE_BASE = `${import.meta.env?.BASE_URL ?? './'}space/textures/`;
 
 /** Physics step. Fixed; time warp runs more steps, never bigger ones. */
@@ -245,8 +247,11 @@ export const SPACE_LIGHT = Object.freeze({
   sunIntensity: 3.2,
 });
 
-/** Save keys, per difficulty, matching the launcher convention. */
-export const STORE_KEYS = Object.freeze({ 1: 'level4_voyage_europa_v1_L1', 4: 'level4_voyage_europa_v1' });
+/** Save keys, per difficulty, matching the launcher convention (src/launcher/profile.js CHAPTERS). */
+export const STORE_KEYS_CH4 = Object.freeze({ 1: 'level4_voyage_europa_v1_L1', 4: 'level4_voyage_europa_v1' });
+export const STORE_KEYS_CH5 = Object.freeze({ 1: 'level5_rings_to_a_star_v1_L1', 4: 'level5_rings_to_a_star_v1' });
+/** This page's save keys: Chapter 5 runs on the same engine (chapter.js). */
+export const STORE_KEYS = IS_CH5 ? STORE_KEYS_CH5 : STORE_KEYS_CH4;
 
 /** Events the modules emit on the shared bus (main.js creates it). */
 export const EVENTS = Object.freeze({
