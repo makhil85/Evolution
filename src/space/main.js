@@ -27,6 +27,7 @@ import { predict, keplerPropagate } from './predictor.js';
 import { createBodies } from './planets.js';
 import { createSky } from './sky.js';
 import { createBelt } from './belt.js';
+import { createKuiper } from './ch5/kuiper.js';
 import { createBeltFx } from './beltFx.js';
 import { createDust } from './dust.js';
 import { createShip } from './ship.js';
@@ -116,6 +117,8 @@ const bus = createBus();
 const bodies = createBodies({ scene, renderer, camera });
 const sky = createSky({ scene, renderer });
 const belt = createBelt({ scene, renderer });
+// Chapter 5: the Kuiper belt past Neptune (points; it rides the floating origin too).
+const kuiper = IS_CH5 ? createKuiper({ scene }) : null;
 const dust = createDust({ scene });
 const trajectory = createTrajectoryView({ scene });
 // The PLANNED path (Easy/Medium, transfer steps): where the coming burn will
@@ -1595,6 +1598,7 @@ function tick(realDt, render = true) {
   bodies.update({ dt: realDt, time: ship.t, positions: states, origin: _origin, camera });
   sky.update({ camera, sunDirection: _sunDir });
   belt.update({ dt: realDt, time: ship.t, origin: _origin, ship: { x: ship.x, z: ship.z }, camera });
+  kuiper?.update(_origin);
   game.beltFx.update(realDt);
   const rel = relativeSpeed(states);
   // Dust is a SENSE of speed, not a speedometer: at a low-orbit 18 u/s the raw

@@ -178,6 +178,32 @@ export function createOverlays(host) {
     });
   }
 
+  /**
+   * A picker of a few options (a mini-game's level, say).
+   * options: [{id, label, blurb, tag?}]; resolves the chosen id, or null on Esc.
+   */
+  function choose({ eyebrow = '', title = '', body = '', options = [], current = null } = {}) {
+    return new Promise((resolve) => {
+      host.open((root) => {
+        if (eyebrow) root.appendChild(el('div', 'sp-modal__eyebrow', eyebrow));
+        root.appendChild(el('h3', 'sp-modal__title', title));
+        if (body) root.appendChild(el('p', 'sp-modal__body', body));
+        const grid = el('div', 'sp-upgrades sp-modes');
+        for (const o of options) {
+          const btn = el('button', `sp-upgrade sp-mode sp-pick${o.id === current ? ' is-current' : ''}`);
+          btn.type = 'button';
+          btn.dataset.pick = o.id;
+          btn.appendChild(el('div', 'sp-upgrade__name', o.label));
+          if (o.blurb) btn.appendChild(el('div', 'sp-mode__blurb', o.blurb));
+          if (o.tag) btn.appendChild(el('div', 'sp-upgrade__req', o.tag));
+          btn.addEventListener('click', () => { host.close(); resolve(o.id); });
+          grid.appendChild(btn);
+        }
+        root.appendChild(grid);
+      }, { onEscape: () => { host.close(); resolve(null); }, wide: true });
+    });
+  }
+
   function showControls() {
     return new Promise((resolve) => {
       host.open((root) => {
@@ -213,8 +239,9 @@ export function createOverlays(host) {
   function showEnd(data = {}) {
     return new Promise((resolve) => {
       host.open((root) => {
-        root.appendChild(el('div', 'sp-modal__eyebrow', 'Mission complete'));
-        root.appendChild(el('h3', 'sp-modal__title', `${data.name || heroName()} reached Europa!`));
+        root.appendChild(el('div', 'sp-modal__eyebrow', data.eyebrow || 'Mission complete'));
+        root.appendChild(el('h3', 'sp-modal__title', data.title || `${data.name || heroName()} reached Europa!`));
+        if (data.note) root.appendChild(el('p', 'sp-modal__body', data.note));
         if (data.route && data.route.length) {
           root.appendChild(el('p', 'sp-modal__body', `Route flown: ${data.route.join(' → ')}`));
         }
@@ -299,5 +326,5 @@ export function createOverlays(host) {
     });
   }
 
-  return { showFact, showDialogue, openUpgrades, showControls, showEnd, pauseMenu, chooseFlightMode };
+  return { showFact, showDialogue, openUpgrades, showControls, showEnd, pauseMenu, chooseFlightMode, choose };
 }

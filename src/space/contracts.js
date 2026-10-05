@@ -112,6 +112,10 @@ const RAW = [
 
   { id: 'neptune', name: 'Neptune', parent: 'sun', orbit: 50000, phase: 4.4, radius: 44, gm: 22000, spin: 280, tilt: 0.49,
     tex: { map: '2k_neptune.jpg' }, atmo: 0x5b7cff, landable: false, role: 'optional' },
+
+  // Chapter 5 only: out in the Kuiper belt (39 AU, with Neptune at 30).
+  ...(IS_CH5 ? [{ id: 'pluto', name: 'Pluto', parent: 'sun', orbit: 65000, phase: 4.6, radius: 8, gm: 150, spin: null, tilt: 0,
+    tex: { map: '2k_ceres_fictional.jpg' }, atmo: null, landable: false, role: 'Chapter 5 fly-past (dwarf planet)' }] : []),
 ];
 
 /**

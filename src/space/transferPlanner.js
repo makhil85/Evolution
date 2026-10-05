@@ -80,7 +80,7 @@ function arrivalBand(tb) {
 function needsPrograde(target) { return target === 'jupiter'; }
 
 /** Bodies she goes into orbit round (the rest are flybys or custom targets). */
-const CAPTURED = new Set(['moon', 'jupiter', 'europa']);
+const CAPTURED = new Set(['moon', 'jupiter', 'europa', 'saturn', 'uranus', 'neptune']);
 
 /** slack widens the band (0.15 = 15% each way), for "still on course". */
 export function planIsGood(p, target, slack = 0) {

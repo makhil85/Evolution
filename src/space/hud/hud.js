@@ -395,6 +395,11 @@ export class Hud {
     return this._overlays.chooseFlightMode(opts);
   }
 
+  /** A picker of a few options. Resolves the chosen id, or null. */
+  choose(opts) {
+    return this._overlays.choose(opts);
+  }
+
   showControls() {
     return this._overlays.showControls();
   }

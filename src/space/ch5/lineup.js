@@ -53,23 +53,30 @@ export function lineUp(ship, id) {
   if (!b || b.parent !== 'sun' || ship.soi !== 'sun') return null;
   const omega = (2 * Math.PI) / b.period;
   const keep = b.phase;
-  for (const lead of [90, 40, 200, 400, 15]) {
+  // The first line-up that opens a window soon; failing that, the soonest
+  // good one found (a long wait beats no line-up: she can time-warp it).
+  let best = null;
+  for (const lead of [90, 40, 200, 400, 15, 700, 1200]) {
     const c = crossingFor(ship, b.orbit, lead);
     if (!c) continue;
     // The planet a little ahead of or behind the crossing, so she passes
     // beside it (in its gravity zone), not through it.
-    for (const side of [0.35, -0.35, 0.2, -0.2, 0.5, -0.5]) {
-      b.phase = c.angle + (side * b.soi) / b.orbit - omega * c.tAt;
+    for (const side of [0.35, -0.35, 0.2, -0.2, 0.5, -0.5, 0.12, -0.12, 0.7, -0.7]) {
+      const phase = c.angle + (side * b.soi) / b.orbit - omega * c.tAt;
+      b.phase = phase;
       const p = planTransfer(ship, id);
       // Clear of the planet (and Saturn's rings, out to ~2.3 radii).
-      if (p && planIsGood(p, id) && p.tau < lead * 3 + 120 && p.peri > b.radius * 3) return p;
+      if (!p || !planIsGood(p, id) || p.peri <= b.radius * 3) continue;
+      if (p.tau < lead * 3 + 120) return p;
+      if (!best || p.tau < best.p.tau) best = { p, phase };
     }
   }
+  if (best) { b.phase = best.phase; return best.p; }
   b.phase = keep;
   return null;
 }
 
-const LINED = ['saturn', 'uranus', 'neptune'];
+const LINED = ['saturn', 'uranus', 'neptune', 'pluto'].filter((id) => BODIES[id]);
 /** Planets already lined up this chapter: never moved again (a reload
  *  mid-trip re-enters the step, and moving it then would undo her burn). */
 const done = new Set();

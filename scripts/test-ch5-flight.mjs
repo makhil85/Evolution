@@ -54,7 +54,7 @@ function fly({ late, vinf, stay }) {
     if (!p || !planIsGood(p, id)) return { ok: false, why: 'no good window' };
     coast(p.tau);
     let v = Math.hypot(ship.vx, ship.vz); kick(p.dv, ship.vx / v, ship.vz / v);
-    for (let k = 0; k < 40 && ship.soi !== id; k++) {
+    for (let k = 0; k < 160 && ship.soi !== id; k++) {
       if (coast(1500, () => ship.soi === id)) break;
       const c = planTransfer(ship, id, { coastOnly: true });
       if (c && !(c.peri < BODIES[id].soi * 0.7 && c.peri > BODIES[id].radius * 1.5)) {
@@ -88,7 +88,14 @@ function fly({ late, vinf, stay }) {
     if (!legs[id].ok) break;
     legs[id].pass = capture(id);
     coast(stay);
-    if (id !== 'neptune') escape(id);
+    escape(id);
+  }
+  // Then out past Neptune to fly by Pluto (no stop: it is tiny).
+  if (legs.neptune?.ok) {
+    const lined = !!tune('pluto');
+    legs.pluto = transfer('pluto');
+    legs.pluto.lined = lined;
+    if (legs.pluto.ok) legs.pluto.pass = flyby('pluto');
   }
   return legs;
 }
@@ -100,12 +107,12 @@ for (const late of (process.env.LATE ? process.env.LATE.split(',').map(Number) :
     const L = fly({ late, vinf, stay });
     if (process.env.V) console.error(late, vinf, ((Date.now() - T0) / 1000).toFixed(1), 's', JSON.stringify(L));
     const tag = `leave Jupiter after ${late} s at ${vinf} u/s, stay ${stay} s`;
-    for (const id of ['saturn', 'uranus', 'neptune']) {
+    for (const id of ['saturn', 'uranus', 'neptune', 'pluto']) {
       const l = L[id];
       check(`${tag}: reaches ${id}`, l?.ok, l ? `wait ${l.wait?.toFixed(0)} s, ${l.sim?.toFixed(0)} s sim, ${l.real?.toFixed(1)} s real` : 'not flown');
       if (l) check(`${tag}: ${id} lined up`, l.lined);
       if (l?.ok) check(`${tag}: ${id} leg under 30 s real at the top warp`, l.real < 30, `${l.real.toFixed(1)} s`);
-      if (l?.pass) check(`${tag}: ${id} pass clear of the planet`, l.pass > BODIES[id].radius * 1.5, `${(l.pass / BODIES[id].radius).toFixed(1)} radii`);
+      if (l?.pass) check(`${tag}: ${id} pass clear of the planet`, l.pass > BODIES[id].radius * (id === 'pluto' ? 1.2 : 1.5), `${(l.pass / BODIES[id].radius).toFixed(1)} radii`);
     }
   }
 }

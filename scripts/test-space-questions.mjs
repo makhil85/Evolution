@@ -190,6 +190,14 @@ for (const [id, q] of Object.entries(CH5_QUESTIONS)) {
   }
 }
 // Saturn floats: 95 Earth masses in 760 Earth volumes, Earth 5.5x water.
+check('c5_hexagon: 6 x 14,500 = 87,000 accepted', checkSpaceAnswer(CH5_QUESTIONS.c5_hexagon, String(6 * 14500)));
+check('c5_hexagon: rejects 5 x 14,500', !checkSpaceAnswer(CH5_QUESTIONS.c5_hexagon, String(5 * 14500)));
+check('c5_uranus_pole_day: 84 / 2 = 42 accepted', checkSpaceAnswer(CH5_QUESTIONS.c5_uranus_pole_day, String(84 / 2)));
+check('c5_uranus_pole_day: rejects the full 84', !checkSpaceAnswer(CH5_QUESTIONS.c5_uranus_pole_day, '84'));
+check('c5_sunlight_neptune: 8 x 30 = 240 accepted', checkSpaceAnswer(CH5_QUESTIONS.c5_sunlight_neptune, String(8 * 30)));
+check('c5_sunlight_neptune: rejects 8 + 30', !checkSpaceAnswer(CH5_QUESTIONS.c5_sunlight_neptune, '38'));
+check('c5_voyager: 2012 - 1977 = 35 accepted', checkSpaceAnswer(CH5_QUESTIONS.c5_voyager, String(2012 - 1977)));
+check('c5_voyager: rejects 45 (a borrowing slip)', !checkSpaceAnswer(CH5_QUESTIONS.c5_voyager, '45'));
 check('c5_saturn_density: 95/760 x 5.5 < 1 (floats)', (95 / 760) * 5.5 < 1 && CH5_QUESTIONS.c5_saturn_density.choices.find((c) => c.correct).text.startsWith('Float'));
 
 // --- report -----------------------------------------------------------------------

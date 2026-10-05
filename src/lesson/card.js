@@ -6,7 +6,10 @@
 //               beats: [{ dur, cap: [l4, l1] }, ...],   // authored seconds + caption
 //               draw(ctx, T, info),                      // T = authored seconds
 //               question: { prompt, choices: [{ text, correct }], hint, why },
-//               clue: [l4, l1], clueAt: beatIndex }] }
+//               clue: [l4, l1], clueAt: beatIndex,
+//               watchOnly: true }] }                     // no question after it
+// A beat with `predict: true` stops the film at its end until the child
+// presses "Show me" (Chapter 5's momentum films: guess first, then see).
 // Every player-facing string is a [Level 4, Level 1] pair (t() picks one).
 //
 // Level 1 clue (lead 2026-10-05): at Level 1 a written note gives the answer
@@ -137,7 +140,7 @@ const CSS = `
 @media (prefers-reduced-motion: reduce) { .ls-btn.is-ready { animation: none; } }
 `;
 
-function injectStyles() {
+export function injectStyles() {
   if (document.getElementById(STYLE_ID)) return;
   const s = document.createElement('style');
   s.id = STYLE_ID;
@@ -156,6 +159,7 @@ export function playLesson(lesson, { bus = null } = {}) {
   injectStyles();
   const films = lesson.films;
   const plans = films.map(filmPlan);
+  const predictStops = plans.map((p, i) => p.beats.filter((_, k) => films[i].beats[k].predict).map((b) => b.start + b.real));
   const results = [];
   let resolveFn;
   const promise = new Promise((r) => { resolveFn = r; });
@@ -169,6 +173,7 @@ export function playLesson(lesson, { bus = null } = {}) {
   let lastCap = '';
   let lastNow = performance.now();
   let closed = false;
+  const held = new Set(); // predict pauses already made in this film
 
   // --- build the card ---
   const card = el('div', 'pl-card ls-card');
@@ -219,18 +224,19 @@ export function playLesson(lesson, { bus = null } = {}) {
   });
   try { bus?.emit?.('ui-modal', true); } catch { /* bus gone */ }
 
-  replayBtn.addEventListener('click', () => { time = 0; setPaused(false); render(); });
+  replayBtn.addEventListener('click', () => { time = 0; held.clear(); setPaused(false); render(); });
   pauseBtn.addEventListener('click', () => setPaused(!paused));
   nextBtn.addEventListener('click', onNext);
 
-  function setPaused(on) {
+  function setPaused(on, predict = false) {
     paused = !!on;
-    pauseBtn.textContent = paused ? '▶ Play' : '❚❚ Pause';
+    pauseBtn.textContent = paused ? (predict ? `▶ ${t('Show me', 'Show me')}` : '▶ Play') : '❚❚ Pause';
+    pauseBtn.classList.toggle('is-ready', paused && predict);
     pauseBtn.setAttribute('aria-pressed', String(paused));
   }
 
   function setFilm(i) {
-    ix = i; mode = 'watch'; time = 0; seenEnd = false; q = null; lastCap = '';
+    ix = i; mode = 'watch'; time = 0; seenEnd = false; q = null; lastCap = ''; held.clear();
     setPaused(false);
     card.classList.remove('is-asking');
     eyebrow.textContent = `${pick(lesson.eyebrow)} · ${i + 1} of ${films.length}`;
@@ -314,7 +320,13 @@ export function playLesson(lesson, { bus = null } = {}) {
   }
 
   function onNext() {
-    if (mode === 'watch') { if (seenEnd) startQuestion(); return; }
+    if (mode === 'watch') {
+      if (!seenEnd) return;
+      if (films[ix].question) startQuestion();
+      else if (ix < films.length - 1) setFilm(ix + 1);
+      else finish();
+      return;
+    }
     if (!q?.done) return;
     if (ix < films.length - 1) setFilm(ix + 1); else finish();
   }
@@ -377,7 +389,14 @@ export function playLesson(lesson, { bus = null } = {}) {
     const now = performance.now();
     const dt = Math.min(1.1, Math.max(0, (now - lastNow) / 1000));
     lastNow = now;
-    if (!paused && mode === 'watch') time += dt;
+    if (!paused && mode === 'watch') {
+      const before = time;
+      time += dt;
+      // A predict beat: hold at its end until "Show me".
+      // (Held just short of the end, so the predict caption stays up.)
+      const stop = predictStops[ix].find((e) => !held.has(e) && before < e && time >= e - 0.02);
+      if (stop !== undefined) { held.add(stop); time = stop - 0.02; setPaused(true, true); }
+    }
     render();
   }
   const timer = setInterval(tick, TICK_MS);
@@ -395,7 +414,7 @@ export function playLesson(lesson, { bus = null } = {}) {
       return closed ? 'finished' : this.state();
     },
     answerAll() {
-      for (let i = ix; i < films.length; i++) if (!results[i]) results[i] = { film: i, correct: true, tries: 1, auto: true };
+      for (let i = ix; i < films.length; i++) if (!results[i] && films[i].question) results[i] = { film: i, correct: true, tries: 1, auto: true };
       finish();
     },
     skip() { finish(); },

@@ -89,6 +89,8 @@ const LOOK = {
     atmo: { thickness: 0.035, scatter: 0xa9eef2, twilight: 0x9fd0d8, density: 0.12, height: 0.4, mie: 0.4 },
     beacon: [0xaef2f5, 7],
   },
+  // Chapter 5's fly-past: a pale, tan dwarf planet (Ceres's rock map).
+  pluto: { seg: 96, surface: { kind: 'rock', gain: 1.35, lunar: 0.5 }, beacon: [0xe8d2b8, 5] },
   neptune: {
     seg: 96,
     surface: { kind: 'gas', ambient: 1.5, gain: 1.15, wrap: 0.12, limb: 0.22, saturation: 1.1 },
@@ -451,6 +453,9 @@ export function createBodies({ scene, renderer, camera }) {
     dispose,
     sunLight: sun.light,
     ambientLight,
+    /** A body's tilt and spin groups (to hang things on that turn with it,
+     *  like Saturn's hexagon) and its flattening. */
+    parts: (id) => (internals[id]?.spin ? { tilt: internals[id].tilt, spin: internals[id].spin, flat: internals[id].look.flat ?? 1 } : null),
     /** For debugging / the lab: on-screen radius in px of each body last frame. */
     pixelRadius: (id) => internals[id]?.pixelRadius ?? 0,
   };

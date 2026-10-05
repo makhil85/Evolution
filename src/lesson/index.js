@@ -13,4 +13,8 @@ export const LESSON_LIST = [
   { id: 'ch3_heavy', chapter: 3, title: ['Heavy rockets need big pushes', 'Heavy rockets'], load: () => import('./lessons/ch3.js').then((m) => m.LESSON_3B) },
   { id: 'ch4_flight_school', chapter: 4, title: ['Flight school: flying to the Moon', 'Flying to the Moon'], load: () => import('./lessons/flightSchool.js').then((m) => m.LESSON_4F) },
   { id: 'ch4_life', chapter: 4, title: ['Cells, DNA and proteins', 'What is life made of?'], load: () => import('./lessons/ch4.js').then((m) => m.LESSON_4G) },
+  { id: 'ch5_rings', chapter: 5, title: ['What are Saturn’s rings?', 'Saturn’s rings'], load: () => import('./lessons/ch5.js').then((m) => m.LESSON_5A) },
+  { id: 'ch5_momentum', chapter: 5, title: ['Bumps in the rings: momentum', 'Bumps in the rings'], load: () => import('./lessons/ch5.js').then((m) => m.LESSON_5AA) },
+  { id: 'ch5_neptune', chapter: 5, title: ['Neptune, the last giant', 'Neptune'], load: () => import('./lessons/ch5b.js').then((m) => m.LESSON_5B) },
+  { id: 'ch5_fusion', chapter: 5, title: ['What makes a star shine?', 'How the Sun shines'], load: () => import('./lessons/ch5c.js').then((m) => m.LESSON_5C) },
 ];

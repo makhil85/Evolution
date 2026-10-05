@@ -11,7 +11,7 @@ import { BODIES } from '../contracts.js';
 import { buildOverlay, blendCamera, waitForSkip, ease } from '../cinematics.js';
 
 const HEX_R = 0.27; // circumradius, planet radii
-const BAND = 0.035; // band half-width, planet radii
+const BAND = 0.022; // band half-width, planet radii
 
 /** The hexagon and vortex, in Saturn's spin frame (unscaled, real units). */
 export function buildHexagon(radius, flat) {
@@ -38,12 +38,12 @@ export function buildHexagon(radius, flat) {
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geo.computeVertexNormals();
   const band = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
-    color: 0x8fa9cf, transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide,
+    color: 0x9db4d6, transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide,
   }));
   g.add(band);
   // The calmer inside, a shade bluer, and the dark eye of the vortex.
   const inner = new THREE.Mesh(new THREE.CircleGeometry(radius * (HEX_R - BAND) * 0.98, 6), new THREE.MeshBasicMaterial({
-    color: 0x5f7fa8, transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide,
+    color: 0x6f8db3, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide,
   }));
   inner.rotation.x = -Math.PI / 2;
   inner.position.y = yAt(radius * 0.12);
@@ -123,8 +123,8 @@ export function playPolePass(game) {
       look.copy(center).addScaledVector(axis, R * 0.9 * up).lerp(shipPos, 0.3);
       const w = ease(t / 2) * (1 - ease((t - 11) / 2));
       blendCamera(camera, camPos, look, w);
-      if (t > 1.5 && !overlay._titled) { overlay._titled = true; overlay.showTitle(); }
-      if (t > 5.5 && !overlay._untitled) { overlay._untitled = true; overlay.hideTitle(); }
+      if (t > 0.6 && !overlay._titled) { overlay._titled = true; overlay.showTitle(); }
+      if (t > 3.6 && !overlay._untitled) { overlay._untitled = true; overlay.hideTitle(); }
       if (t >= DURATION) { game.cinematic = null; finish(); }
     },
   };
