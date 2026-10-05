@@ -9,7 +9,9 @@ import { playZeroG } from '../cinematics.js';
 import { heroName } from '../hud/hud.js';
 import { SATELLITE, satelliteState, satelliteRig, buildPanelPuzzleScene } from '../satellite.js';
 import { t } from '../level.js';
-import { lessonStep } from '../lesson/transferLesson.js';
+import { lessonOnce } from '../../lesson/card.js';
+import { heroText } from '../../launcher/hero.js';
+import { LESSON_4F } from '../../lesson/lessons/flightSchool.js';
 
 /** Screen-space marker for the satellite, in the same shape main.js's own
  * buildMarkers() produces for a real body - but the satellite isn't in
@@ -91,8 +93,8 @@ export function act1Steps(game) {
       async enter() {
         shipView.setWingsFolded(false, true);
         await hud.showDialogue([
-          { who: 'Mission Control', text: 'Clean separation! You are in orbit around Earth.' },
-          { who: 'girl', text: 'Whoa. I can see the whole Atlantic Ocean!' },
+          { who: 'Mission Control', text: t('Clean separation! You are in orbit around Earth.', 'The parts came off! You are going around Earth.') },
+          { who: 'girl', text: t('Whoa. I can see the whole Atlantic Ocean!', 'Whoa. I can see a whole ocean!') },
           { who: 'Mission Control', text: 'You have left the air behind. Watch your wings.' },
         ]);
         shipView.setWingsFolded(true);
@@ -114,9 +116,9 @@ export function act1Steps(game) {
         await playZeroG(ctx);
         await ctx.hud.showFact({
           title: 'Everything is floating!',
-          body: t(`${heroName()}'s pencil drifts past her nose and a drop of water wobbles like jelly. ` +
+          body: heroText(t(`${heroName()}'s pencil drifts past her nose and a drop of water wobbles like jelly. ` +
             'But up here, Earth’s gravity is still almost as strong as on the ground...',
-            `${heroName()}'s pencil floats past her nose. A drop of water wobbles like jelly!`),
+            `${heroName()}'s pencil floats past her nose. A drop of water wobbles like jelly!`)),
         });
       },
       beat: 'cabinFloat',
@@ -235,7 +237,18 @@ export function act1Steps(game) {
     },
     // Flight school (lead 2026-10-02): animated films on how a transfer
     // works, with a question after each, before she flies it for real.
-    lessonStep(game),
+    // Plays on the shared lesson card (once per Level; replay from the
+    // launcher's Lessons list). No check(): the step is done when enter() settles.
+    {
+      id: 'a1_lesson', act: 1,
+      title: t('Flight school', 'Flight school'),
+      objective: t('Watch Mission Control’s quick lesson on how to fly to the Moon, and answer a question after each film.', 'Watch how to fly to the Moon. Then answer the questions.'),
+      markers: ['moon'],
+      async enter() {
+        await lessonOnce(LESSON_4F, { bus: game.bus });
+        hud.toast(t('Now for real: point along your path and wait for the green BURN NOW sign.', 'Now you try! Wait for the green BURN NOW sign.'), { kind: 'good', ms: 4500 });
+      },
+    },
     {
       id: 'a1_raise', act: 1,
       title: 'Aim for the Moon',

@@ -13,6 +13,7 @@ import { loadLook } from '../launcher/profile.js';
 import { toonRamp } from '../game/toonPipeline.js';
 import { TEXTURE_BASE, SPACE_LIGHT } from './contracts.js';
 import { heroName } from './hud/hud.js';
+import { heroText } from '../launcher/hero.js';
 
 const DURATION = 13.5;
 const SKIP_AFTER = 2.2;
@@ -262,9 +263,9 @@ export function buildCabinScene(game) {
       skip.remove();
       game.hud.showFact({
         title: 'Everything is floating!',
-        body: `${heroName()}'s pencil drifts past her nose and a drop of water wobbles in the air like jelly. `
+        body: heroText(`${heroName()}'s pencil drifts past her nose and a drop of water wobbles in the air like jelly. `
           + 'But up here Earth’s gravity is still about 9 tenths as strong as on the ground - she is FALLING, '
-          + 'all the time, just moving sideways fast enough to keep missing the ground.',
+          + 'all the time, just moving sideways fast enough to keep missing the ground.'),
       }).then(() => resolveDone?.());
     }
   }

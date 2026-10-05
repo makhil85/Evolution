@@ -68,19 +68,19 @@ const LEVEL_1 = {
     {
       id: 'lab',
       at: { x: -25, z: 17.5 }, radius: 4.6,
-      clue: 'Clue 2: Look at the stalls around the fountain. Count the stalls with a GREEN roof. Now look at the signs over the buildings. Find the sign with that many WORDS on it, and stand in front of that building.',
+      clue: 'Clue 2: Look at the stalls by the fountain. Count the stalls with a GREEN roof. Now look at the signs on the buildings. Find a sign with that many WORDS on it. Stand in front of that building.',
       found: 'Three green stalls, and three words on the sign: River Flow Lab. Well done!',
     },
     {
       id: 'mill',
       at: { x: 16, z: 14.6 }, radius: 4.6,
-      clue: 'Clue 3: Turn so the river is in front of you. Now walk far to your RIGHT along the river bank, until you find a mill with a big wheel that dips in the water.',
+      clue: 'Clue 3: Turn so the river is in front of you. Now walk far to your RIGHT along the river. Find a mill with a big wheel in the water.',
       found: 'The water wheel is turning. You found the mill!',
     },
     {
       id: 'home',
       at: doorAt('home9'), radius: HOME_R,
-      clue: 'Clue 4: Walk back down the road to where you began. Homes stand on both sides of the road, and each has a number on its sign. Find the home with the number 2 more than 7. The crystal is inside.',
+      clue: 'Clue 4: Walk back down the road to where you started. Homes stand on both sides. Each one has a number on its sign. Find the home with the number 2 more than 7. The crystal is inside.',
       found: 'The crystal is here! It glows blue.',
     },
   ],

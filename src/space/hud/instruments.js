@@ -177,7 +177,7 @@ export function createInstruments(root, { onWarp } = {}) {
   const radiation = el('div', 'sp-radiation');
   radiation.hidden = true;
   radiation.appendChild(svg(iconInner('radiation')));
-  radiation.appendChild(el('span', null, "Jupiter's radiation belt — Radiation Shield needed!"));
+  radiation.appendChild(el('span', null, t("Jupiter's radiation belt — Radiation Shield needed!", 'Bad rays! You need a Radiation Shield!')));
   root.appendChild(radiation);
 
   // --- right column: orbit readout (mission card is built by hud.js above it) ---
@@ -188,7 +188,7 @@ export function createInstruments(root, { onWarp } = {}) {
   orbitPanel.appendChild(orbitTitle);
   const orbitState = el('div', 'sp-orbit__state');
   const orbitStateIcon = svg(iconInner('orbit'));
-  const orbitStateText = el('span', null, 'Not orbiting anything');
+  const orbitStateText = el('span', null, t('Not orbiting anything', 'Not going around anything'));
   orbitState.append(orbitStateIcon, orbitStateText);
   orbitPanel.appendChild(orbitState);
   const periRow = el('div', 'sp-orbit__row');
@@ -276,7 +276,7 @@ export function createInstruments(root, { onWarp } = {}) {
       cargoNote.textContent = f > 0.66
         ? 'Heavy — slow to speed up and slow to turn.'
         : f > 0.3
-          ? 'Getting heavier — handling is softening.'
+          ? t('Getting heavier — handling is softening.', 'Getting heavy. It turns slower.')
           : 'Light and zippy.';
     }
 
@@ -311,7 +311,7 @@ export function createInstruments(root, { onWarp } = {}) {
       const enough = num(state.power, 0) >= num(state.powerNeeded, 0);
       solarStatus.textContent = enough
         ? 'Enough power for the claw and scanner.'
-        : 'Not enough power — get closer to the Sun, or build Big Solar Wings.';
+        : t('Not enough power — get closer to the Sun, or build Big Solar Wings.', 'Not enough power. Fly near the Sun, or build Big Solar Wings.');
       solarStatus.className = `sp-solar__status ${enough ? 'is-ok' : 'is-low'}`;
     }
 

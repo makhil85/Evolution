@@ -1,6 +1,6 @@
 # Lessons plan: "watch, answer, try it" in every chapter
 
-Status (2026-10-05, evening): **1A, 1B, 2A, 2B, 3A, 3B and 4G built** on `src/lesson/` (see HANDOFF). Lead: 2 lessons per chapter; every lesson must be driven by animation, not words (Flight School is the gold standard). 3C is held for later. Not yet: 3C-3E, 4B-4F, the "📖 Lessons" list, porting Flight School. Chapter 4's
+Status (2026-10-05, evening): **1A, 1B, 2A, 2B, 3A, 3B and 4G built** on `src/lesson/` (see HANDOFF). Lead: 2 lessons per chapter; every lesson must be driven by animation, not words (Flight School is the gold standard). 3C is held for later. Flight School (4A) is now on the same card, and the "📖 Lessons" list is on the launcher (2026-10-05, late night). Not yet: 3C-3E, 4B-4F. Chapter 4's
 Flight School (`src/space/lesson/`) is the model: the lead liked that a short
 animation explains a concept, the child answers a question about what they
 just saw, and then does it for real in the game.

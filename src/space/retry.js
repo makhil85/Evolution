@@ -50,7 +50,7 @@ export function createRetry(game) {
       <button type="button" class="sp-retry-card__no"></button><button type="button" class="sp-retry-card__yes"></button></div></div>`;
     card.querySelector('h3').textContent = level1 ? 'Try again?' : 'Something gone wrong?';
     card.querySelector('p').textContent = level1
-      ? 'Go back to just after your last question and try this part again.'
+      ? 'Go back to your last question. Try this part again.'
       : 'Go back to just after your last question and fly this part again. Your answers and supplies from then are kept.';
     card.querySelector('.sp-retry-card__no').textContent = level1 ? 'No, keep going' : 'No, keep flying';
     card.querySelector('.sp-retry-card__yes').textContent = level1 ? 'Yes, try again' : 'Yes, go back';

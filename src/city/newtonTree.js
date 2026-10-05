@@ -54,7 +54,7 @@ const QUIZ = {
     q: 'If you let go of an apple, which way does it go?',
     options: ['Up to the sky', 'Down to the ground', 'It floats where it is'],
     answer: 1,
-    why: 'Gravity pulls things DOWN, towards the middle of the Earth. That is why apples, balls and you always come back down!',
+    why: 'Gravity pulls things DOWN. That is why apples, balls and you always come back down!',
   },
 };
 
@@ -91,6 +91,8 @@ function injectCss() {
  * @param {(m:string, kind?:string) => void} o.toast
  */
 export function createNewtonTree({ scene, at, heightAt, level, storeKey, getAvatar, reward, toast }) {
+  /** Level 4 wording, or the Level 1 one (short, for a 2nd grader). */
+  const L = (l4, l1) => (level === 1 ? l1 : l4);
   injectCss();
   const { group, apples } = buildTree();
   const ground = heightAt(at.x, at.z);
@@ -177,16 +179,16 @@ export function createNewtonTree({ scene, at, heightAt, level, storeKey, getAvat
       who: 'Apple tree',
       text: `An apple just fell right next to you, ${name}! Why do you think it fell DOWN, and not up or sideways?`,
       choices: [
-        next('Something pulled it down', () => reply('Great thinking! Something invisible pulled it. A very curious young man wondered the same thing...')),
-        next('It got tired of hanging', () => reply('Ha! Apples don’t get tired... but something DID pull it down. A very curious young man wondered about this too...')),
-        next('The wind blew it', () => reply('Wind can shake an apple loose, but wind blows sideways. So why did it go straight DOWN? A very curious young man wondered about this too...')),
+        next('Something pulled it down', () => reply(L('Great thinking! Something invisible pulled it. A very curious young man wondered the same thing...', 'Great thinking! Something you can’t see pulled it. A young man once asked the same thing...'))),
+        next('It got tired of hanging', () => reply(L('Ha! Apples don’t get tired... but something DID pull it down. A very curious young man wondered about this too...', 'Ha! Apples don’t get tired... but something DID pull it down. A young man once asked about this too...'))),
+        next('The wind blew it', () => reply(L('Wind can shake an apple loose, but wind blows sideways. So why did it go straight DOWN? A very curious young man wondered about this too...', 'Wind blows sideways. So why did it fall straight DOWN? A young man once asked about this too...'))),
       ],
     });
   }
 
   function story() {
     show({
-      text: 'About 350 years ago, a young scientist named Isaac Newton sat in his garden in England. He watched an apple fall from a tree and asked: what pulls it towards the ground?',
+      text: L('About 350 years ago, a young scientist named Isaac Newton sat in his garden in England. He watched an apple fall from a tree and asked: what pulls it towards the ground?', 'Long ago, a young scientist named Isaac Newton sat in his garden. He saw an apple fall. He asked: what pulls it down?'),
       choices: [next('What did he find out?', story2)],
     });
   }

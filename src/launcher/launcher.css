@@ -169,6 +169,24 @@ button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 }
 #name-input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 #naming-form .primary { margin-top: 12px; }
+#hero-pick { margin-bottom: 18px; }
+#hero-pick[hidden] { display: none; }
+.hero-opts { display: flex; gap: 10px; margin-top: 10px; }
+.hero-opt { flex: 1; position: relative; cursor: pointer; }
+.hero-opt input { position: absolute; opacity: 0; width: 0; height: 0; }
+.hero-opt span {
+  display: block;
+  padding: 14px 10px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: #0f151f;
+  font-size: 20px;
+  font-weight: 800;
+  text-align: center;
+}
+.hero-opt:hover span { border-color: #3d4a5c; }
+.hero-opt input:checked + span { border-color: var(--accent); background: rgba(255, 209, 102, .14); }
+.hero-opt input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 @media (max-width: 520px) {
   #app { padding: 32px 14px 28px; }
@@ -211,3 +229,24 @@ button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
    it sits next to two harmless buttons and must not invite a curious tap. */
 button.danger { color: #ff9a8a; border-color: #43303a; }
 button.danger:hover { border-color: #ff9a8a; background: #2a1c20; }
+
+/* --- lessons (watch again) ------------------------------------------------ */
+#lessons-pick .muted { margin: 0 0 10px; }
+.lessons { display: flex; flex-direction: column; gap: 8px; }
+.lessons__row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.lessons__ch { flex: 0 0 92px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.lesson {
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.lesson:hover:not(:disabled) { border-color: var(--accent); background: var(--panel-2); }
+.lesson:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+.lesson.is-seen { border-color: rgba(99, 210, 155, .5); }
+.lesson.is-locked { opacity: .5; cursor: default; }

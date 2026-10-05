@@ -149,7 +149,7 @@ function refreshHud() {
   hud.setProgress(pr.pct, pr.status);
   const lines = rules.missionLines();
   if (mode.treasureHunt && hunt && !hunt.isFound() && !rules.state.builtFinal) {
-    lines.push('Treasure: a Master Gear is hidden in one of the homes. Follow the clues (Clue button).');
+    lines.push(LEVEL === 1 ? 'Treasure: a Master Gear is hidden in a home. Press the Clue button.' : 'Treasure: a Master Gear is hidden in one of the homes. Follow the clues (Clue button).');
   }
   if (newton && !newton.heard()) lines.push('Bonus: sit under the apple tree near the start and press E. 🍎');
   hud.setMission({ lines });

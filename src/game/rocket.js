@@ -12,6 +12,7 @@
 // HUD shows and the number the sim tests against can never drift apart. Every
 // constant below was tuned by running sweep() under node — see TUNING.
 import { ORBIT_ALTITUDE_M } from './contracts.js';
+import { t } from '../space/level.js';
 
 // ---------------------------------------------------------------------------
 // Environment
@@ -376,10 +377,12 @@ export function verdictFor(apogeeM, twr, liftoffT) {
 
 /** One line per verdict, in the words the HUD should use. */
 export const FLIGHT_ADVICE = Object.freeze({
-  'too-heavy': 'Too much fuel! The rocket was heavier than its engine could push, so it sat on the pad burning fuel it never got to use.',
-  sluggish: 'So heavy it barely left the pad. All that fuel is weight the engine has to lift too — try taking a tank off.',
-  short: 'A clean launch, but it ran out of fuel too early. Try adding a fuel tank.',
-  orbit: 'Orbit! Enough fuel to keep pushing, light enough to get moving fast.',
+  'too-heavy': t('Too much fuel! The rocket was heavier than its engine could push, so it sat on the pad burning fuel it never got to use.',
+    'Too much fuel! The rocket was too heavy to lift. It just sat on the pad.'),
+  sluggish: t('So heavy it barely left the pad. All that fuel is weight the engine has to lift too — try taking a tank off.',
+    'So heavy it hardly left the pad. Fuel is heavy too. Take a tank off.'),
+  short: t('A clean launch, but it ran out of fuel too early. Try adding a fuel tank.', 'Good launch, but the fuel ran out too soon. Add a tank.'),
+  orbit: t('Orbit! Enough fuel to keep pushing, light enough to get moving fast.', 'Space! Enough fuel, and light enough to go fast.'),
 });
 
 /**

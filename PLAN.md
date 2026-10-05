@@ -31,6 +31,7 @@ history.
 
 | Date | Item |
 |---|---|
+| 10-05 | Lessons replay list on the launcher; Level 1 written clues in every lesson; Flight School on the lesson card; girl or boy as the first choice; Level 1 text in all four chapters checked for a 2nd grader (`npm run reading`). See HANDOFF. |
 | 10-01 | Fun moves on the Moon and Europa walks (was item 6): K dance, I splits, B back walkover (J and H are the mission card and help in Chapter 4); walking or a jump ends them; a hint after 8 s of walking. |
 | 09-30 | Mining tools (axe, pickaxe, hammer, wrench, magnifying glass) and the haul flying into the Supplies panel, Chapters 1-3. Chapter 2: Newton's apple tree side story with a gravity question. Launcher remembers finished chapters (a restart can't re-lock the next). Frame monitor in every chapter. |
 | 09-30 | **Chapter 3 no longer opens pre-solved.** `START_SOLVED` was on whenever the game ran on the dev server - which is how the Desktop shortcut runs it - so every visit wiped the child's Chapter 3 save and opened it at 99%. Now only `?solved` does that. Chapter 3 re-played from 0% to launch. |

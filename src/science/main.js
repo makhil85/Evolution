@@ -147,7 +147,7 @@ function refreshHud() {
   hud.setProgress(pr.pct, pr.status);
   const lines = rules.missionLines();
   if (mode.treasureHunt && hunt && !hunt.isFound() && !rules.state.built) {
-    lines.push('Treasure: a Golden Core is hidden in one of the homes. Follow the clues (Clue button).');
+    lines.push(LEVEL === 1 ? 'Treasure: a Golden Core is hidden in a home. Press the Clue button.' : 'Treasure: a Golden Core is hidden in one of the homes. Follow the clues (Clue button).');
   }
   hud.setMission({ lines });
   hud.setBadges(rules.badges().map((b, i) => ({ id: `b${i}`, label: b.label, state: b.done ? 'done' : 'open' })));

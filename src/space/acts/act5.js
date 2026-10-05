@@ -41,7 +41,7 @@ export function act5Steps(game) {
       objective: t('Watch the Mission Biologist’s lesson on cells, DNA and proteins, and answer a question after each film.', 'Watch the lesson about living things. Then answer the questions.'),
       markers: ['europa'],
       async enter() {
-        await lessonOnce(LESSON_4G);
+        await lessonOnce(LESSON_4G, { bus: game.bus });
         hud.toast(t('Now you try! Walk to the crack in the ice and drill for signs of life.', 'Now you try! Walk to the crack and drill.'), { kind: 'good', ms: 4500 });
       },
     },
@@ -56,7 +56,7 @@ export function act5Steps(game) {
         if (scene) {
           await game.runScene(scene);
         } else {
-          await hud.showFact({ title: 'The Europa walk is coming soon', body: 'The drill sequence is still being built. Here is what she found under the ice.' });
+          await hud.showFact({ title: 'The Europa walk is coming soon', body: 'The drill sequence is still being built. Here is what you found under the ice.' });
           await askBeat(game, 'europaWalk');
           await askBeat(game, 'drillResult');
         }

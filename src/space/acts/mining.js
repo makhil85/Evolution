@@ -157,7 +157,7 @@ export function createMiningController(game) {
           title: 'The planet that never was',
           body: t('The asteroid belt holds millions of rocks, but all of them together weigh less than our Moon. '
             + 'They never clumped into a planet - something kept stirring them up...',
-            'The asteroid belt has millions of rocks. They never stuck together into a planet. Something kept shaking them up...'),
+            'The asteroid belt has lots and lots of rocks. They never made a planet. Something kept shaking them...'),
         });
         await askBeat(game, 'beltFact');
       }

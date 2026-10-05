@@ -41,7 +41,7 @@ function drawTriangles(ctx, T) {
   const shake = T > 3 && T < 6 ? Math.sin(T * 60) * 2 : 0;
   const { tl } = frame(ctx, 170, 340, 170, shake, { brace: true });
   if (T > 2.5 && T < 6.5) hand(ctx, tl[0] - 18, tl[1], true);
-  label(ctx, 'One diagonal: two triangles', 255, 120, { size: 20, alpha: span(T, 0.5, 1.5) });
+  label(ctx, 'One stick across: two triangles', 255, 120, { size: 20, alpha: span(T, 0.5, 1.5) });
   const a = span(T, 6.5, 8);
   if (a > 0) {
     ctx.save(); ctx.globalAlpha = a;
@@ -128,6 +128,7 @@ export const LESSON_2A = {
         { dur: 6, cap: ['Push the other way: it flops back over. Its corners can swing, so its shape can change.', 'It flops the other way too.'] },
       ],
       draw: drawSquares,
+      clue: [null, 'The corners can swing. So the square squashes.'],
       question: {
         prompt: ['Why did the square frame squash?', 'Why did the square squash?'],
         choices: [
@@ -147,6 +148,7 @@ export const LESSON_2A = {
         { dur: 4.5, cap: ['A triangle can’t change shape unless one of its sticks gets longer. That makes it firm.', 'Triangles stay firm.'] },
       ],
       draw: drawTriangles,
+      clue: [null, 'The triangle did not move. Triangles stay firm!'],
       question: {
         prompt: ['Which shape stays firm when you push it?', 'Which shape stays firm?'],
         choices: [
@@ -166,6 +168,7 @@ export const LESSON_2A = {
         { dur: 4, cap: ['The truck crosses and the bridge stays straight: the triangles carry the weight to both banks.', 'It stays straight! The triangles help.'] },
       ],
       draw: drawTruss,
+      clue: [null, 'Triangles hold the weight up. The bridge stays straight.'],
       question: {
         prompt: ['Why do many bridges have triangles on top?', 'Why do bridges have triangles?'],
         choices: [
@@ -323,6 +326,7 @@ export const LESSON_2B = {
         { dur: 4, cap: ['His body pushed the water aside. He jumped up shouting “Eureka!”: I found it!', 'He shouted “Eureka!”: I found it!'] },
       ],
       draw: drawBath,
+      clue: [null, 'His body took up room. It pushed the water out.'],
       question: {
         prompt: ['Why did the bath overflow when Archimedes got in?', 'Why did the water spill?'],
         choices: [
@@ -342,6 +346,7 @@ export const LESSON_2B = {
         { dur: 4, cap: ['The bigger silver bar pushes out more water: its jug fills higher.', 'The big silver bar spills more water!'] },
       ],
       draw: drawSameWeight,
+      clue: [null, 'The silver bar is bigger. Bigger spills more water.'],
       question: {
         prompt: ['A gold bar and a silver bar weigh the same. Which pushes out more water?', 'Which bar spills more water?'],
         choices: [
@@ -361,6 +366,7 @@ export const LESSON_2B = {
         { dur: 4, cap: ['The crown spilled more! It was bigger, so cheaper, lighter metal was mixed in. The goldsmith was caught!', 'The crown spilled more. It was not all gold!'] },
       ],
       draw: drawCrownTest,
+      clue: [null, 'The crown spilled more. So it is not all gold.'],
       question: {
         prompt: ['The crown spilled more water than pure gold of the same weight. What does that mean?', 'The crown spilled more. What does it mean?'],
         choices: [

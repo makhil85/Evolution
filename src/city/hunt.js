@@ -47,12 +47,12 @@ const L1 = {
   steps: [
     {
       id: 'cityHall', at: doorAt('City Hall'), radius: 2.2,
-      clue: 'Find the building with a clock in its little tower and 4 tall white pillars at the front. Stand by its front door and press E.',
+      clue: 'Find the building with a clock on its little tower. It has 4 tall white posts at the front. Stand by its door and press E.',
       found: 'Tick tock! You found the clock building.',
     },
     {
       id: 'scienceCenter', at: doorAt('Science Center'), radius: 2.2,
-      clue: 'Walk south along the road, toward the bottom of the map. Find the building with a round purple roof and a gold star over its door. Stand at its door and press E.',
+      clue: 'Walk down the road, to the bottom of the map. Find the building with a round purple roof. It has a gold star over its door. Stand at its door and press E.',
       found: 'A purple dome and a gold star. This is the Science Center!',
     },
     {
@@ -62,7 +62,7 @@ const L1 = {
     },
     {
       id: 'townHouse', at: TOWN, radius: 2.2,
-      clue: 'There are two homes in the city. One is close to the purple-dome building. The Master Gear is in the OTHER home, the one that is far away. Stand at its front door and press E.',
+      clue: 'There are two homes in the city. One is close to the round purple roof. The Master Gear is in the OTHER home, the one that is far away. Stand at its front door and press E.',
       found: 'You found the Master Gear! It clicks and spins. Now the Workshop can be built!',
     },
   ],

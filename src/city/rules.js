@@ -20,8 +20,10 @@ import {
 import { START_TILE, PICKUPS } from './layout.js';
 import { questionsFor } from './questions.js';
 
-const DEFAULT_MESSAGE =
-  'Solve any 3 medium quests or the hard problem. Then the single golden bridge lock opens at the workshop moat, and the bridge puzzle builds 5 planks.';
+const DEFAULT_MESSAGES = {
+  4: 'Solve any 3 medium quests or the hard problem. Then the single golden bridge lock opens at the workshop moat, and the bridge puzzle builds 5 planks.',
+  1: 'Solve any 3 medium quests or the hard one. Then the gold lock at the moat opens. The bridge puzzle builds 5 planks.',
+};
 
 /** Old collect() labels, by pickup type. */
 const PICKUP_LABEL = {
@@ -50,9 +52,9 @@ const BADGE_LABELS = [
 const MEDIUM_OPTION_TEXT = {
   1: {
     water: 'Medium: Water Wheel Drops',
-    gear: 'Medium: Five Gear Direction',
-    power: 'Medium: Bulb Path Logic',
-    tile: 'Medium: STEM Floor Sudoku',
+    gear: 'Medium: Five Gears',
+    power: 'Medium: Light the Bulb',
+    tile: 'Medium: Shape Grid',
   },
   4: {
     water: 'Medium: Water Tower Pattern',
@@ -88,6 +90,9 @@ const num = (v, fallback = 0) => (Number.isFinite(Number(v)) ? Number(v) : fallb
  */
 export function createCityRules({ level, storage } = {}) {
   const lvl = level === 1 ? 1 : 4;
+  /** Level 4 wording, or the Level 1 one (short, for a 2nd grader). */
+  const L = (l4, l1) => (lvl === 1 ? l1 : l4);
+  const DEFAULT_MESSAGE = DEFAULT_MESSAGES[lvl];
   const store = storage || browserStorage() || memoryStorage();
   const key = STORE_KEYS[lvl];
   const questIds = QUEST_IDS[lvl];
@@ -202,7 +207,7 @@ export function createCityRules({ level, storage } = {}) {
   // Hard mode needs the Master Gear before the final build. The requirement is
   // a play-mode setting (not saved); `huntFound` is saved with the chapter.
   let huntRequired = false;
-  const HUNT_TEXT = 'The Workshop needs its Master Gear. Follow the clues - read them again with the 📜 Clue button.';
+  const HUNT_TEXT = L('The Workshop needs its Master Gear. Follow the clues - read them again with the 📜 Clue button.', 'The Workshop needs its Master Gear. Press the 📜 Clue button to read the clues.');
   const setHuntRequired = (on) => { huntRequired = !!on; };
   const isHuntRequired = () => huntRequired;
   const huntFound = () => !!state.huntFound;
@@ -218,7 +223,7 @@ export function createCityRules({ level, storage } = {}) {
     if (!p || isCollected(id)) return null;
     state.resources[p.res] += p.amount;
     state.collected.push(id);
-    const text = say(`${PICKUP_LABEL[p.type]}: +${p.amount} ${p.res}.`);
+    const text = say(`${L(PICKUP_LABEL[p.type], PICKUP_LABEL[p.type].replace('construction ', ''))}: +${p.amount} ${p.res}.`);
     save();
     return { res: p.res, amount: p.amount, text };
   }
@@ -229,13 +234,13 @@ export function createCityRules({ level, storage } = {}) {
   function openQuest(q) {
     if (!questIds.includes(q)) return { ok: false, text: say('That station has nothing to ask right now.') };
     if (state.solved[q]) {
-      return { ok: false, text: say('That quest is already solved. Its control console has been removed from the map.') };
+      return { ok: false, text: say(L('That quest is already solved. Its control console has been removed from the map.', 'You already solved that one!')) };
     }
     if (q === 'bridge' && !bridgeUnlocked()) {
       return {
         ok: false,
         text: say(lvl === 1
-          ? 'The single golden bridge lock is still closed. Solve the hard problem or any 3 medium quests first.'
+          ? 'The gold lock is still closed. Solve the hard one or any 3 medium quests first.'
           : 'The single golden bridge lock is still closed. Solve the hard Olympiad problem or any 3 medium Olympiad quests first.'),
       };
     }
@@ -286,13 +291,14 @@ export function createCityRules({ level, storage } = {}) {
    */
   function workshopCheck() {
     if (state.builtFinal) {
-      return { ok: false, text: 'Engineering Workshop is already built. Go back to the chapters to continue.', missing: [] };
+      return { ok: false, text: L('Engineering Workshop is already built. Go back to the chapters to continue.', 'The Workshop is built! Go back to the chapters.'), missing: [] };
     }
     if (huntRequired && !state.huntFound) return { ok: false, text: HUNT_TEXT, missing: [] };
     if (!(state.solved.bridge && bridgeUnlocked())) {
       return {
         ok: false,
-        text: 'The workshop needs the unlocked bridge route first: solve the hard problem or any 3 medium quests, then solve the 5-plank bridge puzzle.',
+        text: L('The workshop needs the unlocked bridge route first: solve the hard problem or any 3 medium quests, then solve the 5-plank bridge puzzle.',
+          'The workshop needs the bridge first. Solve the hard one or any 3 medium quests. Then solve the bridge puzzle.'),
         missing: [],
       };
     }
@@ -301,7 +307,7 @@ export function createCityRules({ level, storage } = {}) {
       if (state.resources[r] < v) missing.push(`${r} ${state.resources[r]}/${v}`);
     }
     if (missing.length) {
-      return { ok: false, text: `Collect more resources before building: ${missing.join(', ')}.`, missing };
+      return { ok: false, text: `${L('Collect more resources before building:', 'You need more:')} ${missing.join(', ')}.`, missing };
     }
     return { ok: true, text: '', missing: [] };
   }
@@ -318,7 +324,7 @@ export function createCityRules({ level, storage } = {}) {
     for (const [r, v] of Object.entries(RECIPE)) state.resources[r] -= v;
     state.builtFinal = true;
     state.built.workshop = 0;
-    const text = say('Final build started. The Engineering Workshop will rise piece by piece.');
+    const text = say(L('Final build started. The Engineering Workshop will rise piece by piece.', 'Here we go! Watch the Workshop go up, piece by piece.'));
     save();
     return {
       ok: true,
@@ -326,7 +332,7 @@ export function createCityRules({ level, storage } = {}) {
       missing: [],
       target: 'workshop',
       pieces: MAX_PIECES.workshop,
-      doneMessage: 'Engineering Workshop complete! Chapter 3 is unlocked.',
+      doneMessage: L('Engineering Workshop complete! Chapter 3 is unlocked.', 'The Workshop is done! Chapter 3 is open.'),
     };
   }
 
@@ -337,7 +343,7 @@ export function createCityRules({ level, storage } = {}) {
     const routeSteps = Math.max(Math.min(3, mediumSolvedCount()), state.solved.key ? 3 : 0);
     const solved = routeSteps + (state.solved.bridge ? 1 : 0) + (state.builtFinal ? 1 : 0);
     const pct = Math.round((solved / 5) * 100);
-    return { pct, status: state.builtFinal ? 'Engineering Workshop built' : 'Build the Engineering Workshop' };
+    return { pct, status: state.builtFinal ? L('Engineering Workshop built', 'Workshop built') : L('Build the Engineering Workshop', 'Build the Workshop') };
   }
 
   /** The old "next steps" (first 3), each a short line. Never empty. */
@@ -348,10 +354,10 @@ export function createCityRules({ level, storage } = {}) {
       for (const m of mediums) if (!state.solved[m]) next.push(MEDIUM_OPTION_TEXT[lvl][m]);
       if (!state.solved.key) next.push('Hard: Blueprint Lock (outside the moat)');
     }
-    if (bridgeUnlocked() && !state.solved.bridge) next.push('The single golden lock at the moat is open: solve Bridge Builder for 5 planks.');
-    if (state.solved.bridge && !state.builtFinal) next.push('Cross the bridge, collect resources and build the Engineering Workshop.');
+    if (bridgeUnlocked() && !state.solved.bridge) next.push(L('The single golden lock at the moat is open: solve Bridge Builder for 5 planks.', 'The gold lock is open! Solve the bridge puzzle.'));
+    if (state.solved.bridge && !state.builtFinal) next.push(L('Cross the bridge, collect resources and build the Engineering Workshop.', 'Cross the bridge. Get what you need. Build the Workshop.'));
     const lines = next.slice(0, 3);
-    return lines.length ? lines : ['Go back to the chapters to continue.'];
+    return lines.length ? lines : [L('Go back to the chapters to continue.', 'Go back to the chapters.')];
   }
 
   /** The old badge strip: [{ label, done }], the workshop last. */
@@ -369,17 +375,17 @@ export function createCityRules({ level, storage } = {}) {
 
   /** Old one-off lines for the main loop (interaction and movement toasts). */
   const text = {
-    welcome: (name) => (name ? `Welcome, ${name}! Start with the city engineering quests.` : 'Welcome! Start with the city engineering quests.'),
-    nothingNear: 'Move closer to a crate, block, blueprint, quest station, or the workshop foundation.',
+    welcome: (name) => (name ? `Welcome, ${name}! ${L('Start with the city engineering quests.', 'Start with the city quests.')}` : `Welcome! ${L('Start with the city engineering quests.', 'Start with the city quests.')}`),
+    nothingNear: L('Move closer to a crate, block, blueprint, quest station, or the workshop foundation.', 'Walk closer to something to use it.'),
     blocked: 'Blocked. Try a road, bridge, or open area.',
-    moat: 'The corner moat blocks the workshop island. Solve the Bridge Builder puzzle to build 5 planks.',
+    moat: L('The corner moat blocks the workshop island. Solve the Bridge Builder puzzle to build 5 planks.', 'The water is in the way. Solve the bridge puzzle to build a bridge.'),
     wrongAnswer: 'Not quite. Try again.',
     bridgeHint: () => (bridgeUnlocked()
-      ? 'The bridge station is unlocked at the moat entrance. Solve it to place 5 planks.'
+      ? L('The bridge station is unlocked at the moat entrance. Solve it to place 5 planks.', 'The bridge puzzle is open at the water. Solve it to build the bridge.')
       : (lvl === 1
-        ? 'The single golden lock is at the 3-block-wide moat entrance. Solve the hard problem or any 3 medium quests first.'
+        ? 'The gold lock is by the water. Solve the hard one or any 3 medium quests first.'
         : 'The single golden lock is at the 3-block-wide moat entrance. Solve the hard Olympiad problem or any 3 medium Olympiad quests first.')),
-    workshopHint: 'The Engineering Workshop foundation is inside the corner moat. Unlock the bridge route, build 5 planks, collect resources, then build it.',
+    workshopHint: L('The Engineering Workshop foundation is inside the corner moat. Unlock the bridge route, build 5 planks, collect resources, then build it.', 'The Workshop goes on the island. Build the bridge, get what you need, then build it.'),
   };
 
   return {

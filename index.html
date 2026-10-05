@@ -21,9 +21,15 @@
 
       <section id="chapters" aria-label="Chapters"></section>
 
+      <section id="lessons-pick" aria-label="Lessons">
+        <h2 class="section-title">📖 Lessons</h2>
+        <p class="muted" id="lessons-lede">Watch any lesson again.</p>
+        <div id="lessons" class="lessons"></div>
+      </section>
+
       <footer id="foot">
-        <button type="button" id="edit-look" class="ghost">Change how she looks</button>
-        <button type="button" id="rename" class="ghost">Change her name</button>
+        <button type="button" id="edit-look" class="ghost">Change the look</button>
+        <button type="button" id="rename" class="ghost">Change the name</button>
         <button type="button" id="hard-reset" class="ghost danger">Start everything over</button>
         <p id="hint" class="muted"></p>
       </footer>
@@ -32,12 +38,19 @@
     <!-- First run: name her before anything else. -->
     <div id="naming" hidden>
       <form id="naming-form">
+        <div id="hero-pick">
+          <h2>Girl or boy?</h2>
+          <div class="hero-opts" role="radiogroup" aria-label="Girl or boy">
+            <label class="hero-opt"><input type="radio" name="hero" value="girl" checked /><span>👧 Girl</span></label>
+            <label class="hero-opt"><input type="radio" name="hero" value="boy" /><span>👦 Boy</span></label>
+          </div>
+        </div>
         <h2>What is your scientist called?</h2>
-        <p class="muted">She keeps this name through every chapter.</p>
+        <p class="muted" id="name-note">This name stays the same in every chapter.</p>
         <input id="name-input" type="text" maxlength="18" autocomplete="off"
-               spellcheck="false" placeholder="Zara" aria-label="Her name" />
+               spellcheck="false" placeholder="Zara" aria-label="Name" />
         <p id="name-error" class="error" role="alert"></p>
-        <button type="submit" class="primary">Next: build her</button>
+        <button type="submit" class="primary" id="name-next">Next: choose a look</button>
       </form>
     </div>
 

@@ -4,6 +4,9 @@
 // three chapters are untouched games that each save their own progress, and
 // profile.js reads those saves rather than asking them to report in.
 import { DIFFICULTIES, difficulty, chapterStatus, nextChapter, loadProfile, saveProfile, loadLook, profileReady, resetEverything, UNLOCK_KEY } from './profile.js';
+import { LESSON_LIST } from '../lesson/index.js';
+import { hasSeen, playLesson } from '../lesson/card.js';
+import { t } from '../space/level.js';
 import './launcher.css';
 
 const $ = (id) => document.getElementById(id);
@@ -14,8 +17,19 @@ const naming = $('naming');
 const nameInput = $('name-input');
 const nameError = $('name-error');
 
+/** he/she words for the launcher's own lines (the hero can change on this page). */
+function words() {
+  return loadProfile().hero === 'boy' ? { they: 'he', them: 'him', their: 'his' } : { they: 'she', them: 'her', their: 'her' };
+}
+
 function askForName({ afterwards }) {
   naming.hidden = false;
+  // Girl or boy is the FIRST choice on a fresh start; later the look page
+  // changes it, so a rename only asks for the name.
+  $('hero-pick').hidden = afterwards !== 'builder';
+  $('name-next').textContent = afterwards === 'builder' ? 'Next: choose a look' : 'Save';
+  const hero = loadProfile().hero;
+  for (const r of naming.querySelectorAll('input[name="hero"]')) r.checked = r.value === hero;
   nameInput.value = loadProfile().name;
   nameInput.focus();
   nameInput.select();
@@ -27,12 +41,13 @@ $('naming-form').addEventListener('submit', (e) => {
   const name = nameInput.value.trim();
   // A child typing nothing and pressing Enter must be told why, not ignored.
   if (!name) {
-    nameError.textContent = 'Give her a name first.';
+    nameError.textContent = 'Type a name first.';
     nameInput.focus();
     return;
   }
   nameError.textContent = '';
-  saveProfile({ name });
+  const hero = naming.querySelector('input[name="hero"]:checked')?.value === 'boy' ? 'boy' : 'girl';
+  saveProfile(naming.dataset.afterwards === 'builder' ? { name, hero } : { name });
   if (naming.dataset.afterwards === 'builder') {
     // Straight into the builder on a first run, because a name with no face
     // is not a character yet.
@@ -104,9 +119,61 @@ function render() {
     host.appendChild(card);
   }
 
+  renderLessons(status);
+
   $('hint').textContent = loadLook()
     ? ''
-    : 'She has no look yet — build her so she appears in the game.';
+    : `No look yet. Build ${words().them} so ${words().they} appears in the game.`;
+}
+
+/**
+ * The "📖 Lessons" list: every lesson, grouped by chapter, to watch again.
+ *
+ * A lesson opens once its chapter is open (or once it has been watched), so a
+ * child can't skip ahead into a later chapter's films. Watching one here marks
+ * it seen, which also means the chapter won't play it again.
+ */
+function renderLessons(status) {
+  const host = $('lessons');
+  host.textContent = '';
+  for (const c of status) {
+    const items = LESSON_LIST.filter((l) => l.chapter === c.n);
+    if (!items.length) continue;
+    const row = document.createElement('div');
+    row.className = 'lessons__row';
+    const tag = document.createElement('span');
+    tag.className = 'lessons__ch';
+    tag.textContent = `Chapter ${c.n}`;
+    row.appendChild(tag);
+    for (const item of items) {
+      const seen = hasSeen(item.id);
+      const locked = c.locked && !seen;
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'lesson' + (seen ? ' is-seen' : '') + (locked ? ' is-locked' : '');
+      b.dataset.lesson = item.id;
+      b.disabled = locked;
+      b.textContent = `${seen ? '✓ ' : locked ? '🔒 ' : '▶ '}${t(item.title[0], item.title[1])}`;
+      b.title = locked ? `Opens with Chapter ${c.n}` : seen ? 'Watched. Watch it again!' : 'Watch it';
+      b.addEventListener('click', () => watch(item));
+      row.appendChild(b);
+    }
+    host.appendChild(row);
+  }
+}
+
+let watching = false;
+async function watch(item) {
+  if (watching) return;
+  watching = true;
+  try {
+    await playLesson(await item.load());
+  } catch (err) {
+    console.error('[launcher] lesson failed', item.id, err);
+  } finally {
+    watching = false;
+    render();
+  }
 }
 
 /**
@@ -132,7 +199,9 @@ function renderLevels(current) {
     input.checked = d.level === current.level;
     input.addEventListener('change', () => {
       saveProfile({ difficulty: d.level });
-      render();
+      // Reload: the Level is read once per page (src/space/level.js), and the
+      // lessons list and its films must switch wording with it.
+      location.reload();
     });
     label.appendChild(input);
 
@@ -156,8 +225,8 @@ $('hard-reset').addEventListener('click', () => {
   const status = chapterStatus();
   const done = status.filter((c) => c.done).length;
   const warning = done
-    ? `This erases everything: ${done} finished chapter${done > 1 ? 's' : ''}, her name, her look, and all progress at BOTH Level 1 and Level 4.\n\nStart completely over?`
-    : 'This erases her name, her look and all progress at both Level 1 and Level 4.\n\nStart completely over?';
+    ? `This erases everything: ${done} finished chapter${done > 1 ? 's' : ''}, ${words().their} name, ${words().their} look, and all progress at BOTH Level 1 and Level 4.\n\nStart completely over?`
+    : `This erases ${words().their} name, ${words().their} look and all progress at both Level 1 and Level 4.\n\nStart completely over?`;
   if (!confirm(warning)) return;
   resetEverything();
   location.href = 'index.html';

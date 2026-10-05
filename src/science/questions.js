@@ -125,7 +125,7 @@ const LEVEL1 = {
     answers: ['8', 'eight'],
     hint: 'Hint: each new row has 2 more flowers than the row before it.',
     parentHint: 'Count how the flower rows grow: 2, 4, 6, so the next row adds 2 more.',
-    success: 'Correct. The rows go 2, 4, 6, 8. You spotted the growing-by-2 pattern.',
+    success: 'Correct. The rows go 2, 4, 6, 8. They grow by 2 each time.',
     reward: 3,
   }),
   m2: make('m2', {
@@ -138,7 +138,7 @@ const LEVEL1 = {
     answers: ['24', 'twenty four', 'twenty-four'],
     hint: 'Hint: add two numbers first: 3 + 5 = 8 and 7 + 9 = 16. Then add 8 + 16.',
     parentHint: 'The frog lands on 3, 5, 7, 9. Add the four landing numbers.',
-    success: 'Correct. 3 + 5 + 7 + 9 = 24. You used a pattern and careful addition.',
+    success: 'Correct. 3 + 5 + 7 + 9 = 24. You used a pattern to add.',
     reward: 3,
   }),
   m3: make('m3', {
@@ -182,7 +182,7 @@ const LEVEL1 = {
       ['It must stay still forever.', false],
     ],
     hint: 'Hint: look at the arrow from the hand. A push can make an object move that way.',
-    success: 'Correct. A push is a force, and the car starts moving in the direction of the push.',
+    success: 'Correct. A push is a force. The car moves the way you push it.',
     reward: 3,
   }),
   energy: make('energy', {

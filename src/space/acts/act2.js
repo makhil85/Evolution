@@ -35,7 +35,7 @@ export function act2Steps(game) {
     {
       id: 'a2_capture', act: 2,
       title: t('Capture into Moon orbit', 'Go around the Moon'),
-      objective: t('At your lowest point, point backwards (opposite to the way you are moving) and hold W to slow down until your path closes into a loop around the Moon.', 'Near the Moon, turn to face the way you came and hold W to slow down. Follow the green sign.'),
+      objective: t('At your lowest point, point backwards (opposite to the way you are moving) and hold W to slow down until your path closes into a loop around the Moon.', 'Near the Moon, turn to face the way you came. Hold W to slow down. Follow the green sign.'),
       markers: ['moon'],
       aim: 'retrograde',
       capture: 'moon',
@@ -93,7 +93,7 @@ export function act2Steps(game) {
         if (scene) {
           await game.runScene(scene);
         } else {
-          await hud.showFact({ title: 'Moon walk coming soon', body: 'The low-gravity walk is still being built. For now, here is what she found out there.' });
+          await hud.showFact({ title: 'Moon walk coming soon', body: 'The low-gravity walk is still being built. For now, here is what you found out there.' });
           await askBeat(game, 'moonWalk');
           await askBeat(game, 'moonSample');
           await askBeat(game, 'moonFootprints');

@@ -804,7 +804,7 @@ function updateLandingCue(thrust, target = game.landTarget) {
     setCue('stop', t(`Too fast! Hold W to brake. Speed ${speed.toFixed(1)}`, 'Too fast! Hold W to slow down.'));
     aimHelp = { up: aimUp, phase: 'brake', line: aimLine(t('Hold W with the nose on the green mark until the speed is back in the green.', 'Hold W until the speed is green again.')) };
   } else if (thrust > 0 && speed < ship.safeLandingSpeed * 0.45 && !(game.mode.id === 'easy' || game.mode.id === 'medium')) {
-    setCue('stop', t('Ease off W! Let her drift down.', 'Let go of W! Float down slowly.'));
+    setCue('stop', t('Ease off W! Let the ship drift down.', 'Let go of W! Float down slowly.'));
   } else if (headsUpSticky) {
     setCue('wait', auto
       ? t(`Getting fast: get ready to hold W. Speed ${speed.toFixed(1)}`, 'Getting fast! Get ready to hold W.')

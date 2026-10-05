@@ -14,6 +14,7 @@
 // tooltip gives one plain-language fact per body.
 
 import { el, svg, num } from './domUtil.js';
+import { t } from '../level.js';
 import { iconInner } from './icons.js';
 import { BODIES, BODY_ORDER, BELT, SOLAR } from '../contracts.js';
 
@@ -57,14 +58,14 @@ const COLOR = {
 const FACTS = {
   sun: 'Our star. Everything here circles it.',
   earth: 'Home — this is where the journey begins.',
-  moon: 'Her first landing, and the first slingshot.',
+  moon: 'Your first landing, and the first slingshot.',
   mars: 'A quick flyby and scan on the way to the belt.',
   ceres: 'The biggest thing in the asteroid belt — a dwarf planet.',
-  jupiter: "The biggest planet — more than twice the mass of every other planet combined.",
-  io: 'A moon covered in active volcanoes.',
+  jupiter: t('The biggest planet — more than twice the mass of every other planet combined.', 'The biggest planet of all.'),
+  io: t('A moon covered in active volcanoes.', 'A moon full of fire mountains.'),
   europa: 'The goal: an icy moon that may hide an ocean underneath.',
   ganymede: 'The biggest moon in the whole solar system.',
-  callisto: 'The most heavily cratered place in the solar system.',
+  callisto: t('The most heavily cratered place in the solar system.', 'A moon covered in holes from rocks.'),
   saturn: 'Famous for its wide, bright rings.',
   uranus: 'Tipped on its side — it spins almost lying down.',
   neptune: 'The windiest planet, way out at the edge.',

@@ -18,7 +18,8 @@ const { LESSON_2A, LESSON_2B } = await import('../src/lesson/lessons/ch2.js');
 const { LESSON_3A, LESSON_3B } = await import('../src/lesson/lessons/ch3.js');
 const card = await import('../src/lesson/card.js');
 const { LESSON_4G } = await import('../src/lesson/lessons/ch4.js');
-const LESSONS = [LESSON_1A, LESSON_1B, LESSON_2A, LESSON_2B, LESSON_3A, LESSON_3B, LESSON_4G];
+const { LESSON_4F } = await import('../src/lesson/lessons/flightSchool.js');
+const LESSONS = [LESSON_1A, LESSON_1B, LESSON_2A, LESSON_2B, LESSON_3A, LESSON_3B, LESSON_4F, LESSON_4G];
 
 const pair = (v, what) => {
   assert.ok(Array.isArray(v) && v.length === 2, `${what}: needs [Level 4, Level 1]`);
@@ -39,13 +40,14 @@ function fakeCtx() {
 }
 
 console.log('lessons');
-ok('seven lessons with unique ids', () => {
-  assert.equal(new Set(LESSONS.map((l) => l.id)).size, 7);
+ok('eight lessons (two a chapter) with unique ids', () => {
+  assert.equal(new Set(LESSONS.map((l) => l.id)).size, 8);
 });
 for (const L of LESSONS) {
-  ok(`${L.id}: 3 films, both Levels, one right answer of three`, () => {
+  const nFilms = L.id === 'ch4_flight_school' ? 4 : 3; // Flight school kept its four
+  ok(`${L.id}: ${nFilms} films, both Levels, one right answer of three, a Level 1 clue`, () => {
     pair(L.eyebrow, `${L.id} eyebrow`);
-    assert.equal(L.films.length, 3);
+    assert.equal(L.films.length, nFilms);
     L.films.forEach((f, i) => {
       const where = `${L.id} film ${i + 1}`;
       pair(f.title, `${where} title`);
@@ -56,6 +58,9 @@ for (const L of LESSONS) {
       assert.equal(q.choices.length, 3, `${where}: 3 choices`);
       assert.equal(q.choices.filter((c) => c.correct).length, 1, `${where}: one right answer`);
       q.choices.forEach((c) => pair(c.text, `${where} choice`));
+      // Level 1 written clue (lead 2026-10-05): short, and it gives the answer.
+      assert.ok(Array.isArray(f.clue) && typeof f.clue[1] === 'string' && f.clue[1].trim(), `${where}: Level 1 clue`);
+      assert.ok(f.clue[1].split(/\s+/).length <= 18, `${where}: clue too long`);
     });
   });
   ok(`${L.id}: every film draws from start to end without throwing`, () => {
