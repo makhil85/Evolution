@@ -17,7 +17,8 @@ const { LESSON_1A, LESSON_1B } = await import('../src/lesson/lessons/ch1.js');
 const { LESSON_2A, LESSON_2B } = await import('../src/lesson/lessons/ch2.js');
 const { LESSON_3A, LESSON_3B } = await import('../src/lesson/lessons/ch3.js');
 const card = await import('../src/lesson/card.js');
-const LESSONS = [LESSON_1A, LESSON_1B, LESSON_2A, LESSON_2B, LESSON_3A, LESSON_3B];
+const { LESSON_4G } = await import('../src/lesson/lessons/ch4.js');
+const LESSONS = [LESSON_1A, LESSON_1B, LESSON_2A, LESSON_2B, LESSON_3A, LESSON_3B, LESSON_4G];
 
 const pair = (v, what) => {
   assert.ok(Array.isArray(v) && v.length === 2, `${what}: needs [Level 4, Level 1]`);
@@ -38,8 +39,8 @@ function fakeCtx() {
 }
 
 console.log('lessons');
-ok('six lessons with unique ids', () => {
-  assert.equal(new Set(LESSONS.map((l) => l.id)).size, 6);
+ok('seven lessons with unique ids', () => {
+  assert.equal(new Set(LESSONS.map((l) => l.id)).size, 7);
 });
 for (const L of LESSONS) {
   ok(`${L.id}: 3 films, both Levels, one right answer of three`, () => {

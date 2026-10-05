@@ -1,6 +1,6 @@
 # Lessons plan: "watch, answer, try it" in every chapter
 
-Status (2026-10-05, evening): **1A, 1B, 2A, 2B, 3A, 3B built** on `src/lesson/` (see HANDOFF). Not yet: 3C-3E, 4B-4F, the "📖 Lessons" list, porting Flight School. Chapter 4's
+Status (2026-10-05, evening): **1A, 1B, 2A, 2B, 3A, 3B and 4G built** on `src/lesson/` (see HANDOFF). Lead: 2 lessons per chapter; every lesson must be driven by animation, not words (Flight School is the gold standard). 3C is held for later. Not yet: 3C-3E, 4B-4F, the "📖 Lessons" list, porting Flight School. Chapter 4's
 Flight School (`src/space/lesson/`) is the model: the lead liked that a short
 animation explains a concept, the child answers a question about what they
 just saw, and then does it for real in the game.
@@ -210,6 +210,16 @@ why wait for the window, point backwards to be caught. Port onto the engine.
 | Squeeze and stretch | Europa orbits Jupiter on a slightly oval path; up close it gets stretched, farther away it relaxes (shape exaggerated, a "squeeze" meter). | "What does Jupiter's pull do to Europa?" ✓ "Squeezes and stretches it" / "Nothing" / "Spins it like a top" |
 | Squeezing makes heat | A ball of putty squeezed again and again warms up (colour shift). Inside Europa the warm layer keeps water liquid under the ice. | "Why isn't Europa's ocean frozen solid?" ✓ "Squeezing makes heat inside" / "The Sun is very hot there" / "It has volcanoes of lava" |
 | Cracks and plumes | Water pushes up through cracks in the ice and sprays out as plumes. | "Why do we drill at a crack?" ✓ "The ocean is closest there" / "Cracks are softer to walk on" / "It's the coldest spot" |
+
+### 4G. What makes something alive? (BUILT, step a5_lesson: after landing on Europa, before the drill)
+
+Lead, 2026-10-05: Chapter 4's second lesson, biology near Europa: cells, DNA, proteins. What the drill is looking for.
+
+| Film | Animation | Question |
+|---|---|---|
+| Made of cells | A lens zooms from a tree into a leaf: a wobbling honeycomb of cells with nuclei and drifting parts; one cell (ringed in gold) stretches, pinches and splits into two. | "What are all living things made of?" ✓ "Tiny living units called cells" |
+| DNA: the recipe | Into the nucleus: a rotating double helix with coloured A/T/G/C rungs, the letters read out; then it unzips and each half is copied into two ladders. | "What does DNA do?" ✓ "It holds the instructions for building the living thing" |
+| Proteins: tiny machines | A builder slides along a copy of the recipe, adding one coloured bead every 3 letters; the chain folds into a mouth-shaped protein that chomps a sugar in two. | "How does a cell build a protein?" ✓ "It follows DNA's recipe, joining beads in order" |
 
 ---
 
