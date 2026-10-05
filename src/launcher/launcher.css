@@ -211,3 +211,24 @@ button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
    it sits next to two harmless buttons and must not invite a curious tap. */
 button.danger { color: #ff9a8a; border-color: #43303a; }
 button.danger:hover { border-color: #ff9a8a; background: #2a1c20; }
+
+/* --- lessons (watch again) ------------------------------------------------ */
+#lessons-pick .muted { margin: 0 0 10px; }
+.lessons { display: flex; flex-direction: column; gap: 8px; }
+.lessons__row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.lessons__ch { flex: 0 0 92px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.lesson {
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.lesson:hover:not(:disabled) { border-color: var(--accent); background: var(--panel-2); }
+.lesson:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+.lesson.is-seen { border-color: rgba(99, 210, 155, .5); }
+.lesson.is-locked { opacity: .5; cursor: default; }

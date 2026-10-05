@@ -265,6 +265,7 @@ export const LESSON_4G = {
         { dur: 5, cap: ['A cell grows, then splits into two. That is how living things grow. You are made of cells too!', 'A cell splits into two. You are made of cells too!'] },
       ],
       draw: drawCells,
+      clue: [null, 'All living things are made of tiny cells.'],
       question: {
         prompt: ['What are all living things made of?', 'What are living things made of?'],
         choices: [
@@ -284,6 +285,7 @@ export const LESSON_4G = {
         { dur: 4.5, cap: ['When a cell splits, the ladder unzips and each half is copied, so both new cells get the recipe.', 'It unzips and copies, so each new cell gets the recipe.'] },
       ],
       draw: drawDNA,
+      clue: [null, 'DNA is a recipe for the living thing.'],
       question: {
         prompt: ['What does DNA do?', 'What is DNA?'],
         choices: [
@@ -304,6 +306,7 @@ export const LESSON_4G = {
         { dur: 3, cap: ['Each protein is a tiny machine with a job, like cutting up sugar for energy. Now let’s drill Europa and look for signs of life!', 'Proteins do jobs. Now let’s look for life on Europa!'] },
       ],
       draw: drawProtein,
+      clue: [null, 'The builder reads the recipe and joins beads in order.'],
       question: {
         prompt: ['How does a cell build a protein?', 'How is a protein made?'],
         choices: [

@@ -5,8 +5,14 @@
 //     films: [{ title: [l4, l1],
 //               beats: [{ dur, cap: [l4, l1] }, ...],   // authored seconds + caption
 //               draw(ctx, T, info),                      // T = authored seconds
-//               question: { prompt, choices: [{ text, correct }], hint, why } }] }
+//               question: { prompt, choices: [{ text, correct }], hint, why },
+//               clue: [l4, l1], clueAt: beatIndex }] }
 // Every player-facing string is a [Level 4, Level 1] pair (t() picks one).
+//
+// Level 1 clue (lead 2026-10-05): at Level 1 a written note gives the answer
+// away in plain words: it appears under the film from beat `clueAt` (default:
+// the last beat) and stays above the question. The animation is unchanged:
+// the clue is a strip under the picture, never over it. Level 4 never shows it.
 //
 // Captions wait to be read: a beat lasts at least 1.5 s + 0.35 s per word
 // (1.5x that at Level 1). When a caption needs longer than its beat, the
@@ -18,7 +24,9 @@
 //
 // The card opens in the play-mode modal layer (src/play/ui.js openLayer), so
 // game input is locked (body.dataset.playModal) and keys are captured while it
-// is open. Test hook while open: window.__lesson = { state(), next(), answerAll(),
+// is open. In Chapter 4 pass `{ bus: game.bus }`: the space game pauses and
+// drops its controls on the bus's 'ui-modal' (it doesn't read playModal).
+// Test hook while open: window.__lesson = { state(), next(), answerAll(),
 // skip(), film(i), seek(T), shot() }; the right answer's button has data-correct="1".
 import { t, LEVEL } from '../space/level.js';
 import { el, openLayer, prefersReducedMotion } from '../play/ui.js';
@@ -72,17 +80,33 @@ export function planAt(plan, time) {
   return { T: b.aStart + k * b.dur, cap: b.cap };
 }
 
+/** The film's Level 1 clue, or '' (Level 4, or a film without one). */
+export function clueText(film) {
+  if (LEVEL !== 1 || !film.clue) return '';
+  return Array.isArray(film.clue) ? (film.clue[1] || '') : film.clue;
+}
+
+/** Real time the clue appears: the start of beat `clueAt` (default the last). */
+export function clueStart(plan, film) {
+  const i = Math.max(0, Math.min(plan.beats.length - 1, film.clueAt ?? plan.beats.length - 1));
+  return plan.beats[i].start;
+}
+
 const CHEERS = [['Yes! Great thinking!', 'Yes! Well done!'], ['Spot on!', 'You got it!'], ['Exactly right!', 'Super! That’s right!']];
 
 const STYLE_ID = 'lesson-styles';
 const CSS = `
 .ls-card { width: min(980px, 100%); }
 .ls-stage { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 8px; }
-.ls-view { border-radius: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,.18); background: #0b1222; }
+.ls-view { position: relative; border-radius: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,.18); background: #0b1222; }
 .ls-canvas { display: block; width: 100%; height: clamp(220px, 50vh, 460px); }
 .ls-who { font-size: 11px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: var(--pl-gold); margin-bottom: 4px; }
 .ls-line { min-height: 2.9em; font-size: 16px; line-height: 1.45; }
 .ls-q[hidden] { display: none; }
+.ls-clue { padding: 8px 12px; background: #fff3b0; color: #2a2108; font-size: 17px; font-weight: 800; line-height: 1.35; }
+.ls-clue[hidden], .ls-qclue[hidden] { display: none; }
+.ls-clue.is-waiting { visibility: hidden; }
+.ls-qclue { margin: 0 0 8px; padding: 8px 12px; border-radius: 10px; background: #fff3b0; color: #2a2108; font-size: 16px; font-weight: 800; line-height: 1.35; }
 .ls-prompt { margin: 0; font-size: 16px; font-weight: 800; line-height: 1.4; }
 .ls-choices { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .ls-choice { text-align: left; min-height: 44px; padding: 10px 14px; border-radius: 12px; border: 2px solid rgba(255,255,255,.16); background: #1a2540; color: inherit; font: inherit; font-weight: 700; cursor: pointer; }
@@ -127,7 +151,7 @@ let current = null;
  * Play a lesson. Resolves when the child presses the last button.
  * @returns {Promise<{ results: {film: number, correct: boolean, tries: number}[] }>}
  */
-export function playLesson(lesson) {
+export function playLesson(lesson, { bus = null } = {}) {
   if (current) return current.promise;
   injectStyles();
   const films = lesson.films;
@@ -155,7 +179,9 @@ export function playLesson(lesson) {
   const view = el('div', 'ls-view');
   const canvas = el('canvas', 'ls-canvas');
   canvas.setAttribute('role', 'img');
-  view.appendChild(canvas);
+  const clueBox = el('div', 'ls-clue');
+  clueBox.hidden = true;
+  view.append(canvas, clueBox);
   const side = el('div', 'ls-side');
   const talk = el('div', 'ls-talk');
   const line = el('div', 'ls-line');
@@ -164,11 +190,13 @@ export function playLesson(lesson) {
   const qBox = el('div', 'ls-q');
   qBox.hidden = true;
   const prompt = el('p', 'ls-prompt');
+  const qClue = el('p', 'ls-qclue');
+  qClue.hidden = true;
   const choices = el('div', 'ls-choices');
   const fb = el('div', 'ls-feedback');
   fb.hidden = true;
   fb.setAttribute('role', 'status');
-  qBox.append(el('div', 'ls-who', t('Question', 'Question')), prompt, choices, fb);
+  qBox.append(el('div', 'ls-who', t('Question', 'Question')), prompt, qClue, choices, fb);
   side.append(talk, qBox);
   stage.append(view, side);
   const actions = el('div', 'ls-actions');
@@ -187,7 +215,9 @@ export function playLesson(lesson) {
       else if ((e.key === 'Enter' || e.key === 'ArrowRight') && !nextBtn.disabled && !nextBtn.hidden) { e.preventDefault(); onNext(); }
       else if (mode === 'ask' && /^[1-3]$/.test(e.key)) choices.children[+e.key - 1]?.click();
     },
+    onClose() { try { bus?.emit?.('ui-modal', false); } catch { /* bus gone */ } },
   });
+  try { bus?.emit?.('ui-modal', true); } catch { /* bus gone */ }
 
   replayBtn.addEventListener('click', () => { time = 0; setPaused(false); render(); });
   pauseBtn.addEventListener('click', () => setPaused(!paused));
@@ -207,6 +237,7 @@ export function playLesson(lesson) {
     title.textContent = pick(films[i].title);
     canvas.setAttribute('aria-label', title.textContent);
     qBox.hidden = true;
+    clueBox.hidden = true;
     pauseBtn.hidden = false; replayBtn.hidden = false;
     nextBtn.textContent = 'Next'; nextBtn.disabled = true; nextBtn.hidden = false; nextBtn.classList.remove('is-ready');
     [...dots.children].forEach((d, k) => { d.className = `ls-dot${k < i ? ' is-done' : k === i ? ' is-active' : ''}`; });
@@ -221,6 +252,10 @@ export function playLesson(lesson) {
     qBox.hidden = false;
     pauseBtn.hidden = true;
     prompt.textContent = pick(qq.prompt);
+    const clue = clueText(films[ix]);
+    qClue.textContent = clue ? `💡 ${clue}` : '';
+    qClue.hidden = !clue;
+    clueBox.hidden = true;
     choices.textContent = '';
     choices.classList.remove('is-done');
     fb.hidden = true;
@@ -273,7 +308,7 @@ export function playLesson(lesson) {
 
   function afterQuestion() {
     const last = ix === films.length - 1;
-    nextBtn.textContent = last ? t('Now you try!', 'Now you try!') : 'Next';
+    nextBtn.textContent = last ? (lesson.done ? pick(lesson.done) : t('Now you try!', 'Now you try!')) : 'Next';
     nextBtn.hidden = false; nextBtn.disabled = false; nextBtn.classList.add('is-ready');
     try { nextBtn.focus(); } catch { /* closed */ }
   }
@@ -328,6 +363,14 @@ export function playLesson(lesson) {
     }
     ctx.restore();
     if (at.cap !== lastCap) { lastCap = at.cap; line.textContent = at.cap; }
+    if (mode === 'watch') {
+      const clue = clueText(films[ix]);
+      // The strip keeps its place from the start (no jump when it appears).
+      const show = !!clue && time >= clueStart(plan, films[ix]);
+      if (clueBox.textContent !== `💡 ${clue}`) clueBox.textContent = `💡 ${clue}`;
+      clueBox.hidden = !clue;
+      clueBox.classList.toggle('is-waiting', !show);
+    }
   }
 
   function tick() {
@@ -342,7 +385,7 @@ export function playLesson(lesson) {
   const api = {
     get open() { return !closed; },
     state() {
-      return { lesson: lesson.id, film: ix, mode, time: +time.toFixed(2), length: +plans[ix].length.toFixed(2), caption: lastCap, results: results.filter(Boolean) };
+      return { lesson: lesson.id, film: ix, mode, time: +time.toFixed(2), length: +plans[ix].length.toFixed(2), caption: lastCap, clue: mode === 'ask' ? (qClue.hidden ? '' : qClue.textContent) : (clueBox.hidden || clueBox.classList.contains('is-waiting') ? '' : clueBox.textContent), results: results.filter(Boolean) };
     },
     /** One move a child would make: end the film -> question -> right answer -> next. */
     next() {
@@ -373,10 +416,10 @@ export function playLesson(lesson) {
  * when it was already seen (or there is no DOM). Never throws: a broken lesson
  * must not block the quest it comes before.
  */
-export async function lessonOnce(lesson) {
+export async function lessonOnce(lesson, opts) {
   if (!lesson || typeof document === 'undefined' || hasSeen(lesson.id)) return null;
   try {
-    return await playLesson(lesson);
+    return await playLesson(lesson, opts);
   } catch (err) {
     console.error('[lesson] failed', lesson.id, err);
     markSeen(lesson.id);

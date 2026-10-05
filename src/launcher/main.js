@@ -4,6 +4,9 @@
 // three chapters are untouched games that each save their own progress, and
 // profile.js reads those saves rather than asking them to report in.
 import { DIFFICULTIES, difficulty, chapterStatus, nextChapter, loadProfile, saveProfile, loadLook, profileReady, resetEverything, UNLOCK_KEY } from './profile.js';
+import { LESSON_LIST } from '../lesson/index.js';
+import { hasSeen, playLesson } from '../lesson/card.js';
+import { t } from '../space/level.js';
 import './launcher.css';
 
 const $ = (id) => document.getElementById(id);
@@ -104,9 +107,61 @@ function render() {
     host.appendChild(card);
   }
 
+  renderLessons(status);
+
   $('hint').textContent = loadLook()
     ? ''
     : 'She has no look yet — build her so she appears in the game.';
+}
+
+/**
+ * The "📖 Lessons" list: every lesson, grouped by chapter, to watch again.
+ *
+ * A lesson opens once its chapter is open (or once it has been watched), so a
+ * child can't skip ahead into a later chapter's films. Watching one here marks
+ * it seen, which also means the chapter won't play it again.
+ */
+function renderLessons(status) {
+  const host = $('lessons');
+  host.textContent = '';
+  for (const c of status) {
+    const items = LESSON_LIST.filter((l) => l.chapter === c.n);
+    if (!items.length) continue;
+    const row = document.createElement('div');
+    row.className = 'lessons__row';
+    const tag = document.createElement('span');
+    tag.className = 'lessons__ch';
+    tag.textContent = `Chapter ${c.n}`;
+    row.appendChild(tag);
+    for (const item of items) {
+      const seen = hasSeen(item.id);
+      const locked = c.locked && !seen;
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'lesson' + (seen ? ' is-seen' : '') + (locked ? ' is-locked' : '');
+      b.dataset.lesson = item.id;
+      b.disabled = locked;
+      b.textContent = `${seen ? '✓ ' : locked ? '🔒 ' : '▶ '}${t(item.title[0], item.title[1])}`;
+      b.title = locked ? `Opens with Chapter ${c.n}` : seen ? 'Watched. Watch it again!' : 'Watch it';
+      b.addEventListener('click', () => watch(item));
+      row.appendChild(b);
+    }
+    host.appendChild(row);
+  }
+}
+
+let watching = false;
+async function watch(item) {
+  if (watching) return;
+  watching = true;
+  try {
+    await playLesson(await item.load());
+  } catch (err) {
+    console.error('[launcher] lesson failed', item.id, err);
+  } finally {
+    watching = false;
+    render();
+  }
 }
 
 /**
@@ -132,7 +187,9 @@ function renderLevels(current) {
     input.checked = d.level === current.level;
     input.addEventListener('change', () => {
       saveProfile({ difficulty: d.level });
-      render();
+      // Reload: the Level is read once per page (src/space/level.js), and the
+      // lessons list and its films must switch wording with it.
+      location.reload();
     });
     label.appendChild(input);
 

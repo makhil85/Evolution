@@ -97,6 +97,7 @@ export const LESSON_3A = {
         { dur: 5, cap: ['...and the balloon zooms forward: the opposite way to the air.', '...and the balloon zooms forward!'] },
       ],
       draw: drawBalloon,
+      clue: [null, 'Air goes back. The balloon goes forward!'],
       question: {
         prompt: ['When the air rushes out the back, which way does the balloon go?', 'Air goes out the back. Which way does the balloon go?'],
         choices: [
@@ -116,6 +117,7 @@ export const LESSON_3A = {
         { dur: 4, cap: ['The ball pushes back on her, so she rolls backward!', 'And she rolls backward!'] },
       ],
       draw: drawSkater,
+      clue: [null, 'She throws the ball forward. She rolls backward!'],
       question: {
         prompt: ['Mia throws a ball forward from her skateboard. What happens to her?', 'Mia throws a ball forward. What happens to her?'],
         choices: [
@@ -135,6 +137,7 @@ export const LESSON_3A = {
         { dur: 5, cap: ['The gas pushes the rocket up. Scientists call it action and reaction.', 'The gas pushes the rocket up!'] },
       ],
       draw: drawRocketUp,
+      clue: [null, 'The rocket pushes gas down. The gas pushes it up!'],
       question: {
         prompt: ['How does a rocket go up?', 'How does a rocket go up?'],
         choices: [
@@ -241,6 +244,7 @@ export const LESSON_3B = {
         { dur: 5, cap: ['Now the push up is bigger than the weight: lift-off!', 'Push is bigger than weight: lift-off!'] },
       ],
       draw: drawThrustWeight,
+      clue: [null, 'It lifts off when the push is bigger than the weight.'],
       question: {
         prompt: ['When does the rocket lift off?', 'When does the rocket lift off?'],
         choices: [
@@ -260,6 +264,7 @@ export const LESSON_3B = {
         { dur: 4, cap: ['A stronger engine pushes harder than the weight, and up it goes.', 'A stronger engine lifts it!'] },
       ],
       draw: drawMoreFuel,
+      clue: [null, 'More fuel is heavier. It needs a stronger push.'],
       question: {
         prompt: ['You add a lot more fuel. What does the rocket need now?', 'More fuel. What does the rocket need?'],
         choices: [
@@ -279,6 +284,7 @@ export const LESSON_3B = {
         { dur: 4, cap: ['Lighter now, the same engine speeds the rocket up even more. Watch the speed bar!', 'Now it is lighter and goes faster!'] },
       ],
       draw: drawStages,
+      clue: [null, 'Drop the empty part. Lighter goes faster!'],
       question: {
         prompt: ['Why do rockets drop their empty stages?', 'Why drop the empty part?'],
         choices: [

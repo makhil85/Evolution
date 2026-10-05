@@ -105,6 +105,7 @@ export const LESSON_1A = {
         { dur: 5, cap: ['Its edge was always a curve. Only a ball casts a round shadow every time.', 'The shadow was round. The Earth is round!'] },
       ],
       draw: drawEclipse,
+      clue: [null, 'The Earth’s shadow is round. So the Earth is round!'],
       question: {
         prompt: ['During an eclipse, the Earth’s shadow on the Moon is always curved. What does that tell us?', 'The shadow is round. What does it tell us?'],
         choices: [
@@ -124,6 +125,7 @@ export const LESSON_1A = {
         { dur: 4, cap: ['On a flat sea it would just shrink to a dot. The sea curves away and hides the bottom first.', 'The sea curves and hides it!'] },
       ],
       draw: drawShips,
+      clue: [null, 'The sea is curved. It hides the bottom of the ship first.'],
       question: {
         prompt: ['A ship sails away. Why does its bottom disappear before its sail?', 'Why does the bottom of the ship go first?'],
         choices: [
@@ -143,6 +145,7 @@ export const LESSON_1A = {
         { dur: 5, cap: ['New stars appear that no one at home can see. On flat ground, everyone would see the same sky.', 'New stars appear. The Earth is curved!'] },
       ],
       draw: drawStars,
+      clue: [null, 'The Earth is curved. Walk far and you see new stars.'],
       question: {
         prompt: ['Travellers going south saw new stars rise. Why?', 'Why did she see new stars?'],
         choices: [
@@ -296,6 +299,7 @@ export const LESSON_1B = {
         { dur: 3.5, cap: ['The Sun’s rays come in side by side. On a curved Earth, the two sticks point different ways.', 'The Earth is curved, so the sticks point different ways.'] },
       ],
       draw: drawWell,
+      clue: [null, 'The Earth is curved. So only one stick has a shadow.'],
       question: {
         prompt: ['At noon the stick in Syene has no shadow but the one in Alexandria does. Why?', 'Why does only one stick have a shadow?'],
         choices: [
@@ -315,6 +319,7 @@ export const LESSON_1B = {
         { dur: 3.5, cap: ['7 degrees is 1/50 of a full circle. So the two cities are 1/50 of the way round.', 'It is 1 slice out of 50.'] },
       ],
       draw: drawAngle,
+      clue: [null, 'The angle is 1 slice out of 50.'],
       question: {
         prompt: ['The angle is 1/50 of a full circle. How much of the way round the Earth is it from Syene to Alexandria?', 'The angle is 1 slice of 50. How far round is it?'],
         choices: [
@@ -334,6 +339,7 @@ export const LESSON_1B = {
         { dur: 2, cap: ['The real answer is about 40,000 km. With a stick and a shadow, he was nearly exactly right!', 'He was almost exactly right!'] },
       ],
       draw: drawPacing,
+      clue: [null, 'He used a stick, its shadow and a long walk.'],
       question: {
         prompt: ['800 km is 1/50 of the way round the Earth. How far is it all the way round?', 'Did he use a stick’s shadow or a telescope?'],
         choices: [

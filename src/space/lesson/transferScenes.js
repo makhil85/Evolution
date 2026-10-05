@@ -1,5 +1,5 @@
-// The four little films of the orbit-transfer lesson (transferLesson.js plays
-// them): a top-down 2-D view, real two-body gravity, schematic sizes.
+// The four little films of the orbit-transfer lesson (Flight school, played
+// on the lesson card by src/lesson/lessons/flightSchool.js): a top-down 2-D view, real two-body gravity, schematic sizes.
 //
 //   1  Straight at the Moon?   a push towards the Moon only bends the circle
 //   2  Push along your path     the circle stretches into an oval to the Moon
@@ -17,8 +17,11 @@
 // Units: Earth at the origin, the ship's circle radius 1, the Moon's path
 // radius 3.2 (the real ratio is 60; this fits a screen). One lap of Earth
 // takes 2 s of lesson time; the Moon goes round ~5.7x slower (the same law).
-import { t, IS_LEVEL1 } from '../level.js';
-import { heroName } from '../hud/hud.js';
+import { t } from '../level.js';
+import { heroName } from '../hud/domUtil.js';
+
+/** A [Level 4, Level 1] pair: the lesson card (src/lesson/card.js) picks one. */
+const two = (a, b = a) => [a, b];
 
 const TAU = Math.PI * 2;
 const DEG = Math.PI / 180;
@@ -123,17 +126,17 @@ function film1() {
   const samples = simulate({ gm: GM_E, start: circle(theta0), dur, nose, thrust: (tt) => (tt >= tb && tt < tb + BURN ? f : 0) });
   return {
     id: 'straight',
-    title: t('Why not fly straight at the Moon?', 'Why not go straight to the Moon?'),
+    title: two('Why not fly straight at the Moon?', 'Why not go straight to the Moon?'),
     clips: [{
       frame: 'earth', gm: GM_E, samples, dur, rate: 1, moonAt,
       aimLine: (tt) => tt >= 1 && tt < tb + BURN,
       velArrow: (tt) => tt < tb + BURN + 1,
       captions: [
-        [0, t(`Quick flight lesson, ${name()}! This is you, flying round Earth. You are already zooming sideways, super fast.`, `This is you, going round Earth, ${name()}. You are already zooming sideways, super fast!`)],
-        [1, t('So why not just point straight at the Moon...', 'What if you point at the Moon...')],
-        [tb, t('...and hold W? BURN!', '...and hold W? BURN!')],
-        [tb + BURN + 0.2, t('Hmm. The dotted line just turns into a lopsided oval.', 'Hmm. The dotted line just makes a lopsided oval.')],
-        [4.6, t('It never gets near the Moon, and the Moon keeps moving too. Missed!', 'It never gets to the Moon. Missed!')],
+        [0, two(`Quick flight lesson, ${name()}! This is you, flying round Earth. You are already zooming sideways, super fast.`, `This is you, going round Earth, ${name()}. You are already zooming sideways, super fast!`)],
+        [1, two('So why not just point straight at the Moon...', 'What if you point at the Moon...')],
+        [tb, two('...and hold W? BURN!', '...and hold W? BURN!')],
+        [tb + BURN + 0.2, two('Hmm. The dotted line just turns into a lopsided oval.', 'Hmm. The dotted line just makes a lopsided oval.')],
+        [4.6, two('It never gets near the Moon, and the Moon keeps moving too. Missed!', 'It never gets to the Moon. Missed!')],
       ],
       labels: (tt) => (tt < 1 ? [{ text: t('zooming sideways', 'zooming sideways'), kind: 'go' }]
         : tt < tb ? [{ text: t('point at the Moon', 'point at the Moon'), kind: 'info' }]
@@ -151,7 +154,7 @@ function film2() {
   const end = tr.tApo;
   return {
     id: 'along',
-    title: t('Push along your path', 'Push forward!'),
+    title: two('Push along your path', 'Push forward!'),
     clips: [{
       frame: 'earth', gm: GM_E, samples: tr.samples, dur: tr.dur, rate: 1,
       moonAt: (tt) => moonOnPath(thetaM0 + W_MOON * Math.min(tt, end)),
@@ -159,11 +162,11 @@ function film2() {
       velArrow: (tt) => tt < tb,
       meet: (tt) => tt >= end - 0.15,
       captions: [
-        [0, t('Now point the nose ALONG your path, the way you are already going.', 'Now point the nose forward, the way you are going.')],
-        [0.8, t('The engine pushes you the way the nose points.', 'The engine pushes you where the nose points.')],
-        [tb, t('BURN! Hold W and watch the dotted line stretch...', 'BURN! Hold W. Look, the dotted line grows!')],
-        [tb + BURN + 0.15, t('Engine off. Faster means a bigger orbit: your circle is now a long oval.', 'Faster means bigger. Your circle is now a long oval!')],
-        [end - 0.15, t('Its far end reaches all the way out to the Moon!', 'It reaches all the way to the Moon!')],
+        [0, two('Now point the nose ALONG your path, the way you are already going.', 'Now point the nose forward, the way you are going.')],
+        [0.8, two('The engine pushes you the way the nose points.', 'The engine pushes you where the nose points.')],
+        [tb, two('BURN! Hold W and watch the dotted line stretch...', 'BURN! Hold W. Look, the dotted line grows!')],
+        [tb + BURN + 0.15, two('Engine off. Faster means a bigger orbit: your circle is now a long oval.', 'Faster means bigger. Your circle is now a long oval!')],
+        [end - 0.15, two('Its far end reaches all the way out to the Moon!', 'It reaches all the way to the Moon!')],
       ],
       labels: (tt) => (tt < tb ? [{ text: t('nose: along your path', 'nose: forward'), kind: 'info' }]
         : tt < tb + BURN ? [{ text: 'BURN!', kind: 'burn' }]
@@ -185,16 +188,16 @@ function film3() {
   const meetB = { x: B.arrive.x, z: B.arrive.z };
   return {
     id: 'window',
-    title: t('Why go round and wait?', 'Why do we wait?'),
+    title: two('Why go round and wait?', 'Why do we wait?'),
     clips: [{
       frame: 'earth', gm: GM_E, samples: A.samples, dur: A.dur, rate: 1.45,
       moonAt: (tt) => moonOnPath(mA0 + W_MOON * Math.min(tt, A.tApo)),
       oldOrbit: (tt) => tt >= tbA,
       captions: [
-        [0, t('What if you burn right away, without waiting?', 'What if you go right now?')],
-        [tbA, 'BURN!'],
-        [tbA + BURN + 0.1, t('Coast all the way out...', 'Coast...')],
-        [A.tApo - 0.1, t('Oh no! The Moon isn’t there yet. Too early!', 'Oh no! The Moon is not there yet!')],
+        [0, two('What if you burn right away, without waiting?', 'What if you go right now?')],
+        [tbA, two('BURN!')],
+        [tbA + BURN + 0.1, two('Coast all the way out...', 'Coast...')],
+        [A.tApo - 0.1, two('Oh no! The Moon isn’t there yet. Too early!', 'Oh no! The Moon is not there yet!')],
       ],
       labels: (tt) => (tt < tbA ? [] : tt < tbA + BURN ? [{ text: 'BURN!', kind: 'burn' }]
         : tt < A.tApo - 0.1 ? [{ text: 'coast...', kind: 'coast' }]
@@ -206,11 +209,11 @@ function film3() {
       marker: meetB,
       meet: (tt) => tt >= B.tApo - 0.15,
       captions: [
-        [0, t('This time, go round and wait. Watch the Moon move towards the meeting point.', 'This time, go round and wait. Watch the Moon move.')],
-        [tbB - 1.6, t('Mission Control works out the perfect moment and lights your green BURN NOW sign.', 'Wait for the green BURN NOW sign...')],
-        [tbB, t('3, 2, 1... BURN NOW!', 'BURN NOW!')],
-        [tbB + BURN + 0.1, 'Coast...'],
-        [B.tApo - 0.15, t('Right on time! You and the Moon arrive together.', 'Yes! You and the Moon get there together!')],
+        [0, two('This time, go round and wait. Watch the Moon move towards the meeting point.', 'This time, go round and wait. Watch the Moon move.')],
+        [tbB - 1.6, two('Mission Control works out the perfect moment and lights your green BURN NOW sign.', 'Wait for the green BURN NOW sign...')],
+        [tbB, two('3, 2, 1... BURN NOW!', 'BURN NOW!')],
+        [tbB + BURN + 0.1, two('Coast...')],
+        [B.tApo - 0.15, two('Right on time! You and the Moon arrive together.', 'Yes! You and the Moon get there together!')],
       ],
       labels: (tt) => {
         if (tt < tbB - 1.6) return [{ text: t('waiting...', 'waiting...'), kind: 'coast' }, { text: t('meeting point', 'meet here'), kind: 'info', at: 'marker' }];
@@ -256,13 +259,13 @@ function film4() {
   const view = { cx: 0, cz: (z0 + z1) / 2, ex: xm + 0.35, ez: (z1 - z0) / 2 + 0.45 };
   return {
     id: 'capture',
-    title: t('Catch the Moon: the backwards burn', 'Slow down at the Moon'),
+    title: two('Catch the Moon: the backwards burn', 'Slow down at the Moon'),
     clips: [{
       frame: 'moon', view, gm: GM_M, samples: A, dur: durA, rate: 1.25, trail: 99,
       velArrow: () => true,
       captions: [
-        [0, t('Here you come, arriving at the Moon. But you are going much too fast!', 'Here you come to the Moon. But you are too fast!')],
-        [tIn + 0.15, t('Without slowing down... whoosh! You fly right past.', 'No slowing down... whoosh! You fly past.')],
+        [0, two('Here you come, arriving at the Moon. But you are going much too fast!', 'Here you come to the Moon. But you are too fast!')],
+        [tIn + 0.15, two('Without slowing down... whoosh! You fly right past.', 'No slowing down... whoosh! You fly past.')],
       ],
       labels: (tt) => (tt < tIn - 0.2 ? [{ text: t('too fast!', 'too fast!'), kind: 'warn' }]
         : tt < tIn + 0.5 ? [{ text: 'whoosh!', kind: 'coast' }]
@@ -272,9 +275,9 @@ function film4() {
       velArrow: () => true,
       caught: (tt) => tt >= tb + BURN + 0.4,
       captions: [
-        [0, t('This time, turn the ship round: point backwards (opposite to the way you’re moving).', 'This time, turn round. Face the way you came.')],
-        [tb, t('At your lowest point, hold W. BURN! The engine pushes against your speed.', 'At the lowest point, hold W. BURN!')],
-        [tb + BURN + 0.2, t('You slow down... and the Moon’s gravity catches you. You’re in orbit round the Moon!', 'You slow down. The Moon catches you!')],
+        [0, two('This time, turn the ship round: point backwards (opposite to the way you’re moving).', 'This time, turn round. Face the way you came.')],
+        [tb, two('At your lowest point, hold W. BURN! The engine pushes against your speed.', 'At the lowest point, hold W. BURN!')],
+        [tb + BURN + 0.2, two('You slow down... and the Moon’s gravity catches you. You’re in orbit round the Moon!', 'You slow down. The Moon catches you!')],
       ],
       labels: (tt) => (tt < tTurn ? [{ text: t('too fast!', 'too fast!'), kind: 'warn' }]
         : tt < tb ? [{ text: t('point backwards', 'face the way you came'), kind: 'info' }]
@@ -291,65 +294,6 @@ let films = null;
 export function buildFilms() {
   if (!films) films = [film1(), film2(), film3(), film4()];
   return films;
-}
-
-// --- pacing: every line gets time to be read ----------------------------------------
-//
-// Each caption owns the stretch of film up to the next one. If that stretch
-// is shorter than the time to read the line (1.5 s + 0.35 s a word; Level 1
-// half as long again), it plays in slow motion, at most 3x slower, and then
-// the picture holds on its last moment until the line has been read.
-const SLOWEST = 3;
-
-/** Seconds a child needs to read a line. */
-export function readSecs(text) {
-  const words = String(text).trim().split(/\s+/).filter(Boolean).length;
-  return (1.5 + 0.35 * words) * (IS_LEVEL1 ? 1.5 : 1);
-}
-
-function timeline(clip) {
-  if (clip._tl) return clip._tl;
-  const segs = clip.captions.map(([at, text], i) => {
-    const s0 = at;
-    const s1 = i + 1 < clip.captions.length ? clip.captions[i + 1][0] : clip.dur;
-    const natural = (s1 - s0) / clip.rate;
-    const need = readSecs(text);
-    const play = natural >= need ? natural : Math.min(need, natural * SLOWEST);
-    return { s0, s1, text, play, hold: Math.max(0, need - play) };
-  });
-  clip._tl = { segs, len: segs.reduce((a, g) => a + g.play + g.hold, 0) };
-  return clip._tl;
-}
-
-/** Real seconds a film takes to play. */
-export function filmLength(film) {
-  return film.clips.reduce((sum, c) => sum + timeline(c).len, 0);
-}
-
-/** Which clip, its own (lesson) time and the line on screen, `real` seconds into the film. */
-export function clipAt(film, real) {
-  let left = Math.max(0, real);
-  for (let i = 0; i < film.clips.length; i++) {
-    const c = film.clips[i];
-    const tl = timeline(c);
-    const lastClip = i === film.clips.length - 1;
-    if (left < tl.len || lastClip) {
-      const inClip = Math.min(left, tl.len);
-      let l = inClip;
-      for (let k = 0; k < tl.segs.length; k++) {
-        const g = tl.segs[k];
-        const lastSeg = k === tl.segs.length - 1;
-        if (l < g.play) return { clip: c, index: i, simT: g.s0 + ((g.s1 - g.s0) * l) / g.play, real: inClip, caption: g.text };
-        if (l < g.play + g.hold || lastSeg) {
-          // holding: just before the next line's moment, so it is still this line's picture
-          return { clip: c, index: i, simT: lastSeg ? g.s1 : g.s1 - 1e-4, real: inClip, caption: g.text };
-        }
-        l -= g.play + g.hold;
-      }
-    }
-    left -= tl.len;
-  }
-  return null;
 }
 
 // --- drawing ---------------------------------------------------------------------------
