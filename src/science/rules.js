@@ -26,7 +26,7 @@ import { questionsFor } from './questions.js';
 
 const DEFAULT_MESSAGE = {
   4: 'Welcome! Explore the larger village. Solve math to avoid painful mining, or earn the hard key and brute-force it.',
-  1: 'Welcome! Explore the village. Solve 3 medium Grade 1 challenge boards, or solve 1 hard golden key puzzle for the rich iron room.',
+  1: 'Welcome! Look around the village. Solve the 3 purple puzzle boards. Or solve 1 hard gold key puzzle to open the iron room.',
 };
 
 const MATH_QUESTS = ['m1', 'm2', 'm3'];
@@ -71,6 +71,8 @@ export function createScienceRules({ level, storage } = {}) {
   const bank = questionsFor(lvl);
   const recipes = RECIPES[lvl];
   const defaultMessage = DEFAULT_MESSAGE[lvl];
+  /** Level 4 wording, or the Level 1 one (short, for a 2nd grader). */
+  const L = (l4, l1) => (lvl === 1 ? l1 : l4);
 
   const freshState = () => ({
     player: { x: START_TILE.tx, y: START_TILE.ty },
@@ -232,7 +234,7 @@ export function createScienceRules({ level, storage } = {}) {
         state.recipeMode = 'smart';
         allMath = true;
         text = lvl === 1
-          ? 'Smart path complete! Efficient recipe revealed: Wood 12, Stone 24, Iron 60, Science 12.'
+          ? 'All 3 puzzles done! Now you know the cheap plan: Wood 12, Stone 24, Iron 60, Science 12.'
           : 'Smart path complete! Efficient recipe revealed. Iron target uses the plan: 2 × (wood + science) + stone = 84.';
       } else {
         text = `${question.success} You also gained +${science} science.`;
@@ -241,7 +243,7 @@ export function createScienceRules({ level, storage } = {}) {
       state.key = true;
       state.recipeMode = 'brute';
       text = lvl === 1
-        ? `${question.success} Brute-force recipe unlocked, but it still needs many resources.`
+        ? `${question.success} The big plan is open. It needs lots of things.`
         : `${question.success} Brute-force recipe unlocked, but it needs many more resources.`;
     } else {
       text = `${question.success} +${science} science.`;
@@ -267,10 +269,10 @@ export function createScienceRules({ level, storage } = {}) {
 
   /** The old HUD recipe box as one line: the mode name, then what to do / what is needed. */
   function recipeText() {
-    const mode = state.recipeMode === 'smart' ? 'Smart efficient recipe'
-      : state.recipeMode === 'brute' ? 'Brute-force recipe' : 'Recipe locked';
+    const mode = state.recipeMode === 'smart' ? L('Smart efficient recipe', 'Cheap plan')
+      : state.recipeMode === 'brute' ? L('Brute-force recipe', 'Big plan') : L('Recipe locked', 'Plan locked');
     if (state.recipeMode === 'unknown') {
-      return `${mode}: Solve all 3 purple boards for efficient numbers, or solve the golden key puzzle to open the iron room.`;
+      return `${mode}: ${L('Solve all 3 purple boards for efficient numbers, or solve the golden key puzzle to open the iron room.', 'Solve the 3 purple boards for a cheap plan. Or solve the gold key puzzle.')}`;
     }
     const r = recipe();
     return `${mode}: Need: Wood ${r.wood}, Stone ${r.stone}, Iron ${r.iron}, Science ${r.science}.`;
@@ -284,24 +286,25 @@ export function createScienceRules({ level, storage } = {}) {
    */
   function buildCheck() {
     if (state.built) {
-      return { ok: false, text: 'Science Center is already built. Use the Level 2 link when the next file is ready.', missing: [] };
+      return { ok: false, text: L('Science Center is already built. Use the Level 2 link when the next file is ready.', 'The Science Center is built! Go back to the chapters for Chapter 2.'), missing: [] };
     }
     if (huntRequired && !state.huntFound) return { ok: false, text: HUNT_TEXT, missing: [] };
     if (state.recipeMode === 'unknown') {
       return {
         ok: false,
-        text: 'The builders need a plan first. Solve 3 purple medium puzzles for the efficient plan, or solve the hard golden key puzzle for brute force.',
+        text: L('The builders need a plan first. Solve 3 purple medium puzzles for the efficient plan, or solve the hard golden key puzzle for brute force.',
+          'The builders need a plan. Solve the 3 purple puzzles for a cheap plan. Or solve the gold key puzzle.'),
         missing: [],
       };
     }
     if (!state.solved.force) {
-      return { ok: false, text: 'Visit the Force Lab before building. A Science Center needs basic motion intuition.', missing: [] };
+      return { ok: false, text: L('Visit the Force Lab before building. A Science Center needs basic motion intuition.', 'Visit the Force Lab first. Learn how a push makes things move.'), missing: [] };
     }
     if (!state.solved.energy) {
       return {
         ok: false,
         text: lvl === 1
-          ? 'Visit the Light & Plants Lab before building. A Science Center needs living-science knowledge.'
+          ? 'Visit the Light & Plants Lab first. Learn what plants need to grow.'
           : 'Visit the Chemical Energy Lab before building. This prepares the rocket levels later.',
         missing: [],
       };
@@ -309,7 +312,7 @@ export function createScienceRules({ level, storage } = {}) {
     const r = recipe();
     const missing = [];
     for (const k of RESOURCE_KEYS) if (state.resources[k] < r[k]) missing.push(`${k}: need ${r[k] - state.resources[k]} more`);
-    if (missing.length) return { ok: false, text: `Not enough resources yet. ${missing.join('; ')}`, missing };
+    if (missing.length) return { ok: false, text: `${L('Not enough resources yet.', 'You need more.')} ${missing.join('; ')}`, missing };
     return { ok: true, text: '', missing: [] };
   }
 
@@ -345,24 +348,24 @@ export function createScienceRules({ level, storage } = {}) {
     p += Math.round(resPart * 32);
     const pct = Math.min(99, p);
     let status;
-    if (state.recipeMode === 'unknown') status = 'Choose smart path or hard key path';
+    if (state.recipeMode === 'unknown') status = L('Choose smart path or hard key path', 'Pick: 3 puzzles or the hard key');
     else if (!state.solved.force) status = 'Visit Force Lab';
     else if (!state.solved.energy) status = lvl === 1 ? 'Visit Light & Plants Lab' : 'Visit Chemical Energy Lab';
-    else status = 'Gather resources and build on purple foundation';
+    else status = L('Gather resources and build on purple foundation', 'Get what you need, then build on the purple spot');
     return { pct, status };
   }
 
   /** The old missionText(). */
   function missionText() {
-    if (state.built) return 'Science Center complete! Chapter 2 is open: go back to the chapters to play it.';
-    if (state.recipeMode === 'unknown') return 'Choose a path: solve the 3 purple boards for a cheaper plan, or the golden key puzzle to open the iron room.';
+    if (state.built) return L('Science Center complete! Chapter 2 is open: go back to the chapters to play it.', 'Science Center done! Go back to the chapters to play Chapter 2.');
+    if (state.recipeMode === 'unknown') return L('Choose a path: solve the 3 purple boards for a cheaper plan, or the golden key puzzle to open the iron room.', 'Pick a path. Solve the 3 purple boards for a cheap plan. Or solve the gold key puzzle to open the iron room.');
     if (!state.solved.force) return 'Now pass the Force Lab. Learn that a push or pull changes motion.';
     if (!state.solved.energy) {
       return lvl === 1
         ? 'Now pass the Light & Plants Lab. Learn that plants need light to grow.'
         : 'Now pass the Chemical Energy Lab. Learn why future rockets need fuel and oxygen.';
     }
-    return 'Collect the recipe resources, then stand on the purple foundation and press E to build the Science Center.';
+    return L('Collect the recipe resources, then stand on the purple foundation and press E to build the Science Center.', 'Get the things on the list. Then stand on the purple spot and press E to build.');
   }
 
   /** Mission card lines: the old mission text, then the recipe once a plan is chosen. Never empty. */
@@ -388,13 +391,13 @@ export function createScienceRules({ level, storage } = {}) {
   /** Old one-off lines for the main loop (interaction and movement toasts). */
   const text = {
     welcome: defaultMessage,
-    nothingNear: 'Move closer to a resource, board, lab, locked room, or foundation.',
+    nothingNear: L('Move closer to a resource, board, lab, locked room, or foundation.', 'Walk closer to something to use it.'),
     blocked: 'Blocked. Some areas need a key or another path.',
     focusMath: 'Purple boards are in the village square. Stand near a board and press Space.',
-    focusIron: 'The locked iron room is in the north-east. Look for the golden-lock door and solve the hard key puzzle there to open it.',
+    focusIron: L('The locked iron room is in the north-east. Look for the golden-lock door and solve the hard key puzzle there to open it.', 'The iron room is at the top right. Find the door with the gold lock. Solve the hard puzzle there.'),
     /** The old wrong-answer toast: math boards point at the parent hints, labs show the hint. */
     wrongAnswer: (q) => (MATH_QUESTS.includes(q) || q === 'key'
-      ? 'Not quite. Try again, or ask a parent to open the Math Hints tab at the bottom.'
+      ? L('Not quite. Try again, or ask a parent to open the Math Hints tab at the bottom.', 'Not quite. Try again! A grown-up can open Math Hints at the bottom.')
       : `Not quite. ${bank[q]?.hint || ''}`.trim()),
   };
 

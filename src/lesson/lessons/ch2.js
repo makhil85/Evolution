@@ -41,7 +41,7 @@ function drawTriangles(ctx, T) {
   const shake = T > 3 && T < 6 ? Math.sin(T * 60) * 2 : 0;
   const { tl } = frame(ctx, 170, 340, 170, shake, { brace: true });
   if (T > 2.5 && T < 6.5) hand(ctx, tl[0] - 18, tl[1], true);
-  label(ctx, 'One diagonal: two triangles', 255, 120, { size: 20, alpha: span(T, 0.5, 1.5) });
+  label(ctx, 'One stick across: two triangles', 255, 120, { size: 20, alpha: span(T, 0.5, 1.5) });
   const a = span(T, 6.5, 8);
   if (a > 0) {
     ctx.save(); ctx.globalAlpha = a;

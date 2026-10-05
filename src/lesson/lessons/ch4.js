@@ -175,7 +175,7 @@ function drawDNA(ctx, T) {
       circle(ctx, 250 + i * 100, 395, 22, BASE_COL[b]);
       label(ctx, b, 250 + i * 100, 396, { size: 24, color: '#1b1530', halo: null, alpha: k });
     });
-    label(ctx, 'A 4-letter alphabet: the order of the letters is the recipe', 400, 50, { size: 21, color: '#fff', halo: 'rgba(0,0,0,0.6)', alpha: k });
+    label(ctx, '4 letters: their order is the recipe', 400, 50, { size: 21, color: '#fff', halo: 'rgba(0,0,0,0.6)', alpha: k });
     // letters read along the top strand
     const at = Math.floor(lin(T, 4.5, 7.4) * 10);
     const word = SEQ.slice(0, at);

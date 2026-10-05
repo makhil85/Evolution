@@ -111,7 +111,7 @@ for (const level of [1, 4]) {
   const r = fresh(level);
   ok(!r.bridgeUnlocked(), `${tag}: bridge locked at start`);
   const refused = r.openQuest('bridge');
-  ok(refused.ok === false && /golden bridge lock is still closed/.test(refused.text), `${tag}: bridge quest refused while locked`);
+  ok(refused.ok === false && (level === 1 ? /gold lock is still closed/ : /golden bridge lock is still closed/).test(refused.text), `${tag}: bridge quest refused while locked`);
   ok(r.solveQuest('bridge') === null, `${tag}: bridge cannot be solved while locked`);
   const meds = MEDIUM_QUESTS[level];
   for (let i = 0; i < 3; i++) {
@@ -181,12 +181,12 @@ for (const level of [1, 4]) {
   const tag = `L${level}`;
   const r = fresh(level);
   let c = r.workshopCheck();
-  ok(!c.ok && /needs the unlocked bridge route first/.test(c.text), `${tag}: workshop refused before the bridge`);
+  ok(!c.ok && (level === 1 ? /needs the bridge first/ : /needs the unlocked bridge route first/).test(c.text), `${tag}: workshop refused before the bridge`);
 
   r.solveQuest('key');
   r.solveQuest('bridge');
   c = r.workshopCheck();
-  ok(!c.ok && c.text.startsWith('Collect more resources before building: '), `${tag}: workshop refused without resources`);
+  ok(!c.ok && c.text.startsWith(level === 1 ? 'You need more: ' : 'Collect more resources before building: '), `${tag}: workshop refused without resources`);
   ok(c.missing.includes(`wood ${r.state.resources.wood}/24`) && c.missing.every((m) => /^[a-z]+ \d+\/\d+$/.test(m)), `${tag}: missing entries look like "wood 5/24"`);
   ok(c.text.endsWith('.') && c.text.includes(c.missing.join(', ')), `${tag}: missing message lists them`);
   const s0 = JSON.stringify(r.state.resources);
@@ -198,10 +198,10 @@ for (const level of [1, 4]) {
   ok(c.ok && c.missing.length === 0, `${tag}: workshop ok with the recipe`);
   const go = r.startWorkshop();
   ok(go.ok && go.target === 'workshop' && go.pieces === 4, `${tag}: startWorkshop`);
-  ok(/Chapter 3 is unlocked/.test(go.doneMessage), `${tag}: workshop done message`);
+  ok(/Chapter 3 is (unlocked|open)/.test(go.doneMessage), `${tag}: workshop done message`);
   eq(r.state.resources, Object.fromEntries(RESOURCE_KEYS.map((k) => [k, 3])), `${tag}: recipe spent exactly`);
   ok(r.state.builtFinal === true, `${tag}: builtFinal set`);
-  ok(/already built/.test(r.workshopCheck().text) && !r.startWorkshop().ok, `${tag}: cannot build twice`);
+  ok(/already built|is built/.test(r.workshopCheck().text) && !r.startWorkshop().ok, `${tag}: cannot build twice`);
   eq(r.state.resources.wood, 3, `${tag}: second start spends nothing`);
   for (let n = 1; n <= 4; n++) r.setBuilt('workshop', n);
   eq(r.state.built.workshop, 4, `${tag}: workshop at 4 pieces`);
@@ -328,7 +328,7 @@ for (const level of [1, 4]) {
 for (const level of [1, 4]) {
   const tag = `L${level}`;
   const r = fresh(level);
-  eq(r.progress(), { pct: 0, status: 'Build the Engineering Workshop' }, `${tag}: progress at start`);
+  eq(r.progress(), { pct: 0, status: level === 1 ? 'Build the Workshop' : 'Build the Engineering Workshop' }, `${tag}: progress at start`);
   let lines = r.missionLines();
   eq(lines.length, 3, `${tag}: 3 mission lines at start`);
   ok(lines[0] === 'Open the bridge: solve any 3 medium quests (0/3) or the hard one.', `${tag}: first mission line`);
@@ -337,13 +337,13 @@ for (const level of [1, 4]) {
   r.solveQuest(MEDIUM_QUESTS[level][1]);
   r.solveQuest(MEDIUM_QUESTS[level][2]);
   eq(r.progress().pct, 60, `${tag}: 3 mediums = 60%`);
-  ok(r.missionLines()[0].startsWith('The single golden lock at the moat is open'), `${tag}: bridge-open mission line`);
+  ok(r.missionLines()[0].startsWith(level === 1 ? 'The gold lock is open' : 'The single golden lock at the moat is open'), `${tag}: bridge-open mission line`);
   r.solveQuest('bridge');
   eq(r.progress().pct, 80, `${tag}: bridge = 80%`);
   ok(r.missionLines()[0].startsWith('Cross the bridge'), `${tag}: cross-the-bridge line`);
   r.state.builtFinal = true;
-  eq(r.progress(), { pct: 100, status: 'Engineering Workshop built' }, `${tag}: progress at the end`);
-  eq(r.missionLines(), ['Go back to the chapters to continue.'], `${tag}: end mission line`);
+  eq(r.progress(), { pct: 100, status: level === 1 ? 'Workshop built' : 'Engineering Workshop built' }, `${tag}: progress at the end`);
+  eq(r.missionLines(), [level === 1 ? 'Go back to the chapters.' : 'Go back to the chapters to continue.'], `${tag}: end mission line`);
 
   const fk = fresh(level);
   fk.solveQuest('key');
@@ -462,7 +462,7 @@ for (const level of [1, 4]) {
   r.setHuntRequired(true);
   const before = JSON.stringify(r.state.resources);
   const c = r.workshopCheck();
-  ok(!c.ok && c.text === 'The Workshop needs its Master Gear. Follow the clues - read them again with the 📜 Clue button.', `${tag}: Hard refuses the workshop without the Master Gear`);
+  ok(!c.ok && c.text === (level === 1 ? 'The Workshop needs its Master Gear. Press the 📜 Clue button to read the clues.' : 'The Workshop needs its Master Gear. Follow the clues - read them again with the 📜 Clue button.'), `${tag}: Hard refuses the workshop without the Master Gear`);
   const go = r.startWorkshop();
   ok(!go.ok && !r.state.builtFinal && JSON.stringify(r.state.resources) === before, `${tag}: refused build spends nothing`);
   r.setHuntRequired(false);
@@ -478,7 +478,7 @@ for (const level of [1, 4]) {
   ok(!easy.isHuntRequired() && easy.startWorkshop().ok, `${tag}: Easy / Medium build without the hunt`);
   const other = fresh(level);
   other.setHuntRequired(true); other.markHuntFound();
-  ok(other.workshopCheck().text.startsWith('The workshop needs the unlocked bridge route first'), `${tag}: with the gear found the normal refusals apply`);
+  ok(other.workshopCheck().text.startsWith(level === 1 ? 'The workshop needs the bridge first' : 'The workshop needs the unlocked bridge route first'), `${tag}: with the gear found the normal refusals apply`);
   const old = memStore();
   old.setItem(STORE_KEYS[level], JSON.stringify({ resources: { wood: 3 }, builtFinal: false, message: 'hi', collected: [1] }));
   const o = fresh(level, old);

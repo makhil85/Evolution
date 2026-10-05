@@ -48,7 +48,7 @@ const L1 = {
   steps: [
     {
       id: 'well', at: at(9, 20), radius: 2.6,
-      clue: 'Find the place where the villagers get water. It has a little red roof and a bucket. Stand next to it and press E.',
+      clue: 'Find the place where people get water. It has a little red roof and a bucket. Stand next to it and press E.',
       found: 'Splash! You found the well.',
     },
     {
