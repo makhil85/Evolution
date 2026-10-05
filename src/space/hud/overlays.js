@@ -16,6 +16,8 @@ const CONTROL_ROWS = [
   ['A / D', 'Rotate the ship'],
   ['Z / X', 'Nudge sideways, left / right (lining up on an asteroid)'],
   ['T', t('Auto-turn on / off: steer the ship yourself, or let it point itself', 'Auto-turn on or off')],
+  ['F', t('Freeze everything where it is; press F again to carry on', 'Freeze. Press F again to go on')],
+  ['P', t('Autopilot on / off: it flies to the next stop and you answer the questions', 'Autopilot on or off')],
   ['Esc', 'Pause menu (with "Try again from my last question")'],
   ['Shift', t('Precision (gentle) thrust', 'Gentle push')],
   ['Space', t('Hold to stop spinning. On Easy, holding Space also turns the ship to follow the arrow.', 'Hold to stop spinning')],

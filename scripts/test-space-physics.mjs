@@ -16,6 +16,7 @@ import {
   refuel, emergencyTopUp,
 } from '../src/space/physics.js';
 import { predict } from '../src/space/predictor.js';
+import { anchorPath } from '../src/space/pathFrames.js';
 
 const results = [];
 function check(name, pass, detail = '') {
@@ -188,6 +189,81 @@ soiContinuityTest('moon', '(Moon -> Earth)');
   const diff = predicted.closest ? Math.abs(predicted.closest.dist - trueMinDist) : Infinity;
   check('Moon-transfer: predicted closest approach agrees with actual within 1u', diff < 1,
     `true=${trueMinDist.toFixed(3)}u, predicted=${predicted.closest && predicted.closest.dist.toFixed(3)}u, diff=${diff.toFixed(4)}u`);
+}
+
+// ---------------------------------------------------------------------------
+// 3c. THE DRAWN LINE IS UNBROKEN. The dotted path is stored as offsets from a
+// body and re-attached to that body's position (pathFrames.anchorPath) - and
+// the bodies move. Drawing each stretch round its OWN body tore the line in
+// two at every gravity hand-over: from Earth orbit toward the Moon the far
+// half was drawn round where the Moon is NOW while she arrives where the Moon
+// WILL BE, 380 u away in a 500 u system (lead, 2026-10-05: "after each burn
+// it's showing very weird trajectory paths"). So: across every hand-over, the
+// gap between neighbouring dots must stay close to the gap either side of it.
+// ---------------------------------------------------------------------------
+{
+  const gmE = BODIES.earth.gm;
+  const rLow = BODIES.earth.radius * 1.6;
+  const aT = (rLow + BODIES.moon.orbit) / 2;
+  const half = Math.PI * Math.sqrt(aT ** 3 / gmE);
+  const wMoon = (2 * Math.PI) / BODIES.moon.period;
+  const vT = Math.sqrt(gmE * (2 / rLow - 1 / aT));
+
+  /** The drawn dots, as trajectoryView.js places them at time `now`. */
+  function drawnDots(sh, horizon) {
+    const pred = predict(sh, { seconds: horizon, maxPoints: 320, target: 'moon' });
+    const n = pred.points.length / 2;
+    const rel = new Float64Array(n * 2);
+    const frameOf = new Array(n);
+    anchorPath(pred, n, rel, frameOf);
+    const states = allStates(sh.t, {});
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      const b = frameOf[i] === 'sun' ? { x: 0, z: 0 } : states[frameOf[i]];
+      out.push([rel[i * 2] + b.x, rel[i * 2 + 1] + b.z]);
+    }
+    return { pred, dots: out };
+  }
+  /** Worst gap at a hand-over, as a multiple of the three gaps before it. */
+  function worstSeam(sh, horizon) {
+    const { pred, dots } = drawnDots(sh, horizon);
+    const gap = (i) => Math.hypot(dots[i][0] - dots[i - 1][0], dots[i][1] - dots[i - 1][1]);
+    let worst = 0;
+    let runs = 0;
+    for (const f of pred.frames.slice(1)) {
+      const i = f.from;
+      if (i < 4 || i >= dots.length) continue;
+      const before = (gap(i - 1) + gap(i - 2) + gap(i - 3)) / 3;
+      runs++;
+      worst = Math.max(worst, gap(i) / Math.max(1e-9, before));
+    }
+    return { worst, runs };
+  }
+
+  // Aiming at the Moon from Earth orbit, watched all the way in (a crossing
+  // into the Moon's pull), then leaving Earth for the Sun's pull.
+  let worst = 0;
+  let seams = 0;
+  for (const offset of [0.12, 0.3, 0.6]) {
+    const depart = BODIES.moon.phase + wMoon * half + Math.PI + offset;
+    const bs = bodyState('earth', 0);
+    const c = Math.cos(depart);
+    const si = Math.sin(depart);
+    const ship = createShipState({
+      x: bs.x + rLow * c, z: bs.z + rLow * si,
+      vx: bs.vx - vT * si, vz: bs.vz + vT * c, t: 0,
+    });
+    for (let leg = 0; leg < 8; leg++) {
+      for (const horizon of [260, 520]) {
+        const r = worstSeam(ship, horizon);
+        seams += r.runs;
+        worst = Math.max(worst, r.worst);
+      }
+      for (let i = 0; i < Math.round(20 / PHYSICS_DT); i++) stepShip(ship, { thrust: 0, turn: 0 }, PHYSICS_DT);
+    }
+  }
+  check('drawn path: no tear at a gravity hand-over (gap < 8x the dots before it)', worst < 8,
+    `${seams} hand-overs drawn, worst gap ${worst.toFixed(1)}x the dots before it`);
 }
 
 // ---------------------------------------------------------------------------

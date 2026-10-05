@@ -23,11 +23,13 @@ const MANUAL_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyZ', 'KeyX', 'Sp
 export function createAutopilot(game, { controls, hud }) {
   let on = false;
   let loopRunning = false;
-  // Easy (lead 2026-10-02): the autopilot flies every orbit by itself - the
-  // burns, captures and landings were still too hard to time on Easy. The
-  // Moon and Europa walks stay hers; P hands those over too (or
-  // turns it off for a grown-up), and her own flying keys don't switch it
-  // off on Easy.
+  // Easy: the autopilot flies every orbit - the burns, captures and landings
+  // are hard to time. The Moon and Europa walks stay hers; a second press
+  // hands those over too, and her own flying keys don't switch it off on
+  // Easy. It starts OFF (lead, 2026-10-05: "chapter 4 starts with autopilot
+  // on... turn off the autopilot as a default but keep the steering on, and
+  // let the user go to higher warp speed") - Easy still steers the ship for
+  // her and the pace is hers until she presses the button.
   let easyAuto = false;
   let userOff = false;
   const held = new Set();
@@ -72,9 +74,10 @@ body.in-scene .sp-autopilot { top: 12px; }`;
       if (why) hud.toast(why, { kind: 'info', ms: 2600 });
     }
   }
-  // P / the button. On Easy the first press hands over the walks too (full
-  // autopilot); the next turns it off.
+  // P / the button. Off -> on (on Easy the walks stay hers) -> the full
+  // autopilot, walks and all -> off.
   function toggle() {
+    if (!on) { easyAuto = game.mode?.id === 'easy'; setOn(true); return; }
     if (on && easyAuto) {
       easyAuto = false;
       btn.textContent = 'Autopilot ON — P to fly yourself';
@@ -91,14 +94,9 @@ body.in-scene .sp-autopilot { top: 12px; }`;
     // Her own hands on the controls take over (not on Easy, where it flies for her).
     if (on && !easyAuto && e.isTrusted && MANUAL_KEYS.has(e.code)) { userOff = true; setOn(false, 'You took the controls. Autopilot off.'); }
   }, true);
-  // Easy switches it on by itself (and a change of mode away from Easy off).
+  // A change of mode away from Easy hands the controls back.
   setInterval(() => {
-    const easy = game.mode?.id === 'easy';
-    if (easyAuto && !easy) { easyAuto = false; setOn(false); return; }
-    if (easy && !on && !userOff && !game.cinematic && game.missions?.step && game.missions.step.id !== 'a5_end') {
-      easyAuto = true;
-      setOn(true);
-    }
+    if (easyAuto && game.mode?.id !== 'easy') { easyAuto = false; setOn(false); }
   }, 500);
 
   // --- key helpers -------------------------------------------------------------
@@ -217,7 +215,7 @@ body.in-scene .sp-autopilot { top: 12px; }`;
 
   // --- one decision ---------------------------------------------------------------
   async function step() {
-    if (game.paused || game.cinematic) { releaseAll(); await wait(0.3); return; }
+    if (game.paused || game.frozen || game.cinematic) { releaseAll(); await wait(0.3); return; }
     if (game.activeScene) {
       releaseAll();
       // Easy: the wing repair is precise timing too, so it does that; the
