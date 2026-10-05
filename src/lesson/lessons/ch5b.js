@@ -122,7 +122,8 @@ function drawHeavyButNot(ctx, T) {
     arrow(ctx, 200, 300, 200, 336, '#ffd27a', 3);
     label(ctx, '1', 214, 318, { size: 16, color: '#ffd27a', halo: 'rgba(0,0,0,0.7)', align: 'left' });
     arrow(ctx, 640, 310, 640, 448, '#ffd27a', 3);
-    label(ctx, '4 times as far to the middle', 652, 378, { size: 16, color: '#ffd27a', halo: 'rgba(0,0,0,0.7)', align: 'left' });
+    label(ctx, '4 times as far', 652, 370, { size: 16, color: '#ffd27a', halo: 'rgba(0,0,0,0.7)', align: 'left' });
+    label(ctx, 'to the middle', 652, 390, { size: 16, color: '#ffd27a', halo: 'rgba(0,0,0,0.7)', align: 'left' });
   }
   if (T > 16) label(ctx, '17 times the mass, but 4 x 4 = 16 times weaker for distance', 400, 40, { size: 19, color: '#fff', halo: 'rgba(0,0,0,0.7)' });
   ctx.restore();
@@ -134,8 +135,10 @@ function atoms(ctx, x0, y0, w, h, T, speed, seed, col) {
   rect(ctx, x0, y0, w, h, 'rgba(255,255,255,0.05)', 10);
   ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 2; ctx.strokeRect(x0, y0, w, h); ctx.restore();
   for (let i = 0; i < 18; i++) {
-    const ax = x0 + 20 + ((i * 53 + seed) % (w - 40));
-    const ay = y0 + 20 + ((i * 37 + seed * 3) % (h - 40));
+    // Spread out: six across, three down, each nudged off its grid spot.
+    const nx = Math.sin(i * 12.99 + seed * 7.1) * 43758.5; const ny = Math.sin(i * 78.23 + seed * 3.7) * 12345.6;
+    const ax = x0 + ((i % 6) + 0.5 + 0.5 * (nx - Math.floor(nx) - 0.5)) * (w / 6);
+    const ay = y0 + (Math.floor(i / 6) + 0.5 + 0.5 * (ny - Math.floor(ny) - 0.5)) * (h / 3);
     // Each atom jiggles about its spot; how far and how fast depends on the heat.
     const jx = Math.sin(T * speed * (1.3 + (i % 5) * 0.21) + i) * speed * 2.2;
     const jy = Math.cos(T * speed * (1.1 + (i % 7) * 0.17) + i * 2) * speed * 2.2;

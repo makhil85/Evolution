@@ -131,6 +131,7 @@ export function playCh5Ending(game) {
   const sideCam = rockAt.clone().addScaledVector(side, 260).addScaledVector(up, 50).addScaledVector(fwd, 60);
   let speed = 0; let travelled = 0;
   game.cinematic = {
+    calm: true, // no speed dust or warp streaks (main.js)
     hideMarkers: true,
     hidePath: true,
     apply(dt, camera) {

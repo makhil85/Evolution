@@ -203,7 +203,8 @@ const game = {
   bus, hud, ship, shipView, controls, flightCam, belt, bodies, scene,
   /** Heliocentric {x, z} every few sim-seconds: the ending draws this route. */
   route: [],
-  /** A cinematic overriding the camera this frame (cinematics.js), or null. */
+  /** A cinematic overriding the camera this frame (cinematics.js), or null.
+   *  `calm: true` turns off the speed dust and warp streaks while it plays. */
   cinematic: null,
   /** The flying mode (contracts FLIGHT_MODES / FLIGHT_MODES_L1): how much the game helps. */
   mode: MODES.medium,
@@ -1605,8 +1606,10 @@ function tick(realDt, render = true) {
   // Dust is a SENSE of speed, not a speedometer: at a low-orbit 18 u/s the raw
   // number streaked the whole screen. A gentle curve keeps slow flight calm
   // and still lets real speed (and warp) read as fast.
-  _vel.set(rel.vx, 0, rel.vz).multiplyScalar(0.3);
-  dust.update({ dt: realDt, camera, velocity: _vel, warp: WARP_LEVELS[game.warpIndex] });
+  // A `calm` cutscene's camera floats free of the ship: no speed dust or warp streaks.
+  const calm = !!game.cinematic?.calm;
+  if (calm) _vel.set(0, 0, 0); else _vel.set(rel.vx, 0, rel.vz).multiplyScalar(0.3);
+  dust.update({ dt: realDt, camera, velocity: _vel, warp: calm ? 1 : WARP_LEVELS[game.warpIndex] });
 
   prof('scene', _tb);
   const _tm = performance.now();

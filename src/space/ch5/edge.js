@@ -111,7 +111,19 @@ export function playEdgePullBack(game) {
     voyager: pin(lvl('Voyager 1 flew out of the bubble in 2012', 'Voyager 1 got out here in 2012')),
     oort: pin(lvl('Oort cloud: a shell of icy comets (really 10x further still)', 'Oort cloud: lots of icy comets, very far away')),
   };
-  const show = { kuiper: [2, 7], neptune: [4.5, 9], helio: [8.5, 15], voyager: [10, 15], oort: [13.5, 18.5] };
+  const show = { neptune: [6, 8.6], kuiper: [8.8, 11], helio: [11.2, 13.6], voyager: [13.8, 16], oort: [16.2, 19.5] }; // one at a time
+  // The pull-back as camera distances at given times (eased in log steps), so
+  // each stop gets time on screen: her ship, the planets and Kuiper belt, the
+  // bubble, the Oort shell.
+  const KEYS = [[0.5, 40], [4, 3000], [8, 160000], [12, 560000], [16.5, OORT[1] * 2.6]];
+  const distAt = (time) => {
+    if (time <= KEYS[0][0]) return KEYS[0][1];
+    for (let i = 1; i < KEYS.length; i++) {
+      const [t1, d1] = KEYS[i]; const [t0, d0] = KEYS[i - 1];
+      if (time <= t1) return d0 * Math.pow(d1 / d0, ease((time - t0) / (t1 - t0)));
+    }
+    return KEYS[KEYS.length - 1][1];
+  };
 
   let farWas = null;
   let t = 0;
@@ -122,14 +134,19 @@ export function playEdgePullBack(game) {
   setTimeout(() => overlay.bars(true), 100);
 
   const camPos = new THREE.Vector3(); const look = new THREE.Vector3(); const v = new THREE.Vector3();
+  const fwd = new THREE.Vector3(); const d = new THREE.Vector3();
   const place = (el, world, camera, on) => {
+    // In front of the camera? (Not v.z < 1: this far out the depth rounds past 1.)
+    camera.getWorldDirection(fwd);
+    const ahead = d.copy(world).sub(camera.position).dot(fwd) > 0;
     v.copy(world).project(camera);
-    const vis = on && v.z < 1 && Math.abs(v.x) < 1.1 && Math.abs(v.y) < 1.1;
+    const vis = on && ahead && Math.abs(v.x) < 0.85 && Math.abs(v.y) < 0.8; // well inside the frame
     el.style.opacity = vis ? 1 : 0;
     if (vis) { el.style.left = `${(v.x * 0.5 + 0.5) * innerWidth}px`; el.style.top = `${(-v.y * 0.5 + 0.5) * innerHeight}px`; }
   };
 
   game.cinematic = {
+    calm: true, // no speed dust or warp streaks (main.js)
     hideMarkers: true,
     hidePath: true,
     apply(dt, camera) {
@@ -139,8 +156,9 @@ export function playEdgePullBack(game) {
       root.position.set(-ship.x, 0, -ship.z);
       const sun = new THREE.Vector3(-ship.x, 0, -ship.z);
       // Pull back: from just behind her to far enough to see the Oort shell.
-      const out = ease((t - 0.5) / 15.5) * (1 - ease((t - 18) / 3));
-      const dist = 40 * Math.pow((OORT[1] * 2.6) / 40, out);
+      // ...and back in to her ship at the end.
+      const back = ease((t - 18) / 3);
+      const dist = 40 * Math.pow(distAt(t) / 40, 1 - back);
       const toSun = ease((t - 2) / 8) * (1 - ease((t - 18) / 3));
       look.lerpVectors(new THREE.Vector3(), sun, toSun);
       camPos.copy(look).add(new THREE.Vector3(0.2, 0.75, 0.62).normalize().multiplyScalar(dist));
@@ -149,7 +167,7 @@ export function playEdgePullBack(game) {
       // Fade the props in as they come into view.
       lines.forEach((l) => { l.material.opacity = 0.55 * ease((t - 3) / 2) * (1 - ease((t - 18) / 2)); });
       helio.material.uniforms.uAlpha.value = ease((t - 7) / 3) * (1 - ease((t - 18) / 2));
-      oort.material.opacity = 0.8 * ease((t - 12) / 3) * (1 - ease((t - 18.5) / 2));
+      oort.material.opacity = 0.8 * ease((t - 13) / 3) * (1 - ease((t - 18.5) / 2));
       // Labels.
       const near = new THREE.Vector3(ship.x, 0, ship.z).normalize();
       place(labels.kuiper, v.clone().copy(near).multiplyScalar(62000).add(sun), camera, t > show.kuiper[0] && t < show.kuiper[1]);

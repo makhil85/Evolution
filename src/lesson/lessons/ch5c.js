@@ -23,7 +23,7 @@ function rng(seed) {
 
 /** A scale tag in the corner: how big the thing on screen is. */
 function scaleTag(ctx, text, alpha = 1) {
-  label(ctx, text, 690, 420, { size: 18, color: '#ffd27a', halo: 'rgba(0,0,0,0.7)', alpha });
+  label(ctx, text, 620, 420, { size: 18, color: '#ffd27a', halo: 'rgba(0,0,0,0.7)', alpha });
 }
 
 /** A zoom ring: the circle we dive into next. */
@@ -194,7 +194,7 @@ function drawInsideAtom(ctx, T) {
       nucleus(ctx, x, y, e.p, e.n, e.p > 20 ? 5 : 7);
       label(ctx, e.sym, x, y - 70, { size: 26, color: '#fff', halo: 'rgba(0,0,0,0.7)' });
       label(ctx, e.name, x, y + 70, { size: 17, color: '#cfe8ff', halo: 'rgba(0,0,0,0.7)' });
-      label(ctx, `${e.p} protons`, x, y + 96, { size: 15, color: P_COL, halo: 'rgba(0,0,0,0.7)' });
+      label(ctx, `${e.p} proton${e.p === 1 ? '' : 's'}`, x, y + 96, { size: 15, color: P_COL, halo: 'rgba(0,0,0,0.7)' });
       ctx.restore();
     });
     if (T > 16) label(ctx, 'Everything is made of the same three pieces', 400, 410, { size: 22, color: '#fff', halo: 'rgba(0,0,0,0.7)' });

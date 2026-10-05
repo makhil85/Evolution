@@ -10,6 +10,7 @@
 // space game through the bus's 'ui-modal'. Test hook while open:
 // window.__pool = { open, state(), autoShot(), solveAll() }.
 import { el, openLayer } from '../../play/ui.js';
+import { injectStyles } from '../../lesson/card.js';
 import { t } from '../level.js';
 import { nightSky, label, arrow, circle, STAGE_W, STAGE_H } from '../../lesson/draw.js';
 import { POOL_LEVELS, createPool, shoot, stepPool, runShot, bestShot, momentum } from './poolLogic.js';
@@ -42,6 +43,7 @@ function rock(ctx, r, { gold = false, cue = false, picked = false }) {
  * @returns {Promise<{shots:number, levels:number}>}
  */
 export function playPool({ bus = null } = {}) {
+  injectStyles();
   const card = el('div', 'pl-card ls-card');
   card.dataset.game = 'space-pool';
   const eyebrow = el('div', 'pl-eyebrow');
@@ -56,7 +58,9 @@ export function playPool({ bus = null } = {}) {
   const resetBtn = el('button', 'ls-btn ls-btn--ghost', `↻ ${t('Start again', 'Try again')}`);
   resetBtn.type = 'button';
   actions.append(dots, status, resetBtn);
-  card.append(eyebrow, title, canvas, tip, actions);
+  const view = el('div', 'ls-view');
+  view.append(canvas);
+  card.append(eyebrow, title, view, tip, actions);
 
   let ix = 0;
   let pool = createPool(0);

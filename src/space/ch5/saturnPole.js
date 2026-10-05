@@ -100,6 +100,7 @@ export function playPolePass(game) {
   setTimeout(() => overlay.bars(true), 100);
 
   game.cinematic = {
+    calm: true, // no speed dust or warp streaks (main.js)
     hideMarkers: true,
     hidePath: true,
     apply(dt, camera, states) {

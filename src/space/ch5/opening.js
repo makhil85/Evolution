@@ -106,6 +106,7 @@ export function playCh5Opening(game) {
   }
 
   game.cinematic = {
+    calm: true, // no speed dust or warp streaks (main.js)
     hideMarkers: true,
     hidePath: true,
     apply(dt, camera) {
