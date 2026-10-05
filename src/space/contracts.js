@@ -17,6 +17,8 @@
 // ship's heliocentric position, so the ship sits near (0,0,0) and float32 on the
 // GPU never sees a number like 20 000. Use toScene() for that, always.
 
+import { IS_CH5 } from './chapter.js';
+
 export const TEXTURE_BASE = `${import.meta.env?.BASE_URL ?? './'}space/textures/`;
 
 /** Physics step. Fixed; time warp runs more steps, never bigger ones. */
@@ -26,6 +28,14 @@ export const PHYSICS_DT = 1 / 120;
 export const WARP_LEVELS = [1, 4, 16, 64];
 /** The autopilot's cruise warp, out between the planets only (physics.js stepWorld). */
 export const AUTOPILOT_WARP = 256;
+/**
+ * Chapter 5's cruise warp: out between the outer planets the coasts are
+ * 10,000-35,000 s long, so at the top warp, in the Sun's pull, engine off and
+ * path clear, time runs x1024 (for her as well as the autopilot). The coast
+ * there is pure Sun gravity, so physics.js jumps it exactly (Kepler), not in
+ * more steps.
+ */
+export const CRUISE_WARP = 1024;
 
 /**
  * Warp is refused while the ship is within this many radii of any body
@@ -102,7 +112,19 @@ const RAW = [
 
   { id: 'neptune', name: 'Neptune', parent: 'sun', orbit: 50000, phase: 4.4, radius: 44, gm: 22000, spin: 280, tilt: 0.49,
     tex: { map: '2k_neptune.jpg' }, atmo: 0x5b7cff, landable: false, role: 'optional' },
+
+  // Chapter 5 only: out in the Kuiper belt (39 AU, with Neptune at 30).
+  ...(IS_CH5 ? [{ id: 'pluto', name: 'Pluto', parent: 'sun', orbit: 65000, phase: 4.6, radius: 8, gm: 150, spin: null, tilt: 0,
+    tex: { map: '2k_ceres_fictional.jpg' }, atmo: null, landable: false, role: 'Chapter 5 fly-past (dwarf planet)' }] : []),
 ];
+
+/**
+ * Chapter 5's starting line-up (where each planet is at t = 0): Saturn,
+ * Uranus and Neptune near one line out from the Sun. As she sets off for each,
+ * ch5/lineup.js moves it on its rail so its window opens soon (and the save
+ * keeps where it put it). scripts/test-ch5-flight.mjs flies the legs.
+ */
+export const CH5_PHASES = Object.freeze({ saturn: 3.089, uranus: 3.403, neptune: 3.944 });
 
 export const BODIES = (() => {
   const byId = {};
@@ -110,6 +132,7 @@ export const BODIES = (() => {
     const parent = b.parent ? byId[b.parent] : null;
     const body = {
       ...b,
+      ...(IS_CH5 && CH5_PHASES[b.id] !== undefined ? { phase: CH5_PHASES[b.id] } : {}),
       period: parent ? orbitalPeriod(parent.gm, b.orbit) : Infinity,
       soi: parent ? soiRadius(b.orbit, b.gm, parent.gm) : Infinity,
     };
@@ -245,8 +268,11 @@ export const SPACE_LIGHT = Object.freeze({
   sunIntensity: 3.2,
 });
 
-/** Save keys, per difficulty, matching the launcher convention. */
-export const STORE_KEYS = Object.freeze({ 1: 'level4_voyage_europa_v1_L1', 4: 'level4_voyage_europa_v1' });
+/** Save keys, per difficulty, matching the launcher convention (src/launcher/profile.js CHAPTERS). */
+export const STORE_KEYS_CH4 = Object.freeze({ 1: 'level4_voyage_europa_v1_L1', 4: 'level4_voyage_europa_v1' });
+export const STORE_KEYS_CH5 = Object.freeze({ 1: 'level5_rings_to_a_star_v1_L1', 4: 'level5_rings_to_a_star_v1' });
+/** This page's save keys: Chapter 5 runs on the same engine (chapter.js). */
+export const STORE_KEYS = IS_CH5 ? STORE_KEYS_CH5 : STORE_KEYS_CH4;
 
 /** Events the modules emit on the shared bus (main.js creates it). */
 export const EVENTS = Object.freeze({
@@ -328,7 +354,7 @@ export const CHASE_CAMERA = Object.freeze({
 export const FLIGHT_MODES = Object.freeze({
   easy: Object.freeze({
     id: 'easy', label: 'Easy', rank: 'Cadet',
-    blurb: 'The autopilot flies the ship between planets: you answer the questions and explore the Moon and Europa. The tank is bigger and every rock is marked.',
+    blurb: IS_CH5 ? 'The autopilot flies the ship between planets: you answer the questions and play the games on the way. The tank is bigger.' : 'The autopilot flies the ship between planets: you answer the questions and explore the Moon and Europa. The tank is bigger and every rock is marked.',
     pathScale: 2, showGhost: true, autoAim: true, aimArrow: true,
     // Landings: lead playtest (Oct 2): "hard to stay in the green" - a
     // touchdown up to 2.5x the base speed is safe (was 2x).
@@ -361,7 +387,7 @@ export const FLIGHT_MODES = Object.freeze({
 export const FLIGHT_MODES_L1 = Object.freeze({
   easy: Object.freeze({
     id: 'easy', label: 'Easy', rank: 'Rookie',
-    blurb: 'The autopilot flies the ship for you. You answer the questions and walk on the Moon and Europa. A huge fuel tank, and every rock is marked.',
+    blurb: IS_CH5 ? 'The autopilot flies the ship for you. You answer the questions and play the games on the way. A huge fuel tank.' : 'The autopilot flies the ship for you. You answer the questions and walk on the Moon and Europa. A huge fuel tank, and every rock is marked.',
     pathScale: 3, showGhost: true, autoAim: true, aimArrow: true,
     // 2x Easy's fuel as RANGE, not tank mass: a tank twice as heavy would
     // make the ship sluggish and Moon landings much harder (fuel has mass).

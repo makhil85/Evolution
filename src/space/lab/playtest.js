@@ -39,6 +39,16 @@ export async function clear(max = 12) {
   for (let k = 0; k < max; k++) {
     // A src/lesson/ card (the Europa biology lesson): answer it all at once.
     if (window.__lesson?.open) { window.__lesson.answerAll(); log.push('lesson'); await sleep(200); continue; }
+    // Chapter 5's pool, ship-design, rock-hunt and workshop cards: play them through.
+    if (window.__pool?.open) { window.__pool.solveAll(); log.push('pool'); await sleep(200); continue; }
+    if (window.__design?.open) { window.__design.answerAll(); log.push('design'); await sleep(200); continue; }
+    if (window.__hunt?.open) { window.__hunt.solve(); log.push('hunt'); await sleep(200); continue; }
+    if (window.__workshop?.open) { window.__workshop.solve(); log.push('workshop'); await sleep(200); continue; }
+    // A mini-game that can play itself (Chapter 5's ring run): let it.
+    if (g().activeScene?.debug && !g().activeScene.debug.auto) { g().activeScene.debug.auto = true; log.push('auto game'); }
+    // A picker (a mini-game's level, "another go?"): the suggested option.
+    const pick = document.querySelector('.sp-pick.is-current') || document.querySelector('.sp-pick');
+    if (pick) { pick.click(); log.push(`picked: ${pick.dataset.pick}`); await sleep(200); continue; }
     const choices = [...document.querySelectorAll('.sp-choice')];
     const title = document.querySelector('.sp-modal__title')?.textContent;
     if (choices.length) {
@@ -300,7 +310,7 @@ export async function autoplay(seconds = 30) {
       if (step === 'a2_surface') await playMoonWalk();
       else if (step === 'a5_surface') await playEuropaWalk();
       else if (document.querySelector('.satp-wrap')) await solvePanel();
-      else await run(1);
+      else { if (G.activeScene.debug) G.activeScene.debug.auto = true; await run(1); }
       continue;
     }
     if (modalUp()) {

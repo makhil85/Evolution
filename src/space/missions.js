@@ -32,14 +32,19 @@
 import { BODIES, STORE_KEYS } from './contracts.js';
 import { questionForBeat, getSpaceQuestion } from './questions.space.js';
 import { heroName } from './hud/hud.js';
+import { IS_CH5 } from './chapter.js';
+import { CH5_ACT_TITLES } from './ch5/start.js';
+import { ch5Steps } from './ch5/steps.js';
+import { phasesNow, restorePhases } from './ch5/lineup.js';
 
-const ACT_TITLES = {
+const ACT_TITLES_CH4 = {
   1: 'Act 1: Earth orbit',
   2: 'Act 2: The Moon',
   3: 'Act 3: Mars and the asteroid belt',
   4: 'Act 4: Jupiter',
   5: 'Finale: Europa',
 };
+const ACT_TITLES = IS_CH5 ? CH5_ACT_TITLES : ACT_TITLES_CH4;
 
 // --- helpers ----------------------------------------------------------------
 
@@ -89,7 +94,7 @@ import { act5Steps } from './acts/act5.js';
 // --- the steps ----------------------------------------------------------------
 
 function buildSteps(game) {
-  const steps = [
+  const steps = IS_CH5 ? ch5Steps(game) : [
     ...act1Steps(game),
     ...act2Steps(game),
     ...act3Steps(game),
@@ -102,7 +107,7 @@ function buildSteps(game) {
     id: 'wip_end', act: Math.min(5, (steps[steps.length - 1]?.act || 1) + 1),
     title: 'Keep exploring',
     objective: 'This part of the voyage is still being built. Fly anywhere you like!',
-    markers: ['moon', 'mars', 'jupiter'],
+    markers: IS_CH5 ? ['saturn', 'uranus', 'neptune'] : ['moon', 'mars', 'jupiter'],
     check() { return false; },
   });
   return steps;
@@ -132,6 +137,9 @@ function resolveStepIndex(save, steps) {
 export function createMissions(game) {
   const steps = buildSteps(game);
   const save = loadSave() || {};
+  // Chapter 5 lines the planets up as she goes (ch5/lineup.js): put the
+  // saved line-up back before anything reads where they are.
+  if (IS_CH5) restorePhases(save.phases);
   let index = resolveStepIndex(save, steps);
   save.stepIndex = index;
   let entered = false;   // enter() has settled for the current step
@@ -169,6 +177,7 @@ export function createMissions(game) {
       // released into its Moon orbit. Only written once it has a state, so
       // the field from an older save survives until then.
       ...(game.satellite ? { satellite: game.satellite } : {}),
+      ...(IS_CH5 ? { phases: phasesNow() } : {}),
     });
   }
 

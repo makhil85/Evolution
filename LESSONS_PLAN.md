@@ -223,6 +223,50 @@ Lead, 2026-10-05: Chapter 4's second lesson, biology near Europa: cells, DNA, pr
 
 ---
 
+## Chapter 5: Rings to a Star (`src/space/ch5/`, BUILT 2026-10-05)
+
+Lead's rule: Chapters 5-6 may have 3-4 lessons. All four play on the lesson card with `lessonOnce(lesson, { bus: game.bus })`. Files: `src/lesson/lessons/ch5.js` (5A, 5AA), `ch5b.js` (5B), `ch5c.js` (5C). New card features: `predict` beats (the film stops, "▶ Show me" plays on) and `watchOnly` films (no question).
+
+### 5A. What are Saturn's rings? (step c5_lesson_rings, after the hexagon pass)
+
+| Film | Question |
+|---|---|
+| Up close: the rings are billions of ice pieces | "What are Saturn's rings made of?" |
+| Little moons: inner pieces lap the outer ones | "Which pieces of the rings go round Saturn fastest?" |
+| How a ring is born: a moon too close is pulled apart | "Why is there a ring there, and not one big moon?" |
+
+### 5AA. Bumps in the rings: momentum (step c5_lesson_momentum, after the ring run)
+
+| Film | Question |
+|---|---|
+| Same size, one still (predict pause) | "A moving chunk hits a still chunk the same size, head on. What happens?" |
+| Small and big, both ways (momentum bars) | "A big chunk crashes into a small still chunk. What happens to the small one?" |
+| Catching up and sticking | "A fast chunk catches a slow one and they stick together. How fast do they go?" |
+| Lots of pieces (watch only: the total stays the same) | none |
+| Pushing on nothing: a rocket throws gas back | "In empty space there is nothing to push against. How does a rocket speed up?" |
+
+### 5B. Neptune (step c5_neptune_pause)
+
+| Film | Question |
+|---|---|
+| How big? (Earths side by side) | "About how many Earths would fit side by side across Neptune?" (about 4) |
+| Heavy, but not crushing (17 x the mass, about Earth's pull at the cloud tops) | "How heavy would you feel on its cloud tops?" |
+| So cold the atoms crawl | "What does 'cold' mean for the tiny atoms inside something?" |
+
+### 5C. Atoms and fusion (step c5_lesson_fusion, before designing the ship)
+
+| Film | Question |
+|---|---|
+| Zoom into you (hand, cell, DNA, atoms) | "Zoom into your hand far enough and what do you find in the end?" |
+| Zoom into ice (crystal, molecule, H2O) | "What is one water molecule made of?" |
+| Inside an atom (protons, neutrons, electrons) | "What are all atoms made of?" |
+| Protons smash together (fusion) | "Where does the energy from fusion come from?" |
+| The Sun against a coal Sun (a few thousand years) | "If the Sun were a giant lump of burning coal, about how long would it shine?" |
+
+Chapter 6 (planned): 6A tiny-Earth loop, 6B slingshot, 6C light speed.
+
+---
+
 ## Optional, later
 
 Good lessons that aren't in the first set. Each keeps its films and questions

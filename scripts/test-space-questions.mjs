@@ -5,6 +5,7 @@
 //
 //   node scripts/test-space-questions.mjs
 import { SPACE_QUESTIONS, SPACE_QUESTION_ORDER, checkSpaceAnswer, questionForBeat, level1Bank } from '../src/space/questions.space.js';
+import { CH5_QUESTIONS } from '../src/space/ch5/questions.ch5.js';
 
 const results = [];
 function check(name, ok, detail = '') {
@@ -165,8 +166,44 @@ for (const [id, v] of Object.entries(derivedL1)) check(`L1 ${id}: derived ${v} a
 for (const [id, wrong] of Object.entries(temptingL1)) for (const w of wrong) check(`L1 ${id}: rejects tempting "${w}"`, !checkSpaceAnswer(L1[id], w));
 for (const id of Object.keys(derivedL1)) check(`L1 ${id}: answer within 20`, derivedL1[id] <= 20, String(derivedL1[id]));
 
+// --- Chapter 5 bank ------------------------------------------------------------
+// The same shape rules, its own unique beats, and every number re-derived.
+const ch5Beats = new Set();
+for (const [id, q] of Object.entries(CH5_QUESTIONS)) {
+  check(`ch5 ${id}: id matches key`, q.id === id);
+  check(`ch5 ${id}: id starts c5_`, id.startsWith('c5_'));
+  for (const f of ['type', 'title', 'prompt', 'hint', 'parentHint', 'success', 'doneMessage', 'beat']) {
+    check(`ch5 ${id}: has ${f}`, typeof q[f] === 'string' && q[f].length > 0);
+  }
+  check(`ch5 ${id}: act 1-5`, Number.isInteger(q.act) && q.act >= 1 && q.act <= 5);
+  check(`ch5 ${id}: beat unique`, !ch5Beats.has(q.beat), q.beat);
+  ch5Beats.add(q.beat);
+  if (q.type === 'choice') {
+    const n = q.choices.filter((c) => c.correct === true).length;
+    check(`ch5 ${id}: exactly one correct choice`, n === 1, `found ${n}`);
+    check(`ch5 ${id}: 4 choices`, q.choices.length === 4);
+    check(`ch5 ${id}: correct choice accepted`, checkSpaceAnswer(q, q.choices.find((c) => c.correct).text));
+    for (const c of q.choices.filter((c) => !c.correct)) check(`ch5 ${id}: wrong choice rejected (${c.text.slice(0, 24)}…)`, !checkSpaceAnswer(q, c.text));
+  } else {
+    check(`ch5 ${id}: text has answers`, Array.isArray(q.answers) && q.answers.length > 0);
+    for (const a of q.answers) check(`ch5 ${id}: accepts "${a}"`, checkSpaceAnswer(q, a));
+  }
+}
+// Saturn floats: 95 Earth masses in 760 Earth volumes, Earth 5.5x water.
+check('c5_hexagon: 6 x 14,500 = 87,000 accepted', checkSpaceAnswer(CH5_QUESTIONS.c5_hexagon, String(6 * 14500)));
+check('c5_hexagon: rejects 5 x 14,500', !checkSpaceAnswer(CH5_QUESTIONS.c5_hexagon, String(5 * 14500)));
+check('c5_uranus_pole_day: 84 / 2 = 42 accepted', checkSpaceAnswer(CH5_QUESTIONS.c5_uranus_pole_day, String(84 / 2)));
+check('c5_uranus_pole_day: rejects the full 84', !checkSpaceAnswer(CH5_QUESTIONS.c5_uranus_pole_day, '84'));
+check('c5_sunlight_neptune: 8 x 30 = 240 accepted', checkSpaceAnswer(CH5_QUESTIONS.c5_sunlight_neptune, String(8 * 30)));
+check('c5_sunlight_neptune: rejects 8 + 30', !checkSpaceAnswer(CH5_QUESTIONS.c5_sunlight_neptune, '38'));
+check('c5_voyager: 2012 - 1977 = 35 accepted', checkSpaceAnswer(CH5_QUESTIONS.c5_voyager, String(2012 - 1977)));
+check('c5_voyager: rejects 45 (a borrowing slip)', !checkSpaceAnswer(CH5_QUESTIONS.c5_voyager, '45'));
+check('c5_deuterium: 64,000 / 6,400 = 10 accepted', checkSpaceAnswer(CH5_QUESTIONS.c5_deuterium, String(64000 / 6400)));
+check('c5_deuterium: rejects 100 (one zero too many)', !checkSpaceAnswer(CH5_QUESTIONS.c5_deuterium, '100'));
+check('c5_saturn_density: 95/760 x 5.5 < 1 (floats)', (95 / 760) * 5.5 < 1 && CH5_QUESTIONS.c5_saturn_density.choices.find((c) => c.correct).text.startsWith('Float'));
+
 // --- report -----------------------------------------------------------------------
 const failed = results.filter((r) => !r.ok);
 for (const r of failed) console.log(`FAIL  ${r.name}${r.detail ? `  (${r.detail})` : ''}`);
-console.log(`${SPACE_QUESTION_ORDER.length} questions, ${results.length} checks, ${failed.length} failed`);
+console.log(`${SPACE_QUESTION_ORDER.length} + ${Object.keys(CH5_QUESTIONS).length} (ch5) questions, ${results.length} checks, ${failed.length} failed`);
 process.exit(failed.length ? 1 : 0);

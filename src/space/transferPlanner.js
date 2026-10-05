@@ -21,6 +21,12 @@
 import { BODIES } from './contracts.js';
 import { bodyState, bodyStateRel } from './orbits.js';
 import { keplerPropagate } from './predictor.js';
+import { IS_CH5 } from './chapter.js';
+
+/** Longest wait searched for a window. Chapter 5's outer planets come round
+ *  far more slowly (Saturn-Uranus repeat every ~44,000 s), and its x1024
+ *  cruise makes even a long wait short at the keyboard. */
+const WAIT_CAP = IS_CH5 ? 60000 : 9000;
 
 const _p = { x: 0, z: 0, vx: 0, vz: 0 };
 const _o = { x: 0, z: 0, vx: 0, vz: 0 };
@@ -74,7 +80,7 @@ function arrivalBand(tb) {
 function needsPrograde(target) { return target === 'jupiter'; }
 
 /** Bodies she goes into orbit round (the rest are flybys or custom targets). */
-const CAPTURED = new Set(['moon', 'jupiter', 'europa']);
+const CAPTURED = new Set(['moon', 'jupiter', 'europa', 'saturn', 'uranus', 'neptune']);
 
 /** slack widens the band (0.15 = 15% each way), for "still on course". */
 export function planIsGood(p, target, slack = 0) {
@@ -128,8 +134,8 @@ export function* planTransferSteps(shipNow, target, { quick = false, dvHint = 0,
   // A ring (the asteroid belt) is everywhere at once: no waiting for it to
   // come round, just for the right point on her own orbit (one lap).
   const tMax = tb.ring
-    ? Math.min(9000, (2 * Math.PI) / Math.max(1e-6, omegaS))
-    : Math.min(9000, synodic * 1.05);
+    ? Math.min(WAIT_CAP, (2 * Math.PI) / Math.max(1e-6, omegaS))
+    : Math.min(WAIT_CAP, synodic * 1.05);
   const r2 = tb.orbit;
   // The target's siblings (Jupiter's other moons; the other planets): a path
   // through one's gravity zone isn't the path this model predicts (Easy

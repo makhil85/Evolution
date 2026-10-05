@@ -16,6 +16,7 @@ A kids' science game in the browser (Three.js + Vite), two question Levels
 | Chapter 2 City Engineering | `chapter2.html` -> `src/city/` | 3-D, same. Built structures and bridges are solid/walkable. |
 | Chapter 3 Rocket Village | `chapter3.html` -> `src/gameScene.js`, `src/game/` | Same. |
 | Chapter 4 Voyage to Europa | `chapter4.html` -> `src/space/` | Flight game; plays end to end at Level 4 Easy/Medium/Hard and Level 1. |
+| Chapter 5 Rings to a Star | `chapter5.html` -> `src/space/ch5/` (same engine) | Saturn, ring run, ice giants, Space pool, Pluto, the edge, fusion, the rock ship's engine half. Level 4 built; Level 1 not tuned. |
 | Play modes (Ch1-3) | `src/play/` | Easy arrow + glow, Medium/Hard mining by E, Hard treasure hunt. |
 | Fun moves (Ch1-3) | `src/game/emotes.js`, clips in `src/character/clips.js` | H handstand, J jumping jacks, K dance, L forward roll, U moonwalk, I splits, B back walkover. |
 | Chapter openings / endings (Ch1-3) | `src/game/chapterStory.js` | Opening camera sweep + title card (full once per chapter and Level, then a short card); ending with confetti and a "Chapter complete" card with Next. |
@@ -403,3 +404,22 @@ Built in a lab copy (git worktree `.claude/worktrees/sat`, own server on port 51
 - **Level 1 reading** (`scripts/check-reading.mjs`, `npm run reading`): reads every Level 1 line (banks at Level 1, `t()`/`two()`/`L()` second sides, `[l4, l1]` lesson pairs, `level === 1 ?` / `IS_L1 ?` branches) and lists lines with more than 14 words in a sentence, a 3+ syllable word not on its easy list, or Flesch-Kincaid above grade 3. 1660 lines -> about 28 left, all just over the line or names. Chapter 3's step text at Level 1 lives in `src/game/quests.level1.js` (an overlay; ids and costs stay in `quests.js`).
 - Fixed on the way: six Chapter 3 Level 1 questions showed the Level 4 picture (`bonus_ratio`, `rocket_guidance`, `bonus_place_value`, `bonus_volume`, `bonus_division`, `bonus_angle`); Chapter 4 `inverse_square` too.
 
+## Session 2026-10-05 (Chapter 5 build): Rings to a Star
+
+Design: `CHAPTER5_PLAN.md` (steps and checks) and the lead's Claude doc linked there. Level 4 first; Level 1 text is there but not tuned.
+
+- **Page and engine**: `chapter5.html` runs the Chapter 4 space engine; `src/space/chapter.js` (`IS_CH5`) picks the mission chain (`src/space/ch5/steps.js` = partA + partB + partC + partD), save keys (`level5_rings_to_a_star_v1`, `_L1`), the start (Jupiter orbit) and the opening. Launcher card locked until Chapter 4 is done.
+- **Flight**: Saturn, Uranus and Neptune are orbit stops (flybys in this squeezed solar system gave huge slingshots). `ch5/lineup.js` `lineUpOnce` moves the next planet as she sets off, so a window opens soon; the phases go into the save. Pluto is Chapter 5 only (`contracts.js`), a fly-past. Kuiper belt points (`ch5/kuiper.js`).
+- **Mini-games** (2-D ones open in the play-mode layer and pause space with bus `ui-modal`):
+  - Ring run (`ringRun.js` scene + `ringRunLogic.js` rules): chase cam through Saturn's rings, Easy/Medium/Hard, blast ice for water, dodge boulders (shots bounce off them), recoil. `debug.auto` plays itself.
+  - Space pool (`pool.js` + `poolLogic.js`): 4 momentum levels in the Kuiper belt. Hook `window.__pool`.
+  - Design the ship (`designBoard.js`): 4 choice questions + the fuel sum (600 t); the blueprint grows with each answer. Hook `__design`.
+  - Rock hunt (`rockHunt.js`): scan 4 rocks against 5 checks; only Rock B passes; a wrong pick says why. Hook `__hunt`.
+  - Workshop (`workshop.js`): mine, make fuel, print rings, fit, test fire. Hook `__workshop`.
+- **Cutscenes**: opening (`ch5/opening.js`), Saturn pole hexagon (`saturnPole.js`), the edge pull-back with the heliosphere and Voyager (`edge.js`), the ending (`ending.js`): she flies into the rock ship, the magnet rings light, the engine fires, then "Coming next: Chapter 6". The end card says "To be continued".
+- **Lessons** (`src/lesson/lessons/ch5.js`, `ch5b.js`, `ch5c.js`): 5A rings, 5AA momentum (5 films, predict pauses, one watch-only film), 5B Neptune, 5C atoms and fusion (2 zoom paths, protons smash, coal Sun). The lesson card gained `predict` beats (pause, "Show me") and `watchOnly` films.
+- **Questions**: `ch5/questions.ch5.js` (beats in each step).
+- **Tests**: `scripts/test-ch5-flight.mjs` (every leg, line-ups, Pluto pass), `scripts/test-ch5-games.mjs` (ring run, pool, design, rock hunt, workshop rules); both in `npm test`. `lab/playtest.js clear()` plays the Chapter 5 cards and lets `debug.auto` scenes play.
+- **Browser checks done**: each part jumped to with `__space.missions.jump(id)` and screenshotted (ring run, lessons, pool, edge, design, hunt, workshop, ending, end card); a Part B autopilot run Saturn -> fusion lesson.
+- **Gotchas**: a cutscene with `calm: true` on `game.cinematic` turns off the speed dust and warp streaks (all Chapter 5 cutscenes set it; Chapter 4's do not). Far out (`camera.far` 1e8) a point's projected depth can round past 1, so "is it on screen" checks use the camera direction, not `v.z < 1` (`edge.js`). Editing an imported src file while a browser test runs reloads the page and spoils the test.
+- **Not done**: Level 1 pass for Chapter 5 text; a child playing it; Chapter 6.

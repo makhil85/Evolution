@@ -27,6 +27,7 @@ import { predict, keplerPropagate } from './predictor.js';
 import { createBodies } from './planets.js';
 import { createSky } from './sky.js';
 import { createBelt } from './belt.js';
+import { createKuiper } from './ch5/kuiper.js';
 import { createBeltFx } from './beltFx.js';
 import { createDust } from './dust.js';
 import { createShip } from './ship.js';
@@ -44,6 +45,9 @@ import { createRetry } from './retry.js';
 import { createAimToggle } from './aimToggle.js';
 import { createAimDial } from './hud/aimDial.js';
 import { playIntro } from './cinematics.js';
+import { IS_CH5 } from './chapter.js';
+import { CH5_START, CH5_UPGRADES } from './ch5/start.js';
+import { playCh5Opening } from './ch5/opening.js';
 import { t, IS_LEVEL1, LEVEL } from './level.js';
 
 // --- bus -----------------------------------------------------------------------
@@ -113,6 +117,8 @@ const bus = createBus();
 const bodies = createBodies({ scene, renderer, camera });
 const sky = createSky({ scene, renderer });
 const belt = createBelt({ scene, renderer });
+// Chapter 5: the Kuiper belt past Neptune (points; it rides the floating origin too).
+const kuiper = IS_CH5 ? createKuiper({ scene }) : null;
 const dust = createDust({ scene });
 const trajectory = createTrajectoryView({ scene });
 // The PLANNED path (Easy/Medium, transfer steps): where the coming burn will
@@ -179,7 +185,10 @@ function circularOrbitState(bodyId, radius, phaseAngle, t = 0) {
 // She starts on the DAY side, just past the terminator, so the opening shot is
 // the lit Earth under her with the night side's city lights rolling up ahead.
 // (Earth sits at +X of the Sun at t=0, so the day side faces angle PI.)
-const ship = createShipState(circularOrbitState('earth', BODIES.earth.radius * 1.6, Math.PI + 0.9));
+// Chapter 5 starts where Chapter 4 ended: in orbit round Jupiter.
+const ship = createShipState(IS_CH5
+  ? circularOrbitState(CH5_START.body, CH5_START.radius, CH5_START.phase)
+  : circularOrbitState('earth', BODIES.earth.radius * 1.6, Math.PI + 0.9));
 const rewind = createRewind(30);
 
 // --- game state shared with missions.js ------------------------------------------
@@ -194,7 +203,8 @@ const game = {
   bus, hud, ship, shipView, controls, flightCam, belt, bodies, scene,
   /** Heliocentric {x, z} every few sim-seconds: the ending draws this route. */
   route: [],
-  /** A cinematic overriding the camera this frame (cinematics.js), or null. */
+  /** A cinematic overriding the camera this frame (cinematics.js), or null.
+   *  `calm: true` turns off the speed dust and warp streaks while it plays. */
   cinematic: null,
   /** The flying mode (contracts FLIGHT_MODES / FLIGHT_MODES_L1): how much the game helps. */
   mode: MODES.medium,
@@ -237,7 +247,13 @@ function restoreFromSave(saved) {
   if (Array.isArray(saved.samples)) game.samples.push(...new Set(saved.samples)); // de-duplicate old saves
   if (Array.isArray(saved.route)) game.route.push(...saved.route);
   if (saved.stats) game.stats = saved.stats;
-  game.upgradesOwned = new Set(saved.upgrades || []);
+  applyOwnedUpgrades(saved.upgrades);
+  return true;
+}
+/** Re-apply built upgrades (a save's, or Chapter 5's starting kit) through
+ *  the same effects that built them; past the opening, wings are folded. */
+function applyOwnedUpgrades(list) {
+  game.upgradesOwned = new Set(list || []);
   if (game.upgradesOwned.has('bigSolarWings')) {
     shipView.setSolarWings(1, true);
     game.solarMultiplier = SOLAR.bigWingsMultiplier;
@@ -247,9 +263,10 @@ function restoreFromSave(saved) {
   // Past the opening, the wings are always folded; landed means legs down.
   shipView.setWingsFolded(true, true);
   if (ship.landedOn) shipView.setLegs(true, true);
-  return true;
 }
 const resumed = restoreFromSave(missions.saved);
+// A fresh Chapter 5: the ship she finished Chapter 4 with.
+if (IS_CH5 && !resumed) applyOwnedUpgrades(CH5_UPGRADES);
 
 // --- events ---------------------------------------------------------------------
 
@@ -280,6 +297,9 @@ bus.on('rewind', () => {
  * round the Sun, where no step can finish and no cue applies). After a
  * moment, Mission Control puts her back in a safe orbit around the planet.
  */
+/** Forget every burn plan (Chapter 5's line-up has just moved a planet). */
+game.replan = () => { burnPlan = null; transferPlan = null; planJob = null; coastPhase = null; predictorClock = 0; };
+
 let lostSince = null;
 function checkLost() {
   const goal = BODIES[game.transferTarget] || BODIES[game.captureTarget];
@@ -831,7 +851,8 @@ function updateEscapeCue(thrust) {
   if (!game.escapeStep || !cuesOn() || game.cinematic || ship.soi === 'sun') return false;
   if (ship.landedOn) { setCue('burn', 'Hold W to lift off!'); return true; }
   const oe = orbitElements(ship);
-  const name = BODIES[ship.soi]?.name || 'planet';
+  const body = BODIES[ship.soi]?.name || 'planet';
+  const name = body === 'Moon' ? 'the Moon' : body; // "the Moon", but "Jupiter"
   // Escaping for real: unbound AND the dotted path doesn't crash back into
   // it. (Playtest: straight up off the Moon she was "escaping", but with
   // almost no speed left over she kept pace with it and fell back 60 s later.)
@@ -841,9 +862,9 @@ function updateEscapeCue(thrust) {
   // and waiting for that to vanish too overshot Mars (another 0.5 t).
   const returns = pred?.impact?.body === here;
   if (!oe.bound && !returns) {
-    setCue(thrust > 0 ? 'stop' : 'good', thrust > 0 ? `Let go of W! You’re escaping the ${name}.` : `Escaping the ${name}. Coast!`);
+    setCue(thrust > 0 ? 'stop' : 'good', thrust > 0 ? `Let go of W! You’re escaping ${name}’s pull.` : `Escaping ${name}’s pull. Coast!`);
   } else {
-    setCue('burn', t(`Follow the arrow and hold W to break free of the ${name}`, `Follow the arrow and hold W to fly away from the ${name}`));
+    setCue('burn', t(`Follow the arrow and hold W to break free of ${name}’s pull`, `Follow the arrow and hold W to fly away from ${name}`));
   }
   return true;
 }
@@ -1420,7 +1441,7 @@ function tick(realDt, render = true) {
     }
     const pathClear = !ship.landedOn && !!game.prediction && !game.prediction.impact;
     const _ts = performance.now();
-    const res = stepWorld(ship, physInput, slowMoNow() ? realDt * SLOW_MO : realDt, WARP_LEVELS[game.warpIndex], { warpSafeRadii: WARP_SAFE_RADII * game.mode.warpSafeScale, safeBody, pathClear, target: game.target, autopilot: !!game.autopilot?.on, boost: !!game.warpBoost });
+    const res = stepWorld(ship, physInput, slowMoNow() ? realDt * SLOW_MO : realDt, WARP_LEVELS[game.warpIndex], { warpSafeRadii: WARP_SAFE_RADII * game.mode.warpSafeScale, safeBody, pathClear, target: game.target, autopilot: !!game.autopilot?.on, boost: !!game.warpBoost, cruise: IS_CH5 });
     prof('step', _ts);
     if (burnPlan && physInput.burnBudget && res.dvUsed) burnPlan.delivered += res.dvUsed;
     game.firing = physInput.thrust > 0 && !ship.landedOn; // debug: lab/xferwatch.js
@@ -1552,7 +1573,7 @@ function tick(realDt, render = true) {
     // onto the planned one instead of in jumps.
     predictorClock = physInput.thrust > 0 ? 0.1 : 0.2;
   }
-  trajectory.setVisible(!ship.landedOn);
+  trajectory.setVisible(!ship.landedOn && !game.cinematic?.hidePath);
   trajectory.update({ time: ship.t, origin: _origin, positions: states });
 
   const _tc = performance.now();
@@ -1579,13 +1600,16 @@ function tick(realDt, render = true) {
   bodies.update({ dt: realDt, time: ship.t, positions: states, origin: _origin, camera });
   sky.update({ camera, sunDirection: _sunDir });
   belt.update({ dt: realDt, time: ship.t, origin: _origin, ship: { x: ship.x, z: ship.z }, camera });
+  kuiper?.update(_origin);
   game.beltFx.update(realDt);
   const rel = relativeSpeed(states);
   // Dust is a SENSE of speed, not a speedometer: at a low-orbit 18 u/s the raw
   // number streaked the whole screen. A gentle curve keeps slow flight calm
   // and still lets real speed (and warp) read as fast.
-  _vel.set(rel.vx, 0, rel.vz).multiplyScalar(0.3);
-  dust.update({ dt: realDt, camera, velocity: _vel, warp: WARP_LEVELS[game.warpIndex] });
+  // A `calm` cutscene's camera floats free of the ship: no speed dust or warp streaks.
+  const calm = !!game.cinematic?.calm;
+  if (calm) _vel.set(0, 0, 0); else _vel.set(rel.vx, 0, rel.vz).multiplyScalar(0.3);
+  dust.update({ dt: realDt, camera, velocity: _vel, warp: calm ? 1 : WARP_LEVELS[game.warpIndex] });
 
   prof('scene', _tb);
   const _tm = performance.now();
@@ -1613,7 +1637,8 @@ function tick(realDt, render = true) {
     // "x% of the sunlight at Earth" is about the SUNLIGHT, so it ignores how
     // big her panels are; `power` above is what her panels actually make.
     solar: { power, distanceFromSun: realAU(Math.hypot(ship.x, ship.z)), fractionOfEarth: solarPower(ship.x, ship.z, 1) / SOLAR.panelPowerAtEarth },
-    warp: WARP_LEVELS[game.warpIndex],
+    // Chapter 5's cruise runs faster than the top button says: show it.
+    warp: IS_CH5 && warpState.warp > WARP_LEVELS[game.warpIndex] ? warpState.warp : WARP_LEVELS[game.warpIndex],
     // The warp buttons only when there's a long wait ahead (lead: over 100 s);
     // keys 1-4 work any time.
     warpUseful: game.warpIndex > 0 || waitAhead() > 100,
@@ -1756,7 +1781,7 @@ Promise.all([bodies.ready, sky.ready, belt.ready])
       : hud.chooseFlightMode({ modes: MODES, current: 'easy', first: true }).then((id) => id || 'easy');
     pickMode
       .then((id) => applyMode(id, { fresh: fresh && !resumed }))
-      .then(() => (fresh ? playIntro(game) : null))
+      .then(() => (fresh ? (IS_CH5 ? playCh5Opening(game) : playIntro(game)) : null))
       .then(() => missions.start())
       // Dev only: resume a lab run after a dev-server reload (lab/labrun.js).
       .then(() => { try { const m = import.meta.env.DEV && localStorage.getItem('lab_autorun'); if (m) import(/* @vite-ignore */ `/src/space/lab/${m}.js`).then((x) => x.autorun?.()); } catch { /* no storage */ } });

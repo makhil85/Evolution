@@ -57,7 +57,7 @@ export function difficulty() {
 }
 
 /**
- * The four chapters, in order.
+ * The chapters, in order.
  *
  * `store` and `isDone` are each chapter's OWN save key and OWN completion
  * flag, read as they already exist:
@@ -65,6 +65,7 @@ export function difficulty() {
  *   chapter 2 sets `builtFinal` when the engineering workshop goes up
  *   chapter 3 sets `launched` when the rocket flies
  *   chapter 4 sets `complete` when she reaches Europa
+ *   chapter 5 sets `complete` when the fusion drive first fires
  */
 export const CHAPTERS = [
   {
@@ -97,6 +98,14 @@ export const CHAPTERS = [
     blurb: 'Fly a real-gravity spaceship past the Moon, Mars and the asteroid belt to Jupiter’s icy moon.',
     href: 'chapter4.html',
     store: { 1: 'level4_voyage_europa_v1_L1', 4: 'level4_voyage_europa_v1' },
+    isDone: (s) => s?.complete === true,
+  },
+  {
+    n: 5,
+    title: 'Rings to a Star',
+    blurb: 'Fly through Saturn’s rings, out past Neptune and Pluto, find out what powers the stars, and build a ship inside a rock.',
+    href: 'chapter5.html',
+    store: { 1: 'level5_rings_to_a_star_v1_L1', 4: 'level5_rings_to_a_star_v1' },
     isDone: (s) => s?.complete === true,
   },
 ];
@@ -208,7 +217,7 @@ export function nextChapter(status = chapterStatus()) {
 }
 
 /**
- * Wipe EVERYTHING: both difficulties, all four chapters, the name, the look.
+ * Wipe EVERYTHING: both difficulties, every chapter, the name, the look.
  *
  * The keys are gathered from CHAPTERS rather than typed out, so a chapter
  * added later is cleared too without anyone remembering to come back here -

@@ -65,7 +65,7 @@ function injectCss() {
   cssInjected = true;
 }
 
-function buildOverlay({ eyebrow, title, sub, startBlack }) {
+export function buildOverlay({ eyebrow, title, sub, startBlack }) {
   injectCss();
   const root = document.createElement('div');
   root.className = 'cine';
@@ -107,11 +107,11 @@ function buildOverlay({ eyebrow, title, sub, startBlack }) {
 
 // --- helpers ---------------------------------------------------------------------
 
-const ease = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
-const easeOut = (t) => 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3);
+export const ease = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
+export const easeOut = (t) => 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3);
 
 /** Blend the camera from its current (flight) pose toward a cinematic pose. */
-function blendCamera(camera, pos, look, w) {
+export function blendCamera(camera, pos, look, w) {
   // camera already holds the flight camera's pose for this frame.
   const flightPos = camera.position.clone();
   const flightLook = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).multiplyScalar(pos.distanceTo(look)).add(flightPos);
@@ -121,7 +121,7 @@ function blendCamera(camera, pos, look, w) {
   camera.lookAt(l);
 }
 
-function waitForSkip(armAfterMs, onArm) {
+export function waitForSkip(armAfterMs, onArm) {
   let armed = false;
   let resolveSkip;
   const promise = new Promise((r) => { resolveSkip = r; });
@@ -177,7 +177,7 @@ function buildBooster() {
   return holder;
 }
 
-function puffCloud(scene) {
+export function puffCloud(scene) {
   const n = 60;
   const geo = new THREE.BufferGeometry();
   const pos = new Float32Array(n * 3);

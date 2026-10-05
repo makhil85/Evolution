@@ -19,7 +19,12 @@ const { LESSON_3A, LESSON_3B } = await import('../src/lesson/lessons/ch3.js');
 const card = await import('../src/lesson/card.js');
 const { LESSON_4G } = await import('../src/lesson/lessons/ch4.js');
 const { LESSON_4F } = await import('../src/lesson/lessons/flightSchool.js');
-const LESSONS = [LESSON_1A, LESSON_1B, LESSON_2A, LESSON_2B, LESSON_3A, LESSON_3B, LESSON_4F, LESSON_4G];
+const { LESSON_5A, LESSON_5AA } = await import('../src/lesson/lessons/ch5.js');
+const { LESSON_5B } = await import('../src/lesson/lessons/ch5b.js');
+const { LESSON_5C } = await import('../src/lesson/lessons/ch5c.js');
+const LESSONS = [LESSON_1A, LESSON_1B, LESSON_2A, LESSON_2B, LESSON_3A, LESSON_3B, LESSON_4F, LESSON_4G, LESSON_5A, LESSON_5AA, LESSON_5B, LESSON_5C];
+// Films per lesson: three, unless the plan says otherwise.
+const FILMS = { ch4_flight_school: 4, ch5_momentum: 5, ch5_fusion: 5 };
 
 const pair = (v, what) => {
   assert.ok(Array.isArray(v) && v.length === 2, `${what}: needs [Level 4, Level 1]`);
@@ -40,11 +45,13 @@ function fakeCtx() {
 }
 
 console.log('lessons');
-ok('eight lessons (two a chapter) with unique ids', () => {
-  assert.equal(new Set(LESSONS.map((l) => l.id)).size, 8);
+const { LESSON_LIST } = await import('../src/lesson/index.js');
+ok('every lesson has its own id, and the launcher lists them all in play order', () => {
+  assert.equal(new Set(LESSONS.map((l) => l.id)).size, LESSONS.length);
+  assert.deepEqual(LESSON_LIST.map((l) => l.id), LESSONS.map((l) => l.id));
 });
 for (const L of LESSONS) {
-  const nFilms = L.id === 'ch4_flight_school' ? 4 : 3; // Flight school kept its four
+  const nFilms = FILMS[L.id] ?? 3;
   ok(`${L.id}: ${nFilms} films, both Levels, one right answer of three, a Level 1 clue`, () => {
     pair(L.eyebrow, `${L.id} eyebrow`);
     assert.equal(L.films.length, nFilms);
@@ -53,6 +60,10 @@ for (const L of LESSONS) {
       pair(f.title, `${where} title`);
       assert.ok(f.beats.length >= 2, `${where}: beats`);
       for (const b of f.beats) { assert.ok(b.dur > 0, `${where}: beat length`); pair(b.cap, `${where} caption`); }
+      // A predict pause holds the film mid-way, so never on the last beat.
+      assert.ok(!f.beats.at(-1).predict, `${where}: predict on the last beat`);
+      // A watch-only film (no question) is the exception, never the rule.
+      if (f.watchOnly) { assert.ok(!f.question, `${where}: watch-only with a question`); return; }
       const q = f.question;
       pair(q.prompt, `${where} prompt`); pair(q.hint, `${where} hint`); pair(q.why, `${where} why`);
       assert.equal(q.choices.length, 3, `${where}: 3 choices`);
@@ -73,6 +84,9 @@ for (const L of LESSONS) {
     }
   });
 }
+ok('most films end in a question (watch-only films are rare)', () => {
+  for (const L of LESSONS) assert.ok(L.films.filter((f) => f.watchOnly).length <= 1, `${L.id}: too many watch-only films`);
+});
 ok('captions are held long enough to read', () => {
   for (const L of LESSONS) {
     for (const f of L.films) {
