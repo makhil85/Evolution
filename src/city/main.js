@@ -27,6 +27,11 @@ import {
 } from './contracts.js';
 import { PICKUPS, stationsFor, WORKSHOP_BUILD_TILE, START_TILE, ROADS } from './layout.js';
 import { createNewtonTree } from './newtonTree.js';
+import { lessonOnce, hasSeen as lessonSeen } from '../lesson/card.js';
+import { LESSON_2A, LESSON_2B } from '../lesson/lessons/ch2.js';
+
+/** "Watch, answer, try it" lessons, the first time each quest opens (LESSONS_PLAN.md). */
+const LESSON_BEFORE = { bridge: LESSON_2A, water: LESSON_2B };
 
 const mount = document.getElementById('stage');
 const logEl = document.getElementById('log');
@@ -289,6 +294,12 @@ function interact() {
   if (n.kind === 'station') {
     const open = rules.openQuest(n.id);
     if (!open.ok) { hud.toast(open.text, 'warn'); return; }
+    const lesson = LESSON_BEFORE[n.id];
+    if (lesson && !lessonSeen(lesson.id)) {
+      // The lesson first; when it closes, E again opens the real quest.
+      lessonOnce(lesson).then(() => interact());
+      return;
+    }
     const q = QUESTIONS[n.id];
     let solved = false;
     hud.askQuestion(q, (ok) => {

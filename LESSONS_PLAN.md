@@ -1,6 +1,6 @@
 # Lessons plan: "watch, answer, try it" in every chapter
 
-Status: **plan only** (lead, 2026-10-05). Nothing built yet. Chapter 4's
+Status (2026-10-05, evening): **1A, 1B, 2A, 2B, 3A, 3B built** on `src/lesson/` (see HANDOFF). Not yet: 3C-3E, 4B-4F, the "📖 Lessons" list, porting Flight School. Chapter 4's
 Flight School (`src/space/lesson/`) is the model: the lead liked that a short
 animation explains a concept, the child answers a question about what they
 just saw, and then does it for real in the game.

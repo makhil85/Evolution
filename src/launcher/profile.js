@@ -230,11 +230,12 @@ export function resetEverything() {
     // Chapter 4's act-start copy (`<save>_act`, the two-tries restart point).
     for (const k of stores) { keys.add(k); keys.add(`${k}_hunt`); keys.add(`${k}_act`); keys.add(`${k}_ckpt`); keys.add(`${k}_apple`); }
   }
-  // "Seen the chapter opening" flags (src/game/chapterStory.js).
+  // "Seen the chapter opening" flags (src/game/chapterStory.js) and "seen this
+  // lesson" flags (src/lesson/card.js).
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k && (k.startsWith(SEEN_PREFIX) || k.startsWith(DONE_PREFIX))) keys.add(k);
+      if (k && (k.startsWith(SEEN_PREFIX) || k.startsWith(DONE_PREFIX) || k.startsWith('rocket_village_lesson_'))) keys.add(k);
     }
   } catch { /* private mode */ }
   const removed = [];

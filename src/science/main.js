@@ -27,6 +27,11 @@ import {
   LEVEL, STORE_KEYS, BOUNDS, TILE, MAP_W, MAP_H, tileToWorld, SCIENCE_CENTER_PIECES, PIECE_INTERVAL_MS, INTERACT_RADIUS,
 } from './contracts.js';
 import { PICKUPS, STATIONS, KEY_GATE, BUILD_TILE, START_TILE } from './layout.js';
+import { lessonOnce, hasSeen as lessonSeen } from '../lesson/card.js';
+import { LESSON_1A, LESSON_1B } from '../lesson/lessons/ch1.js';
+
+/** "Watch, answer, try it" lessons (LESSONS_PLAN.md): 1A before the first Science Lab. */
+const LESSON_BEFORE = { force: LESSON_1A, energy: LESSON_1A };
 
 const mount = document.getElementById('stage');
 const logEl = document.getElementById('log');
@@ -292,6 +297,12 @@ function interact() {
   if (n.kind === 'station' || n.kind === 'gate') {
     const open = rules.openQuest(n.id);
     if (!open.ok) { hud.toast(open.text, 'warn'); return; }
+    const lesson = LESSON_BEFORE[n.id];
+    if (lesson && !lessonSeen(lesson.id)) {
+      // The lesson first; when it closes, E again opens the real lab.
+      lessonOnce(lesson).then(() => interact());
+      return;
+    }
     const q = QUESTIONS[n.id];
     let solved = false;
     hud.askQuestion(q, (ok) => {
@@ -309,6 +320,12 @@ function interact() {
     return;
   }
   if (n.kind === 'foundation') {
+    // 1B (Eratosthenes) plays once, when she can really build: then the
+    // Science Center rises straight after "Now you try!".
+    if (!rules.state.built && rules.buildCheck().ok && !lessonSeen(LESSON_1B.id)) {
+      lessonOnce(LESSON_1B).then(() => interact());
+      return;
+    }
     const res = rules.startBuild();
     if (!res.ok) { hud.toast(res.text, 'warn'); return; }
     hud.toast(res.text, 'good');

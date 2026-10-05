@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
     "answer-key": "node scripts/answer-key.mjs",
-    "test": "node scripts/test-space-physics.mjs && node scripts/test-space-questions.mjs && node scripts/test-play.mjs && node scripts/test-science.mjs && node scripts/test-city.mjs && node scripts/test-ch3-hunt.mjs"
+    "test": "node scripts/test-space-physics.mjs && node scripts/test-space-questions.mjs && node scripts/test-play.mjs && node scripts/test-science.mjs && node scripts/test-city.mjs && node scripts/test-ch3-hunt.mjs && node scripts/test-lessons.mjs"
   },
   "dependencies": {
     "three": "0.185.1"
