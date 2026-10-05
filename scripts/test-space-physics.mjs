@@ -16,7 +16,7 @@ import {
   refuel, emergencyTopUp,
 } from '../src/space/physics.js';
 import { predict } from '../src/space/predictor.js';
-import { accelRel } from '../src/space/gravity.js';
+import { accelRel, setMoonPulls, isKeplerFrame } from '../src/space/gravity.js';
 import { anchorPath } from '../src/space/pathFrames.js';
 
 const results = [];
@@ -127,6 +127,21 @@ lowOrbitTest('europa', 1.6, 100, 0.05);
   const fall = BODIES.earth.gm / (md * md);
   const jump = Math.hypot(out.ax - (inn.ax - fall * mx / md), out.az - (inn.az - fall * mz / md));
   check('no jump in her pull at the Moon\'s zone edge', jump < 1e-6, `jump ${jump.toExponential(2)} u/s^2`);
+}
+
+// 1c. Chapter 6's switch: Sun + one nearby planet only (lead, 2026-10-05).
+{
+  const ms = bodyState('moon', 0); const es = bodyState('earth', 0);
+  const rx = (ms.x - es.x) * 0.7; const rz = (ms.z - es.z) * 0.7;
+  const a = { ax: 0, az: 0, tau: 0 };
+  setMoonPulls(false);
+  accelRel('earth', rx, rz, 0, a);
+  const r = Math.hypot(rx, rz);
+  const want = BODIES.earth.gm / (r * r);
+  const kepler = isKeplerFrame('earth');
+  setMoonPulls(true);
+  check('Chapter 6 switch: only the planet pulls in its zone', approx(Math.hypot(a.ax, a.az), want, 1e-12) && kepler,
+    `pull ${Math.hypot(a.ax, a.az).toFixed(6)} vs Earth alone ${want.toFixed(6)}`);
 }
 
 // ---------------------------------------------------------------------------

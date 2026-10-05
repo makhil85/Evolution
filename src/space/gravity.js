@@ -60,8 +60,16 @@ for (const id of BODY_ORDER) {
 
 /** True when her path in this frame is a pure two-body (Kepler) orbit. */
 export function isKeplerFrame(frameId) {
-  return !SOURCES[frameId];
+  return !moonPulls || !SOURCES[frameId];
 }
+
+// Chapter 6 (lead, 2026-10-05): "for chapter 6 consider only the Sun and a
+// nearby planet" - its slingshots are the clean two-body lesson, so moons
+// don't pull there: setMoonPulls(false) makes every frame one body's pull
+// (the Sun's between planets, the planet's in its zone), path and flight alike.
+let moonPulls = true;
+/** Moons pulling inside a planet's zone (default on; Chapter 6 turns it off). */
+export function setMoonPulls(on) { moonPulls = !!on; }
 
 const _r = { x: 0, z: 0, vx: 0, vz: 0 };
 
@@ -96,7 +104,7 @@ for (const id of BODY_ORDER) {
  * (the predictor sizes its steps from it). Returns out.
  */
 export function accelRel(frameId, rx, rz, t, out) {
-  const src = SOURCES[frameId];
+  const src = moonPulls ? SOURCES[frameId] : null;
   if (!src) {
     const gm = BODIES[frameId].gm;
     const r2 = rx * rx + rz * rz;
