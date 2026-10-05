@@ -17,6 +17,7 @@
 
 import { t } from './level.js';
 import { IS_CH5 } from './chapter.js';
+import { toggleBar, paintToggle } from './hud/toggleBar.js';
 
 const MANUAL_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyZ', 'KeyX', 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 
@@ -40,25 +41,20 @@ export function createAutopilot(game, { controls, hud }) {
   btn.type = 'button';
   btn.className = 'sp-autopilot';
   btn.setAttribute('aria-pressed', 'false');
-  btn.textContent = 'Autopilot (P)';
-  const style = document.createElement('style');
-  style.textContent = `
-.sp-autopilot { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); z-index: 5;
-  font: 700 14px/1 system-ui, sans-serif; padding: 9px 16px; border-radius: 999px; cursor: pointer;
-  background: rgba(14, 20, 34, .85); color: #dfe7ff; border: 1.5px solid #5a78c8; }
-.sp-autopilot:hover { background: rgba(28, 40, 70, .95); }
-.sp-autopilot.is-on { background: #2f6bff; color: #fff; border-color: #9fbaff; box-shadow: 0 0 0 4px rgba(47,107,255,.25); }
-.sp-autopilot:focus-visible { outline: 3px solid #ffb347; outline-offset: 2px; }
-body.in-scene .sp-autopilot { top: 12px; }`;
-  document.head.appendChild(style);
-  (hud.root || document.body).appendChild(btn);
+  toggleBar(game).appendChild(btn);
+  function paint() {
+    paintToggle(btn, 'P', 'Autopilot', on ? 'on' : 'off', on
+      ? (easyAuto ? 'Autopilot is flying (Easy). The walks are yours. P: let it do the walks too' : 'Autopilot is flying. P to fly yourself')
+      : 'Autopilot is off: you fly. P to switch it on');
+  }
+  paint();
 
   function setOn(v, why) {
     if (on === !!v) return;
     on = !!v;
     btn.classList.toggle('is-on', on);
     btn.setAttribute('aria-pressed', String(on));
-    btn.textContent = on ? (easyAuto ? 'Autopilot flies on Easy — P: let it do the walks too' : 'Autopilot ON — P to fly yourself') : 'Autopilot (P)';
+    paint();
     // Hard mode hides the banners; the autopilot flies by them.
     game.debugCues = on;
     if (on) {
@@ -80,7 +76,7 @@ body.in-scene .sp-autopilot { top: 12px; }`;
     if (!on) { easyAuto = game.mode?.id === 'easy'; setOn(true); return; }
     if (on && easyAuto) {
       easyAuto = false;
-      btn.textContent = 'Autopilot ON — P to fly yourself';
+      paint();
       hud.toast('Full autopilot: it does the walks too.', { kind: 'info', ms: 2600 });
       return;
     }

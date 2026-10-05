@@ -32,6 +32,11 @@
 // a body's surface are found the same way. This mirrors patched conics
 // exactly - it just solves each conic instead of numerically walking it.
 //
+// MOONS (2026-10-05). Inside a planet's zone the planet and its moons all
+// pull at once (gravity.js), which has no closed form, so those segments are
+// walked with small RK4 steps instead (makeSegment). The Sun's stretches and
+// moonless planets stay exact Kepler solves.
+//
 // closest-approach-to-target gets one extra refinement pass (a golden-section
 // search within the bracket the coarse scan found) since the coordinator's
 // "agree within 1u" bar is tighter than the coarse scan's spacing alone
@@ -41,6 +46,7 @@
 
 import { BODIES, SHIP } from './contracts.js';
 import { bodyState, allStates, dominantBody } from './orbits.js';
+import { isKeplerFrame, rk4Step, coastStep, accelRel } from './gravity.js';
 
 const SUN_ZERO = Object.freeze({ x: 0, z: 0, vx: 0, vz: 0 });
 
@@ -150,6 +156,77 @@ function bodyStateOf(bodyId, t, scratch) {
 }
 
 const _bodyScratch = { x: 0, z: 0, vx: 0, vz: 0 };
+
+/**
+ * One stretch of her coast relative to one body: seg.rel(t) is her offset and
+ * velocity from that body at time t (>= seg.t0). Out in the Sun's pull, or
+ * round a planet with no moons, that is an exact Kepler solve. Inside a
+ * planet's system the planet AND its moving moons pull together
+ * (gravity.js), which has no closed form: the coast is walked forward with
+ * small RK4 steps (stored, so each time is worked out once) and read back
+ * between steps with a cubic (Hermite) curve through position, velocity and
+ * acceleration at both ends.
+ */
+export function makeSegment(body, t0, rx, rz, vx, vz) {
+  if (isKeplerFrame(body)) {
+    const mu = gmOf(body);
+    return { body, t0, rel: (t) => keplerPropagate(rx, rz, vx, vz, mu, t - t0) };
+  }
+  const T = [t0]; const X = [rx]; const Z = [rz]; const VX = [vx]; const VZ = [vz];
+  const acc = { ax: 0, az: 0, tau: 0 };
+  accelRel(body, rx, rz, t0, acc);
+  const AX = [acc.ax]; const AZ = [acc.az];
+  const s = { x: rx, z: rz, vx, vz };
+  let tl = t0;
+  let cur = 0;
+  function extendTo(t) {
+    let n = 0;
+    while (tl < t && n++ < 200000) {
+      const h = coastStep(acc.tau);
+      rk4Step(body, s, tl, h, acc);
+      tl += h;
+      T.push(tl); X.push(s.x); Z.push(s.z); VX.push(s.vx); VZ.push(s.vz); AX.push(acc.ax); AZ.push(acc.az);
+    }
+  }
+  function rel(t) {
+    if (t > tl) extendTo(t);
+    const last = T.length - 1;
+    if (last === 0) return { x: X[0], z: Z[0], vx: VX[0], vz: VZ[0] };
+    // Find i with T[i] <= t <= T[i+1] (queries mostly move forward).
+    if (cur > last - 1) cur = last - 1;
+    if (t < T[cur]) {
+      let lo = 0; let hi = cur;
+      while (hi - lo > 1) { const m = (lo + hi) >> 1; if (T[m] <= t) lo = m; else hi = m; }
+      cur = lo;
+    } else {
+      while (cur < last - 1 && T[cur + 1] < t) cur++;
+    }
+    const i = cur;
+    const h = T[i + 1] - T[i];
+    const u = (t - T[i]) / h;
+    const u2 = u * u; const u3 = u2 * u;
+    // Cubic Hermite: position from pos+vel, velocity from vel+accel.
+    const h00 = 2 * u3 - 3 * u2 + 1; const h10 = u3 - 2 * u2 + u;
+    const h01 = -2 * u3 + 3 * u2; const h11 = u3 - u2;
+    return {
+      x: h00 * X[i] + h10 * h * VX[i] + h01 * X[i + 1] + h11 * h * VX[i + 1],
+      z: h00 * Z[i] + h10 * h * VZ[i] + h01 * Z[i + 1] + h11 * h * VZ[i + 1],
+      vx: h00 * VX[i] + h10 * h * AX[i] + h01 * VX[i + 1] + h11 * h * AX[i + 1],
+      vz: h00 * VZ[i] + h10 * h * AZ[i] + h01 * VZ[i + 1] + h11 * h * AZ[i + 1],
+    };
+  }
+  return { body, t0, rel };
+}
+
+/**
+ * Her coast from a state relative to `body` at t0, dt seconds on (same
+ * gravity as the flight; no zone changes). Returns { x, z, vx, vz } relative.
+ */
+export function coastRel(body, rx, rz, vx, vz, t0, dt) {
+  if (dt <= 0) return { x: rx, z: rz, vx, vz };
+  return makeSegment(body, t0, rx, rz, vx, vz).rel(t0 + dt);
+}
+
 const _targetScratch = { x: 0, z: 0, vx: 0, vz: 0 };
 const _allStatesScratch = {};
 
@@ -193,20 +270,15 @@ export function predict(ship, opts = {}) {
   // --- Segment state: the ship's position/velocity relative to whichever
   // body currently dominates, valid (exactly, via keplerPropagate) for as
   // long as that body keeps dominating.
-  let segStartT = t0;
   let segDomId = ship.soi;
-  let segMu = gmOf(segDomId);
+  let seg;
   {
-    const b0 = bodyStateOf(segDomId, segStartT, _bodyScratch);
-    var relX = ship.x - b0.x;
-    var relZ = ship.z - b0.z;
-    var relVX = ship.vx - b0.vx;
-    var relVZ = ship.vz - b0.vz;
+    const b0 = bodyStateOf(segDomId, t0, _bodyScratch);
+    seg = makeSegment(segDomId, t0, ship.x - b0.x, ship.z - b0.z, ship.vx - b0.vx, ship.vz - b0.vz);
   }
 
   function evalAt(t) {
-    const dt = t - segStartT;
-    const rel = keplerPropagate(relX, relZ, relVX, relVZ, segMu, dt);
+    const rel = seg.rel(t);
     const b = bodyStateOf(segDomId, t, _bodyScratch);
     return {
       x: rel.x + b.x, z: rel.z + b.z,
@@ -218,15 +290,10 @@ export function predict(ship, opts = {}) {
   // Segments that ENTER the target's gravity zone (for the closest pass).
   const targetSegs = [];
   function startSegment(t, heliX, heliZ, heliVX, heliVZ, newDomId) {
-    segStartT = t;
     segDomId = newDomId;
-    segMu = gmOf(newDomId);
     const b = bodyStateOf(newDomId, t, _bodyScratch);
-    relX = heliX - b.x;
-    relZ = heliZ - b.z;
-    relVX = heliVX - b.vx;
-    relVZ = heliVZ - b.vz;
-    if (target && newDomId === target) targetSegs.push({ t, relX, relZ, relVX, relVZ });
+    seg = makeSegment(newDomId, t, heliX - b.x, heliZ - b.z, heliVX - b.vx, heliVZ - b.vz);
+    if (target && newDomId === target) targetSegs.push(seg);
   }
 
   const points = [];
@@ -247,7 +314,7 @@ export function predict(ship, opts = {}) {
   let prevSegD = null;
 
   // Closest approach to the caller-supplied target.
-  let closestCoarse = null; // {t, dist, segDomId, segStartT, relX,relZ,relVX,relVZ} snapshot for refinement
+  let closestCoarse = null; // {t, dist, seg} snapshot for refinement
 
   function distToTarget(t, s) {
     const ts = bodyState(target, t, _targetScratch);
@@ -278,7 +345,7 @@ export function predict(ship, opts = {}) {
   recordSample(t0, prevS);
   if (target) {
     const { dist } = distToTarget(t0, prevS);
-    closestCoarse = { t: t0, dist, segDomId, segStartT, relX, relZ, relVX, relVZ };
+    closestCoarse = { t: t0, dist, seg };
   }
 
   const tEnd = t0 + seconds;
@@ -355,7 +422,7 @@ export function predict(ship, opts = {}) {
     if (target && !soiChanges.some((c) => c.from === target)) {
       const { dist } = distToTarget(t, sFinal);
       if (!closestCoarse || dist < closestCoarse.dist) {
-        closestCoarse = { t, dist, segDomId, segStartT, relX, relZ, relVX, relVZ };
+        closestCoarse = { t, dist, seg };
       }
     }
 
@@ -400,14 +467,13 @@ export function predict(ship, opts = {}) {
   // between "on course" and a correction (2026-10-05 lab, Jupiter to Europa).
   // A pass inside the target's zone is searched on the target's own conic
   // as well (below), and the closer of the two kept.
-  if (target && targetSegs.length && closestCoarse && closestCoarse.segDomId !== target) {
+  if (target && targetSegs.length && closestCoarse && closestCoarse.seg.body !== target) {
     const g = targetSegs[0];
-    const e = segEnd(g.t);
-    const muT = gmOf(target);
-    const dAt = (t) => { const q = keplerPropagate(g.relX, g.relZ, g.relVX, g.relVZ, muT, t - g.t); return Math.hypot(q.x, q.z); };
+    const e = segEnd(g.t0);
+    const dAt = (t) => { const q = g.rel(t); return Math.hypot(q.x, q.z); };
     // Golden section over [entry, exit]: one pass in, one out (unimodal).
     const gr0 = (Math.sqrt(5) - 1) / 2;
-    let a = g.t; let bb = e;
+    let a = g.t0; let bb = e;
     let c = bb - gr0 * (bb - a); let d = a + gr0 * (bb - a);
     let fc = dAt(c); let fd = dAt(d);
     for (let k = 0; k < CLOSEST_REFINE_STEPS; k++) {
@@ -416,21 +482,16 @@ export function predict(ship, opts = {}) {
     }
     const tm = fc < fd ? c : d;
     // Hand the refine below the target segment when its pass is the closer.
-    if (Math.min(fc, fd) < closestCoarse.dist) closestCoarse = { t: tm, dist: Math.min(fc, fd), segDomId: target, segStartT: g.t, relX: g.relX, relZ: g.relZ, relVX: g.relVX, relVZ: g.relVZ };
+    if (Math.min(fc, fd) < closestCoarse.dist) closestCoarse = { t: tm, dist: Math.min(fc, fd), seg: g };
   }
   if (target && closestCoarse) {
     const half = scanDt; // bracket half-width around the coarse minimum
-    let lo = Math.max(t0, closestCoarse.t - half, closestCoarse.segStartT);
-    let hi = Math.min(t0 + seconds, closestCoarse.t + half, segEnd(closestCoarse.segStartT));
-    const segT0 = closestCoarse.segStartT;
-    const segRx = closestCoarse.relX;
-    const segRz = closestCoarse.relZ;
-    const segRvx = closestCoarse.relVX;
-    const segRvz = closestCoarse.relVZ;
-    const segBody = closestCoarse.segDomId;
-    const mu = gmOf(segBody);
+    const cs = closestCoarse.seg;
+    let lo = Math.max(t0, closestCoarse.t - half, cs.t0);
+    let hi = Math.min(t0 + seconds, closestCoarse.t + half, segEnd(cs.t0));
+    const segBody = cs.body;
     const distAt = (t) => {
-      const rel = keplerPropagate(segRx, segRz, segRvx, segRvz, mu, t - segT0);
+      const rel = cs.rel(t);
       const b = bodyStateOf(segBody, t, _bodyScratch);
       const hx = rel.x + b.x;
       const hz = rel.z + b.z;

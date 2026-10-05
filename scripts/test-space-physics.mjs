@@ -16,6 +16,7 @@ import {
   refuel, emergencyTopUp,
 } from '../src/space/physics.js';
 import { predict } from '../src/space/predictor.js';
+import { accelRel, setMoonPulls, isKeplerFrame } from '../src/space/gravity.js';
 import { anchorPath } from '../src/space/pathFrames.js';
 
 const results = [];
@@ -66,8 +67,98 @@ function energyDriftTest(bodyId, altitudeFactor, label) {
   check(`energy drift <1e-4 over 100 orbits (${label})`, maxDrift < 1e-4, `max relative drift ${maxDrift.toExponential(3)}`);
 }
 
-energyDriftTest('earth', 1.6, 'Earth low orbit');
-energyDriftTest('europa', 1.6, 'Europa low orbit');
+// Energy is only conserved where ONE body pulls (gravity.js): round Earth the
+// moving Moon now tugs too, so the exact-energy check uses Mars (no moons),
+// and Earth / Moon / Europa get a "low orbit stays round" check instead.
+energyDriftTest('mars', 1.6, 'Mars low orbit');
+
+function lowOrbitTest(bodyId, altitudeFactor, orbits, tol) {
+  const b = BODIES[bodyId];
+  const r = b.radius * altitudeFactor;
+  const bs = bodyState(bodyId, 0);
+  const v = Math.sqrt(b.gm / r);
+  const ship = createShipState({ x: bs.x + r, z: bs.z, vx: bs.vx, vz: bs.vz + v, t: 0 });
+  const period = 2 * Math.PI * Math.sqrt((r * r * r) / b.gm);
+  let lo = Infinity; let hi = 0;
+  const n = Math.round((period * orbits) / PHYSICS_DT);
+  for (let i = 0; i < n; i++) {
+    stepShip(ship, { thrust: 0, turn: 0 }, PHYSICS_DT);
+    if (i % 20 === 0) {
+      const p = bodyState(bodyId, ship.t);
+      const d = Math.hypot(ship.x - p.x, ship.z - p.z);
+      lo = Math.min(lo, d); hi = Math.max(hi, d);
+    }
+  }
+  check(`low ${b.name} orbit stays round for ${orbits} orbits (within ${tol * 100}%)`, lo > r * (1 - tol) && hi < r * (1 + tol),
+    `r=${r.toFixed(1)} swung ${lo.toFixed(2)}-${hi.toFixed(2)}`);
+}
+lowOrbitTest('earth', 1.6, 100, 0.05);
+lowOrbitTest('moon', 1.6, 100, 0.05);
+lowOrbitTest('moon', 3, 30, 0.05);
+lowOrbitTest('europa', 1.6, 100, 0.05);
+
+// 1b. THE MOON PULLS FROM AFAR (lead, 2026-10-05: on a manual flight "the
+// Moon never catches the ship, it acts like only Earth pulls"). Coasting in
+// Earth's zone, outside the Moon's own 74 u zone, she must be bent toward the
+// moving Moon - the old model let only Earth pull there. And the pull must
+// not jump where she crosses into the Moon's zone.
+{
+  const t = 0;
+  const ms = bodyState('moon', t);
+  const es = bodyState('earth', t);
+  const mx = ms.x - es.x; const mz = ms.z - es.z;
+  const md = Math.hypot(mx, mz);
+  // 90 u from the Moon, on the Earth side (its pull there is 17% of
+  // Earth's, so above the 10% "ignore it" line).
+  const k = (md - 90) / md;
+  const acc = { ax: 0, az: 0, tau: 0 };
+  accelRel('earth', mx * k, mz * k, t, acc);
+  const earthOnly = BODIES.earth.gm / ((md - 90) ** 2);
+  const moonPull = BODIES.moon.gm / (90 * 90);
+  const along = (acc.ax * mx + acc.az * mz) / md; // + = toward the Moon (and away from Earth)
+  check('the Moon pulls her from outside its zone', approx(along, -earthOnly + moonPull, 1e-9),
+    `along Earth-Moon line ${along.toFixed(5)} (Earth alone would be ${(-earthOnly).toFixed(5)})`);
+  // Either side of the Moon's zone edge, the same pull (frame shift aside).
+  const soi = BODIES.moon.soi;
+  const ux = -mx / md; const uz = -mz / md;
+  const out = { ax: 0, az: 0, tau: 0 }; const inn = { ax: 0, az: 0, tau: 0 };
+  accelRel('earth', mx + ux * (soi + 1e-6), mz + uz * (soi + 1e-6), t, out);
+  accelRel('moon', ux * (soi - 1e-6), uz * (soi - 1e-6), t, inn);
+  // In the Moon's frame we take away the Moon's own fall round Earth.
+  const fall = BODIES.earth.gm / (md * md);
+  const jump = Math.hypot(out.ax - (inn.ax - fall * mx / md), out.az - (inn.az - fall * mz / md));
+  check('no jump in her pull at the Moon\'s zone edge', jump < 1e-6, `jump ${jump.toExponential(2)} u/s^2`);
+}
+
+// 1b2. Lead (2026-10-05): "if speed during orbit transfer is too much we
+// overshoot and sling by; if speed is right we enter an elliptical orbit".
+// At a 20 u low point by the Moon: under escape speed (4.47) she stays on an
+// ellipse; over it she is slung past and leaves the Moon's zone.
+{
+  const run = (v) => {
+    const m = bodyState('moon', 0);
+    const s = createShipState({ t: 0, x: m.x + 20, z: m.z, vx: m.vx, vz: m.vz + v, soi: 'moon' });
+    for (let i = 0; i < 900 / PHYSICS_DT; i++) { stepShip(s, {}, PHYSICS_DT); if (s.soi !== 'moon') return 'slung past'; }
+    return 'ellipse';
+  };
+  const slow = run(3.6); const fast = run(4.6);
+  check('Moon: right speed = ellipse, too fast = slung past', slow === 'ellipse' && fast === 'slung past', `3.6 u/s: ${slow}, 4.6 u/s: ${fast}`);
+}
+
+// 1c. Chapter 6's switch: Sun + one nearby planet only (lead, 2026-10-05).
+{
+  const ms = bodyState('moon', 0); const es = bodyState('earth', 0);
+  const rx = (ms.x - es.x) * 0.7; const rz = (ms.z - es.z) * 0.7;
+  const a = { ax: 0, az: 0, tau: 0 };
+  setMoonPulls(false);
+  accelRel('earth', rx, rz, 0, a);
+  const r = Math.hypot(rx, rz);
+  const want = BODIES.earth.gm / (r * r);
+  const kepler = isKeplerFrame('earth');
+  setMoonPulls(true);
+  check('Chapter 6 switch: only the planet pulls in its zone', approx(Math.hypot(a.ax, a.az), want, 1e-12) && kepler,
+    `pull ${Math.hypot(a.ax, a.az).toFixed(6)} vs Earth alone ${want.toFixed(6)}`);
+}
 
 // ---------------------------------------------------------------------------
 // 2. SOI hand-off continuity: Earth<->Sun and Moon<->Earth.

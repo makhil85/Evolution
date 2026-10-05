@@ -269,8 +269,8 @@ export function* planTransferSteps(shipNow, target, { quick = false, dvHint = 0,
     }
     const gmT = tb.gm || 0;
     const v2 = rvx * rvx + rvz * rvz;
-    // Only inside its gravity zone: outside it the target doesn't pull at all
-    // in this game's physics, so a slow pass 350 u out stays 350 u out.
+    // Only inside its gravity zone: further out the target's pull is weak
+    // (this plan ignores it; the dotted path and the corrections don't).
     const peri = gmT > 0 && v2 > 1e-9 && miss < tb.soi ? (gmT / v2) * (Math.sqrt(1 + ((miss * v2) / gmT) ** 2) - 1) : miss;
     // What stopping there will cost: from her speed at the lowest point down
     // to orbit speed at that height.

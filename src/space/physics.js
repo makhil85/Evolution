@@ -36,11 +36,20 @@
 // in this codebase can keep reading ship.x/z/vx/vz exactly as before) while
 // the physics never has an unaccounted-for acceleration term.
 //
+// WHICH PULLS (2026-10-05, gravity.js): the dominant body only picks the
+// frame. Inside a planet's zone the planet AND all its moving moons pull
+// together, so the Moon tugs her the whole way out from Earth instead of
+// switching on at its small zone edge; out between the planets it is the
+// Sun alone. The same accelRel() drives the dotted path (predictor.js).
+//
 // Pure JS, float64, no three.js import - must run under plain `node`.
 
 import { BODIES, SHIP, SOLAR, WARP_LEVELS, AUTOPILOT_WARP, CRUISE_WARP, WARP_SAFE_RADII, RADIATION, PHYSICS_DT, EVENTS } from './contracts.js';
 import { allStates, bodyState, dominantBody } from './orbits.js';
 import { keplerPropagate } from './predictor.js';
+import { accelRel } from './gravity.js';
+
+const _gAcc = { ax: 0, az: 0 };
 
 /** Fastest she can spin, rad/s (flight assist; see stepShip). */
 const MAX_SPIN = 1.8;
@@ -251,7 +260,6 @@ export function stepShip(ship, input = {}, dt = PHYSICS_DT, clearOfZones = false
   // dominant body). This roughly halves stepShip's cost, which matters a lot
   // to the predictor's thousands-of-steps-per-call budget.
   const domStart = ship.soi;
-  const gmStart = domStart === 'sun' ? BODIES.sun.gm : BODIES[domStart].gm;
   const sStart = domStart === 'sun' ? _sunState : bodyState(domStart, ship.t, _startScratch);
 
   // Ship state RELATIVE to the dominant body (see the header comment for why).
@@ -260,11 +268,11 @@ export function stepShip(ship, input = {}, dt = PHYSICS_DT, clearOfZones = false
   let rvx = ship.vx - sStart.vx;
   let rvz = ship.vz - sStart.vz;
 
-  const r2 = rx * rx + rz * rz;
-  const r = Math.sqrt(r2) || 1e-9;
-  const g = -gmStart / (r2 * r); // pure two-body pull, toward the body (rvec points away from it)
-  const gax = g * rx;
-  const gaz = g * rz;
+  // Every pull she feels here (gravity.js): the Sun alone out between the
+  // planets; inside a planet's zone the planet AND its moons, all moving.
+  accelRel(domStart, rx, rz, ship.t, _gAcc);
+  const gax = _gAcc.ax;
+  const gaz = _gAcc.az;
 
   const mass = shipMass(ship);
   const scale = input.precision ? PRECISION_SCALE : 1;
