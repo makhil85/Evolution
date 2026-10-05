@@ -19,9 +19,11 @@ export const CLOSE_NAMES = Object.freeze([
 ]);
 
 /** Fuel she has for steering on the whole trip (tonnes). */
-export const FUEL_BUDGET = 60;
+export const FUEL_BUDGET = 40;
 /** The speed the route must reach before the drive goes on (km/s). */
-export const GOAL_BOOST = 60;
+export const GOAL_BOOST = 50;
+/** Her speed at the edge before the first flyby (km/s), for the running total. */
+export const START_SPEED = 5;
 
 /**
  * Each stop: the speed boost (km/s) and the steering fuel (t) at closeness
@@ -128,3 +130,21 @@ export const CRUISE_PERCENT = 10;
 export const percentOfLight = (kms) => Math.round((kms / LIGHT_KMS) * 1000) / 10;
 /** Years to go `ly` light years at `pct` % of light speed. */
 export const yearsAt = (ly, pct) => ly / (pct / 100);
+
+/**
+ * The flight's result: each leg's planned boost, the timing error of her
+ * press (null = no press, a miss), the boost kept, and the running speed.
+ * @param {{route:string, close:number[]}} plan
+ * @param {(number|null)[]} errs one per stop
+ */
+export function flightResult(plan, errs) {
+  const { legs } = planTotals(plan);
+  let speed = START_SPEED;
+  const out = legs.map((leg, i) => {
+    const err = errs[i] == null ? 2 : errs[i];
+    const kept = keptBoost(leg, err);
+    speed += kept;
+    return { ...leg, err, kept, speed };
+  });
+  return { legs: out, kept: speed - START_SPEED, speed };
+}
