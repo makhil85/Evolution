@@ -108,12 +108,13 @@ lowOrbitTest('europa', 1.6, 100, 0.05);
   const es = bodyState('earth', t);
   const mx = ms.x - es.x; const mz = ms.z - es.z;
   const md = Math.hypot(mx, mz);
-  // 120 u from the Moon, on the Earth side.
-  const k = (md - 120) / md;
+  // 90 u from the Moon, on the Earth side (its pull there is 17% of
+  // Earth's, so above the 10% "ignore it" line).
+  const k = (md - 90) / md;
   const acc = { ax: 0, az: 0, tau: 0 };
   accelRel('earth', mx * k, mz * k, t, acc);
-  const earthOnly = BODIES.earth.gm / ((md - 120) ** 2);
-  const moonPull = BODIES.moon.gm / (120 * 120);
+  const earthOnly = BODIES.earth.gm / ((md - 90) ** 2);
+  const moonPull = BODIES.moon.gm / (90 * 90);
   const along = (acc.ax * mx + acc.az * mz) / md; // + = toward the Moon (and away from Earth)
   check('the Moon pulls her from outside its zone', approx(along, -earthOnly + moonPull, 1e-9),
     `along Earth-Moon line ${along.toFixed(5)} (Earth alone would be ${(-earthOnly).toFixed(5)})`);
@@ -127,6 +128,21 @@ lowOrbitTest('europa', 1.6, 100, 0.05);
   const fall = BODIES.earth.gm / (md * md);
   const jump = Math.hypot(out.ax - (inn.ax - fall * mx / md), out.az - (inn.az - fall * mz / md));
   check('no jump in her pull at the Moon\'s zone edge', jump < 1e-6, `jump ${jump.toExponential(2)} u/s^2`);
+}
+
+// 1b2. Lead (2026-10-05): "if speed during orbit transfer is too much we
+// overshoot and sling by; if speed is right we enter an elliptical orbit".
+// At a 20 u low point by the Moon: under escape speed (4.47) she stays on an
+// ellipse; over it she is slung past and leaves the Moon's zone.
+{
+  const run = (v) => {
+    const m = bodyState('moon', 0);
+    const s = createShipState({ t: 0, x: m.x + 20, z: m.z, vx: m.vx, vz: m.vz + v, soi: 'moon' });
+    for (let i = 0; i < 900 / PHYSICS_DT; i++) { stepShip(s, {}, PHYSICS_DT); if (s.soi !== 'moon') return 'slung past'; }
+    return 'ellipse';
+  };
+  const slow = run(3.6); const fast = run(4.6);
+  check('Moon: right speed = ellipse, too fast = slung past', slow === 'ellipse' && fast === 'slung past', `3.6 u/s: ${slow}, 4.6 u/s: ${fast}`);
 }
 
 // 1c. Chapter 6's switch: Sun + one nearby planet only (lead, 2026-10-05).

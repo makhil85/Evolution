@@ -86,7 +86,9 @@ flying mode, at both question levels, verified by the autopilot (see Testing).
 - `gravity.js`: the one gravity model for flight AND path (all chapters):
   inside a planet's zone the planet and all its moving moons pull together
   (the Moon tugs her the whole way from Earth); the Sun alone between planets.
-  Deep in a moon's zone the planet's tug fades out so low orbits stay round.
+  Any pull under 10% of the home body's is ignored (lead's rule), so low
+  Moon/Europa orbits are clean ellipses and the Moon pulls from ~155 u out.
+  `setMoonPulls(false)` = Sun + one planet only (Chapter 6 slingshots).
 - `physics.js`: flight (frame = dominant body, forces from `gravity.js`), burn computer (`burnBudget`), flight
   assist (spin cap), warp rules (`safeBody` allows warp closer on safe orbits).
 - `missions.js` + `acts/act1..5.js`: story steps. A step can have `beat` (its

@@ -20,8 +20,9 @@
 // she feels. Relative to a planet P (on its rail, not tugged by its moons):
 //   a = pull of P + pull of each moon
 // Relative to a moon M of P, take away M's own acceleration round P:
-//   a = pull of M + w * (pull of P + pull of other moons - GM_P (P - M) / |P - M|^3)
-// where w fades that planet tug out deep inside M's zone (see accelRel).
+//   a = pull of M + pull of other moons + (pull of P - GM_P (P - M) / |P - M|^3)
+// Any of those extra effects under 10% of the home body's pull is left out
+// (lead's rule; see accelRel).
 //
 // Every position here is relative to the system's planet, from the analytic
 // rails (orbits.bodyStateRel), so nothing is ever integrated but the ship.
@@ -120,37 +121,44 @@ export function accelRel(frameId, rx, rz, t, out) {
   const fx = fi >= 0 ? xs[fi] : 0; const fz = fi >= 0 ? zs[fi] : 0;
   // Ship relative to the planet.
   const sx = rx + fx; const sz = rz + fz;
+  // The frame body's own pull first: the yardstick for the rest.
   let ax = 0; let az = 0; let tau = Infinity;
-  let px = 0; let pz = 0; // every pull but the frame body's own
-  for (let i = 0; i < src.length; i++) {
+  {
+    const i = fi >= 0 ? fi : 0;
     const gm = src[i].gm;
     const dx = sx - xs[i]; const dz = sz - zs[i];
     const d2 = dx * dx + dz * dz;
-    const d = Math.sqrt(d2) || 1e-9;
-    const d3 = d2 * d;
-    const g = -gm / d3;
-    if (i === fi) { ax += g * dx; az += g * dz; } else { px += g * dx; pz += g * dz; }
+    const d3 = d2 * (Math.sqrt(d2) || 1e-9);
+    ax = (-gm / d3) * dx; az = (-gm / d3) * dz;
+    tau = d3 / gm;
+  }
+  const main2 = ax * ax + az * az || 1e-24;
+  for (let i = 0; i < src.length; i++) {
+    if (i === (fi >= 0 ? fi : 0)) continue;
+    const gm = src[i].gm;
+    const dx = sx - xs[i]; const dz = sz - zs[i];
+    const d2 = dx * dx + dz * dz;
+    const d3 = d2 * (Math.sqrt(d2) || 1e-9);
+    let px = (-gm / d3) * dx; let pz = (-gm / d3) * dz;
+    if (fi >= 0 && i === 0) {
+      // In a moon's frame the planet's real effect is its pull on her minus
+      // its pull on the moon (the moon falls round it too): the tide.
+      const f2 = fx * fx + fz * fz;
+      const g = gm / (f2 * Math.sqrt(f2));
+      px += g * fx; pz += g * fz;
+    }
+    // Lead (2026-10-05): "keep the rough physics real... if the effect of
+    // another object is <10%, ignore it". Below 10% of the main pull it is
+    // left out; it eases in by 13% so the pull never jumps. So low Moon and
+    // Europa orbits are clean ellipses (the planet's tide there is 2-9%),
+    // while on the way out from Earth the Moon pulls from ~155 u away.
+    const q2 = (px * px + pz * pz) / main2;
+    if (q2 <= 0.01) continue;
+    const k = (Math.sqrt(q2) - 0.1) / 0.03;
+    const w = k >= 1 ? 1 : k * k * (3 - 2 * k);
+    ax += w * px; az += w * pz;
     const tq = d3 / gm;
     if (tq < tau) tau = tq;
-  }
-  if (fi >= 0) {
-    // The moon's own fall round its planet (the frame accelerates).
-    const d2 = fx * fx + fz * fz;
-    const g = PLANET_GM[frameId] / (d2 * Math.sqrt(d2));
-    px += g * fx; pz += g * fz;
-    // Deep in a moon's zone the planet's tug fades out, reaching full
-    // strength at the zone's edge (so the pull never jumps there). The
-    // game's moons sit far closer to their planets than real ones, so at
-    // full strength the planet's tug wrecked low orbits: round Europa a
-    // circle at 16 u swung 11-20 u (nearly into the ground), and one at
-    // 25 u was torn away in 250 s. Faded, low orbits stay round, and the
-    // planet still bends her path everywhere else.
-    const R = BODIES[frameId].radius;
-    const k = Math.min(1, Math.max(0, (Math.sqrt(rx * rx + rz * rz) - R) / (BODIES[frameId].soi - R)));
-    const w = k * k;
-    ax += w * px; az += w * pz;
-  } else {
-    ax += px; az += pz;
   }
   out.ax = ax; out.az = az; out.tau = Math.sqrt(tau);
   return out;
