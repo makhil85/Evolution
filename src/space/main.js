@@ -43,6 +43,7 @@ import { createFrameMonitor } from '../game/frameMonitor.js';
 import { createAutopilot } from './autopilot.js';
 import { createRetry } from './retry.js';
 import { createAimToggle } from './aimToggle.js';
+import { createFreezeButton } from './freeze.js';
 import { createAimDial } from './hud/aimDial.js';
 import { playIntro } from './cinematics.js';
 import { IS_CH5 } from './chapter.js';
@@ -234,6 +235,7 @@ hud.onOutOfTries = () => missions.restartAct();
 game.autopilot = createAutopilot(game, { controls, hud });
 game.retry = createRetry(game); // Esc / button: back to just after the last question
 const aimToggle = createAimToggle(game); // T / button: auto-turn on or off
+const freeze = createFreezeButton(game); // F / button: freeze everything, then carry on
 
 // --- resume ----------------------------------------------------------------------
 // A reload puts her back exactly where she was: the ship (and the sim clock, so
@@ -580,6 +582,15 @@ function narrate(kind, text) {
  * banner stops asking for it.
  */
 const SLOW_MO = 0.4;
+/**
+ * How fast "x1" runs: 0.75 sim seconds per real second (lead, 2026-10-05:
+ * "1x speed has to become 0.5 or 0.75x - the earlier pace was good, right now
+ * everything is going too fast"). Every time-warp level multiplies THIS, so
+ * x4 is still four times normal flight; it just gives a child a little longer
+ * to read the banner, turn, and let go of W. Fuel and gravity are per sim
+ * second, so nothing about the flying gets easier or harder - only calmer.
+ */
+const FLIGHT_PACE = 0.75;
 function slowMoNow() {
   return game.mode?.id === 'medium' && !game.autopilot?.on && performance.now() < (game.slowUntil || 0);
 }
@@ -1336,8 +1347,10 @@ function prof(name, t0) {
 }
 
 function tick(realDt, render = true) {
+  // F / the button: everything stops where it is until she says carry on.
+  freeze.update();
   // Real seconds played, for the end card (saved with the stats).
-  if (!game.paused && realDt < 1) { game.stats = game.stats || {}; game.stats.played = (game.stats.played || 0) + realDt; }
+  if (!game.paused && !game.frozen && realDt < 1) { game.stats = game.stats || {}; game.stats.played = (game.stats.played || 0) + realDt; }
   if (activeScene) {
     // Flight is frozen while a mini-scene runs: no physics, no warp, and the
     // solar system simply waits for her to climb back aboard.
@@ -1350,7 +1363,7 @@ function tick(realDt, render = true) {
   }
 
   const input = controls.sample();
-  const paused = modalOpen || game.paused;
+  const paused = modalOpen || game.paused || game.frozen;
 
   // Easy's booster during a transfer burn: one tap of W starts it and it
   // runs until the planned push is done (the burn computer stops it); S
@@ -1441,7 +1454,8 @@ function tick(realDt, render = true) {
     }
     const pathClear = !ship.landedOn && !!game.prediction && !game.prediction.impact;
     const _ts = performance.now();
-    const res = stepWorld(ship, physInput, slowMoNow() ? realDt * SLOW_MO : realDt, WARP_LEVELS[game.warpIndex], { warpSafeRadii: WARP_SAFE_RADII * game.mode.warpSafeScale, safeBody, pathClear, target: game.target, autopilot: !!game.autopilot?.on, boost: !!game.warpBoost, cruise: IS_CH5 });
+    const paceDt = realDt * FLIGHT_PACE * (slowMoNow() ? SLOW_MO : 1);
+    const res = stepWorld(ship, physInput, paceDt, WARP_LEVELS[game.warpIndex], { warpSafeRadii: WARP_SAFE_RADII * game.mode.warpSafeScale, safeBody, pathClear, target: game.target, autopilot: !!game.autopilot?.on, boost: !!game.warpBoost, cruise: IS_CH5 });
     prof('step', _ts);
     if (burnPlan && physInput.burnBudget && res.dvUsed) burnPlan.delivered += res.dvUsed;
     game.firing = physInput.thrust > 0 && !ship.landedOn; // debug: lab/xferwatch.js

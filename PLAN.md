@@ -33,6 +33,7 @@ history.
 
 | Date | Item |
 |---|---|
+| 10-05 | **Chapter 4 pace, paths, freeze** (lead playtest): the dotted path no longer tears where one body's pull hands over to the next (it used to break by 380 u reaching for the Moon, which read as "weird trajectories after each burn"); x1 runs at 0.75 sim seconds per real second; a Freeze button (F) in Chapters 4-6; the autopilot starts OFF with Easy's steering help kept and the time warp hers. See HANDOFF. |
 | 10-05 | **Chapter 5: Rings to a Star** (`chapter5.html`, `src/space/ch5/`): Jupiter to Saturn (hexagon, ring run), Uranus, Neptune, Space pool in the Kuiper belt, Pluto, the edge of the Sun's bubble, atoms and fusion, design the rock ship, rock hunt, engine build and test fire, ending into Chapter 6. Lessons 5A, 5AA, 5B, 5C. See HANDOFF and `CHAPTER5_PLAN.md`. |
 | 10-05 | Lessons replay list on the launcher; Level 1 written clues in every lesson; Flight School on the lesson card; girl or boy as the first choice; Level 1 text in all four chapters checked for a 2nd grader (`npm run reading`). See HANDOFF. |
 | 10-01 | Fun moves on the Moon and Europa walks (was item 6): K dance, I splits, B back walkover (J and H are the mission card and help in Chapter 4); walking or a jump ends them; a hint after 8 s of walking. |

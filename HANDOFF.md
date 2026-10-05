@@ -347,7 +347,7 @@ brute recipe). Hooks: `window.__science`, `__scienceRun`, `__scienceSetYaw`,
 
 ## Session 2026-10-02: Easy flies itself, Medium slow motion, smaller side panels
 
-- **Easy = autopilot flies** (`autopilot.js` `easyAuto`): on Easy it switches itself on and does every flight task: burns, captures, landings, mining, the bay and the satellite wing repair. The Moon and Europa walks stay hers. Her flying keys don't turn it off on Easy. P once hands over the walks too (full autopilot); P again turns it off for the session (`userOff`).
+- **Easy = autopilot flies** (`autopilot.js` `easyAuto`): *(superseded 2026-10-05: it no longer switches itself on - see the pace/freeze session below)* on Easy it does every flight task: burns, captures, landings, mining, the bay and the satellite wing repair. The Moon and Europa walks stay hers. Her flying keys don't turn it off on Easy. P once hands over the walks too (full autopilot); P again turns it off for the session (`userOff`).
 - **Banner narrates while the autopilot flies** (`narrate()` in main.js): "Autopilot: firing the engine!", "engine off. Coasting.", "braking for a gentle landing.", countdowns without "keys 1 to 4" or "point" orders. The raw order is kept in `burnCue.dataset.raw`; the autopilot, realpace.js and anything else steering by the banner must read that.
 - **Medium slow motion** (`SLOW_MO` 0.4, `slowMoNow()`): the last 3 s before a burn window, the burn ("BURN NOW") and "Let go of W" run at 0.4x, with a turtle on the banner. Medium only, never while the autopilot flies. Measured: 0.2 s of game time per 0.5 s.
 - **Side panels** (hud.css end): instruments and the mission card at `--hud-scale: 1` (rest of the HUD 1.3), 190/236 px wide (178/224 under 1366 px).
@@ -423,3 +423,56 @@ Design: `CHAPTER5_PLAN.md` (steps and checks) and the lead's Claude doc linked t
 - **Browser checks done**: each part jumped to with `__space.missions.jump(id)` and screenshotted (ring run, lessons, pool, edge, design, hunt, workshop, ending, end card); a Part B autopilot run Saturn -> fusion lesson.
 - **Gotchas**: a cutscene with `calm: true` on `game.cinematic` turns off the speed dust and warp streaks (all Chapter 5 cutscenes set it; Chapter 4's do not). Far out (`camera.far` 1e8) a point's projected depth can round past 1, so "is it on screen" checks use the camera direction, not `v.z < 1` (`edge.js`). Editing an imported src file while a browser test runs reloads the page and spoils the test.
 - **Not done**: Level 1 pass for Chapter 5 text; a child playing it; Chapter 6.
+
+## Session 2026-10-05 (Chapter 4 pace, paths, freeze)
+
+Lead playtest of Chapter 4: "the pace looks too fast - 1x has to become 0.5 or
+0.75x", "after each burn it's showing very weird trajectory paths... the Moon
+is not catching the ship", "add a freeze button in chapters 4, 5, 6",
+"chapter 4 starts with autopilot on - turn it off as a default but keep the
+steering on, and let the user go to higher warp speed".
+
+- **The dotted line no longer tears** (`pathFrames.js`). This was the whole
+  "weird trajectories" report, and it was the DRAWING, not the maths: the
+  predictor already agrees with actual stepping to 0.15% (test 3a) and the
+  Moon's pull is in both. Each stretch of the line used to hang off its own
+  body's CURRENT position, so a path from Earth orbit to the Moon was drawn as
+  an Earth ellipse plus a loop round where the Moon is NOW, while she arrives
+  where the Moon WILL BE - a 380 u break in a 500 u system, swinging about as
+  the Moon went round (and thousands of units leaving Earth for Mars). Now
+  every stretch is joined at the exact crossing time, so it is one unbroken
+  line that runs to where the body will be - the same place the "where the
+  target will be" ghost marks - and once she is inside a body's pull the loop
+  is drawn round the body itself, as before. Measured: the worst gap at a
+  hand-over went from 321x the dots either side to 4.9x. (Leaving a body was
+  already joined this way since 10-04; arriving at one was not.) Guarded by
+  `scripts/test-space-physics.mjs` test 3c; the before/after lab tool is
+  `scripts/_lab_path_draw.mjs`. Watch out for `pos()`: it hands back one
+  shared scratch object, so read the first position before asking for the
+  second.
+- **x1 is 0.75 sim seconds per real second** (`FLIGHT_PACE` in main.js). Warp
+  multiplies it, so "x4" is still four times normal flight. Fuel and gravity
+  are per sim second, so nothing is easier or harder - only calmer.
+- **Freeze (F or the button)** (`src/space/freeze.js`, `game.frozen`): stops
+  the ship, the planets and the clock where they are, with a cold edge round
+  the view, until F again. Top-centre stack is now Autopilot (12px), Freeze
+  (52px), Auto-turn (92px). Hidden during cutscenes, walks, cards and
+  mini-games (those hold the game already); the autopilot waits while frozen.
+  Chapters 4, 5 and 6 all get it from the shared engine.
+- **Checked in the browser** (Chapter 4, Level 4, Easy, three boots): it boots
+  with the autopilot off and the three top-centre buttons stacked right; flown
+  from Earth orbit through the Moon burn window by the on-screen cue alone
+  (hold W when it says), the dotted path reached the Moon (closest 77 u) and
+  the step moved on to "Coast to the Moon"; the drawn line measured live while
+  flying - gaps even, no tear; Freeze correctly refuses while a question card
+  is up. No page errors. NOT yet checked on a screen: the hand-over frame into
+  the Moon's pull (measured in node instead, test 3c), the freeze/thaw and
+  pace numbers at a quiet moment (every attempt landed while a question card
+  was open, which pauses the game anyway), Medium and Hard, Chapter 5.
+- **The autopilot starts OFF, in every mode** (`autopilot.js`): Easy keeps its
+  steering help (the ship points itself, landings steer themselves, one tap of
+  W runs a cued burn), and the warp is hers - nothing asks for x16/x64 by
+  itself any more, and the autopilot's own x256 cruise only happens while it
+  is flying. P (or the button) cycles: off -> flies, walks hers -> full
+  autopilot -> off. The Easy blurbs in `contracts.js` say so, and H lists F
+  and P.

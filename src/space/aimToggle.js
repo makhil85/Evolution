@@ -6,6 +6,8 @@
 // turns itself (Easy's auto-aim and the Easy/Medium landing auto-steer); A / D
 // are all hers. Press again to give the steering back. Only shown when the
 // autopilot is off and something would auto-turn (Easy, or a Medium landing).
+// Third in the top-centre stack, under the Autopilot (12px) and Freeze (52px)
+// buttons.
 
 /** @param {object} game  reads game.mode, game.autopilot; sets game.manualAim */
 export function createAimToggle(game) {
@@ -15,7 +17,7 @@ export function createAimToggle(game) {
   btn.className = 'sp-aimtoggle';
   const style = document.createElement('style');
   style.textContent = `
-.sp-aimtoggle { position: fixed; top: 52px; left: 50%; transform: translateX(-50%); z-index: 5; font: 700 13px/1 system-ui, sans-serif;
+.sp-aimtoggle { position: fixed; top: 92px; left: 50%; transform: translateX(-50%); z-index: 5; font: 700 13px/1 system-ui, sans-serif;
   padding: 7px 13px; border-radius: 999px; cursor: pointer; background: rgba(14, 20, 34, .8); color: #bfe9ff;
   border: 1.5px solid rgba(143, 232, 107, .55); pointer-events: auto; display: none; }
 .sp-aimtoggle.is-manual, .sp-aimtoggle.is-steering { color: #ffcf5c; border-color: rgba(255, 207, 92, .7); }

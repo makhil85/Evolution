@@ -354,7 +354,11 @@ export const CHASE_CAMERA = Object.freeze({
 export const FLIGHT_MODES = Object.freeze({
   easy: Object.freeze({
     id: 'easy', label: 'Easy', rank: 'Cadet',
-    blurb: IS_CH5 ? 'The autopilot flies the ship between planets: you answer the questions and play the games on the way. The tank is bigger.' : 'The autopilot flies the ship between planets: you answer the questions and explore the Moon and Europa. The tank is bigger and every rock is marked.',
+    // The autopilot is OFF to start with (lead, 2026-10-05): on Easy the ship
+    // still points itself the right way and lands itself, so the flying is
+    // hers at her own pace, and the Autopilot button (P) is there the moment
+    // she wants a leg flown for her.
+    blurb: IS_CH5 ? 'The ship points itself the right way, so you just hold W when the banner says. A bigger tank, and the Autopilot button (P) flies a leg for you whenever you want.' : 'The ship points itself the right way and lands itself, so you just hold W when the banner says. A bigger tank, every rock marked, and the Autopilot button (P) flies a leg for you whenever you want.',
     pathScale: 2, showGhost: true, autoAim: true, aimArrow: true,
     // Landings: lead playtest (Oct 2): "hard to stay in the green" - a
     // touchdown up to 2.5x the base speed is safe (was 2x).
@@ -387,7 +391,7 @@ export const FLIGHT_MODES = Object.freeze({
 export const FLIGHT_MODES_L1 = Object.freeze({
   easy: Object.freeze({
     id: 'easy', label: 'Easy', rank: 'Rookie',
-    blurb: IS_CH5 ? 'The autopilot flies the ship for you. You answer the questions and play the games on the way. A huge fuel tank.' : 'The autopilot flies the ship for you. You answer the questions and walk on the Moon and Europa. A huge fuel tank, and every rock is marked.',
+    blurb: IS_CH5 ? 'The ship turns itself the right way. You just hold W when it says. A huge fuel tank, and an Autopilot button (P) that flies for you.' : 'The ship turns itself the right way and lands itself. You just hold W when it says. A huge fuel tank, every rock marked, and an Autopilot button (P) that flies for you.',
     pathScale: 3, showGhost: true, autoAim: true, aimArrow: true,
     // 2x Easy's fuel as RANGE, not tank mass: a tank twice as heavy would
     // make the ship sluggish and Moon landings much harder (fuel has mass).
