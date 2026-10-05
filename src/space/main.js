@@ -23,7 +23,7 @@ import { allStates, bodyState } from './orbits.js';
 import {
   createShipState, stepWorld, createRewind, gravityInfo, orbitElements, solarPower, realAU,
 } from './physics.js';
-import { predict, keplerPropagate } from './predictor.js';
+import { predict, coastRel } from './predictor.js';
 import { createBodies } from './planets.js';
 import { createSky } from './sky.js';
 import { createBelt } from './belt.js';
@@ -1045,9 +1045,8 @@ function updatePlannedPath() {
   const same = planned && planned.target === target && Math.abs(planned.at - at) < 1.5 && Math.abs(planned.dv - p.dv) <= 0.03 * Math.abs(planned.dv) + 0.01;
   if (!same) {
     const par = ship.soi;
-    const mu = BODIES[par].gm;
     const ps = par === 'sun' ? { x: 0, z: 0, vx: 0, vz: 0 } : bodyState(par, ship.t, {});
-    const q = keplerPropagate(ship.x - ps.x, ship.z - ps.z, ship.vx - ps.vx, ship.vz - ps.vz, mu, Math.max(0, at - ship.t));
+    const q = coastRel(par, ship.x - ps.x, ship.z - ps.z, ship.vx - ps.vx, ship.vz - ps.vz, ship.t, Math.max(0, at - ship.t));
     const v = Math.hypot(q.vx, q.vz) || 1;
     const k = (v + p.dv) / v;
     const pa = par === 'sun' ? { x: 0, z: 0, vx: 0, vz: 0 } : bodyState(par, Math.max(ship.t, at), {});
@@ -1321,7 +1320,7 @@ const _scA = {}; const _scB = {};
 function sameCoast(s) {
   if (!s || s.soi !== ship.soi || ship.landedOn) return false;
   const b0 = bodyState(s.soi, s.t, _scA); const b1 = bodyState(s.soi, ship.t, _scB);
-  const q = keplerPropagate(s.x - b0.x, s.z - b0.z, s.vx - b0.vx, s.vz - b0.vz, BODIES[s.soi].gm, ship.t - s.t);
+  const q = coastRel(s.soi, s.x - b0.x, s.z - b0.z, s.vx - b0.vx, s.vz - b0.vz, s.t, ship.t - s.t);
   return Math.hypot(q.x - (ship.x - b1.x), q.z - (ship.z - b1.z)) < 0.5 + 1e-4 * Math.hypot(q.x, q.z);
 }
 let rewindClock = 0;
