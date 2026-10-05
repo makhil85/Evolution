@@ -32,14 +32,18 @@
 import { BODIES, STORE_KEYS } from './contracts.js';
 import { questionForBeat, getSpaceQuestion } from './questions.space.js';
 import { heroName } from './hud/hud.js';
+import { IS_CH5 } from './chapter.js';
+import { CH5_ACT_TITLES } from './ch5/start.js';
+import { ch5Steps } from './ch5/steps.js';
 
-const ACT_TITLES = {
+const ACT_TITLES_CH4 = {
   1: 'Act 1: Earth orbit',
   2: 'Act 2: The Moon',
   3: 'Act 3: Mars and the asteroid belt',
   4: 'Act 4: Jupiter',
   5: 'Finale: Europa',
 };
+const ACT_TITLES = IS_CH5 ? CH5_ACT_TITLES : ACT_TITLES_CH4;
 
 // --- helpers ----------------------------------------------------------------
 
@@ -89,7 +93,7 @@ import { act5Steps } from './acts/act5.js';
 // --- the steps ----------------------------------------------------------------
 
 function buildSteps(game) {
-  const steps = [
+  const steps = IS_CH5 ? ch5Steps(game) : [
     ...act1Steps(game),
     ...act2Steps(game),
     ...act3Steps(game),
@@ -102,7 +106,7 @@ function buildSteps(game) {
     id: 'wip_end', act: Math.min(5, (steps[steps.length - 1]?.act || 1) + 1),
     title: 'Keep exploring',
     objective: 'This part of the voyage is still being built. Fly anywhere you like!',
-    markers: ['moon', 'mars', 'jupiter'],
+    markers: IS_CH5 ? ['saturn', 'uranus', 'neptune'] : ['moon', 'mars', 'jupiter'],
     check() { return false; },
   });
   return steps;

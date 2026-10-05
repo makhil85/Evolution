@@ -44,6 +44,8 @@ import { createRetry } from './retry.js';
 import { createAimToggle } from './aimToggle.js';
 import { createAimDial } from './hud/aimDial.js';
 import { playIntro } from './cinematics.js';
+import { IS_CH5 } from './chapter.js';
+import { CH5_START, CH5_UPGRADES } from './ch5/start.js';
 import { t, IS_LEVEL1, LEVEL } from './level.js';
 
 // --- bus -----------------------------------------------------------------------
@@ -179,7 +181,10 @@ function circularOrbitState(bodyId, radius, phaseAngle, t = 0) {
 // She starts on the DAY side, just past the terminator, so the opening shot is
 // the lit Earth under her with the night side's city lights rolling up ahead.
 // (Earth sits at +X of the Sun at t=0, so the day side faces angle PI.)
-const ship = createShipState(circularOrbitState('earth', BODIES.earth.radius * 1.6, Math.PI + 0.9));
+// Chapter 5 starts where Chapter 4 ended: in orbit round Jupiter.
+const ship = createShipState(IS_CH5
+  ? circularOrbitState(CH5_START.body, CH5_START.radius, CH5_START.phase)
+  : circularOrbitState('earth', BODIES.earth.radius * 1.6, Math.PI + 0.9));
 const rewind = createRewind(30);
 
 // --- game state shared with missions.js ------------------------------------------
@@ -237,7 +242,13 @@ function restoreFromSave(saved) {
   if (Array.isArray(saved.samples)) game.samples.push(...new Set(saved.samples)); // de-duplicate old saves
   if (Array.isArray(saved.route)) game.route.push(...saved.route);
   if (saved.stats) game.stats = saved.stats;
-  game.upgradesOwned = new Set(saved.upgrades || []);
+  applyOwnedUpgrades(saved.upgrades);
+  return true;
+}
+/** Re-apply built upgrades (a save's, or Chapter 5's starting kit) through
+ *  the same effects that built them; past the opening, wings are folded. */
+function applyOwnedUpgrades(list) {
+  game.upgradesOwned = new Set(list || []);
   if (game.upgradesOwned.has('bigSolarWings')) {
     shipView.setSolarWings(1, true);
     game.solarMultiplier = SOLAR.bigWingsMultiplier;
@@ -247,9 +258,10 @@ function restoreFromSave(saved) {
   // Past the opening, the wings are always folded; landed means legs down.
   shipView.setWingsFolded(true, true);
   if (ship.landedOn) shipView.setLegs(true, true);
-  return true;
 }
 const resumed = restoreFromSave(missions.saved);
+// A fresh Chapter 5: the ship she finished Chapter 4 with.
+if (IS_CH5 && !resumed) applyOwnedUpgrades(CH5_UPGRADES);
 
 // --- events ---------------------------------------------------------------------
 
@@ -1756,7 +1768,7 @@ Promise.all([bodies.ready, sky.ready, belt.ready])
       : hud.chooseFlightMode({ modes: MODES, current: 'easy', first: true }).then((id) => id || 'easy');
     pickMode
       .then((id) => applyMode(id, { fresh: fresh && !resumed }))
-      .then(() => (fresh ? playIntro(game) : null))
+      .then(() => (fresh && !IS_CH5 ? playIntro(game) : null))
       .then(() => missions.start())
       // Dev only: resume a lab run after a dev-server reload (lab/labrun.js).
       .then(() => { try { const m = import.meta.env.DEV && localStorage.getItem('lab_autorun'); if (m) import(/* @vite-ignore */ `/src/space/lab/${m}.js`).then((x) => x.autorun?.()); } catch { /* no storage */ } });
