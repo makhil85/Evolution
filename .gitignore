@@ -61,3 +61,6 @@ scripts/save-shot.mjs
 .claude/agents/luna_worker.md
 # Lab caches
 .vite-lab/
+
+# Local tools (the GitHub CLI used to push)
+.tools/
