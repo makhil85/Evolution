@@ -27,13 +27,14 @@ Open the URL Vite prints (normally http://localhost:5173/). Menu shortcuts:
 ## Test
 
 ```bash
-npm test          # all six suites below
+npm test          # all seven suites below
 node scripts/test-space-physics.mjs
 node scripts/test-space-questions.mjs
 node scripts/test-play.mjs
 node scripts/test-science.mjs
 node scripts/test-city.mjs
 node scripts/test-ch3-hunt.mjs
+node scripts/test-lessons.mjs
 npm run build     # production build into dist/
 ```
 

@@ -65,6 +65,7 @@ flying mode, at both question levels, verified by the autopilot (see Testing).
 - `level4_voyage_europa_v1`: Level 4 save. `level4_voyage_europa_v1_L1`: Level 1 save.
 - `rocket_village_profile`: launcher profile; `difficulty: 1` means Level 1.
 - `rocket_village_ch4_flight_mode`: easy / medium / hard.
+- `rocket_village_lesson_<id>_L<level>`: a Chapters 1-3 lesson was seen (cleared by "Start everything over").
 - `ch4_ckpt_<stepId>`: lab checkpoints the autopilot writes at each step (copy
   one into the save key and reload to replay a leg).
 
@@ -127,6 +128,15 @@ Moved to `PLAN.md` ("Next items"), the one list for the whole game.
   Turn to point, and never start a waiting banner with "BURN NOW".
 - The browser pane only renders when visible; tests drive frames with
   `window.__space.debugRun(seconds, dt)`.
+- **Lesson films** (`src/lesson/`): the question is asked over the film's
+  LAST frame, so nothing may leave the stage at the end and labels/arrows stay
+  on. Keep arrows off figures. Look at frames with `window.__lesson.seek()`.
+- `src/game/rocket.js` imports `contracts.js`, which reads `import.meta.env`:
+  plain node can't import it. Node checks load it through Vite
+  (`createServer().ssrLoadModule`, see `scripts/test-lessons.mjs`).
+- Chapter 3: `engine.launch()` marks the rocket flown for good. Anything the
+  child chooses (the Launch Tuner) must come before it, and only a build that
+  reached space may be launched, or the chapter never ends.
 - Fuel has mass in the physics (the Mass lesson): for "more fuel" prefer
   `burnScale` / engine efficiency over a bigger tank, or the ship gets sluggish.
 
@@ -370,3 +380,11 @@ Built in a lab copy (git worktree `.claude/worktrees/sat`, own server on port 51
 - **Chapter 4 flight** (flight agent): no burns planned past a dip into another zone (`clearUntil`), the 8 s lead counted from now (`clock`), quick re-checks never later than the window (`maxTau`), stale searches dropped (`sameCoast`); closest pass = first pass through the target zone (Europa flips gone); autopilot-only x256 cruise warp in the Sun's pull (`AUTOPILOT_WARP`); cheaper high-warp frames (fewer predictor/coast refreshes, zone search skipped when provably out of reach, 1,200-step cap). Medium real-pace run: 0 plan jumps on a2_coast / a3_depart / a4_europa_orbit. a3_depart shows no burn window until the shield is built. Lab: `src/space/lab/labrun.js`, `game.planLog`.
 - **Chapter 4 screen** (screen agent + main): the "minimap wedge" was the 3-D aim arrow (now kept small and in view); labels avoid every panel/banner/button (`markers.js` keep-out boxes); rock markers: nearest needed of each kind, max 4; Europa walk frames Jupiter on its line, drill fades when it hides her, icy ground; pause menu centred; the one-line banner now sits bottom centre and hides under the bottom panels (`bottomPanelUp`, cached 4x/s); the autopilot reads `burnCue.dataset.raw` even while hidden.
 - **Chapters 1-3 + launcher** (theme agent): calm toasts like Chapter 4 (2 visible, 1.5 s apart, 5 s min, stale 8 s, dupes 10 s, held during cards); focus during question cards; slim top row; smaller side panels (`--side-scale`); one font stack everywhere; shorter pickup/answer/mission lines (rules-module strings pinned by tests unchanged; shortened where shown). Lab: `src/lab/shot.js`, `src/lab/themeShots.js`.
+
+## Session 2026-10-05 (evening): lessons in Chapters 1-3, Launch Tuner
+
+- **Lesson engine** (`src/lesson/card.js`, `draw.js`): the "watch, answer, try it" card of `LESSONS_PLAN.md` for Chapters 1-3. Films draw on a fixed 800x450 stage (letterboxed); captions hold until read (1.5 s + 0.35 s a word, x1.5 at Level 1) and the picture slows to match; two tries, no restart; opens in the play-mode modal layer (input locked). Seen once per Level (`rocket_village_lesson_<id>_L<n>`). Test hook `window.__lesson` (state, next, answerAll, skip, film, seek, shot). Flight School (Chapter 4) is not ported onto it yet.
+- **Lessons** (`src/lesson/lessons/ch1.js`, `ch2.js`, `ch3.js`): 1A round Earth (before the first Science Lab), 1B Eratosthenes (at the foundation once she can build), 2A triangles (Bridge Builder), 2B Archimedes (water quest), 3A push back (Engine Thrust), 3B heavy rockets (Heavy or Light? / Mass on the Pad, else before the Launch Tuner). After a lesson the same E opens the real quest.
+- **Launch Tuner** (`src/game/launchTuner.js`): before the real launch she picks 1-8 tanks and a nose, test-flies on the real sim (climbs drawn together, the sim's verdict), and "Launch for real" arms once that build reached 100 km. Easy starts on 5 tanks + pointed; Medium/Hard on 2 + flat; Hard has a star challenge (>125 km in 3 tests). The launch flies her build. Hook `window.__tuner` (set, test, launch, close, state).
+- Tests: `scripts/test-lessons.mjs` (in `npm test`). Browser: every film looked at (start, middle, end, question) at Level 4 and Level 1; each chapter's hook played through in the game.
+- Not done yet: lessons 3C-3E and Chapter 4's 4B-4F, the "📖 Lessons" replay list, porting Flight School.

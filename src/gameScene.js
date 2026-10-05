@@ -45,6 +45,9 @@ import { huntFor, launchGate } from './game/hunt.js';
 import { HOMES } from './game/homesLayout.js';
 import { buildHomes } from './game/homes.js';
 import { MINE_REACH } from './game/pickups.js';
+import { lessonOnce, hasSeen as lessonSeen } from './lesson/card.js';
+import { LESSON_3A, LESSON_3B } from './lesson/lessons/ch3.js';
+import { openLaunchTuner } from './game/launchTuner.js';
 
 const mount = document.getElementById('stage');
 const logEl = document.getElementById('log');
@@ -625,6 +628,7 @@ async function main() {
     keyBlock.visible = false;
     scene.add(keyBlock);
   }
+  const LESSON_BEFORE = { rocket_thrust: LESSON_3A, bonus_mass: LESSON_3B, bonus_liftoff_mass: LESSON_3B };
   onInteract = () => {
     // Hard: the treasure hunt gets the first look at every press.
     if (playMode.treasureHunt && hunt && !crystalFound()) {
@@ -652,6 +656,13 @@ async function main() {
     }
     if (step.questionId) {
       const q = QUESTIONS[step.questionId];
+      // A "watch, answer, try it" lesson the first time (LESSONS_PLAN.md):
+      // 3A before Engine Thrust, 3B before the two mass puzzles.
+      const lesson = LESSON_BEFORE[step.questionId];
+      if (lesson && !lessonSeen(lesson.id)) {
+        lessonOnce(lesson).then(() => onInteract());
+        return;
+      }
       hud.askQuestion(q, (ok) => { if (ok) hud.update(engine); }, {
         // The ENGINE grades, not the HUD, so attempt counts and rewards stay in
         // one place and the HUD never becomes a second source of truth.
@@ -681,20 +692,30 @@ async function main() {
         hud.update(engine);
         return;
       }
-      const res = engine.launch?.();
-      if (res && res.ok === false) {
-        hud.toast(res.message, 'info');
-        hud.update(engine);
+      if (engine.state.launched) {
+        hud.toast(engine.launch?.()?.message || 'This rocket has already flown.', 'info');
         return;
       }
-      // Fuel tanks the child actually built drive the flight. This is the whole
-      // lesson: more fuel is more mass, and the sweet spot is findable.
-      // `|| 5` turned a real 0 into 5. ?? keeps 0 meaningful.
-      if (launch.start({ fuelTanks: rocket.fuelTanks ?? 5, noseCone: 'pointed' })) {
-        window.__freezeCamera = true;
-        hud.toast('Ignition!', 'good');
-      }
-      hud.update(engine);
+      // Lesson 3B if she skipped both mass puzzles, then the Launch Tuner:
+      // she picks the tanks and the nose, test-flies them on the real sim,
+      // and the launch flies the build she chose. Only a build that reached
+      // space in a test can be launched, so the chapter's ending still comes.
+      (async () => {
+        await lessonOnce(LESSON_3B);
+        const build = await openLaunchTuner({ mode: playMode?.id || 'medium' });
+        if (!build) { hud.update(engine); return; }
+        const res = engine.launch?.();
+        if (res && res.ok === false) {
+          hud.toast(res.message, 'info');
+          hud.update(engine);
+          return;
+        }
+        if (launch.start(build)) {
+          window.__freezeCamera = true;
+          hud.toast('Ignition!', 'good');
+        }
+        hud.update(engine);
+      })();
     } else {
       hud.toast(step.title || 'Nothing to do here yet.', 'info');
     }
