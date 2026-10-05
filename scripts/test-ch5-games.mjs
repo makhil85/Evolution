@@ -7,8 +7,13 @@
 // can't be blasted, shots kick her back, and a level plays the same each go.
 // Space pool (poolLogic.js): every level can be won with good shots, bumps
 // keep the total momentum, and a bad shot doesn't win.
+// Part D (designBoard.js, rockHunt.js, workshop.js): each design question has
+// one right answer, the fuel sum works, and exactly one rock passes the list.
 import assert from 'node:assert/strict';
 import { createRun, stepRun, botInput, result, LEVELS, waterFor, BIG_R, SHIP_R } from '../src/space/ch5/ringRunLogic.js';
+import { DESIGN_STEPS } from '../src/space/ch5/designBoard.js';
+import { CHECKS, ROCKS, failures } from '../src/space/ch5/rockHunt.js';
+import { STATIONS } from '../src/space/ch5/workshop.js';
 import { POOL_LEVELS, createPool, shoot, stepPool, runShot, bestShot, momentum } from '../src/space/ch5/poolLogic.js';
 
 let passed = 0;
@@ -58,7 +63,7 @@ ok('a shot kicks her back, and she eases forward again', () => {
 ok('boulders bounce shots; small chunks blast into water', () => {
   for (const big of [true, false]) {
     const run = createRun('hard', 1);
-    run.spawnClock = 1e9; // no other ice
+    run.spawnClock = 1e9; run.ice.length = 0; // no other ice
     const r = big ? BIG_R + 0.5 : 1.2;
     run.ice.push({ id: 99, x: 0, y: 0, z: -60, r, big, spin: 0, spinRate: 0, shape: 1 });
     const ev = [];
@@ -72,7 +77,7 @@ ok('boulders bounce shots; small chunks blast into water', () => {
 ok('a fast shot never skips through a chunk between steps', () => {
   // Coarse steps (a slow frame): the swept test still catches it.
   const run = createRun('hard', 1);
-  run.spawnClock = 1e9;
+  run.spawnClock = 1e9; run.ice.length = 0;
   run.ice.push({ id: 1, x: 0, y: 0, z: -50, r: 0.7, big: false, spin: 0, spinRate: 0, shape: 1 });
   stepRun(run, 1 / 60, { turn: 0, thrust: 0, fire: true });
   for (let i = 0; i < 10; i++) stepRun(run, 0.1, idle());
@@ -80,7 +85,7 @@ ok('a fast shot never skips through a chunk between steps', () => {
 });
 ok('ice that reaches her is a bump, once', () => {
   const run = createRun('easy', 1);
-  run.spawnClock = 1e9;
+  run.spawnClock = 1e9; run.ice.length = 0;
   run.ice.push({ id: 1, x: 0, y: 0, z: -20, r: 1, big: false, spin: 0, spinRate: 0, shape: 1 });
   for (let i = 0; i < 120; i++) stepRun(run, 1 / 60, idle());
   assert.equal(run.bumps, 1);
@@ -134,6 +139,36 @@ ok('a miss loses the level: out of shots, or the cue rock drifts away', () => {
 });
 ok('a gold rock can only be flicked if it is a cue rock', () => {
   assert.equal(shoot(createPool(0), 'gold', 0, 1), false);
+});
+
+ok('design: every choice question has exactly one right answer', () => {
+  for (const q of DESIGN_STEPS) {
+    if (q.type === 'text') continue;
+    assert.equal(q.choices.filter((c) => c.correct).length, 1, q.prompt[0]);
+    for (const c of q.choices) assert.ok(Array.isArray(c.text) && c.text.length === 2);
+  }
+});
+ok('design: the fuel sum (600,000 t at 1 t per 1,000 t) is 600, and solid needs 3,000', () => {
+  const q = DESIGN_STEPS.find((x) => x.type === 'text');
+  assert.equal(String(600000 / 1000), q.answers[0]);
+  assert.equal(3000000 / 1000, 3000);
+  assert.ok(q.why[0].includes('600') && q.why[0].includes('3,000'));
+});
+ok('rock hunt: only Rock B passes; every wrong rock fails at least one check', () => {
+  for (const c of CHECKS) assert.ok(c.no?.length === 2 && c.text.length === 2, c.id);
+  const pass = ROCKS.filter((r) => !failures(r).length);
+  assert.deepEqual(pass.map((r) => r.id), ['B']);
+  for (const r of ROCKS) if (r.id !== 'B') assert.ok(failures(r).length >= 1, r.id);
+  // Each check is the reason some wrong rock fails, so every line matters.
+  const used = new Set(ROCKS.flatMap((r) => failures(r).map((c) => c.id)));
+  assert.deepEqual([...used].sort(), CHECKS.map((c) => c.id).sort());
+  // About 140 m wide, about 3 million tonnes solid (icy rock, ~1.7 t per cubic metre, a little long).
+  const rb = ROCKS.find((r) => r.id === 'B');
+  const tonnes = (4 / 3) * Math.PI * (rb.width / 2) ** 3 * 1.25 * 1.7;
+  assert.ok(tonnes > 2.5e6 && tonnes < 3.5e6, `${tonnes}`);
+});
+ok('workshop: five stations in order, ending in the test fire', () => {
+  assert.deepEqual(STATIONS.map((s) => s.id), ['mine', 'fuel', 'parts', 'fit', 'fire']);
 });
 
 console.log(`\n${passed} passed`);

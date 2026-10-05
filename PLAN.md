@@ -9,7 +9,7 @@ history.
 
 ## Standing decisions (lead)
 
-- Main session Opus 5.5; subagents Sonnet 5.5, few at a time (`CLAUDE.md`).
+- Main session Opus 5.5; subagents Opus 5.5 at medium effort, few at a time (`CLAUDE.md`).
 - Keyboard and mouse only for now: **no touch screen or tablet work yet.**
 - Sound is parked.
 - Play the game from the Desktop shortcut `Rocket Village.bat` (runs
@@ -25,12 +25,15 @@ history.
 | 9 | Real-screen frame check | **Needs the game on screen** (the Browser pane stayed hidden all session: 0 frames drawn). Open `chapter4.html?fps` (or press F9): a live frame graph shows the worst frames and where they happened (step, time warp). Fly at 1x and x64 and look for red bars / a blank moment. Scripted: `window.__frames.summary()`. | S |
 | 11 | Asteroid belt polish (lead, 2026-10-04) - DONE 10-05, see HANDOFF | (a) After mining, when the cargo bay is full, there is no button to open the upgrade bay: add a visible one. (b) The time-warp pips in the side panel should be clickable (x1 / x4 / x16 / x64). (c) An animation when an upgrade is built. (d) Mining: the asteroid breaks apart on E and its pieces fly into the ship / onto the cargo tally, like the mining chain in Chapters 1-3 (`src/play/tools.js` `flyToSupplies`). (e) A mined tally like Level 1: a box on the right listing what was mined and how much (silicon, metal, ice), and how much is still needed for the fuel refill and the new solar panels (wings), with the broken ore pieces flying into it. Files: `src/space/acts/mining.js`, `belt.js`, `hud/instruments.js`, `hud/overlays.js` (`openUpgrades`). | M |
 | 12 | Teaching lessons in every chapter (lead, 2026-10-05; 1A, 1B, 2A, 2B, 3A, 3B and the Ch3 Launch Tuner built 10-05, see HANDOFF) | "Watch, answer, try it" lessons like Chapter 4's Flight School, for Chapters 1-4: shared engine first, then 2-3 lessons per chapter. Full plan: `LESSONS_PLAN.md`. | L |
+| 13 | Chapter 5 at Level 1 (lead, 2026-10-05) | Level 4 was built first. Level 1 lines exist for every string but are not tuned: run `npm run reading`, simplify, check the mini-games at Level 1. | M |
+| 14 | Chapter 6: The Crew (lead, 2026-10-05) | Second half of the build, crew joins, habitat, route planner, slingshots, Sun dive, % of light speed, "to be continued". Lessons 6A-6C. Design: the Claude doc linked in `CHAPTER5_PLAN.md`. | L |
 | - | Parked | Touch controls and tablets (Ch1-3 have none; Ch4 has a simulated-only pad), phone layout, pinch zoom, sound, NASA Europa texture. | - |
 
 ## Done (most recent first)
 
 | Date | Item |
 |---|---|
+| 10-05 | **Chapter 5: Rings to a Star** (`chapter5.html`, `src/space/ch5/`): Jupiter to Saturn (hexagon, ring run), Uranus, Neptune, Space pool in the Kuiper belt, Pluto, the edge of the Sun's bubble, atoms and fusion, design the rock ship, rock hunt, engine build and test fire, ending into Chapter 6. Lessons 5A, 5AA, 5B, 5C. See HANDOFF and `CHAPTER5_PLAN.md`. |
 | 10-05 | Lessons replay list on the launcher; Level 1 written clues in every lesson; Flight School on the lesson card; girl or boy as the first choice; Level 1 text in all four chapters checked for a 2nd grader (`npm run reading`). See HANDOFF. |
 | 10-01 | Fun moves on the Moon and Europa walks (was item 6): K dance, I splits, B back walkover (J and H are the mission card and help in Chapter 4); walking or a jump ends them; a hint after 8 s of walking. |
 | 09-30 | Mining tools (axe, pickaxe, hammer, wrench, magnifying glass) and the haul flying into the Supplies panel, Chapters 1-3. Chapter 2: Newton's apple tree side story with a gravity question. Launcher remembers finished chapters (a restart can't re-lock the next). Frame monitor in every chapter. |

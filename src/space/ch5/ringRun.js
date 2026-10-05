@@ -101,7 +101,7 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
   rings.material.uniforms.uCenter.value.copy(center);
   rings.material.uniforms.uSunDir.value.copy(sunDir);
   rings.material.uniforms.uNormal.value.set(0, 1, 0);
-  rings.material.uniforms.uGain.value = 1.1; // seen up close, not from far away
+  rings.material.uniforms.uGain.value = 0.55; // seen up close: dimmer, so the ice stands out
   scene.add(rings.mesh);
 
   // Stars.
@@ -136,7 +136,7 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
   shipView.group.quaternion.identity();
   shipView.group.scale.setScalar(0.32); // the logic's hit radius fits a ship this size
 
-  const iceMatSmall = new THREE.MeshStandardMaterial({ color: 0xe9f4ff, roughness: 0.55, metalness: 0, flatShading: true, emissive: 0x18324a, emissiveIntensity: 0.4 });
+  const iceMatSmall = new THREE.MeshStandardMaterial({ color: 0xe9f4ff, roughness: 0.55, metalness: 0, flatShading: true, emissive: 0x4a86c0, emissiveIntensity: 0.7 });
   const iceMatBig = new THREE.MeshStandardMaterial({ color: 0x7d7a78, roughness: 0.95, flatShading: true });
   const meshes = new Map();
   const boltGeo = new THREE.CylinderGeometry(0.12, 0.12, 2.6, 6).rotateX(Math.PI / 2);
@@ -193,7 +193,7 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
     const s = run.ship;
     // The ship: where she is, banking into turns, kicked back by each shot.
     shipNode.position.set(s.x, s.y, s.z * 3);
-    shipNode.rotation.set(s.vy * 0.012, 0, -s.vx * 0.025);
+    shipNode.rotation.set(Math.max(-0.3, Math.min(0.3, s.vy * 0.012)), 0, Math.max(-0.6, Math.min(0.6, -s.vx * 0.025)));
     shipView.setThrottle(0.7);
     shipView.setTurn(s.vx / 22);
     shipView.update(dt);

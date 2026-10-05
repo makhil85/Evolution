@@ -42,3 +42,19 @@ contract like the Moon and Europa walks.
 | 19 | Math questions through the chapter | bank test |
 | 20 | Ending: cutscene into Chapter 6, end card, chapter complete | browser run, launcher shows done |
 | 21 | Lessons list, autopilot full run, docs | full autopilot run, `npm test` |
+
+## Status (2026-10-05)
+
+All 21 steps built at Level 4. Changes from the first plan, agreed while
+building:
+
+- Saturn, Uranus and Neptune are orbit stops, not flybys: in this squeezed
+  solar system a flyby flung the ship far off course. The next planet is
+  lined up as she sets off (`ch5/lineup.js`), so a window opens soon.
+- Pluto is a fly-past (Chapter 5 only body); Eris is left out.
+- The rock hunt and the engine build are 2-D cards on the lesson-card
+  layer, like the Space pool; the ending is a 3-D cutscene.
+
+Checks: `npm test` (the Chapter 5 suites are `test-ch5-flight.mjs` and
+`test-ch5-games.mjs`), and a browser look at every part (see HANDOFF).
+Level 1 wording is in place but not yet tuned (PLAN.md item 13).

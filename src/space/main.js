@@ -850,7 +850,8 @@ function updateEscapeCue(thrust) {
   if (!game.escapeStep || !cuesOn() || game.cinematic || ship.soi === 'sun') return false;
   if (ship.landedOn) { setCue('burn', 'Hold W to lift off!'); return true; }
   const oe = orbitElements(ship);
-  const name = BODIES[ship.soi]?.name || 'planet';
+  const body = BODIES[ship.soi]?.name || 'planet';
+  const name = body === 'Moon' ? 'the Moon' : body; // "the Moon", but "Jupiter"
   // Escaping for real: unbound AND the dotted path doesn't crash back into
   // it. (Playtest: straight up off the Moon she was "escaping", but with
   // almost no speed left over she kept pace with it and fell back 60 s later.)
@@ -860,9 +861,9 @@ function updateEscapeCue(thrust) {
   // and waiting for that to vanish too overshot Mars (another 0.5 t).
   const returns = pred?.impact?.body === here;
   if (!oe.bound && !returns) {
-    setCue(thrust > 0 ? 'stop' : 'good', thrust > 0 ? `Let go of W! You’re escaping the ${name}.` : `Escaping the ${name}. Coast!`);
+    setCue(thrust > 0 ? 'stop' : 'good', thrust > 0 ? `Let go of W! You’re escaping ${name}’s pull.` : `Escaping ${name}’s pull. Coast!`);
   } else {
-    setCue('burn', t(`Follow the arrow and hold W to break free of the ${name}`, `Follow the arrow and hold W to fly away from the ${name}`));
+    setCue('burn', t(`Follow the arrow and hold W to break free of ${name}’s pull`, `Follow the arrow and hold W to fly away from ${name}`));
   }
   return true;
 }

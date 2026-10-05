@@ -198,6 +198,8 @@ check('c5_sunlight_neptune: 8 x 30 = 240 accepted', checkSpaceAnswer(CH5_QUESTIO
 check('c5_sunlight_neptune: rejects 8 + 30', !checkSpaceAnswer(CH5_QUESTIONS.c5_sunlight_neptune, '38'));
 check('c5_voyager: 2012 - 1977 = 35 accepted', checkSpaceAnswer(CH5_QUESTIONS.c5_voyager, String(2012 - 1977)));
 check('c5_voyager: rejects 45 (a borrowing slip)', !checkSpaceAnswer(CH5_QUESTIONS.c5_voyager, '45'));
+check('c5_deuterium: 64,000 / 6,400 = 10 accepted', checkSpaceAnswer(CH5_QUESTIONS.c5_deuterium, String(64000 / 6400)));
+check('c5_deuterium: rejects 100 (one zero too many)', !checkSpaceAnswer(CH5_QUESTIONS.c5_deuterium, '100'));
 check('c5_saturn_density: 95/760 x 5.5 < 1 (floats)', (95 / 760) * 5.5 < 1 && CH5_QUESTIONS.c5_saturn_density.choices.find((c) => c.correct).text.startsWith('Float'));
 
 // --- report -----------------------------------------------------------------------

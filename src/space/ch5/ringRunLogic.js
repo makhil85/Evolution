@@ -53,7 +53,7 @@ export const waterFor = (r) => Math.max(1, Math.round(r * r * r * 4));
 
 export function createRun(levelId = 'easy', seed = 7) {
   const L = LEVELS[levelId] || LEVELS.easy;
-  return {
+  const run = {
     level: L, rand: rng(seed + L.time),
     t: 0, over: false,
     ship: { x: 0, y: 0, vx: 0, vy: 0, z: 0, vz: 0, cool: 0, hitFlash: 0 },
@@ -61,6 +61,9 @@ export function createRun(levelId = 'easy', seed = 7) {
     spawnClock: 0.5, nextId: 1,
     water: 0, blasted: 0, bumps: 0, shots: 0, bounced: 0,
   };
+  // A few pieces already on the way, so the rings look full from the start.
+  for (let i = 0; i < 4; i++) { spawn(run); run.ice[i].z = SPAWN_Z * (0.75 - i * 0.12); }
+  return run;
 }
 
 function spawn(run) {

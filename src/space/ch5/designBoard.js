@@ -40,6 +40,14 @@ export function drawBlueprint(ctx, n, grow, T = 0) {
   label(ctx, t('ROCK SHIP · DESIGN', 'ROCK SHIP'), 120, 28, { size: 16, color: INK, halo: null });
   const cx = 440; const cy = 220; const rx = 250; const ry = 150;
   const a = (k) => (n > k ? 1 : n === k ? grow : 0);
+  // 0. Nothing yet: a dashed outline waiting for the first answer.
+  if (a(1) < 1) {
+    ctx.save(); ctx.globalAlpha = 1 - a(1);
+    rockPath(ctx, cx, cy, rx, ry); ctx.strokeStyle = 'rgba(207,232,255,0.55)'; ctx.setLineDash([10, 8]); ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]);
+    label(ctx, '?', cx, cy + 20, { size: 90, color: 'rgba(207,232,255,0.5)', halo: null });
+    label(ctx, t('Each answer adds a part', 'Each answer adds a part'), cx, cy + ry + 34, { size: 16, color: INK, halo: null });
+    ctx.restore();
+  }
   // 1. The thick rock shield.
   if (a(1) > 0) {
     ctx.save(); ctx.globalAlpha = a(1);

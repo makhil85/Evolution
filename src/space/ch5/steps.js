@@ -3,11 +3,13 @@
 import { partASteps } from './partA.js';
 import { partBSteps } from './partB.js';
 import { partCSteps } from './partC.js';
+import { partDSteps } from './partD.js';
 
 export function ch5Steps(game) {
   return [
     ...partASteps(game),
     ...partBSteps(game),
     ...partCSteps(game),
+    ...partDSteps(game),
   ];
 }

@@ -177,4 +177,23 @@ export const CH5_QUESTIONS = {
     doneMessage: 'Next: what makes the Sun shine at all?',
     reward: { science: 10 },
   },
+
+  c5_deuterium: {
+    id: 'c5_deuterium',
+    type: 'text',
+    act: 5,
+    beat: 'c5Deuterium',
+    title: 'Fuel from ice',
+    subject: 'Division',
+    difficulty: 'Level 4',
+    prompt:
+      'In water, about 1 hydrogen atom in every 6,400 is heavy hydrogen, the fusion fuel. ' +
+      'If a scoop of ice holds 64,000 hydrogen atoms, about how many of them are heavy hydrogen? (Type a number.)',
+    answers: ['10', 'ten'],
+    hint: 'How many 6,400s fit in 64,000? Look at the zeros: 64,000 is 10 times 6,400.',
+    parentHint: '64,000 ÷ 6,400 = 10. (Real ice holds far more atoms than this, which is why there is plenty of fuel in a big icy rock.)',
+    success: 'Yes! 10. Only a few in every thousands, but a rock holds so many atoms that it has fuel for years.',
+    doneMessage: 'The engine half is built!',
+    reward: { science: 10 },
+  },
 };
