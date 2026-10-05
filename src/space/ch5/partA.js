@@ -3,6 +3,7 @@
 import { BODIES } from '../contracts.js';
 import { fuelSafetyNet } from '../acts/util.js';
 import { t } from '../level.js';
+import { lineUpOnce } from './lineup.js';
 
 export function partASteps(game) {
   const { hud } = game;
@@ -40,9 +41,18 @@ export function partASteps(game) {
       markers: ['saturn'],
       aim: 'prograde',
       transfer: 'saturn',
-      enter() { game.target = 'saturn'; },
+      async enter() {
+        game.target = 'saturn';
+        // Saturn is a dot far away: line it up now, under Mission Control's line.
+        if (lineUpOnce(game.ship, 'saturn')) { game.replan?.(); game.missions?.save(); }
+        await hud.showDialogue([
+          { who: 'Mission Control', text: t('Out of Jupiter’s pull! We’ve worked out your path to Saturn. Wait for BURN NOW.', 'You left Jupiter! Wait for the green BURN NOW sign.') },
+        ]);
+      },
       check() {
         fuelSafetyNet(game);
+        // Fell back into Jupiter's pull (left too slowly): leave it again.
+        if (game.ship.soi === 'jupiter') { game.missions?.jump('c5_leave_jupiter'); return false; }
         const c = game.prediction?.closest;
         return game.ship.soi === 'saturn' || (!!c && c.body === 'saturn' && !c.retro && c.dist < BODIES.saturn.soi * 0.6);
       },

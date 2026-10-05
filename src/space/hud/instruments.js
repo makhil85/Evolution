@@ -318,7 +318,11 @@ export function createInstruments(root, { onWarp } = {}) {
     // Time warp -----------------------------------------------------------
     if (changed('warpUseful', state.warpUseful)) warpPanel.style.display = state.warpUseful === false ? 'none' : '';
     if (changed('warp', state.warp) || changed('warpAllowed', state.warpAllowed) || changed('warpReason', state.warpReason)) {
-      warpPips.forEach((pip, i) => pip.classList.toggle('is-active', WARP_LEVELS[i] === state.warp));
+      // Above the top button (Chapter 5's cruise): the top pip says how fast.
+      const top = WARP_LEVELS.length - 1;
+      const over = state.warp > WARP_LEVELS[top];
+      warpPips.forEach((pip, i) => pip.classList.toggle('is-active', WARP_LEVELS[i] === state.warp || (over && i === top)));
+      warpPips[top].textContent = `×${over ? state.warp : WARP_LEVELS[top]}`;
       const blocked = state.warpAllowed === false;
       warpReason.classList.toggle('is-hidden', !blocked);
       warpReasonText.textContent = blocked ? (state.warpReason || 'Too close to a body to warp.') : '';

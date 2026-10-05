@@ -35,6 +35,7 @@ import { heroName } from './hud/hud.js';
 import { IS_CH5 } from './chapter.js';
 import { CH5_ACT_TITLES } from './ch5/start.js';
 import { ch5Steps } from './ch5/steps.js';
+import { phasesNow, restorePhases } from './ch5/lineup.js';
 
 const ACT_TITLES_CH4 = {
   1: 'Act 1: Earth orbit',
@@ -136,6 +137,9 @@ function resolveStepIndex(save, steps) {
 export function createMissions(game) {
   const steps = buildSteps(game);
   const save = loadSave() || {};
+  // Chapter 5 lines the planets up as she goes (ch5/lineup.js): put the
+  // saved line-up back before anything reads where they are.
+  if (IS_CH5) restorePhases(save.phases);
   let index = resolveStepIndex(save, steps);
   save.stepIndex = index;
   let entered = false;   // enter() has settled for the current step
@@ -173,6 +177,7 @@ export function createMissions(game) {
       // released into its Moon orbit. Only written once it has a state, so
       // the field from an older save survives until then.
       ...(game.satellite ? { satellite: game.satellite } : {}),
+      ...(IS_CH5 ? { phases: phasesNow() } : {}),
     });
   }
 

@@ -38,8 +38,9 @@
 //
 // Pure JS, float64, no three.js import - must run under plain `node`.
 
-import { BODIES, SHIP, SOLAR, WARP_LEVELS, AUTOPILOT_WARP, WARP_SAFE_RADII, RADIATION, PHYSICS_DT, EVENTS } from './contracts.js';
+import { BODIES, SHIP, SOLAR, WARP_LEVELS, AUTOPILOT_WARP, CRUISE_WARP, WARP_SAFE_RADII, RADIATION, PHYSICS_DT, EVENTS } from './contracts.js';
 import { allStates, bodyState, dominantBody } from './orbits.js';
+import { keplerPropagate } from './predictor.js';
 
 /** Fastest she can spin, rad/s (flight assist; see stepShip). */
 const MAX_SPIN = 1.8;
@@ -448,7 +449,7 @@ const MAX_STEPS_PER_CALL = 1200;
  * warp > 1 within WARP_SAFE_RADII body-radii of any body, or inside Jupiter's
  * radiation zone. Returns {steps, warpAllowed, reason, events}.
  */
-export function stepWorld(ship, input, realDt, warp, { warpSafeRadii = WARP_SAFE_RADII, safeBody = null, pathClear = false, target = null, autopilot = false, boost = false } = {}) {
+export function stepWorld(ship, input, realDt, warp, { warpSafeRadii = WARP_SAFE_RADII, safeBody = null, pathClear = false, target = null, autopilot = false, boost = false, cruise = false } = {}) {
   const requested = WARP_LEVELS.includes(warp) ? warp : 1;
   let blocker = requested > 1 ? nearestBodyWithin(ship, warpSafeRadii, safeBody, pathClear, target) : null;
   // The autopilot reacts every frame, and warp never makes the physics less
@@ -470,6 +471,10 @@ export function stepWorld(ship, input, realDt, warp, { warpSafeRadii = WARP_SAFE
   // with nothing for her to do. Still more steps, never bigger ones.
   if (boost && autopilot && pathClear && warpAllowed && cap === Infinity && requested === WARP_LEVELS[WARP_LEVELS.length - 1]
     && ship.soi === 'sun' && !ship.landedOn && !(input.thrust > 0)) effectiveWarp = AUTOPILOT_WARP;
+  // Chapter 5's cruise (CRUISE_WARP): the same place, for her too.
+  const cruising = cruise && pathClear && warpAllowed && cap === Infinity && requested === WARP_LEVELS[WARP_LEVELS.length - 1]
+    && ship.soi === 'sun' && !ship.landedOn && !input.thrust && !input.strafe;
+  if (cruising) effectiveWarp = CRUISE_WARP;
   const reason = blocker
     ? (blocker === 'jupiter-radiation'
       ? 'inside Jupiter\'s radiation zone'
@@ -502,6 +507,22 @@ export function stepWorld(ship, input, realDt, warp, { warpSafeRadii = WARP_SAFE
     const aMax = (SHIP.thrust * (1 + SIDE_THRUST)) / SHIP.dryMass + BODIES.sun.gm / (r * r);
     const vBound = Math.hypot(ship.vx, ship.vz) + aMax * dur + PLANET_SPEED_MAX;
     if (gap > 0) clearSteps = Math.floor((0.8 * gap) / (vBound * PHYSICS_DT));
+  }
+  // Cruising: the part of this call that can't reach any planet's zone is
+  // a pure Sun-gravity coast, jumped in one exact Kepler step (the same
+  // formula the predictor draws her path with). The rest is stepped as usual.
+  if (cruising && clearSteps > 2) {
+    const n = Math.min(clearSteps - 1, Math.floor(ship._accum / PHYSICS_DT));
+    if (n > 0) {
+      const q = keplerPropagate(ship.x, ship.z, ship.vx, ship.vz, BODIES.sun.gm, n * PHYSICS_DT);
+      ship.x = q.x; ship.z = q.z; ship.vx = q.vx; ship.vz = q.vz;
+      ship.t += n * PHYSICS_DT;
+      ship._accum -= n * PHYSICS_DT;
+      clearSteps -= n;
+      if (input.steady) ship.angVel = 0;
+      else ship.angVel *= Math.exp(-1.6 * n * PHYSICS_DT);
+      ship.angle += ship.angVel * PHYSICS_DT;
+    }
   }
   while (ship._accum >= PHYSICS_DT && steps < MAX_STEPS_PER_CALL) {
     if (budget && input.thrust > 0) {

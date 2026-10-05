@@ -292,6 +292,9 @@ bus.on('rewind', () => {
  * round the Sun, where no step can finish and no cue applies). After a
  * moment, Mission Control puts her back in a safe orbit around the planet.
  */
+/** Forget every burn plan (Chapter 5's line-up has just moved a planet). */
+game.replan = () => { burnPlan = null; transferPlan = null; planJob = null; coastPhase = null; predictorClock = 0; };
+
 let lostSince = null;
 function checkLost() {
   const goal = BODIES[game.transferTarget] || BODIES[game.captureTarget];
@@ -1432,7 +1435,7 @@ function tick(realDt, render = true) {
     }
     const pathClear = !ship.landedOn && !!game.prediction && !game.prediction.impact;
     const _ts = performance.now();
-    const res = stepWorld(ship, physInput, slowMoNow() ? realDt * SLOW_MO : realDt, WARP_LEVELS[game.warpIndex], { warpSafeRadii: WARP_SAFE_RADII * game.mode.warpSafeScale, safeBody, pathClear, target: game.target, autopilot: !!game.autopilot?.on, boost: !!game.warpBoost });
+    const res = stepWorld(ship, physInput, slowMoNow() ? realDt * SLOW_MO : realDt, WARP_LEVELS[game.warpIndex], { warpSafeRadii: WARP_SAFE_RADII * game.mode.warpSafeScale, safeBody, pathClear, target: game.target, autopilot: !!game.autopilot?.on, boost: !!game.warpBoost, cruise: IS_CH5 });
     prof('step', _ts);
     if (burnPlan && physInput.burnBudget && res.dvUsed) burnPlan.delivered += res.dvUsed;
     game.firing = physInput.thrust > 0 && !ship.landedOn; // debug: lab/xferwatch.js
@@ -1625,7 +1628,8 @@ function tick(realDt, render = true) {
     // "x% of the sunlight at Earth" is about the SUNLIGHT, so it ignores how
     // big her panels are; `power` above is what her panels actually make.
     solar: { power, distanceFromSun: realAU(Math.hypot(ship.x, ship.z)), fractionOfEarth: solarPower(ship.x, ship.z, 1) / SOLAR.panelPowerAtEarth },
-    warp: WARP_LEVELS[game.warpIndex],
+    // Chapter 5's cruise runs faster than the top button says: show it.
+    warp: IS_CH5 && warpState.warp > WARP_LEVELS[game.warpIndex] ? warpState.warp : WARP_LEVELS[game.warpIndex],
     // The warp buttons only when there's a long wait ahead (lead: over 100 s);
     // keys 1-4 work any time.
     warpUseful: game.warpIndex > 0 || waitAhead() > 100,

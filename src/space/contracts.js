@@ -28,6 +28,14 @@ export const PHYSICS_DT = 1 / 120;
 export const WARP_LEVELS = [1, 4, 16, 64];
 /** The autopilot's cruise warp, out between the planets only (physics.js stepWorld). */
 export const AUTOPILOT_WARP = 256;
+/**
+ * Chapter 5's cruise warp: out between the outer planets the coasts are
+ * 10,000-35,000 s long, so at the top warp, in the Sun's pull, engine off and
+ * path clear, time runs x1024 (for her as well as the autopilot). The coast
+ * there is pure Sun gravity, so physics.js jumps it exactly (Kepler), not in
+ * more steps.
+ */
+export const CRUISE_WARP = 1024;
 
 /**
  * Warp is refused while the ship is within this many radii of any body
@@ -106,12 +114,21 @@ const RAW = [
     tex: { map: '2k_neptune.jpg' }, atmo: 0x5b7cff, landable: false, role: 'optional' },
 ];
 
+/**
+ * Chapter 5's starting line-up (where each planet is at t = 0): Saturn,
+ * Uranus and Neptune near one line out from the Sun. As she sets off for each,
+ * ch5/lineup.js moves it on its rail so its window opens soon (and the save
+ * keeps where it put it). scripts/test-ch5-flight.mjs flies the legs.
+ */
+export const CH5_PHASES = Object.freeze({ saturn: 3.089, uranus: 3.403, neptune: 3.944 });
+
 export const BODIES = (() => {
   const byId = {};
   for (const b of RAW) {
     const parent = b.parent ? byId[b.parent] : null;
     const body = {
       ...b,
+      ...(IS_CH5 && CH5_PHASES[b.id] !== undefined ? { phase: CH5_PHASES[b.id] } : {}),
       period: parent ? orbitalPeriod(parent.gm, b.orbit) : Infinity,
       soi: parent ? soiRadius(b.orbit, b.gm, parent.gm) : Infinity,
     };

@@ -487,6 +487,35 @@ function runUntilTouchdown(radialSpeed, maxSteps = 60) {
     `ratio=${ratio.toFixed(5)} (target ${(1 / 27).toFixed(5)}), realAU earth=${realAU(BODIES.earth.orbit)} jupiter=${realAU(BODIES.jupiter.orbit)}`);
 }
 
+// ---------------------------------------------------------------------------
+// 13. Chapter 5's cruise warp: an exact Kepler jump through the clear part of
+// a Sun-only coast lands where plain stepping does, and runs x1024.
+// ---------------------------------------------------------------------------
+{
+  const mk = () => createShipState({ x: 40000, z: 0, vx: 0, vz: Math.sqrt(BODIES.sun.gm / 40000) * 1.08, t: 0, soi: 'sun' });
+  const a = mk(); const b = mk();
+  const W = WARP_LEVELS[WARP_LEVELS.length - 1];
+  let warps = new Set();
+  // 600 frames at 60 fps: 10 s real, ~10,000 s of sim at x1024.
+  for (let i = 0; i < 600; i++) {
+    const r = stepWorld(a, { thrust: 0 }, 1 / 60, W, { pathClear: true, cruise: true });
+    warps.add(r.warp);
+  }
+  while (b.t < a.t - PHYSICS_DT / 2) stepShip(b, { thrust: 0 }, PHYSICS_DT);
+  const err = Math.hypot(a.x - b.x, a.z - b.z);
+  check('cruise warp runs x1024 out in the Sun\'s pull', warps.has(1024) && a.t > 9000, `sim ${a.t.toFixed(0)} s in 10 s real, warps ${[...warps].join(',')}`);
+  check('cruise Kepler jump matches stepping (<2 u after ~10,000 s)', err < 2, `${err.toFixed(3)} u apart`);
+  // Not without `cruise` (Chapter 4), not with the engine on, not near a planet.
+  const c = mk();
+  const r0 = stepWorld(c, { thrust: 0 }, 1 / 60, W, { pathClear: true });
+  const r1 = stepWorld(c, { thrust: 1 }, 1 / 60, W, { pathClear: true, cruise: true });
+  const j = bodyState('jupiter', 0); const d = createShipState({ x: j.x + BODIES.jupiter.soi + 50, z: j.z, vx: j.vx, vz: j.vz, t: 0, soi: 'sun' });
+  const r2 = stepWorld(d, { thrust: 0 }, 1 / 60, W, { pathClear: true, cruise: true });
+  // Next to a planet's zone she may cruise, but is stepped, never jumped.
+  check('no cruise in Chapter 4 or with the engine on; no jump next to a planet', r0.warp === W && r1.warp === W && r2.steps === 1200,
+    `ch4 x${r0.warp}, engine x${r1.warp}, near Jupiter ${r2.steps} steps`);
+}
+
 // ===========================================================================
 // PASS/FAIL TABLE
 // ===========================================================================
