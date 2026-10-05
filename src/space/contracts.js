@@ -350,7 +350,7 @@ export const CHASE_CAMERA = Object.freeze({
 export const FLIGHT_MODES = Object.freeze({
   easy: Object.freeze({
     id: 'easy', label: 'Easy', rank: 'Cadet',
-    blurb: 'The autopilot flies the ship between planets: you answer the questions and explore the Moon and Europa. The tank is bigger and every rock is marked.',
+    blurb: IS_CH5 ? 'The autopilot flies the ship between planets: you answer the questions and play the games on the way. The tank is bigger.' : 'The autopilot flies the ship between planets: you answer the questions and explore the Moon and Europa. The tank is bigger and every rock is marked.',
     pathScale: 2, showGhost: true, autoAim: true, aimArrow: true,
     // Landings: lead playtest (Oct 2): "hard to stay in the green" - a
     // touchdown up to 2.5x the base speed is safe (was 2x).
@@ -383,7 +383,7 @@ export const FLIGHT_MODES = Object.freeze({
 export const FLIGHT_MODES_L1 = Object.freeze({
   easy: Object.freeze({
     id: 'easy', label: 'Easy', rank: 'Rookie',
-    blurb: 'The autopilot flies the ship for you. You answer the questions and walk on the Moon and Europa. A huge fuel tank, and every rock is marked.',
+    blurb: IS_CH5 ? 'The autopilot flies the ship for you. You answer the questions and play the games on the way. A huge fuel tank.' : 'The autopilot flies the ship for you. You answer the questions and walk on the Moon and Europa. A huge fuel tank, and every rock is marked.',
     pathScale: 3, showGhost: true, autoAim: true, aimArrow: true,
     // 2x Easy's fuel as RANGE, not tank mass: a tank twice as heavy would
     // make the ship sluggish and Moon landings much harder (fuel has mass).

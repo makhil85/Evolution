@@ -46,6 +46,7 @@ import { createAimDial } from './hud/aimDial.js';
 import { playIntro } from './cinematics.js';
 import { IS_CH5 } from './chapter.js';
 import { CH5_START, CH5_UPGRADES } from './ch5/start.js';
+import { playCh5Opening } from './ch5/opening.js';
 import { t, IS_LEVEL1, LEVEL } from './level.js';
 
 // --- bus -----------------------------------------------------------------------
@@ -1567,7 +1568,7 @@ function tick(realDt, render = true) {
     // onto the planned one instead of in jumps.
     predictorClock = physInput.thrust > 0 ? 0.1 : 0.2;
   }
-  trajectory.setVisible(!ship.landedOn);
+  trajectory.setVisible(!ship.landedOn && !game.cinematic?.hidePath);
   trajectory.update({ time: ship.t, origin: _origin, positions: states });
 
   const _tc = performance.now();
@@ -1772,7 +1773,7 @@ Promise.all([bodies.ready, sky.ready, belt.ready])
       : hud.chooseFlightMode({ modes: MODES, current: 'easy', first: true }).then((id) => id || 'easy');
     pickMode
       .then((id) => applyMode(id, { fresh: fresh && !resumed }))
-      .then(() => (fresh && !IS_CH5 ? playIntro(game) : null))
+      .then(() => (fresh ? (IS_CH5 ? playCh5Opening(game) : playIntro(game)) : null))
       .then(() => missions.start())
       // Dev only: resume a lab run after a dev-server reload (lab/labrun.js).
       .then(() => { try { const m = import.meta.env.DEV && localStorage.getItem('lab_autorun'); if (m) import(/* @vite-ignore */ `/src/space/lab/${m}.js`).then((x) => x.autorun?.()); } catch { /* no storage */ } });
