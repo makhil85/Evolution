@@ -91,9 +91,9 @@ export function createDust({ scene }) {
   group.renderOrder = 900; // draw late; additive, depth-tested against the world
   scene.add(group);
 
-  const DUST_COUNT = 700;
+  const DUST_COUNT = 60; // lead 2026-10-06: "very few flying streaks here and there" (was 700)
   const DUST_HALF = 16;
-  const STREAK_COUNT = 500;
+  const STREAK_COUNT = 40; // (was 500: it read as a meteor shower)
   const STREAK_HALF = 260;
 
   const dust = buildStreakSystem(DUST_COUNT, 0xdfe6ff);

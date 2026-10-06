@@ -6,9 +6,8 @@
 // she is.
 //
 // Three modes, cycled with C:
-//   chase - CHASE_CAMERA from the contract: behind, above and 32 degrees round
-//           to starboard, the angle tuned in the ship lab so the girl in the
-//           canopy is readable. It swings round as she turns.
+//   chase - CHASE_CAMERA from the contract: straight behind and a little
+//           above. It swings round behind her as she turns.
 //   orbit - free look around the ship; does not follow her heading
 //   top   - straight down onto the orbital plane: the best view for reading
 //           the predicted path, because the physics IS this plane
@@ -28,7 +27,7 @@ const CHASE_OFFSET = new THREE.Vector3(...CHASE_CAMERA.offset);
 const CHASE_LOOK = new THREE.Vector3(...CHASE_CAMERA.lookAt);
 const CHASE_LEN = CHASE_OFFSET.distanceTo(CHASE_LOOK);
 const MIN_DIST = CHASE_LEN * 0.55;
-const MAX_DIST = 9000;
+const MAX_DIST = 20000; // a whole Saturn system from above (its zone is 6,000 u)
 
 const UP = new THREE.Vector3(0, 1, 0);
 const tmpPos = new THREE.Vector3();
@@ -81,29 +80,22 @@ export function createFlightCamera({ camera, baseFov }) {
     shake(amount = 0.15) { shake = Math.max(shake, amount); },
 
     /**
-     * @param {{ dt: number, yaw: number, mouse: {dx,dy,wheel,dragging},
-     *           focusYaw?: number, focusWeight?: number }} f
-     *   yaw         - the ship group's rotation.y (so CHASE_CAMERA's ship-frame
-     *                 offset can be rotated exactly as the ship is)
-     *   focusYaw    - the same kind of yaw, but pointing at the planet she is
-     *                 near
-     *   focusWeight - 0..1, how much the chase camera turns toward it
-     *   hold        - keep the chase direction still (time warp)
-     *   follow      - swing-round rate behind her, 1/s (default 2.4)
+     * @param {{ dt: number, yaw: number, mouse: {dx,dy,wheel,dragging} }} f
+     *   yaw    - the ship group's rotation.y (so CHASE_CAMERA's ship-frame
+     *            offset can be rotated exactly as the ship is)
+     *   hold   - keep the chase direction still (time warp)
+     *   follow - swing-round rate behind her, 1/s (default 2.4)
      *
-     * WHY THE FOCUS. The physics is flat, so in a low orbit the planet is never
-     * "below" her: it is beside her, 90 degrees off her heading, and a camera
-     * that only looks where she is going never shows it. Near a big planet
-     * the camera turns part of the way toward it, so the child sees Earth
-     * rolling past beside her ship, which is the whole point of being there.
+     * The chase view stays straight behind her (lead, 2026-10-06); it no
+     * longer turns toward a nearby planet by itself.
      */
-    update({ dt, yaw, mouse, focusYaw = 0, focusWeight = 0, hold = false, follow = 2.4 }) {
+    update({ dt, yaw, mouse, hold = false, follow = 2.4 }) {
       if (mouse.wheel) {
         targetDistance = THREE.MathUtils.clamp(targetDistance * Math.exp(mouse.wheel * 0.0012), MIN_DIST, MAX_DIST);
       }
       distance += (targetDistance - distance) * (1 - Math.exp(-dt * 8));
 
-      const aimYaw = focusWeight > 0 ? yaw + wrapAngle(focusYaw - yaw) * focusWeight : yaw;
+      const aimYaw = yaw;
       if (smoothedYaw === null) smoothedYaw = aimYaw;
       // hold: time warp - keep the view still (see main.js); follow: how fast
       // the chase view swings round behind her (gentler on the autopilot).

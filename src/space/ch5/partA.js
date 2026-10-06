@@ -62,7 +62,10 @@ export function partASteps(game) {
       id: 'c5_leave_jupiter', act: 1,
       title: t('Leave Jupiter', 'Leave Jupiter'),
       objective: t('Follow the arrow: fly the same way Jupiter is moving and hold W until your path breaks free of Jupiter’s pull.', 'Follow the arrow and hold W to leave Jupiter.'),
-      markers: ['saturn'],
+      // No marker on the next planet while she leaves: it is lined up only
+      // once she is out (lineup.js), and a distance shown before that jumped
+      // the moment she escaped, as if her burn had been ignored (lead, 2026-10-06).
+      markers: [],
       aim: 'with-body',
       escape: true,
       enter() { game.target = 'saturn'; },

@@ -118,6 +118,9 @@ const bus = createBus();
 const bodies = createBodies({ scene, renderer, camera });
 const sky = createSky({ scene, renderer });
 const belt = createBelt({ scene, renderer });
+// Chapter 5 starts out past Jupiter and never goes back: the asteroid belt
+// (a bright band across the sky out there) only got in the way (lead, 2026-10-06).
+if (IS_CH5) belt.group.visible = false;
 // Chapter 5: the Kuiper belt past Neptune (points; it rides the floating origin too).
 const kuiper = IS_CH5 ? createKuiper({ scene }) : null;
 const dust = createDust({ scene });
@@ -162,6 +165,8 @@ if (touch.enabled) {
   if (hint) hint.textContent = t('Tap for the big map', 'Tap for the big map');
 }
 const flightCam = createFlightCamera({ camera, baseFov: RENDER.fov });
+/** The wide escape view (see the camera update in tick): on, and the mode to go back to. */
+const escapeView = { on: false, mode: null };
 
 // --- the ship's starting orbit -------------------------------------------------
 
@@ -392,12 +397,25 @@ function buildMarkers(states) {
   for (const id of ids) {
     if (!id || !states[id]) continue;
     const s = states[id];
-    _proj.set(s.x - _origin.x, 0, s.z - _origin.z).project(camera);
-    const behind = _proj.z > 1;
-    const onScreen = !behind && Math.abs(_proj.x) <= 1 && Math.abs(_proj.y) <= 1;
-    let sx = (_proj.x * 0.5 + 0.5) * w;
-    let sy = (-_proj.y * 0.5 + 0.5) * h;
-    if (behind) { sx = w - sx; sy = h - sy; }
+    // In camera space (lead, 2026-10-06: "the cross is not always at the
+    // right place"). The projected depth was the behind-test, and for far
+    // bodies it rounds past 1 (the Chapter 5 edge labels hit the same), so a
+    // planet in front was treated as behind and mirrored. Camera space has
+    // no such rounding: in front is z < 0. Behind her, the edge arrow points
+    // the true way round (left is left), straight down when dead behind.
+    _proj.set(s.x - _origin.x, 0, s.z - _origin.z).applyMatrix4(camera.matrixWorldInverse);
+    const behind = _proj.z >= -1e-6;
+    let sx; let sy; let onScreen = false;
+    if (!behind) {
+      _proj.applyMatrix4(camera.projectionMatrix);
+      onScreen = Math.abs(_proj.x) <= 1 && Math.abs(_proj.y) <= 1;
+      sx = (_proj.x * 0.5 + 0.5) * w;
+      sy = (-_proj.y * 0.5 + 0.5) * h;
+    } else {
+      const len = Math.hypot(_proj.x, _proj.y);
+      const dx = len > 1e-9 ? _proj.x / len : 0; const dy = len > 1e-9 ? -_proj.y / len : 1;
+      sx = w / 2 + dx * w * 4; sy = h / 2 + dy * h * 4;
+    }
     const dist = Math.hypot(s.x - ship.x, s.z - ship.z) - BODIES[id].radius;
     // markers.js appends "· <distance> u" itself; the label is just the name.
     out.push({ id, label: BODIES[id].name, screenX: sx, screenY: sy, onScreen, distance: Math.max(0, dist), kind: 'target' });
@@ -1081,7 +1099,7 @@ function updateBurnCue(states, thrust) {
   const theName = target === 'moon' ? 'the Moon' : tb.name;
   const accelNow = SHIP.thrust / (SHIP.dryMass + ship.fuel + ship.cargo);
   const help = (phase, extra = {}) => {
-    xfer = { phase, targetName: theName, auto: !!game.mode.autoAim, pilot: !!game.autopilot?.on, autoStop: cuesOn(), accel: accelNow, ...extra };
+    xfer = { phase, targetName: theName, auto: !!game.mode.autoAim, pilot: !!game.autopilot?.on, autoStop: cuesOn() && (game.mode.autoAim || !!game.autopilot?.on), accel: accelNow, ...extra };
   };
   // Already on a path that meets it SAFELY (not through the middle): coast.
   const c = game.prediction?.closest;
@@ -1441,7 +1459,12 @@ function tick(realDt, render = true) {
   // On Hard (no cues) nothing stops the engine: the budget is endless and
   // only MEASURES the push, for the transfer panel's bar.
   if (burnPlan && physInput.thrust > 0 && ship.t - (burnPlan.seenAt ?? -Infinity) < 0.5) {
-    physInput.burnBudget = { remaining: cuesOn() ? burnPlan.dvTarget - burnPlan.delivered : Infinity, aim: aimAngle };
+    // Only Easy and the autopilot get the automatic cut-off. Flying by hand
+    // (Medium, Hard) her W always fires: once the planned change was done the
+    // engine used to stay dead while the cue was up, so a burn of her own
+    // "did nothing" (lead, 2026-10-06). The budget still measures the push.
+    const autoStop = cuesOn() && (game.mode.autoAim || !!game.autopilot?.on);
+    physInput.burnBudget = { remaining: autoStop ? burnPlan.dvTarget - burnPlan.delivered : Infinity, aim: aimAngle };
   }
 
   if (!paused) {
@@ -1508,25 +1531,25 @@ function tick(realDt, render = true) {
   // Camera BEFORE the visuals: the lens flare, distance glows and atmosphere
   // rims all read the camera, so they must see this frame's position.
   const mouse = controls.takeMouse();
-  // Turn the chase camera toward the planet she is near, more the bigger it
-  // looms: a planet filling 40+ degrees of sky gets ~55% of the turn, a
-  // distant dot none (see camera.js).
-  let focusYaw = 0;
-  let focusWeight = 0;
-  if (ship.soi !== 'sun') {
-    const b = states[ship.soi];
-    const dx = b.x - ship.x;
-    const dz = b.z - ship.z;
-    const d = Math.hypot(dx, dz);
-    const angular = Math.asin(Math.min(1, BODIES[ship.soi].radius / d));
-    focusWeight = 0.55 * THREE.MathUtils.smoothstep(angular, 0.06, 0.6);
-    focusYaw = yawFor(Math.atan2(dz, dx));
+  // The chase camera stays straight behind her (lead, 2026-10-06). It used
+  // to swing up to 55% of the way toward a nearby planet, so the view kept
+  // turning by itself and left/right turns looked reversed.
+  // Leaving Jupiter's or Saturn's system (lead, 2026-10-06): a top-down view
+  // of roughly the whole system, so she sees her path climb out past the
+  // moons. Back to the view she had once she is out (or the step changes).
+  // A moon's zone on the way out still counts as the system (its planet).
+  const sysOf = ship.soi !== 'sun' && BODIES[ship.soi] ? (BODIES[ship.soi].parent === 'sun' ? ship.soi : BODIES[ship.soi].parent) : null;
+  const wideEscape = !!game.escapeStep && (sysOf === 'jupiter' || sysOf === 'saturn') && !ship.landedOn && !game.cinematic;
+  if (wideEscape !== escapeView.on) {
+    escapeView.on = wideEscape;
+    if (wideEscape) { escapeView.mode = flightCam.mode; flightCam.setMode('top'); flightCam.setDistance(BODIES[sysOf].soi * 1.5); }
+    else { flightCam.setMode(escapeView.mode || 'chase'); flightCam.resetZoom(); }
   }
   // Time warp: the camera holds its direction (her path and the planet
   // beside her both sweep round once per orbit in a second or two). The
   // autopilot's turns are followed gently. Both ease back afterwards.
   flightCam.update({
-    dt: realDt, yaw: shipView.group.rotation.y, focusYaw, focusWeight,
+    dt: realDt, yaw: shipView.group.rotation.y,
     hold: game.warpIndex > 0, follow: game.autopilot?.on ? 0.9 : 2.4,
     mouse: modalOpen ? { dx: 0, dy: 0, wheel: 0, dragging: false } : mouse,
   });
@@ -1616,6 +1639,9 @@ function tick(realDt, render = true) {
   sky.update({ camera, sunDirection: _sunDir });
   belt.update({ dt: realDt, time: ship.t, origin: _origin, ship: { x: ship.x, z: ship.z }, camera });
   kuiper?.update(_origin);
+  // The Kuiper belt only once she is out past Uranus: near Jupiter and Saturn
+  // its band across the sky was clutter (lead, 2026-10-06).
+  kuiper?.setVisible(Math.hypot(ship.x, ship.z) > BODIES.uranus.orbit);
   game.beltFx.update(realDt);
   const rel = relativeSpeed(states);
   // Dust is a SENSE of speed, not a speedometer: at a low-orbit 18 u/s the raw
