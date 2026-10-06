@@ -8,21 +8,23 @@
 // catches the ship, it acts like only Earth pulls" (lead, 2026-10-05). Real
 // spacecraft feel the Earth AND the moving Moon the whole way.
 //
-// THE MODEL NOW. Inside a planet's system (its gravity zone), the planet and
-// ALL of its moons pull on her together, every step, with every moon moving
-// on its rail. Out in the Sun's pull it is the Sun alone, as before (the
-// planets are far away there, and in-system the Sun's pull on her and on the
+// THE MODEL NOW (2026-10-06). Inside a moon's zone, the moon alone pulls
+// (an exact Kepler orbit: captures and retro burns behave). In the rest of a
+// planet's zone - the transfer leg out to a moon - the planet and ALL of its
+// moons pull on her together, every step, with every moon moving on its
+// rail, so the Moon bends her path from far out. Out in the Sun's pull it is
+// the Sun alone, as before (the planets are far away there, and in-system the Sun's pull on her and on the
 // planet are nearly the same, so it cancels - see physics.js's header).
 //
-// FRAMES. She is still integrated relative to her "home" body (the smallest
-// zone she is in), for precision - but the home body only picks the frame,
-// not the forces, so crossing into the Moon's zone no longer changes the pull
-// she feels. Relative to a planet P (on its rail, not tugged by its moons):
-//   a = pull of P + pull of each moon
-// Relative to a moon M of P, take away M's own acceleration round P:
-//   a = pull of M + pull of other moons + (pull of P - GM_P (P - M) / |P - M|^3)
-// Any of those extra effects under 10% of the home body's pull is left out
-// (lead's rule; see accelRel).
+// FRAMES. She is integrated relative to her "home" body (the smallest zone
+// she is in). Relative to a planet P (on its rail, not tugged by its moons):
+//   a = pull of P + pull of each moon (a moon under 10% of P's pull is left out)
+// Relative to a moon M: a = pull of M alone. So her pull DOES change where she
+// crosses into a moon's zone (the planet's tide drops out there). That is on
+// purpose (lead, 2026-10-06: "if you are near the Moon, ignore everything and
+// only consider the Moon"): a steady orbit round the Moon matters more than a
+// smooth hand-over, and the dotted path uses the same rule, so the drawn path
+// and the flight still agree.
 //
 // Every position here is relative to the system's planet, from the analytic
 // rails (orbits.bodyStateRel), so nothing is ever integrated but the ship.
@@ -55,7 +57,13 @@ function systemPlanet(id) {
 const SOURCES = {};
 for (const id of BODY_ORDER) {
   const P = systemPlanet(id);
-  if (!P || !MOONS[P]) { SOURCES[id] = null; continue; }
+  // Inside a moon's own zone ONLY the moon pulls (lead, 2026-10-06: "if you
+  // are near the Moon, ignore everything and only consider the Moon"): her
+  // path there is an exact ellipse round it, so a retro burn at the low
+  // point gives a clean, steady orbit instead of one the planet's tide keeps
+  // reshaping. The planet and its moons pull together only in the planet's
+  // zone outside every moon's zone: the transfer leg out to a moon.
+  if (!P || !MOONS[P] || P !== id) { SOURCES[id] = null; continue; }
   SOURCES[id] = [P, ...MOONS[P]].map((b) => ({ id: b, gm: BODIES[b].gm, isMoon: b !== P }));
 }
 
@@ -89,15 +97,6 @@ for (const id of BODY_ORDER) {
   if (!src || src.xs) continue;
   src.xs = new Float64Array(src.length); src.zs = new Float64Array(src.length); src.t = NaN;
 }
-const FRAME_INDEX = {};
-const PLANET_GM = {};
-for (const id of BODY_ORDER) {
-  const src = SOURCES[id];
-  if (!src) continue;
-  FRAME_INDEX[id] = BODIES[id].parent === 'sun' ? -1 : src.findIndex((b) => b.id === id);
-  PLANET_GM[id] = src[0].gm;
-}
-
 /**
  * Acceleration of the ship relative to frame body `frameId`, at offset
  * (rx, rz) from it, at time t. Writes out.ax / out.az, and out.tau: the
@@ -114,44 +113,30 @@ export function accelRel(frameId, rx, rz, t, out) {
     out.ax = g * rx; out.az = g * rz; out.tau = Math.sqrt((r2 * r) / gm);
     return out;
   }
+  // A planet's frame (the only kind with extra sources: a moon's frame is
+  // the moon alone, above). Ship and moons are offsets from the planet.
   moonOffsets(src, t);
   const xs = src.xs; const zs = src.zs;
-  // Frame body's offset from the planet (0 when the frame IS the planet).
-  const fi = FRAME_INDEX[frameId];
-  const fx = fi >= 0 ? xs[fi] : 0; const fz = fi >= 0 ? zs[fi] : 0;
-  // Ship relative to the planet.
-  const sx = rx + fx; const sz = rz + fz;
-  // The frame body's own pull first: the yardstick for the rest.
+  // The planet's own pull first: the yardstick for the rest.
   let ax = 0; let az = 0; let tau = Infinity;
   {
-    const i = fi >= 0 ? fi : 0;
-    const gm = src[i].gm;
-    const dx = sx - xs[i]; const dz = sz - zs[i];
-    const d2 = dx * dx + dz * dz;
+    const gm = src[0].gm;
+    const d2 = rx * rx + rz * rz;
     const d3 = d2 * (Math.sqrt(d2) || 1e-9);
-    ax = (-gm / d3) * dx; az = (-gm / d3) * dz;
+    ax = (-gm / d3) * rx; az = (-gm / d3) * rz;
     tau = d3 / gm;
   }
   const main2 = ax * ax + az * az || 1e-24;
-  for (let i = 0; i < src.length; i++) {
-    if (i === (fi >= 0 ? fi : 0)) continue;
+  for (let i = 1; i < src.length; i++) {
     const gm = src[i].gm;
-    const dx = sx - xs[i]; const dz = sz - zs[i];
+    const dx = rx - xs[i]; const dz = rz - zs[i];
     const d2 = dx * dx + dz * dz;
     const d3 = d2 * (Math.sqrt(d2) || 1e-9);
-    let px = (-gm / d3) * dx; let pz = (-gm / d3) * dz;
-    if (fi >= 0 && i === 0) {
-      // In a moon's frame the planet's real effect is its pull on her minus
-      // its pull on the moon (the moon falls round it too): the tide.
-      const f2 = fx * fx + fz * fz;
-      const g = gm / (f2 * Math.sqrt(f2));
-      px += g * fx; pz += g * fz;
-    }
+    const px = (-gm / d3) * dx; const pz = (-gm / d3) * dz;
     // Lead (2026-10-05): "keep the rough physics real... if the effect of
-    // another object is <10%, ignore it". Below 10% of the main pull it is
-    // left out; it eases in by 13% so the pull never jumps. So low Moon and
-    // Europa orbits are clean ellipses (the planet's tide there is 2-9%),
-    // while on the way out from Earth the Moon pulls from ~155 u away.
+    // another object is <10%, ignore it". Below 10% of the planet's pull a
+    // moon is left out; it eases in by 13% so the pull doesn't jump there.
+    // On the way out from Earth the Moon starts to pull from ~155 u away.
     const q2 = (px * px + pz * pz) / main2;
     if (q2 <= 0.01) continue;
     const k = (Math.sqrt(q2) - 0.1) / 0.03;

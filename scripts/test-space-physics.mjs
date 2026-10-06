@@ -118,16 +118,12 @@ lowOrbitTest('europa', 1.6, 100, 0.05);
   const along = (acc.ax * mx + acc.az * mz) / md; // + = toward the Moon (and away from Earth)
   check('the Moon pulls her from outside its zone', approx(along, -earthOnly + moonPull, 1e-9),
     `along Earth-Moon line ${along.toFixed(5)} (Earth alone would be ${(-earthOnly).toFixed(5)})`);
-  // Either side of the Moon's zone edge, the same pull (frame shift aside).
-  const soi = BODIES.moon.soi;
-  const ux = -mx / md; const uz = -mz / md;
-  const out = { ax: 0, az: 0, tau: 0 }; const inn = { ax: 0, az: 0, tau: 0 };
-  accelRel('earth', mx + ux * (soi + 1e-6), mz + uz * (soi + 1e-6), t, out);
-  accelRel('moon', ux * (soi - 1e-6), uz * (soi - 1e-6), t, inn);
-  // In the Moon's frame we take away the Moon's own fall round Earth.
-  const fall = BODIES.earth.gm / (md * md);
-  const jump = Math.hypot(out.ax - (inn.ax - fall * mx / md), out.az - (inn.az - fall * mz / md));
-  check('no jump in her pull at the Moon\'s zone edge', jump < 1e-6, `jump ${jump.toExponential(2)} u/s^2`);
+  // Inside the Moon's zone, only the Moon pulls (lead, 2026-10-06): an exact
+  // ellipse round it, the planet left out.
+  const inn = { ax: 0, az: 0, tau: 0 };
+  accelRel('moon', 30, 0, t, inn);
+  check('inside the Moon\'s zone only the Moon pulls', isKeplerFrame('moon') && approx(inn.ax, -BODIES.moon.gm / 900, 1e-12) && inn.az === 0,
+    `a = (${inn.ax.toFixed(6)}, ${inn.az.toFixed(6)})`);
 }
 
 // 1b2. Lead (2026-10-05): "if speed during orbit transfer is too much we
@@ -143,6 +139,33 @@ lowOrbitTest('europa', 1.6, 100, 0.05);
   };
   const slow = run(3.6); const fast = run(4.6);
   check('Moon: right speed = ellipse, too fast = slung past', slow === 'ellipse' && fast === 'slung past', `3.6 u/s: ${slow}, 4.6 u/s: ${fast}`);
+}
+
+// 1b3. Lead (2026-10-06): "the back burn almost doesn't work... orbits are
+// changing and the Moon is not catching the ship". Brake backwards at the
+// low point of a too-fast pass: she is caught, and the orbit then STAYS (with
+// Earth's tide pulling inside the Moon's zone it sank into the Moon and left
+// within 1,400 s).
+{
+  const mu = BODIES.moon.gm; const rp = 20;
+  const m = bodyState('moon', 0);
+  const s = createShipState({ t: 0, x: m.x + rp, z: m.z, vx: m.vx, vz: m.vz + Math.sqrt((2 * mu) / rp) * 1.2, soi: 'moon' });
+  const orb = () => {
+    const b = bodyState('moon', s.t); const rx = s.x - b.x; const rz = s.z - b.z; const vx = s.vx - b.vx; const vz = s.vz - b.vz;
+    const r = Math.hypot(rx, rz); const h = rx * vz - rz * vx; const en = (vx * vx + vz * vz) / 2 - mu / r;
+    const e = Math.sqrt(Math.max(0, 1 + (2 * en * h * h) / (mu * mu)));
+    return { en, peri: (h * h) / mu / (1 + e), apo: en < 0 ? (h * h) / mu / (1 - e) : Infinity, vx, vz };
+  };
+  for (let n = 0; orb().en > (-0.3 * mu) / rp && n < 20000; n++) { const o = orb(); s.angle = Math.atan2(-o.vz, -o.vx); stepShip(s, { thrust: 1 }, PHYSICS_DT); }
+  const p0 = orb();
+  let stayed = true; let worst = 0;
+  for (let i = 0; i < 3000 / PHYSICS_DT; i++) {
+    stepShip(s, {}, PHYSICS_DT);
+    if (s.soi !== 'moon') { stayed = false; break; }
+    if (i % 60 === 0) { const o = orb(); worst = Math.max(worst, Math.abs(o.peri - p0.peri), Math.abs(o.apo - p0.apo)); }
+  }
+  check('Moon: a retro burn at the low point captures her, and the orbit holds', stayed && worst < 0.5,
+    `stayed ${stayed}, peri ${p0.peri.toFixed(1)} apo ${p0.apo.toFixed(1)}, drift ${worst.toFixed(3)} u in 3000 s`);
 }
 
 // 1c. Chapter 6's switch: Sun + one nearby planet only (lead, 2026-10-05).
