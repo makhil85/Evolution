@@ -16,7 +16,7 @@
 // straight to the spot ("the autopilot takes her there").
 
 import { t } from './level.js';
-import { IS_CH5 } from './chapter.js';
+import { OUTER } from './chapter.js';
 import { toggleBar, paintToggle } from './hud/toggleBar.js';
 
 const MANUAL_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyZ', 'KeyX', 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
@@ -59,7 +59,7 @@ export function createAutopilot(game, { controls, hud }) {
     game.debugCues = on;
     if (on) {
       hud.toast(easyAuto
-        ? (IS_CH5
+        ? (OUTER
           ? t('Easy: the autopilot flies the ship. You answer the questions and play the games on the way!', 'Easy: the autopilot flies. You answer questions and play the games!')
           : t('Easy: the autopilot flies the ship. You answer the questions and explore the Moon and Europa!', 'Easy: the autopilot flies. You answer questions and walk on the Moon and Europa!'))
         : 'Autopilot on. It flies to the next stop - you answer the questions!', { kind: 'info', ms: 4200 });

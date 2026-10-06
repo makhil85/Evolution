@@ -21,12 +21,12 @@
 import { BODIES } from './contracts.js';
 import { bodyState, bodyStateRel } from './orbits.js';
 import { keplerPropagate } from './predictor.js';
-import { IS_CH5 } from './chapter.js';
+import { OUTER } from './chapter.js';
 
 /** Longest wait searched for a window. Chapter 5's outer planets come round
  *  far more slowly (Saturn-Uranus repeat every ~44,000 s), and its x1024
  *  cruise makes even a long wait short at the keyboard. */
-const WAIT_CAP = IS_CH5 ? 60000 : 9000;
+const WAIT_CAP = OUTER ? 60000 : 9000;
 
 const _p = { x: 0, z: 0, vx: 0, vz: 0 };
 const _o = { x: 0, z: 0, vx: 0, vz: 0 };

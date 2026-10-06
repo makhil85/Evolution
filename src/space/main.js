@@ -46,8 +46,10 @@ import { createAimToggle } from './aimToggle.js';
 import { createFreezeButton } from './freeze.js';
 import { createAimDial } from './hud/aimDial.js';
 import { playIntro } from './cinematics.js';
-import { IS_CH5 } from './chapter.js';
+import { IS_CH5, IS_CH6, OUTER } from './chapter.js';
 import { CH5_START, CH5_UPGRADES } from './ch5/start.js';
+import { CH6_START } from './ch6/start.js';
+import { setMoonPulls } from './gravity.js';
 import { playCh5Opening } from './ch5/opening.js';
 import { t, IS_LEVEL1, LEVEL } from './level.js';
 
@@ -119,7 +121,9 @@ const bodies = createBodies({ scene, renderer, camera });
 const sky = createSky({ scene, renderer });
 const belt = createBelt({ scene, renderer });
 // Chapter 5: the Kuiper belt past Neptune (points; it rides the floating origin too).
-const kuiper = IS_CH5 ? createKuiper({ scene }) : null;
+const kuiper = OUTER ? createKuiper({ scene }) : null;
+// Chapter 6's slingshots: the Sun and one planet only (lead, 2026-10-05).
+if (IS_CH6) setMoonPulls(false);
 const dust = createDust({ scene });
 const trajectory = createTrajectoryView({ scene });
 // The PLANNED path (Easy/Medium, transfer steps): where the coming burn will
@@ -187,7 +191,9 @@ function circularOrbitState(bodyId, radius, phaseAngle, t = 0) {
 // the lit Earth under her with the night side's city lights rolling up ahead.
 // (Earth sits at +X of the Sun at t=0, so the day side faces angle PI.)
 // Chapter 5 starts where Chapter 4 ended: in orbit round Jupiter.
-const ship = createShipState(IS_CH5
+const ship = createShipState(IS_CH6
+  ? circularOrbitState(CH6_START.body, CH6_START.radius, CH6_START.phase)
+  : IS_CH5
   ? circularOrbitState(CH5_START.body, CH5_START.radius, CH5_START.phase)
   : circularOrbitState('earth', BODIES.earth.radius * 1.6, Math.PI + 0.9));
 const rewind = createRewind(30);
@@ -268,7 +274,7 @@ function applyOwnedUpgrades(list) {
 }
 const resumed = restoreFromSave(missions.saved);
 // A fresh Chapter 5: the ship she finished Chapter 4 with.
-if (IS_CH5 && !resumed) applyOwnedUpgrades(CH5_UPGRADES);
+if (OUTER && !resumed) applyOwnedUpgrades(CH5_UPGRADES);
 
 // --- events ---------------------------------------------------------------------
 
@@ -1454,7 +1460,7 @@ function tick(realDt, render = true) {
     const pathClear = !ship.landedOn && !!game.prediction && !game.prediction.impact;
     const _ts = performance.now();
     const paceDt = realDt * FLIGHT_PACE * (slowMoNow() ? SLOW_MO : 1);
-    const res = stepWorld(ship, physInput, paceDt, WARP_LEVELS[game.warpIndex], { warpSafeRadii: WARP_SAFE_RADII * game.mode.warpSafeScale, safeBody, pathClear, target: game.target, autopilot: !!game.autopilot?.on, boost: !!game.warpBoost, cruise: IS_CH5 });
+    const res = stepWorld(ship, physInput, paceDt, WARP_LEVELS[game.warpIndex], { warpSafeRadii: WARP_SAFE_RADII * game.mode.warpSafeScale, safeBody, pathClear, target: game.target, autopilot: !!game.autopilot?.on, boost: !!game.warpBoost, cruise: OUTER });
     prof('step', _ts);
     if (burnPlan && physInput.burnBudget && res.dvUsed) burnPlan.delivered += res.dvUsed;
     game.firing = physInput.thrust > 0 && !ship.landedOn; // debug: lab/xferwatch.js
@@ -1651,7 +1657,7 @@ function tick(realDt, render = true) {
     // big her panels are; `power` above is what her panels actually make.
     solar: { power, distanceFromSun: realAU(Math.hypot(ship.x, ship.z)), fractionOfEarth: solarPower(ship.x, ship.z, 1) / SOLAR.panelPowerAtEarth },
     // Chapter 5's cruise runs faster than the top button says: show it.
-    warp: IS_CH5 && warpState.warp > WARP_LEVELS[game.warpIndex] ? warpState.warp : WARP_LEVELS[game.warpIndex],
+    warp: OUTER && warpState.warp > WARP_LEVELS[game.warpIndex] ? warpState.warp : WARP_LEVELS[game.warpIndex],
     // The warp buttons only when there's a long wait ahead (lead: over 100 s);
     // keys 1-4 work any time.
     warpUseful: game.warpIndex > 0 || waitAhead() > 100,
@@ -1794,7 +1800,7 @@ Promise.all([bodies.ready, sky.ready, belt.ready])
       : hud.chooseFlightMode({ modes: MODES, current: 'easy', first: true }).then((id) => id || 'easy');
     pickMode
       .then((id) => applyMode(id, { fresh: fresh && !resumed }))
-      .then(() => (fresh ? (IS_CH5 ? playCh5Opening(game) : playIntro(game)) : null))
+      .then(() => (fresh ? (IS_CH6 ? null : IS_CH5 ? playCh5Opening(game) : playIntro(game)) : null))
       .then(() => missions.start())
       // Dev only: resume a lab run after a dev-server reload (lab/labrun.js).
       .then(() => { try { const m = import.meta.env.DEV && localStorage.getItem('lab_autorun'); if (m) import(/* @vite-ignore */ `/src/space/lab/${m}.js`).then((x) => x.autorun?.()); } catch { /* no storage */ } });

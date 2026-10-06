@@ -24,8 +24,9 @@
 
 import { checkAnswer as checkChapter3Answer } from '../game/questions.js';
 import { heroQuestion } from '../launcher/hero.js';
-import { IS_CH5 } from './chapter.js';
+import { IS_CH5, IS_CH6 } from './chapter.js';
 import { CH5_QUESTIONS } from './ch5/questions.ch5.js';
+import { partEBank } from './ch6/questions.partE.js';
 
 /** @typedef {import('../game/questions.js').Question & {act:number, beat:string}} SpaceQuestion */
 
@@ -1415,6 +1416,8 @@ function difficultyLevel() {
 function selectBank() {
   // Chapter 5 has its own bank (Level 4 only so far: Level 1 comes later).
   if (IS_CH5) return CH5_QUESTIONS;
+  // Chapter 6: so far its Part E bank (steps 13-20), Level 1 overlay merged.
+  if (IS_CH6) return partEBank(difficultyLevel());
   if (difficultyLevel() !== 1) return LEVEL4_SPACE_QUESTIONS;
   const out = {};
   for (const [id, base] of Object.entries(LEVEL4_SPACE_QUESTIONS)) {

@@ -25,7 +25,7 @@
 - GitHub: private repo `Evolution`, branch `main`. Only the current version is
   in it (no old plans, screenshots or asset originals; see `.gitignore`).
 - Fresh checkout / cloud: `npm ci`, then `npm run dev` (port 5173) and
-  `npm test` (all nine suites). Browser checks use the lab helpers described in
+  `npm test` (all ten suites). Browser checks use the lab helpers described in
   `HANDOFF.md` (the game exposes `window.__space`, `__science`, `__city`,
   `__game`).
 - Cloud sessions work on a branch and open a pull request; the lead's PC pulls
