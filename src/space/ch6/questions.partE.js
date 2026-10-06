@@ -2,9 +2,8 @@
 // for every science question, as the plan's maths thread asks: add the
 // slingshot boosts, the fuel left, percent of light speed, and distance =
 // speed x time to the nearest star. Same schema as Chapter 5's bank
-// (questions.ch5.js): type 'choice' or 'text', act, beat. The `act` numbers
-// are placeholders: set them to Part E's act when this is joined to the
-// Chapter 6 bank (see CHAPTER6_PART_E.md).
+// (questions.ch5.js): type 'choice' or 'text', act, beat. Act 6 is Part E
+// (ch6/start.js).
 //
 // Every numeric answer is re-derived in scripts/test-ch6-route.mjs, from the
 // same tables the games use (routes.js), so a retune can't leave a question
@@ -37,7 +36,7 @@ export const CH6E_QUESTIONS = {
     hint: `Start at ${START_SPEED} and add each boost in turn.`,
     parentHint: `${START_SPEED} + ${NEP} + ${JUP} + ${SUN} = ${ROUTE_END}. (Forgetting the starting speed gives ${ROUTE_END - START_SPEED}.)`,
     success: `Yes! ${ROUTE_END} km/s. Every slingshot adds to the total.`,
-    doneMessage: 'Now set how close each flyby passes.',
+    doneMessage: 'Now fly the route!',
     reward: { science: 10 },
   },
 
@@ -56,7 +55,7 @@ export const CH6E_QUESTIONS = {
     hint: 'Add up what the three passes use, then take that away from the tank.',
     parentHint: `${STOPS.neptune.fuel[2]} + ${STOPS.jupiter.fuel[2]} + ${STOPS.sun.fuel[3]} = ${FUEL_USED}; ${FUEL_BUDGET} − ${FUEL_USED} = ${FUEL_LEFT}.`,
     success: `Right! ${FUEL_LEFT} tonnes spare. A good pilot always keeps some back.`,
-    doneMessage: 'Plan made. Time to fly it!',
+    doneMessage: 'Plan made! First: how does a slingshot work?',
     reward: { science: 10 },
   },
 
@@ -68,7 +67,7 @@ export const CH6E_QUESTIONS = {
     title: 'The best slingshot',
     subject: 'Gravity and momentum',
     difficulty: 'Level 4',
-    prompt: 'A close pass of Jupiter gave the biggest boost of all the planets. Why Jupiter?',
+    prompt: 'Of all the planets, a close pass of Jupiter gives the biggest slingshot boost. Why Jupiter?',
     choices: [
       { text: 'It is the heaviest planet, so its pull swings the ship hardest and it has the most momentum to share', correct: true },
       { text: 'It is the closest planet to the Sun' },
@@ -163,7 +162,7 @@ export const CH6E_LEVEL1 = {
   },
   c6_jupiter_boost: {
     difficulty: 'Level 1 • gravity',
-    prompt: 'Jupiter gave the biggest push. Why?',
+    prompt: 'Jupiter gives the biggest push of all the planets. Why?',
     choices: [
       { text: 'It is the biggest, heaviest planet', correct: true },
       { text: 'It is near the Sun' },

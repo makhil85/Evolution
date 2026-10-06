@@ -2,10 +2,10 @@
 // she walks the habitat (habitat.js) and does each station (stations.js),
 // with that station's question after it. See missions.js for the step format.
 //
-// Which stations are done is kept in its own save key, so a reload (or a
-// restart after two missed tries) doesn't make her redo the finished ones.
+// Which stations are done is kept in its own save key, so a reload doesn't
+// make her redo the finished ones. A station counts as done only after its
+// question, so two missed tries (an act restart) bring that station back.
 import { t, LEVEL } from '../level.js';
-import { askBeat } from '../acts/util.js';
 import { createHabitatScene } from './habitat.js';
 import { playStation } from './stations.js';
 import { STATION_BEAT } from './questions.partB.js';
@@ -36,8 +36,10 @@ export function partBSteps(game) {
           done: [...done],
           async onStation(id) {
             await playStation(id, { bus: game.bus });
+            // The question first, then the station counts as done: two missed
+            // tries restart the act, and then she redoes this station too.
+            await game.missions.ask(STATION_BEAT[id]);
             done.add(id); saveDone([...done]);
-            await askBeat(game, STATION_BEAT[id]);
           },
         }));
         hud.toast(t('The living half is built! Our rock is a home now.', 'The ship is a home now!'), { kind: 'good', ms: 4200 });

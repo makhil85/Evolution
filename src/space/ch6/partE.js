@@ -3,12 +3,8 @@
 // lights (cutscene), how fast light is (lesson 6C), the trip to the nearest
 // star, and the end card. See missions.js for the step format.
 //
-// Built apart from Part D (steps 1-12: the page, the crew, the habitat and
-// its stations), so it plugs in at the end of Chapter 6's chain:
-//   steps.js:  [...partA..D, ...partESteps(game)]
-// What to check when joining (CHAPTER6_PART_E.md has the list): the crew's
-// names in CREW below, the act number, and the question beats (the bank is
-// questions.partE.js, merged into Chapter 6's).
+// The last part of Chapter 6's chain (ch6/steps.js), after the habitat
+// and lesson 6A. Questions: questions.partE.js; numbers: routes.js.
 import { t, LEVEL } from '../level.js';
 import { markSaveComplete, answeredCount } from '../acts/util.js';
 import { lessonOnce } from '../../lesson/card.js';

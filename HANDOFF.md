@@ -485,8 +485,8 @@ steering on, and let the user go to higher warp speed".
 
 ## Session 2026-10-06 (Chapter 6 build): The Long Trip
 
-Design: `CHAPTER6_PLAN.md` (steps and checks), `CHAPTER6_PART_E.md` (Part E
-detail and numbers), and the Claude doc linked there. Level 4 first; Level 1
+Design: `CHAPTER6_PLAN.md` (steps, checks, Part E detail and numbers) and
+the Claude doc linked there. Level 4 first; Level 1
 lines are in place but not tuned.
 
 - **Page and engine**: `chapter6.html`; `chapter.js` `IS_CH6`, and `OUTER`
@@ -518,7 +518,7 @@ lines are in place but not tuned.
   2 splitter steps is the one mix), water (grit -> algae -> UV; 98%, 500
   days), farm (10-12 m²), power (1/3, 1/4, 1/6, 1/4 of 12), pack list (8.8 t
   of needs under 10 t). A question after each (`ch6/questions.partB.js`).
-- **Part E**: see `CHAPTER6_PART_E.md` (route planner `window.__route`,
+- **Part E**: see `CHAPTER6_PLAN.md` (route planner `window.__route`,
   slingshot card `window.__sling`, drive-on cutscene, lessons 6B/6C).
 - **Tests**: `scripts/test-ch6-route.mjs` in `npm test` (ten suites):
   routes, timing, stations, both question banks re-derived from the tables,

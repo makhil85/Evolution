@@ -275,6 +275,9 @@ export function createMissions(game) {
     saved: save,
     /** Save now (main.js calls this every few seconds while flying). */
     save() { persist(); },
+    /** Ask a beat's question the way a step's own beat is asked: counted as
+     *  answered, or deferred and asked again later (Chapter 6's stations). */
+    ask(beat) { return ask(beat).then(() => persist()); },
     /**
      * Two wrong tries on a question (lead rule): back to the start of this
      * act - the save from then is put back and the page reloads into it.
