@@ -44,6 +44,10 @@ export async function clear(max = 12) {
     if (window.__design?.open) { window.__design.answerAll(); log.push('design'); await sleep(200); continue; }
     if (window.__hunt?.open) { window.__hunt.solve(); log.push('hunt'); await sleep(200); continue; }
     if (window.__workshop?.open) { window.__workshop.solve(); log.push('workshop'); await sleep(200); continue; }
+    // Chapter 6's cards: a station, the route planner, the slingshots.
+    if (window.__station?.open) { window.__station.solve(); window.__station.done(); log.push(`station ${window.__station?.id || ''}`); await sleep(200); continue; }
+    if (window.__route?.open) { window.__route.solve(); window.__route.go(); log.push('route'); await sleep(200); continue; }
+    if (window.__sling?.open) { window.__sling.solve(); log.push('slingshots'); await sleep(200); continue; }
     // A mini-game that can play itself (Chapter 5's ring run): let it.
     if (g().activeScene?.debug && !g().activeScene.debug.auto) { g().activeScene.debug.auto = true; log.push('auto game'); }
     // A picker (a mini-game's level, "another go?"): the suggested option.

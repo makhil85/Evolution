@@ -482,3 +482,54 @@ steering on, and let the user go to higher warp speed".
   is flying. P (or the button) cycles: off -> flies, walks hers -> full
   autopilot -> off. The Easy blurbs in `contracts.js` say so, and H lists F
   and P.
+
+## Session 2026-10-06 (Chapter 6 build): The Long Trip
+
+Design: `CHAPTER6_PLAN.md` (steps, checks, Part E detail and numbers) and
+the Claude doc linked there. Level 4 first; Level 1
+lines are in place but not tuned.
+
+- **Page and engine**: `chapter6.html`; `chapter.js` `IS_CH6`, and `OUTER`
+  for what Chapters 5 and 6 share (Pluto, cruise warp, long windows, Kuiper
+  belt). Own save keys (`level6_long_trip_v1`, `_L1`), start (Sun orbit at
+  62,000 u, by Rock B), act titles (`ch6/start.js`), question bank (Part B +
+  Part E, Level 1 overlays), moons off (`setMoonPulls(false)`). Launcher card
+  6, locked until Chapter 5 is done.
+- **Chain** (`ch6/steps.js`): `c6_meet_crew` (Part A) -> `c6_habitat` (Part
+  B) -> `c6_lesson_tiny_earth` (6A) -> Part E (`c6_plan_route`,
+  `c6_lesson_slingshot`, `c6_fly_slingshots`, `c6_drive_on`,
+  `c6_lesson_light`, `c6_star_trip`, `c6_end`). She never flies freely in
+  Chapter 6: the slingshots are 2-D cards (the lead OK'd that; flybys in the
+  squeezed solar system fling the ship).
+- **Crew**: `ch6/crewInfo.js` (names, jobs, colours): Mira the biologist and
+  Theo the doctor (kids, the hero's rig in their own looks), Bolt the builder
+  bot, Echo the signal bot (`ch6/crew.js`).
+- **Opening** (`ch6/opening.js`): Rock B hangs beside her ship
+  (`showRockB`, for the whole chapter); the supply ship docks at its hangar
+  door; title.
+- **Habitat** (`ch6/habitat.js`, a runScene walk like the Moon's): round hall
+  inside the rock, power core, six stations, bunks, the crew at their
+  stations, beacon on the next. Test hook `game.activeScene.debug`
+  (`goTo(id)`, `pressE()`). Station progress is kept in
+  `rocket_village_ch6_stations_L<level>` (a reload or a two-miss restart
+  does not redo finished stations).
+- **Stations** (`ch6/stationsLogic.js` rules, `ch6/stations.js` cards, hook
+  `window.__station`): shield (each metre halves the rays), oxygen (6 lamps +
+  2 splitter steps is the one mix), water (grit -> algae -> UV; 98%, 500
+  days), farm (10-12 m²), power (1/3, 1/4, 1/6, 1/4 of 12), pack list (8.8 t
+  of needs under 10 t). A question after each (`ch6/questions.partB.js`).
+- **Part E**: see `CHAPTER6_PLAN.md` (route planner `window.__route`,
+  slingshot card `window.__sling`, drive-on cutscene, lessons 6B/6C).
+- **Tests**: `scripts/test-ch6-route.mjs` in `npm test` (ten suites):
+  routes, timing, stations, both question banks re-derived from the tables,
+  the whole chain, lessons 6B/6C (6A is in `test-lessons.mjs`).
+- **Browser checks done**: fresh boot -> opening frames -> crew dialogue ->
+  habitat -> shield station (E, card, solve, question) -> every other card;
+  Part E planner, a slingshot leg pressed by hand, the drive-on cutscene; no
+  page errors.
+- **Gotchas**: the habitat's rock wall and dome are seen from inside, so
+  they need `side: BackSide`; the walker's spacesuit parts (helmet, collar
+  ring, pack) are hidden indoors. `pgrep -f vite` matches its own command
+  line (pitfall 6): check the server with curl instead.
+- **Not done**: a child playing it; Level 1 tuning; a real-screen pass
+  (frame rate in the habitat, the cutscenes).

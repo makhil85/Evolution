@@ -17,7 +17,7 @@
 // ship's heliocentric position, so the ship sits near (0,0,0) and float32 on the
 // GPU never sees a number like 20 000. Use toScene() for that, always.
 
-import { IS_CH5 } from './chapter.js';
+import { IS_CH5, IS_CH6, OUTER } from './chapter.js';
 
 export const TEXTURE_BASE = `${import.meta.env?.BASE_URL ?? './'}space/textures/`;
 
@@ -114,7 +114,7 @@ const RAW = [
     tex: { map: '2k_neptune.jpg' }, atmo: 0x5b7cff, landable: false, role: 'optional' },
 
   // Chapter 5 only: out in the Kuiper belt (39 AU, with Neptune at 30).
-  ...(IS_CH5 ? [{ id: 'pluto', name: 'Pluto', parent: 'sun', orbit: 65000, phase: 4.6, radius: 8, gm: 150, spin: null, tilt: 0,
+  ...(OUTER ? [{ id: 'pluto', name: 'Pluto', parent: 'sun', orbit: 65000, phase: 4.6, radius: 8, gm: 150, spin: null, tilt: 0,
     tex: { map: '2k_ceres_fictional.jpg' }, atmo: null, landable: false, role: 'Chapter 5 fly-past (dwarf planet)' }] : []),
 ];
 
@@ -132,7 +132,7 @@ export const BODIES = (() => {
     const parent = b.parent ? byId[b.parent] : null;
     const body = {
       ...b,
-      ...(IS_CH5 && CH5_PHASES[b.id] !== undefined ? { phase: CH5_PHASES[b.id] } : {}),
+      ...(OUTER && CH5_PHASES[b.id] !== undefined ? { phase: CH5_PHASES[b.id] } : {}),
       period: parent ? orbitalPeriod(parent.gm, b.orbit) : Infinity,
       soi: parent ? soiRadius(b.orbit, b.gm, parent.gm) : Infinity,
     };
@@ -271,8 +271,9 @@ export const SPACE_LIGHT = Object.freeze({
 /** Save keys, per difficulty, matching the launcher convention (src/launcher/profile.js CHAPTERS). */
 export const STORE_KEYS_CH4 = Object.freeze({ 1: 'level4_voyage_europa_v1_L1', 4: 'level4_voyage_europa_v1' });
 export const STORE_KEYS_CH5 = Object.freeze({ 1: 'level5_rings_to_a_star_v1_L1', 4: 'level5_rings_to_a_star_v1' });
-/** This page's save keys: Chapter 5 runs on the same engine (chapter.js). */
-export const STORE_KEYS = IS_CH5 ? STORE_KEYS_CH5 : STORE_KEYS_CH4;
+export const STORE_KEYS_CH6 = Object.freeze({ 1: 'level6_long_trip_v1_L1', 4: 'level6_long_trip_v1' });
+/** This page's save keys: Chapters 5 and 6 run on the same engine (chapter.js). */
+export const STORE_KEYS = IS_CH6 ? STORE_KEYS_CH6 : IS_CH5 ? STORE_KEYS_CH5 : STORE_KEYS_CH4;
 
 /** Events the modules emit on the shared bus (main.js creates it). */
 export const EVENTS = Object.freeze({
@@ -361,7 +362,7 @@ export const FLIGHT_MODES = Object.freeze({
     // still points itself the right way and lands itself, so the flying is
     // hers at her own pace, and the Autopilot button (P) is there the moment
     // she wants a leg flown for her.
-    blurb: IS_CH5 ? 'The ship points itself the right way, so you just hold W when the banner says. A bigger tank, and the Autopilot button (P) flies a leg for you whenever you want.' : 'The ship points itself the right way and lands itself, so you just hold W when the banner says. A bigger tank, every rock marked, and the Autopilot button (P) flies a leg for you whenever you want.',
+    blurb: OUTER ? 'The ship points itself the right way, so you just hold W when the banner says. A bigger tank, and the Autopilot button (P) flies a leg for you whenever you want.' : 'The ship points itself the right way and lands itself, so you just hold W when the banner says. A bigger tank, every rock marked, and the Autopilot button (P) flies a leg for you whenever you want.',
     pathScale: 2, showGhost: true, autoAim: true, aimArrow: true,
     // Landings: lead playtest (Oct 2): "hard to stay in the green" - a
     // touchdown up to 2.5x the base speed is safe (was 2x).
@@ -394,7 +395,7 @@ export const FLIGHT_MODES = Object.freeze({
 export const FLIGHT_MODES_L1 = Object.freeze({
   easy: Object.freeze({
     id: 'easy', label: 'Easy', rank: 'Rookie',
-    blurb: IS_CH5 ? 'The ship turns itself the right way. You just hold W when it says. A huge fuel tank, and an Autopilot button (P) that flies for you.' : 'The ship turns itself the right way and lands itself. You just hold W when it says. A huge fuel tank, every rock marked, and an Autopilot button (P) that flies for you.',
+    blurb: OUTER ? 'The ship turns itself the right way. You just hold W when it says. A huge fuel tank, and an Autopilot button (P) that flies for you.' : 'The ship turns itself the right way and lands itself. You just hold W when it says. A huge fuel tank, every rock marked, and an Autopilot button (P) that flies for you.',
     pathScale: 3, showGhost: true, autoAim: true, aimArrow: true,
     // 2x Easy's fuel as RANGE, not tank mass: a tank twice as heavy would
     // make the ship sluggish and Moon landings much harder (fuel has mass).

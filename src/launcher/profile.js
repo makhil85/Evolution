@@ -108,6 +108,14 @@ export const CHAPTERS = [
     store: { 1: 'level5_rings_to_a_star_v1_L1', 4: 'level5_rings_to_a_star_v1' },
     isDone: (s) => s?.complete === true,
   },
+  {
+    n: 6,
+    title: 'The Long Trip',
+    blurb: 'Meet the crew, build a home inside the rock ship, then slingshot past the planets and the Sun towards the stars.',
+    href: 'chapter6.html',
+    store: { 1: 'level6_long_trip_v1_L1', 4: 'level6_long_trip_v1' },
+    isDone: (s) => s?.complete === true,
+  },
 ];
 
 /** localStorage, without letting private mode take the page down with it. */
@@ -234,6 +242,9 @@ export function resetEverything() {
     // Chapters 1-3: the Easy/Medium/Hard choice (src/play/modes.js). Missed
     // until 2026-09-30: after a reset the chooser never came back.
     'rocket_village_play_mode',
+    // Chapter 6: the stations done and the route planned (ch6/partB.js, ch6/partE.js).
+    'rocket_village_ch6_stations_L1', 'rocket_village_ch6_stations_L4',
+    'rocket_village_ch6_route_L1', 'rocket_village_ch6_route_L4',
   ]);
   for (const c of CHAPTERS) {
     const stores = typeof c.store === 'string' ? [c.store] : Object.values(c.store);
