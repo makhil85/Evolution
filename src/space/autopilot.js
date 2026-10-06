@@ -18,6 +18,7 @@
 import { t } from './level.js';
 import { IS_CH5 } from './chapter.js';
 import { toggleBar, paintToggle } from './hud/toggleBar.js';
+import { BODIES } from './contracts.js';
 
 const MANUAL_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyZ', 'KeyX', 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 
@@ -209,6 +210,46 @@ export function createAutopilot(game, { controls, hud }) {
     await wait(3.5);
   }
 
+  // --- tidying her orbit (lead, 2026-10-06) ------------------------------------------
+  // "After taking manual control and then turning on the autopilot, the
+  // autopilot calculates the correct trajectory." The banners it flies by
+  // assume a sensible orbit; after her own burns she can be on one that dips
+  // into the planet, or so stretched that no burn window ever shows. Then it
+  // first makes her orbit round at her present height round the body she is
+  // in (point along the needed change of velocity, hold W), and the banners
+  // take over from there. Never while landing, or in the Sun's pull.
+  let idleSince = null; // sim time the banner last gave nothing to fly by
+  function orbitFix() {
+    const G = game; const ship = G.ship;
+    const st = G.missions.step || {};
+    if (ship.landedOn || ship.soi === 'sun' || st.land) return null;
+    const b = BODIES[ship.soi]; const bs = G.states?.[ship.soi];
+    if (!b || !bs) return null;
+    const rx = ship.x - bs.x; const rz = ship.z - bs.z;
+    const vx = ship.vx - (bs.vx || 0); const vz = ship.vz - (bs.vz || 0);
+    const r = Math.hypot(rx, rz); const mu = b.gm;
+    const h = rx * vz - rz * vx; const en = (vx * vx + vz * vz) / 2 - mu / r;
+    const e = Math.sqrt(Math.max(0, 1 + (2 * en * h * h) / (mu * mu)));
+    const peri = (h * h) / mu / (1 + e);
+    const tooLow = peri < b.radius * 1.25;
+    // On a capture step, inside the target's zone and bound: that is the goal, leave it.
+    if (st.capture === ship.soi && en < 0 && !tooLow) return null;
+    const c = cueText();
+    const ordersSomething = /BURN NOW|hold W|Hold W|tap W|Brake|Too fast|window in|Let go|Ease off|Coast|On course|time warp|Looking|Escaping|Turn to point/.test(c);
+    if (ordersSomething) idleSince = null;
+    else if (idleSince === null) idleSince = ship.t;
+    // No banner for 20 s of flight, on a step that should have one (a transfer or a capture).
+    const lost = (st.transfer || st.capture) && idleSince !== null && ship.t - idleSince > 20;
+    if (!tooLow && !lost) return null;
+    // Aim for a round orbit at her height (at least 1.6 radii), same way round.
+    const rWant = Math.max(r, b.radius * 1.6);
+    const vc = Math.sqrt(mu / rWant); const sgn = h >= 0 ? 1 : -1;
+    const tx = (-rz / r) * vc * sgn; const tz = (rx / r) * vc * sgn;
+    const dvx = tx - vx; const dvz = tz - vz; const dv = Math.hypot(dvx, dvz);
+    if (dv < 0.05) { idleSince = null; return null; }
+    return { aim: Math.atan2(dvz, dvx), dv, why: tooLow ? 'low' : 'lost' };
+  }
+
   // --- one decision ---------------------------------------------------------------
   async function step() {
     if (game.paused || game.frozen || game.cinematic) { releaseAll(); await wait(0.3); return; }
@@ -241,6 +282,19 @@ export function createAutopilot(game, { controls, hud }) {
       return;
     }
 
+    // Her orbit first, when it needs tidying (see orbitFix).
+    const fix = orbitFix();
+    if (fix) {
+      key('Space', false);
+      const err = Math.atan2(Math.sin(fix.aim - G.ship.angle), Math.cos(fix.aim - G.ship.angle));
+      const brake = G.ship.angVel * 0.6;
+      key('KeyD', err - brake > 0.04);
+      key('KeyA', err - brake < -0.04);
+      key('KeyW', Math.abs(err) < 0.25);
+      G.bus.emit('warp-request', 0);
+      await frame();
+      return;
+    }
     const c = cueText();
     const burn = !!c && /BURN NOW|hold W|Hold W|tap W|Brake|Too fast/.test(c) && !/Let go|Ease off/.test(c);
     let aligned = true;

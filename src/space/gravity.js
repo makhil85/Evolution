@@ -8,9 +8,11 @@
 // catches the ship, it acts like only Earth pulls" (lead, 2026-10-05). Real
 // spacecraft feel the Earth AND the moving Moon the whole way.
 //
-// THE MODEL NOW. Inside a planet's system (its gravity zone), the planet and
-// ALL of its moons pull on her together, every step, with every moon moving
-// on its rail. Out in the Sun's pull it is the Sun alone, as before (the
+// THE MODEL NOW (2026-10-06). Inside a moon's zone, the moon alone pulls
+// (an exact Kepler orbit: captures and retro burns behave). In the rest of a
+// planet's zone - the transfer leg out to a moon - the planet and ALL of its
+// moons pull on her together, every step, with every moon moving on its
+// rail, so the Moon bends her path from far out. Out in the Sun's pull it is the Sun alone, as before (the
 // planets are far away there, and in-system the Sun's pull on her and on the
 // planet are nearly the same, so it cancels - see physics.js's header).
 //
@@ -55,7 +57,13 @@ function systemPlanet(id) {
 const SOURCES = {};
 for (const id of BODY_ORDER) {
   const P = systemPlanet(id);
-  if (!P || !MOONS[P]) { SOURCES[id] = null; continue; }
+  // Inside a moon's own zone ONLY the moon pulls (lead, 2026-10-06: "if you
+  // are near the Moon, ignore everything and only consider the Moon"): her
+  // path there is an exact ellipse round it, so a retro burn at the low
+  // point gives a clean, steady orbit instead of one the planet's tide keeps
+  // reshaping. The planet and its moons pull together only in the planet's
+  // zone outside every moon's zone: the transfer leg out to a moon.
+  if (!P || !MOONS[P] || P !== id) { SOURCES[id] = null; continue; }
   SOURCES[id] = [P, ...MOONS[P]].map((b) => ({ id: b, gm: BODIES[b].gm, isMoon: b !== P }));
 }
 
