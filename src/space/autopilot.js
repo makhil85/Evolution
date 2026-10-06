@@ -219,6 +219,7 @@ export function createAutopilot(game, { controls, hud }) {
   // in (point along the needed change of velocity, hold W), and the banners
   // take over from there. Never while landing, or in the Sun's pull.
   let idleSince = null; // sim time the banner last gave nothing to fly by
+  let lastFix = null; // tests: the last tidy-up it wanted ({aim, dv, why} or null)
   function orbitFix() {
     const G = game; const ship = G.ship;
     const st = G.missions.step || {};
@@ -284,6 +285,7 @@ export function createAutopilot(game, { controls, hud }) {
 
     // Her orbit first, when it needs tidying (see orbitFix).
     const fix = orbitFix();
+    lastFix = fix;
     if (fix) {
       key('Space', false);
       const err = Math.atan2(Math.sin(fix.aim - G.ship.angle), Math.cos(fix.aim - G.ship.angle));
@@ -367,6 +369,8 @@ export function createAutopilot(game, { controls, hud }) {
   return {
     get on() { return on; },
     set(v) { setOn(v); },
+    /** Test hook: the last orbit tidy-up it wanted, or null. */
+    get lastFix() { return lastFix; },
     /** Test hook: replace the per-frame wait (see `frame` above). */
     useFrame(fn) { frameFn = fn; },
   };
