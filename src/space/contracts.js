@@ -325,7 +325,10 @@ export const RENDER = Object.freeze({
  * ship lab so the girl in the canopy is readable. camera.js reads this.
  */
 export const CHASE_CAMERA = Object.freeze({
-  offset: Object.freeze([0.66, 0.61, 1.01]),
+  // Straight behind and a little above (lead, 2026-10-06: "the camera
+  // should always be behind the rocket ship"; it used to sit 32 degrees
+  // round to starboard, which made left and right turns read backwards).
+  offset: Object.freeze([0, 0.61, 1.21]),
   lookAt: Object.freeze([0, 0.1, -0.05]),
 });
 

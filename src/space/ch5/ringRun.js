@@ -115,16 +115,8 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
     scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0xcfd8ff, size: 1.6, sizeAttenuation: false })));
   }
 
-  // Ring dust: tiny ice all round her, streaming past (it is the rings, close up).
-  const DUST = 2200;
-  const dustPos = new Float32Array(DUST * 3);
-  const dustRand = (i) => { const x = Math.sin(i * 12.9898) * 43758.5453; return x - Math.floor(x); };
-  for (let i = 0; i < DUST; i++) {
-    dustPos.set([(dustRand(i) * 2 - 1) * 70, (dustRand(i + 0.5) * 2 - 1) * 14 - 4, -dustRand(i + 0.25) * 300], i * 3);
-  }
-  const dustGeo = new THREE.BufferGeometry(); dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
-  const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({ color: 0xdfe8f5, size: 1.6, sizeAttenuation: false, transparent: true, opacity: 0.7, depthWrite: false }));
-  scene.add(dust);
+  // No ring dust (lead, 2026-10-06): thousands of tiny points streaming past
+  // hid the ice she has to shoot. Only the chunks and boulders move.
 
   // Her ship joins this scene for the run (put back when it ends).
   const shipParent = shipView.group.parent;
@@ -226,20 +218,12 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
       m.material.opacity = Math.max(0, m.userData.life / 0.9);
       if (m.userData.life <= 0) { scene.remove(m); m.material.dispose(); bursts.splice(i, 1); }
     }
-    // Ring dust streams past at her speed.
-    const p = dustGeo.attributes.position;
-    for (let i = 0; i < DUST; i++) {
-      let z = p.getZ(i) + run.level.speed * dt;
-      if (z > 20) z -= 320;
-      p.setZ(i, z);
-    }
-    p.needsUpdate = true;
     // Chase camera: behind and a little above, leaning with her.
     camera.position.set(s.x * 0.7, s.y * 0.7 + 3.6, 12.5 + s.z * 0.6);
     camera.up.set(-s.vx * 0.004, 1, 0).normalize();
     camera.lookAt(s.x * 0.85, s.y * 0.8 + 0.6, -30);
-    // Hit flash: the screen edge glows red for a moment.
-    scene.background.setRGB(0.008 + s.hitFlash * 0.25, 0.012, 0.04);
+    // (No full-screen red flash on a hit: flashing the whole background read
+    // as the screen flickering. The bump counter on the panel says it.)
     panel.set(run);
   }
 
@@ -289,7 +273,7 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
       shipView.setTurn(0);
       for (const m of meshes.values()) m.geometry.dispose();
       for (const m of bursts) m.material.dispose();
-      [iceMatSmall, iceMatBig, boltGeo, boltMat, burstGeo, dustGeo, satMat, ringTex].forEach((x) => x.dispose());
+      [iceMatSmall, iceMatBig, boltGeo, boltMat, burstGeo, satMat, ringTex].forEach((x) => x.dispose());
       rings.dispose?.();
     },
   };

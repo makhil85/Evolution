@@ -27,7 +27,10 @@ function legSteps(game, { from, to, act, say, beat, ids }) {
       id: ids.leave, act,
       title: t(`Leave ${From}`, `Leave ${From}`),
       objective: t(`Follow the arrow: fly the same way ${From} is moving and hold W until your path breaks free of ${From}’s pull.`, `Follow the arrow and hold W to leave ${From}.`),
-      markers: [to],
+      // No marker on the next planet while she leaves: it is lined up only
+      // once she is out (lineup.js), and a distance shown before that jumped
+      // the moment she escaped, as if her burn had been ignored (lead, 2026-10-06).
+      markers: [],
       aim: 'with-body',
       escape: true,
       enter() { game.target = to; },
@@ -137,7 +140,10 @@ export function partBSteps(game) {
       id: 'c5_leave_neptune', act: 3,
       title: t('Leave Neptune', 'Leave Neptune'),
       objective: t('Follow the arrow: fly the same way Neptune is moving and hold W until your path breaks free of its pull.', 'Follow the arrow and hold W to leave Neptune.'),
-      markers: ['pluto'],
+      // No marker on the next planet while she leaves: it is lined up only
+      // once she is out (lineup.js), and a distance shown before that jumped
+      // the moment she escaped, as if her burn had been ignored (lead, 2026-10-06).
+      markers: [],
       aim: 'with-body',
       escape: true,
       enter() { game.target = 'pluto'; },

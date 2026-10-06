@@ -6,9 +6,8 @@
 // she is.
 //
 // Three modes, cycled with C:
-//   chase - CHASE_CAMERA from the contract: behind, above and 32 degrees round
-//           to starboard, the angle tuned in the ship lab so the girl in the
-//           canopy is readable. It swings round as she turns.
+//   chase - CHASE_CAMERA from the contract: straight behind and a little
+//           above. It swings round behind her as she turns.
 //   orbit - free look around the ship; does not follow her heading
 //   top   - straight down onto the orbital plane: the best view for reading
 //           the predicted path, because the physics IS this plane
@@ -28,7 +27,7 @@ const CHASE_OFFSET = new THREE.Vector3(...CHASE_CAMERA.offset);
 const CHASE_LOOK = new THREE.Vector3(...CHASE_CAMERA.lookAt);
 const CHASE_LEN = CHASE_OFFSET.distanceTo(CHASE_LOOK);
 const MIN_DIST = CHASE_LEN * 0.55;
-const MAX_DIST = 9000;
+const MAX_DIST = 20000; // a whole Saturn system from above (its zone is 6,000 u)
 
 const UP = new THREE.Vector3(0, 1, 0);
 const tmpPos = new THREE.Vector3();

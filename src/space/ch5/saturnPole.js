@@ -13,48 +13,120 @@ import { buildOverlay, blendCamera, waitForSkip, ease } from '../cinematics.js';
 const HEX_R = 0.27; // circumradius, planet radii
 const BAND = 0.022; // band half-width, planet radii
 
+const CAP = 0.46; // the painted polar cap reaches this far from the axis, planet radii
+
+/**
+ * The polar cap painted on a canvas, seen from straight above the pole
+ * (lead, 2026-10-06: "make the Saturn hexagon pole more realistic, right now
+ * it looks very fake"). After Cassini's pictures: Saturn's golden bands
+ * darken towards the pole into a blue-grey cap; the hexagon is a jet stream,
+ * a soft, wavy, streaky band rather than a drawn line; inside it the clouds
+ * curl in spiral lanes to a dark eye with a bright rim. The edge fades out
+ * so the cap melts into the planet's own texture.
+ */
+function paintCap(size = 1024) {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = size;
+  const c = cv.getContext('2d');
+  const m = size / 2; const px = m / CAP; // pixels per planet radius
+  let seed = 7;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  c.translate(m, m);
+  // Base: golden at the edge, deepening to blue-grey towards the pole.
+  const base = c.createRadialGradient(0, 0, 0, 0, 0, m);
+  base.addColorStop(0, 'rgba(58,82,104,1)');
+  base.addColorStop(HEX_R / CAP * 0.9, 'rgba(78,104,124,1)');
+  base.addColorStop(HEX_R / CAP * 1.25, 'rgba(150,146,126,0.95)');
+  base.addColorStop(0.82, 'rgba(198,172,128,0.75)');
+  base.addColorStop(1, 'rgba(210,180,130,0)');
+  c.fillStyle = base; c.beginPath(); c.arc(0, 0, m, 0, Math.PI * 2); c.fill();
+  // Fine cloud bands round the pole (thin wavy rings, light and dark).
+  for (let i = 0; i < 140; i++) {
+    const r = (0.06 + rnd() * (CAP - 0.08)) * px;
+    const fade = Math.min(1, (m - r) / (m * 0.25));
+    c.strokeStyle = rnd() < 0.5 ? `rgba(235,225,200,${0.05 * fade})` : `rgba(30,40,55,${0.06 * fade})`;
+    c.lineWidth = 1 + rnd() * 3;
+    c.beginPath();
+    const a0 = rnd() * Math.PI * 2; const span = 0.6 + rnd() * 2.5; const wob = rnd() * 0.012 * px;
+    for (let k = 0; k <= 40; k++) { const a = a0 + (span * k) / 40; const rr = r + Math.sin(a * 6 + i) * wob; c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+    c.stroke();
+  }
+  // The hexagon jet stream: many soft, slightly wavy strokes on the six-sided path.
+  const hexPath = (rr, wob, ph) => {
+    c.beginPath();
+    for (let k = 0; k <= 6 * 24; k++) {
+      const side = Math.floor(k / 24); const u = (k % 24) / 24;
+      const a0 = (side / 6) * Math.PI * 2; const a1 = ((side + 1) / 6) * Math.PI * 2;
+      let x = Math.cos(a0) * rr + (Math.cos(a1) - Math.cos(a0)) * rr * u;
+      let y = Math.sin(a0) * rr + (Math.sin(a1) - Math.sin(a0)) * rr * u;
+      const w = 1 + Math.sin(k * 0.9 + ph) * wob;
+      x *= w; y *= w;
+      if (k === 0) c.moveTo(x, y); else c.lineTo(x, y);
+    }
+    c.closePath();
+  };
+  for (let i = 0; i < 26; i++) {
+    const off = (rnd() - 0.5) * BAND * 2.2;
+    hexPath((HEX_R + off) * px, 0.006 + rnd() * 0.01, rnd() * 6);
+    const light = rnd() < 0.55;
+    c.strokeStyle = light ? `rgba(196,206,214,${0.10 + rnd() * 0.08})` : `rgba(52,70,92,${0.12 + rnd() * 0.1})`;
+    c.lineWidth = (0.004 + rnd() * 0.012) * px;
+    c.stroke();
+  }
+  // Small bright storm clouds caught in the jet.
+  for (let i = 0; i < 60; i++) {
+    const side = Math.floor(rnd() * 6); const u = rnd();
+    const a0 = (side / 6) * Math.PI * 2; const a1 = ((side + 1) / 6) * Math.PI * 2;
+    const rr = (HEX_R + (rnd() - 0.5) * BAND * 2) * px;
+    const x = Math.cos(a0) * rr + (Math.cos(a1) - Math.cos(a0)) * rr * u;
+    const y = Math.sin(a0) * rr + (Math.sin(a1) - Math.sin(a0)) * rr * u;
+    const g = c.createRadialGradient(x, y, 0, x, y, (0.004 + rnd() * 0.008) * px);
+    g.addColorStop(0, 'rgba(240,240,232,0.55)'); g.addColorStop(1, 'rgba(240,240,232,0)');
+    c.fillStyle = g; c.beginPath(); c.arc(x, y, 0.012 * px, 0, Math.PI * 2); c.fill();
+  }
+  // Spiral cloud lanes curling in to the eye.
+  for (let i = 0; i < 70; i++) {
+    const a0 = rnd() * Math.PI * 2; const r0 = (0.05 + rnd() * (HEX_R - 0.07)) * px;
+    c.strokeStyle = rnd() < 0.5 ? 'rgba(150,175,190,0.10)' : 'rgba(25,38,52,0.12)';
+    c.lineWidth = 1 + rnd() * 2.5;
+    c.beginPath();
+    for (let k = 0; k <= 30; k++) { const a = a0 + k * 0.06; const rr = r0 * Math.exp(-k * 0.012); c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+    c.stroke();
+  }
+  // The eye: dark, with a bright ring of cloud round it.
+  const eyeR = 0.05 * px;
+  const eye = c.createRadialGradient(0, 0, 0, 0, 0, eyeR * 1.6);
+  eye.addColorStop(0, 'rgba(18,26,38,0.95)'); eye.addColorStop(0.55, 'rgba(30,44,60,0.85)');
+  eye.addColorStop(0.72, 'rgba(205,214,220,0.6)'); eye.addColorStop(1, 'rgba(120,145,165,0)');
+  c.fillStyle = eye; c.beginPath(); c.arc(0, 0, eyeR * 1.6, 0, Math.PI * 2); c.fill();
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  return tex;
+}
+
 /** The hexagon and vortex, in Saturn's spin frame (unscaled, real units). */
 export function buildHexagon(radius, flat) {
   const g = new THREE.Group();
   g.name = 'saturn-hexagon';
-  // The spheroid's height at distance rho from the axis, just above the clouds.
-  const yAt = (rho) => radius * flat * Math.sqrt(Math.max(0, 1 - (rho / radius) ** 2)) * 1.004;
-  const pos = [];
-  const SEG = 8; // per side, so the band follows the curve of the planet
-  const corner = (k, rr) => { const a = (k / 6) * Math.PI * 2; return [Math.cos(a) * rr, Math.sin(a) * rr]; };
-  for (let k = 0; k < 6; k++) {
-    for (let s = 0; s < SEG; s++) {
-      const quad = [];
-      for (const [u, edge] of [[s / SEG, -1], [(s + 1) / SEG, -1], [(s + 1) / SEG, 1], [s / SEG, 1]]) {
-        const rr = radius * (HEX_R + edge * BAND);
-        const [x0, z0] = corner(k, rr); const [x1, z1] = corner(k + 1, rr);
-        const x = x0 + (x1 - x0) * u; const z = z0 + (z1 - z0) * u;
-        quad.push([x, yAt(Math.hypot(x, z)), z]);
-      }
-      pos.push(...quad[0], ...quad[1], ...quad[2], ...quad[0], ...quad[2], ...quad[3]);
-    }
+  // A cap of the (flattened) sphere just above the clouds, mapped from above.
+  const theta = Math.asin(CAP);
+  const geo = new THREE.SphereGeometry(radius * 1.003, 128, 24, 0, Math.PI * 2, 0, theta);
+  const p = geo.attributes.position; const uv = geo.attributes.uv;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i); const z = p.getZ(i);
+    uv.setXY(i, 0.5 + x / (2 * CAP * radius * 1.003), 0.5 - z / (2 * CAP * radius * 1.003));
+    p.setY(i, p.getY(i) * flat);
   }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geo.computeVertexNormals();
-  const band = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
-    color: 0x9db4d6, transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide,
+  // Self-lit: the Sun lies in the planet's equator plane here, so the pole
+  // the cutscene looks down on is all but dark under real lighting (Cassini
+  // saw it in northern summer). Painted at about daylit Saturn's brightness.
+  const cap = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+    map: paintCap(), transparent: true, depthWrite: false, color: new THREE.Color(0.92, 0.92, 0.92),
   }));
-  g.add(band);
-  // The calmer inside, a shade bluer, and the dark eye of the vortex.
-  const inner = new THREE.Mesh(new THREE.CircleGeometry(radius * (HEX_R - BAND) * 0.98, 6), new THREE.MeshBasicMaterial({
-    color: 0x6f8db3, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide,
-  }));
-  inner.rotation.x = -Math.PI / 2;
-  inner.position.y = yAt(radius * 0.12);
-  g.add(inner);
-  const eye = new THREE.Mesh(new THREE.CircleGeometry(radius * 0.045, 24), new THREE.MeshBasicMaterial({
-    color: 0x1d2a3d, transparent: true, opacity: 0.75, depthWrite: false, side: THREE.DoubleSide,
-  }));
-  eye.rotation.x = -Math.PI / 2;
-  eye.position.y = yAt(0) * 1.0005;
-  g.add(eye);
-  for (const m of g.children) m.renderOrder = 2;
+  cap.renderOrder = 2;
+  g.add(cap);
   return g;
 }
 
