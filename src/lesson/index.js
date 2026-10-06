@@ -17,6 +17,7 @@ export const LESSON_LIST = [
   { id: 'ch5_momentum', chapter: 5, title: ['Bumps in the rings: momentum', 'Bumps in the rings'], load: () => import('./lessons/ch5.js').then((m) => m.LESSON_5AA) },
   { id: 'ch5_neptune', chapter: 5, title: ['Neptune, the last giant', 'Neptune'], load: () => import('./lessons/ch5b.js').then((m) => m.LESSON_5B) },
   { id: 'ch5_fusion', chapter: 5, title: ['What makes a star shine?', 'How the Sun shines'], load: () => import('./lessons/ch5c.js').then((m) => m.LESSON_5C) },
+  { id: 'ch6_tiny_earth', chapter: 6, title: ['A ship that is a tiny Earth', 'A tiny Earth'], load: () => import('./lessons/ch6a.js').then((m) => m.LESSON_6A) },
   { id: 'ch6_slingshot', chapter: 6, title: ['Stealing speed', 'Get speed from a planet'], load: () => import('./lessons/ch6b.js').then((m) => m.LESSON_6B) },
   { id: 'ch6_light', chapter: 6, title: ['How fast is light?', 'How fast is light?'], load: () => import('./lessons/ch6c.js').then((m) => m.LESSON_6C) },
 ];

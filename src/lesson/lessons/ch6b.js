@@ -215,7 +215,7 @@ function drawSunDive(ctx, T) {
 export const LESSON_6B = {
   id: 'ch6_slingshot',
   eyebrow: ['Stealing speed', 'Get speed from a planet'],
-  narrator: ['Signal bot', 'Signal bot'],
+  narrator: ['Echo (signal bot)', 'Echo the robot'],
   tryIt: ['Next: fly the slingshots on your route. Press at just the right moment!', 'Next: fly past the planets! Press at the right time.'],
   films: [
     {

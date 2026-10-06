@@ -139,7 +139,7 @@ function drawNearestStar(ctx, T) {
 export const LESSON_6C = {
   id: 'ch6_light',
   eyebrow: ['How fast is light?', 'How fast is light?'],
-  narrator: ['Signal bot', 'Signal bot'],
+  narrator: ['Echo (signal bot)', 'Echo the robot'],
   tryIt: ['Next: watch the dial. From now on our speed is in percent of light.', 'Next: watch the speed dial!'],
   films: [
     {

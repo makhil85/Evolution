@@ -17,6 +17,7 @@ let passed = 0;
 const ok = (name, fn) => { fn(); passed += 1; console.log(`  ok  ${name}`); };
 
 const R = await import('../src/space/ch6/routes.js');
+const await_crew = await import('../src/space/ch6/crewInfo.js');
 const { ROUTES, STOPS, CLOSE_LEVELS, FUEL_BUDGET, GOAL_BOOST, START_SPEED } = R;
 
 console.log('routes');
@@ -81,6 +82,52 @@ ok('percent of light and years to a star', () => {
   assert.ok(Math.abs(R.yearsAt(4.4, R.CRUISE_PERCENT) - 44) < 1e-9);
 });
 
+console.log('stations');
+const S = await import('../src/space/ch6/stationsLogic.js');
+ok('shield: each metre stops half; the thin spots can all be patched with the blocks given, with a little spare', () => {
+  assert.equal(S.raysThrough(0), 100); assert.equal(S.raysThrough(1), 50); assert.equal(S.raysThrough(3), 12.5);
+  const sh = S.createShield();
+  assert.ok(!S.shieldDone(sh));
+  sh.cells.forEach((m, i) => { while (sh.cells[i] < S.SHIELD.safe) assert.ok(S.patchCell(sh, i)); });
+  assert.ok(S.shieldDone(sh)); assert.equal(sh.blocks, S.SHIELD.spare);
+  assert.ok(S.worstLeak(sh) < 2);
+});
+ok('oxygen: exactly one mix makes enough for five inside the power', () => {
+  assert.equal(S.oxygenNeed(), 2750);
+  assert.deepEqual(S.oxygenAnswers(), [{ lamps: 6, split: 2 }]);
+  assert.ok(!S.oxygenTotals({ lamps: 6, split: 3 }).inPower); // more splitter = too much power
+  assert.ok(!S.oxygenTotals({ lamps: 6, split: 1 }).enough);
+});
+ok('water: grit first, UV last; 98% back, a tank lasts 500 days', () => {
+  assert.equal(S.waterProblem(['grit', 'bio', 'uv']), null);
+  for (const o of [['bio', 'grit', 'uv'], ['grit', 'uv', 'bio'], ['uv', 'bio', 'grit'], ['grit', 'grit', 'uv']]) assert.ok(S.waterProblem(o), o.join());
+  assert.equal(S.recycledPercent(), 98); assert.equal(S.tankDays(), 500);
+});
+ok('food: a farm of 10-12 m² feeds five; too small or too big fails', () => {
+  assert.equal(S.foodNeed(), 5);
+  for (const f of S.farmAnswers()) { const a = f.w * f.l; assert.ok(a >= 10 && a <= 12); }
+  assert.ok(!S.farmTotals({ w: 3, l: 3 }).ok); assert.ok(!S.farmTotals({ w: 4, l: 4 }).ok);
+});
+ok('energy: the minimum shares (1/3, 1/4, 1/6, 1/4) use exactly the 12 units', () => {
+  const mins = Object.fromEntries(S.GRID.systems.map((x) => [x.id, x.min]));
+  assert.ok(S.gridTotals(mins).ok);
+  assert.deepEqual(S.GRID.systems.map((x) => S.fraction(x.min)), ['1/3', '1/4', '1/6', '1/4']);
+  assert.ok(!S.gridTotals({ ...mins, air: 3, engine: 4 }).ok);
+  assert.ok(S.gridTotals({ ...mins, engine: 4 }).over);
+});
+ok('pack: only what is needed, under 10 t (8.8 t); junk or a missing need fails', () => {
+  const need = S.PACK_CARDS.filter((c) => c.need).map((c) => c.id);
+  assert.equal(S.packNeededMass(), 8.8);
+  assert.ok(S.packTotals(need).ok);
+  assert.ok(!S.packTotals([...need, 'piano']).ok);
+  assert.ok(!S.packTotals(need.slice(1)).ok);
+});
+ok('six stations, each led by a crewmate', () => {
+  assert.equal(S.STATIONS.length, 6);
+  const { CREW_INFO } = await_crew;
+  for (const st of S.STATIONS) assert.ok(CREW_INFO[st.lead], st.id);
+});
+
 console.log('questions');
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
 try {
@@ -129,10 +176,27 @@ try {
   });
 
   console.log('steps');
-  const E = await vite.ssrLoadModule('/src/space/ch6/partE.js');
-  const fakeGame = { hud: {}, bus: null };
-  const steps = E.partESteps(fakeGame);
-  ok('Part E steps: unique c6_ ids, an enter each, and every beat has a question', () => {
+  const Ch6 = await vite.ssrLoadModule('/src/space/ch6/steps.js');
+  const QB = await vite.ssrLoadModule('/src/space/ch6/questions.partB.js');
+  const fakeGame = { hud: {}, bus: null, scene: { add() {}, remove() {} }, ship: { x: 60000, z: 0 } };
+  const steps = Ch6.ch6Steps(fakeGame);
+  Object.assign(L4, QB.partBBank(4));
+  ok('station questions: numbers re-derived from the station tables, both Levels', () => {
+    const B4 = QB.partBBank(4); const B1 = QB.partBBank(1);
+    for (const bank of [B4, B1]) for (const q of Object.values(bank)) {
+      if (q.type === 'choice') assert.equal(q.choices.filter((c) => c.correct).length, 1, q.id);
+      else for (const a of q.answers) assert.ok(checkSpaceAnswer(q, a), `${q.id}: ${a}`);
+    }
+    assert.ok(checkSpaceAnswer(B4.c6_shield_half, String(160 / 16)));
+    assert.ok(!checkSpaceAnswer(B4.c6_shield_half, '0'));
+    assert.ok(checkSpaceAnswer(B4.c6_oxygen_day, String(S.oxygenNeed() * 7)));
+    assert.ok(checkSpaceAnswer(B4.c6_water_percent, String(S.tankDays())));
+    assert.ok(checkSpaceAnswer(B4.c6_farm_area, String(S.foodNeed() / S.FOOD.perSquareMetre)));
+    assert.ok(checkSpaceAnswer(B4.c6_grid_fraction, '1/3'));
+    assert.ok(checkSpaceAnswer(B4.c6_pack_mass, String(+(S.PACK_LIMIT - S.packNeededMass()).toFixed(1))));
+    for (const beat of Object.values(QB.STATION_BEAT)) assert.ok(Object.values(B4).some((q) => q.beat === beat), beat);
+  });
+  ok('the whole chain: unique c6_ ids, an enter each, and every beat has a question', () => {
     const ids = steps.map((st) => st.id);
     assert.equal(new Set(ids).size, ids.length);
     for (const st of steps) {
@@ -141,8 +205,10 @@ try {
       assert.ok(typeof st.title === 'string' && st.title, st.id);
       if (st.beat) assert.ok(Object.values(L4).some((q) => q.beat === st.beat), `${st.id}: no question for ${st.beat}`);
     }
-    // every question is asked somewhere in the chain
-    for (const q of Object.values(L4)) assert.ok(steps.some((st) => st.beat === q.beat), `${q.id} never asked`);
+    // every question is asked somewhere: a step's beat, or after a station
+    const stationBeats = new Set(Object.values(QB.STATION_BEAT));
+    for (const q of Object.values(L4)) assert.ok(steps.some((st) => st.beat === q.beat) || stationBeats.has(q.beat), `${q.id} never asked`);
+    assert.deepEqual(steps.slice(0, 3).map((st) => st.id), ['c6_meet_crew', 'c6_habitat', 'c6_lesson_tiny_earth']);
     assert.equal(steps.at(-1).id, 'c6_end');
   });
 

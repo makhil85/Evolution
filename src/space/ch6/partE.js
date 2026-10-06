@@ -17,14 +17,15 @@ import { LESSON_6C } from '../../lesson/lessons/ch6c.js';
 import { playRoutePlanner } from './routePlanner.js';
 import { playSlingshots } from './slingshot.js';
 import { playDriveOn } from './driveOn.js';
+import { who } from './crewInfo.js';
 import { routeById, bestPlan, planTotals, CRUISE_PERCENT, START_SPEED, STOPS } from './routes.js';
 
-/** Who says what. Steps 1-12 named the crew: put their names here when joining. */
+/** Who says what (names from crewInfo.js). */
 export const CREW = {
-  biologist: 'Biologist',
-  doctor: 'Doctor',
-  builder: 'Builder bot',
-  signal: 'Signal bot',
+  biologist: who('biologist'),
+  doctor: who('doctor'),
+  builder: who('builder'),
+  signal: who('signal'),
 };
 
 const ACT_E = 6;
