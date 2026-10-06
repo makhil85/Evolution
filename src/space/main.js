@@ -1535,10 +1535,12 @@ function tick(realDt, render = true) {
   // Leaving Jupiter's or Saturn's system (lead, 2026-10-06): a top-down view
   // of roughly the whole system, so she sees her path climb out past the
   // moons. Back to the view she had once she is out (or the step changes).
-  const wideEscape = !!game.escapeStep && (ship.soi === 'jupiter' || ship.soi === 'saturn') && !ship.landedOn && !game.cinematic;
+  // A moon's zone on the way out still counts as the system (its planet).
+  const sysOf = ship.soi !== 'sun' && BODIES[ship.soi] ? (BODIES[ship.soi].parent === 'sun' ? ship.soi : BODIES[ship.soi].parent) : null;
+  const wideEscape = !!game.escapeStep && (sysOf === 'jupiter' || sysOf === 'saturn') && !ship.landedOn && !game.cinematic;
   if (wideEscape !== escapeView.on) {
     escapeView.on = wideEscape;
-    if (wideEscape) { escapeView.mode = flightCam.mode; flightCam.setMode('top'); flightCam.setDistance(BODIES[ship.soi].soi * 1.5); }
+    if (wideEscape) { escapeView.mode = flightCam.mode; flightCam.setMode('top'); flightCam.setDistance(BODIES[sysOf].soi * 1.5); }
     else { flightCam.setMode(escapeView.mode || 'chase'); flightCam.resetZoom(); }
   }
   // Time warp: the camera holds its direction (her path and the planet

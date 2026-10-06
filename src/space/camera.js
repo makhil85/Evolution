@@ -80,29 +80,22 @@ export function createFlightCamera({ camera, baseFov }) {
     shake(amount = 0.15) { shake = Math.max(shake, amount); },
 
     /**
-     * @param {{ dt: number, yaw: number, mouse: {dx,dy,wheel,dragging},
-     *           focusYaw?: number, focusWeight?: number }} f
-     *   yaw         - the ship group's rotation.y (so CHASE_CAMERA's ship-frame
-     *                 offset can be rotated exactly as the ship is)
-     *   focusYaw    - the same kind of yaw, but pointing at the planet she is
-     *                 near
-     *   focusWeight - 0..1, how much the chase camera turns toward it
-     *   hold        - keep the chase direction still (time warp)
-     *   follow      - swing-round rate behind her, 1/s (default 2.4)
+     * @param {{ dt: number, yaw: number, mouse: {dx,dy,wheel,dragging} }} f
+     *   yaw    - the ship group's rotation.y (so CHASE_CAMERA's ship-frame
+     *            offset can be rotated exactly as the ship is)
+     *   hold   - keep the chase direction still (time warp)
+     *   follow - swing-round rate behind her, 1/s (default 2.4)
      *
-     * WHY THE FOCUS. The physics is flat, so in a low orbit the planet is never
-     * "below" her: it is beside her, 90 degrees off her heading, and a camera
-     * that only looks where she is going never shows it. Near a big planet
-     * the camera turns part of the way toward it, so the child sees Earth
-     * rolling past beside her ship, which is the whole point of being there.
+     * The chase view stays straight behind her (lead, 2026-10-06); it no
+     * longer turns toward a nearby planet by itself.
      */
-    update({ dt, yaw, mouse, focusYaw = 0, focusWeight = 0, hold = false, follow = 2.4 }) {
+    update({ dt, yaw, mouse, hold = false, follow = 2.4 }) {
       if (mouse.wheel) {
         targetDistance = THREE.MathUtils.clamp(targetDistance * Math.exp(mouse.wheel * 0.0012), MIN_DIST, MAX_DIST);
       }
       distance += (targetDistance - distance) * (1 - Math.exp(-dt * 8));
 
-      const aimYaw = focusWeight > 0 ? yaw + wrapAngle(focusYaw - yaw) * focusWeight : yaw;
+      const aimYaw = yaw;
       if (smoothedYaw === null) smoothedYaw = aimYaw;
       // hold: time warp - keep the view still (see main.js); follow: how fast
       // the chase view swings round behind her (gentler on the autopilot).

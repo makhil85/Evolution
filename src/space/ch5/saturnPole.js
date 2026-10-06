@@ -130,12 +130,14 @@ export function buildHexagon(radius, flat) {
   return g;
 }
 
-/** Hang the hexagon on Saturn (once). */
+/** Hang the hexagon on Saturn (once). Hidden until the pole pass shows it:
+ *  the cap lights itself, so left on it would glow on Saturn's night side. */
 export function ensureHexagon(game) {
   if (game._hexagon) return game._hexagon;
   const parts = game.bodies?.parts?.('saturn');
   if (!parts) return null;
   const hex = buildHexagon(BODIES.saturn.radius, parts.flat);
+  hex.visible = false;
   parts.spin.add(hex);
   game._hexagon = hex;
   return hex;
@@ -148,7 +150,8 @@ export function ensureHexagon(game) {
  */
 export function playPolePass(game) {
   const { shipView } = game;
-  ensureHexagon(game);
+  const hex = ensureHexagon(game);
+  if (hex) hex.visible = true;
   const overlay = buildOverlay({ eyebrow: 'Saturn', title: 'The hexagon storm', sub: 'Over the north pole', startBlack: false });
   document.body.classList.add('in-cinematic');
   game.controls.setEnabled(false);
@@ -203,6 +206,7 @@ export function playPolePass(game) {
   };
 
   return done.finally(() => {
+    if (hex) hex.visible = false;
     shipView.group.position.set(0, 0, 0);
     shipView.setThrottle(0);
     skip.dispose();
