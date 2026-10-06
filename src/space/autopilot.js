@@ -67,6 +67,7 @@ export function createAutopilot(game, { controls, hud }) {
       if (!loopRunning) loop();
     } else {
       releaseAll();
+      game.aimOverride = null;
       game.bus.emit('warp-request', 0);
       if (why) hud.toast(why, { kind: 'info', ms: 2600 });
     }
@@ -218,14 +219,19 @@ export function createAutopilot(game, { controls, hud }) {
   // first makes her orbit round at her present height round the body she is
   // in (point along the needed change of velocity, hold W), and the banners
   // take over from there. Never while landing, or in the Sun's pull.
-  let idleSince = null; // sim time the banner last gave nothing to fly by
+  // When the banner last went blank, in REAL seconds (sim time races under
+  // the warp the autopilot itself asks for), and on which step: a new step
+  // starts the count again.
+  let idleSince = null;
+  let idleStep = null;
   let lastFix = null; // tests: the last tidy-up it wanted ({aim, dv, why} or null)
   function orbitFix() {
     const G = game; const ship = G.ship;
     const st = G.missions.step || {};
-    if (ship.landedOn || ship.soi === 'sun' || st.land) return null;
+    if (st.id !== idleStep) { idleStep = st.id; idleSince = null; }
+    if (ship.landedOn || ship.soi === 'sun' || st.land) { idleSince = null; return null; }
     const b = BODIES[ship.soi]; const bs = G.states?.[ship.soi];
-    if (!b || !bs) return null;
+    if (!b || !bs) { idleSince = null; return null; }
     const rx = ship.x - bs.x; const rz = ship.z - bs.z;
     const vx = ship.vx - (bs.vx || 0); const vz = ship.vz - (bs.vz || 0);
     const r = Math.hypot(rx, rz); const mu = b.gm;
@@ -234,13 +240,13 @@ export function createAutopilot(game, { controls, hud }) {
     const peri = (h * h) / mu / (1 + e);
     const tooLow = peri < b.radius * 1.25;
     // On a capture step, inside the target's zone and bound: that is the goal, leave it.
-    if (st.capture === ship.soi && en < 0 && !tooLow) return null;
+    if (st.capture === ship.soi && en < 0 && !tooLow) { idleSince = null; return null; }
     const c = cueText();
-    const ordersSomething = /BURN NOW|hold W|Hold W|tap W|Brake|Too fast|window in|Let go|Ease off|Coast|On course|time warp|Looking|Escaping|Turn to point/.test(c);
-    if (ordersSomething) idleSince = null;
-    else if (idleSince === null) idleSince = ship.t;
-    // No banner for 20 s of flight, on a step that should have one (a transfer or a capture).
-    const lost = (st.transfer || st.capture) && idleSince !== null && ship.t - idleSince > 20;
+    // Any banner at all counts as something to fly by.
+    if (c.trim()) idleSince = null;
+    else if (idleSince === null) idleSince = performance.now();
+    // No banner for 20 real seconds, on a step that should have one (a transfer or a capture).
+    const lost = !!(st.transfer || st.capture) && idleSince !== null && performance.now() - idleSince > 20000;
     if (!tooLow && !lost) return null;
     // Aim for a round orbit at her height (at least 1.6 radii), same way round.
     const rWant = Math.max(r, b.radius * 1.6);
@@ -286,6 +292,9 @@ export function createAutopilot(game, { controls, hud }) {
     // Her orbit first, when it needs tidying (see orbitFix).
     const fix = orbitFix();
     lastFix = fix;
+    // Easy's steering help steers to game.aimOverride while a fix is on, so
+    // it helps the fix instead of turning her back to the step's heading.
+    game.aimOverride = fix ? fix.aim : null;
     if (fix) {
       key('Space', false);
       const err = Math.atan2(Math.sin(fix.aim - G.ship.angle), Math.cos(fix.aim - G.ship.angle));

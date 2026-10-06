@@ -414,6 +414,8 @@ function buildMarkers(states) {
 
 /** Heading (physics angle) the current step wants, or null. */
 function aimHeading(states) {
+  // The autopilot tidying her orbit (autopilot.js orbitFix) points her itself.
+  if (game.aimOverride != null) return game.aimOverride;
   const hint = game.aimHint;
   if (!hint) return null;
   const rel = ship.soi === 'sun' || !states[ship.soi] ? { vx: ship.vx, vz: ship.vz } : { vx: ship.vx - states[ship.soi].vx, vz: ship.vz - states[ship.soi].vz };
