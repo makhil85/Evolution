@@ -26,16 +26,16 @@ them (`scripts/test-ch6-*.mjs`).
 | # | Step | Check |
 |---|---|---|
 | 1 | Page, chapter switch, save keys, start, launcher card, Part E playable | DONE: npm test, page boots into Part E |
-| 2 | Rock B beside her in flight (the Ch5 rock ship model), riding with her | screenshot |
-| 3 | The crew: Biologist (kid), Doctor (kid), Builder bot, Signal bot: 3-D figures and dialogue names | screenshot |
-| 4 | Opening: the supply ship from Earth docks at the rock, title, the crew say hello | cutscene frames |
-| 5 | The habitat: walk inside the rock ship (shield wall, air, water, farm, power core, store, crew quarters); a station at each part; the crewmate who leads it stands there | screenshot, walk + E |
-| 6 | Station: Shield check (patch thin spots; each metre stops half) | logic test + card |
-| 7 | Station: Oxygen (algae lamps + ice splitter vs what the crew breathes) | logic test + card |
-| 8 | Station: Water loop (route used water through the filters; % recycled) | logic test + card |
-| 9 | Station: Food (plan the farm: area x yield) | logic test + card |
-| 10 | Station: Energy grid (share the drive's power: fractions) | logic test + card |
-| 11 | Station: Pack list (needed or not; mass budget with decimals) | logic test + card |
-| 12 | Lesson 6A: a ship that is a tiny Earth (3 films) | lesson test + frames |
+| 2 | Rock B beside her in flight (the Ch5 rock ship model), riding with her | DONE 10-06 |
+| 3 | The crew: Biologist (kid), Doctor (kid), Builder bot, Signal bot: 3-D figures and dialogue names | DONE 10-06 |
+| 4 | Opening: the supply ship from Earth docks at the rock, title, the crew say hello | DONE 10-06 |
+| 5 | The habitat: walk inside the rock ship (shield wall, air, water, farm, power core, store, crew quarters); a station at each part; the crewmate who leads it stands there | DONE 10-06 |
+| 6 | Station: Shield check (patch thin spots; each metre stops half) | DONE 10-06 |
+| 7 | Station: Oxygen (algae lamps + ice splitter vs what the crew breathes) | DONE 10-06 |
+| 8 | Station: Water loop (route used water through the filters; % recycled) | DONE 10-06 |
+| 9 | Station: Food (plan the farm: area x yield) | DONE 10-06 |
+| 10 | Station: Energy grid (share the drive's power: fractions) | DONE 10-06 |
+| 11 | Station: Pack list (needed or not; mass budget with decimals) | DONE 10-06 |
+| 12 | Lesson 6A: a ship that is a tiny Earth (3 films) | DONE 10-06 |
 | 13-20 | Part E (route planner, 6B, slingshots, Sun dive, 6C, % of light, questions, end) | DONE: see CHAPTER6_PART_E.md |
-| 21 | Questions for Parts A-C, docs (HANDOFF, PLAN, LESSONS_PLAN), full chain check | bank test, npm test |
+| 21 | Questions for Parts A-C, docs (HANDOFF, PLAN, LESSONS_PLAN), full chain check | DONE 10-06: npm test (ten suites), browser pass |

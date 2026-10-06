@@ -267,6 +267,22 @@ Chapter 6 (planned): 6A tiny-Earth loop, 6B slingshot, 6C light speed.
 
 ---
 
+## Chapter 6: The Long Trip (`src/space/ch6/`, BUILT 2026-10-06)
+
+Three lessons on the shared card, Level 4 first (Level 1 lines and clues in place).
+
+### 6A. A ship that is a tiny Earth (step c6_lesson_tiny_earth, after the habitat)
+
+`src/lesson/lessons/ch6a.js`. Films: the loop (the crew breathe out, the algae breathe it in and give oxygen back; water through the filters); the rock wall (rays go through thin metal, each metre of rock halves them); power to every part, then one cable breaks and the air bar falls. Questions: where the oxygen comes from; why the home is inside a rock; what happens if one part of the loop breaks.
+
+### 6B. Stealing speed (step c6_lesson_slingshot, after the route plan)
+
+`src/lesson/lessons/ch6b.js`. Films: seen from Earth (same speed in and out); seen from the Sun (50 -> 70 km/s, Earth drifts back, exaggerated, momentum bars); the Sun dive (a plain flyby adds nothing; the same push fired far out 60 km/s, at the closest point 93 km/s).
+
+### 6C. How fast is light? (step c6_lesson_light, after the drive lights)
+
+`src/lesson/lessons/ch6c.js`. Films: light laps Earth ~7 times in a second; the ship's bar next to light's grows to 1/10 and the dial switches to "10% of light"; 4 light years at 10% = 40 years, with one teaser line on clocks ticking slower.
+
 ## Optional, later
 
 Good lessons that aren't in the first set. Each keeps its films and questions

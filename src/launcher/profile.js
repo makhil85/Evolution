@@ -242,6 +242,9 @@ export function resetEverything() {
     // Chapters 1-3: the Easy/Medium/Hard choice (src/play/modes.js). Missed
     // until 2026-09-30: after a reset the chooser never came back.
     'rocket_village_play_mode',
+    // Chapter 6: the stations done and the route planned (ch6/partB.js, ch6/partE.js).
+    'rocket_village_ch6_stations_L1', 'rocket_village_ch6_stations_L4',
+    'rocket_village_ch6_route_L1', 'rocket_village_ch6_route_L4',
   ]);
   for (const c of CHAPTERS) {
     const stores = typeof c.store === 'string' ? [c.store] : Object.values(c.store);

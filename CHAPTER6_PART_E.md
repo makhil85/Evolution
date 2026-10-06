@@ -30,31 +30,9 @@ The chain (`partE.js`): `c6_plan_route` (beat `c6FuelLeft`) -> `c6_lesson_slings
 `c6_end` (`markSaveComplete`, end card). The plan and the flight result are
 saved in `rocket_village_ch6_route_L<level>` so a reload mid-Part E resumes.
 
-## Joining it to steps 1-12 (the other thread's code)
+## Joined (2026-10-06)
 
-1. **Chain:** in Chapter 6's `steps.js` add `...partESteps(game)` after the
-   last station step (import from `./partE.js`). If steps 1-12 already end
-   with an end card step, drop theirs (Part E's `c6_end` is the chapter end).
-2. **Crew names:** `CREW` at the top of `partE.js` uses job titles
-   (`Biologist`, `Doctor`, `Builder bot`, `Signal bot`). Swap in the names
-   steps 1-12 gave them. Lessons 6B and 6C use `narrator: 'Signal bot'`.
-3. **Questions:** merge `partEBank(level)` (or `CH6E_QUESTIONS` +
-   `CH6E_LEVEL1`) into Chapter 6's question bank, the way `selectBank()` in
-   `questions.space.js` picks Chapter 5's. Set `ACT_E` (6, a placeholder) in
-   `questions.partE.js` and `partE.js` to Part E's real act number, and add
-   the act title.
-4. **Lessons list:** add to `src/lesson/index.js` after 6A:
-   `{ id: 'ch6_slingshot', chapter: 6, title: ['Stealing speed', 'Get speed from a planet'], load: () => import('./lessons/ch6b.js').then((m) => m.LESSON_6B) }`,
-   `{ id: 'ch6_light', chapter: 6, title: ['How fast is light?', 'How fast is light?'], load: () => import('./lessons/ch6c.js').then((m) => m.LESSON_6C) }`,
-   and add both to `LESSONS` in `scripts/test-lessons.mjs` (it checks the
-   list order).
-5. **Tests:** add `node scripts/test-ch6-route.mjs` to `npm test` in
-   `package.json`, and bump the suite count in `CLAUDE.md`.
-6. **Test hooks:** `src/space/lab/playtest.js` `clear()` should solve
-   `window.__route` (`solve(); go()`) and `window.__sling` (`solve()`).
-7. **Restart:** the chapter restart and "Start everything over" should call
-   `clearPartE()` (or remove the `rocket_village_ch6_route_L*` keys).
-8. **Docs:** fold this file into `CHAPTER6_PLAN.md`, HANDOFF and PLAN item 14.
+Steps 1-12 were then built in the same branch (`CHAPTER6_PLAN.md`), so the joining list is done: the chain (`ch6/steps.js`), crew names (`crewInfo.js`), the question bank (`questions.space.js`), the lessons list, `npm test`, the docs. The playtest hooks are in `lab/playtest.js clear()`, and "Start everything over" removes the Part B/E keys (`launcher/profile.js`).
 
 ## Numbers (all in `routes.js`, retune there; tests and questions follow)
 
