@@ -73,12 +73,15 @@ function truck(ctx, x, y) {
   circle(ctx, x - 26, y - 2, 8, C.ink); circle(ctx, x + 28, y - 2, 8, C.ink);
 }
 
-// Strain colours: a pulled (tension) side goes red, a pushed (squeezed) side a
-// deeper orange-red. Kept close so a 5th grader just reads "red = working hard".
+// Strain colours (lead 2026-10-07): the truss is green at rest and its sides
+// go red as they strain - pulled (tension) red, pushed (squeezed) a deeper
+// orange-red, close enough that a 5th grader reads "red = working hard".
+// The joints are blue, so they stand out against both.
 const PULL = [214, 40, 40];
 const PUSH = [204, 72, 18];
-const WOOD = [176, 122, 69];
-const mix = (rgb, k) => `rgb(${WOOD.map((w, i) => Math.round(lerp(w, rgb[i], k))).join(',')})`;
+const REST = [46, 160, 67];
+const JOINT = '#1f5fd6';
+const mix = (rgb, k) => `rgb(${REST.map((w, i) => Math.round(lerp(w, rgb[i], k))).join(',')})`;
 
 function drawTruss(ctx, T, opts = {}) {
   banks(ctx);
@@ -129,7 +132,7 @@ function drawTruss(ctx, T, opts = {}) {
       }
       if (i < 4) side(tops[i], tops[i + 1], 7, PUSH);
     }
-    for (const p of [...bot, ...tops]) circle(ctx, p[0], p[1], 5, '#5b6270');
+    for (const p of [...bot, ...tops]) { circle(ctx, p[0], p[1], 7, '#ffffff'); circle(ctx, p[0], p[1], 5, JOINT); }
   }
   truck(ctx, tx, deckY(tx) - 6);
   if (!truss) {
