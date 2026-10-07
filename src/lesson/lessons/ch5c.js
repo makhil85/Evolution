@@ -11,7 +11,7 @@
 //
 // Pitfalls carried: the last frame still shows the answer; labels beside the
 // picture, not across it; every string has a Level 1 version.
-import { span, lerp, label, circle, arrow, rect, nightSky, kid } from '../draw.js';
+import { span, lerp, label, circle, arrow, rect, nightSky, plainDark, kid } from '../draw.js';
 
 const TAU = Math.PI * 2;
 const P_COL = '#ff6b6b'; const N_COL = '#b9c2cf'; const E_COL = '#5fb8ff';
@@ -99,7 +99,7 @@ function drawIntoYou(ctx, T) {
     scaleTag(ctx, 'DNA: 2 millionths of a mm wide');
   });
   layer(ctx, s3, () => {
-    nightSky(ctx, 71);
+    plainDark(ctx); // atoms only, no star dots
     // A bit of DNA as atoms: carbon, hydrogen, oxygen, nitrogen, phosphorus.
     const rnd = rng(5);
     const syms = ['C', 'C', 'H', 'O', 'N', 'H', 'C', 'P', 'O', 'H', 'H', 'C', 'N', 'O', 'H', 'C', 'H', 'O'];
@@ -115,7 +115,7 @@ function drawIntoYou(ctx, T) {
 // --- film 2: into a chunk of ring ice ------------------------------------------------------
 
 function drawIntoIce(ctx, T) {
-  nightSky(ctx, 73);
+  plainDark(ctx); // atoms only, no star dots
   const s1 = span(T, 3, 4.5); const s2 = span(T, 7, 8.5);
   layer(ctx, 1 - s1, () => {
     // A ring chunk, house-sized.
@@ -163,7 +163,7 @@ const ELEMENTS = [
 ];
 
 function drawInsideAtom(ctx, T) {
-  nightSky(ctx, 77);
+  plainDark(ctx); // atoms only, no star dots
   const mont = span(T, 9, 10);
   layer(ctx, 1 - mont, () => {
     // Carbon, big: nucleus and 6 electrons.

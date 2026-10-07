@@ -37,7 +37,7 @@ export function act2Steps(game) {
     {
       id: 'a2_capture', act: 2,
       title: t('Get into Moon orbit', 'Get into Moon orbit'),
-      objective: t('Goal: make your path a loop round the Moon. At your lowest point, point backwards (← / →, opposite to the way you are moving) and hold W until the dotted line closes into a circle.', 'Goal: go round the Moon. Turn to face the way you came (← →) and hold W until the dotted line is a circle.'),
+      objective: t('Goal: make your path a loop round the Moon. At your lowest point, point backwards (← / →, opposite to the way you are moving) and hold Space until the dotted line closes into a circle.', 'Goal: go round the Moon. Turn to face the way you came (← →) and hold Space until the dotted line is a circle.'),
       markers: ['moon'],
       aim: 'retrograde',
       capture: 'moon',
@@ -73,7 +73,7 @@ export function act2Steps(game) {
     {
       id: 'a2_circle', act: 2,
       title: t('Circle the Moon', 'Circle the Moon'),
-      objective: t('Goal: go once all the way round the Moon. No need to touch W: just watch the Moon turn below you.', 'Goal: go all the way round the Moon once. Just watch!'),
+      objective: t('Goal: go once all the way round the Moon. No need to touch Space: just watch the Moon turn below you.', 'Goal: go all the way round the Moon once. Just watch!'),
       markers: ['moon'],
       enter() { moonLast = null; moonSwept = 0; },
       check(ctx, states, stepTime) {
@@ -99,7 +99,7 @@ export function act2Steps(game) {
     {
       id: 'a2_land', act: 2,
       title: 'Land on the Moon',
-      objective: t('Goal: land gently. Point backwards (against your motion, ← / →) and hold W to slow down, then keep your falling speed in the green. Legs are down.', 'Goal: land softly. Turn to face backwards (← →) and hold W to slow down.'),
+      objective: t('Goal: land gently. Point backwards (against your motion, ← / →) and hold Space to slow down, then keep your falling speed in the green. Legs are down.', 'Goal: land softly. Turn to face backwards (← →) and hold Space to slow down.'),
       markers: ['moon'],
       aim: 'retrograde',
       land: 'moon',
@@ -136,7 +136,7 @@ export function act2Steps(game) {
     {
       id: 'a2_liftoff', act: 2,
       title: 'Blast off',
-      objective: t('Your ship is standing upright. Hold W to lift straight off the Moon.', 'Hold W to take off!'),
+      objective: t('Your ship is standing upright. Hold Space to lift straight off the Moon.', 'Hold Space to take off!'),
       markers: ['moon'],
       aim: 'up',
       escape: true,
@@ -159,7 +159,7 @@ export function act2Steps(game) {
     {
       id: 'a2_slingshot', act: 2,
       title: t('Leave Earth behind', 'Leave Earth behind'),
-      objective: t('Goal: fly out of Earth’s pull, toward Mars. Follow the arrow (the way the Moon is moving) and hold W. Going the way you are already moving saves fuel.', 'Goal: fly away from Earth, toward Mars. Follow the arrow and hold W.'),
+      objective: t('Goal: fly out of Earth’s pull, toward Mars. Follow the arrow (the way the Moon is moving) and hold Space. Going the way you are already moving saves fuel.', 'Goal: fly away from Earth, toward Mars. Follow the arrow and hold Space.'),
       markers: ['mars'],
       // Lead playtest: 'target' pointed her straight at Mars (not how orbits
       // work), and 'prograde' straight after liftoff is straight UP, which
@@ -180,7 +180,7 @@ export function act2Steps(game) {
     {
       id: 'a2_coast', act: 2,
       title: t('Catch the Mars window', 'Head for Mars'),
-      objective: t('Mars moves too! Use time warp (1-4) until the banner says BURN NOW, then point along your path and hold W until your dotted line reaches Mars.', 'Wait for the green BURN NOW sign (keys 1 to 4 make time go fast). Then hold W until your dotted line reaches Mars.'),
+      objective: t('Mars moves too! Use time warp (1-4) until the banner says BURN NOW, then point along your path and hold Space until your dotted line reaches Mars.', 'Wait for the green BURN NOW sign (keys 1 to 4 make time go fast). Then hold Space until your dotted line reaches Mars.'),
       markers: ['mars'],
       aim: 'prograde',
       transfer: 'mars',

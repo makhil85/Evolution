@@ -100,7 +100,7 @@ export function act3Steps(game) {
     {
       id: 'a3_power', act: 3,
       title: t('Watch your power', 'Out to the belt'),
-      objective: t('Head out to the asteroid belt: wait for the BURN NOW banner, then hold W until your dotted line reaches the belt. Watch your Power meter drop as you go.', 'Next: the asteroid belt! Wait for BURN NOW, then hold W. Watch your Power go down as you fly away from the Sun.'),
+      objective: t('Head out to the asteroid belt: wait for the BURN NOW banner, then hold Space until your dotted line reaches the belt. Watch your Power meter drop as you go.', 'Next: the asteroid belt! Wait for BURN NOW, then hold Space. Watch your Power go down as you fly away from the Sun.'),
       markers: ['ceres'],
       // Lead playtest: this used to be "coast outward" with the arrow on
       // Ceres, but after the Mars flyby her orbit doesn't reach the belt and
@@ -192,7 +192,7 @@ export function act3Steps(game) {
     {
       id: 'a3_depart', act: 3,
       title: t('Depart for Jupiter', 'Off to Jupiter'),
-      objective: t('Jupiter moves too! Use time warp until the banner says BURN NOW, then hold W until your dotted line reaches Jupiter. (You need a Radiation Shield first: 4 metal, 2 ice.)', 'First build a Radiation Shield. Then wait for BURN NOW and hold W until your dotted line reaches Jupiter.'),
+      objective: t('Jupiter moves too! Use time warp until the banner says BURN NOW, then hold Space until your dotted line reaches Jupiter. (You need a Radiation Shield first: 4 metal, 2 ice.)', 'First build a Radiation Shield. Then wait for BURN NOW and hold Space until your dotted line reaches Jupiter.'),
       markers: ['jupiter'],
       aim: 'prograde',
       transfer: 'jupiter',

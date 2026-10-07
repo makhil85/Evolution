@@ -372,7 +372,7 @@ export function createInstruments(root, { onWarp } = {}) {
       needle.style.left = `${f * 100}%`;
       const bad = state.landingTooFast ?? speed > lim;
       const warn = !bad && (state.landingHeadsUp ?? speed > lim * 0.8);
-      verdict.textContent = bad ? t('Too fast — hold W to brake!', 'Too fast! Hold W to slow down.')
+      verdict.textContent = bad ? t('Too fast — hold Space to brake!', 'Too fast! Hold Space to slow down.')
         : warn ? t('Getting fast — get ready to brake', 'Getting fast! Get ready.')
           : t('Good speed — keep it in the green', 'Good! Keep it green.');
       verdict.className = `sp-landing__verdict ${bad ? 'is-bad' : 'is-good'}`;

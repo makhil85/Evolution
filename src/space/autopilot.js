@@ -20,7 +20,7 @@ import { OUTER } from './chapter.js';
 import { toggleBar, paintToggle } from './hud/toggleBar.js';
 import { BODIES } from './contracts.js';
 
-const MANUAL_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyZ', 'KeyX', 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
+const MANUAL_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyZ', 'KeyX', 'Space', 'KeyQ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 
 export function createAutopilot(game, { controls, hud }) {
   let on = false;
@@ -217,7 +217,7 @@ export function createAutopilot(game, { controls, hud }) {
   // assume a sensible orbit; after her own burns she can be on one that dips
   // into the planet, or so stretched that no burn window ever shows. Then it
   // first makes her orbit round at her present height round the body she is
-  // in (point along the needed change of velocity, hold W), and the banners
+  // in (point along the needed change of velocity, hold Space), and the banners
   // take over from there. Never while landing, or in the Sun's pull.
   // When the banner last went blank, in REAL seconds (sim time races under
   // the warp the autopilot itself asks for), and on which step: a new step
@@ -296,7 +296,7 @@ export function createAutopilot(game, { controls, hud }) {
     // it helps the fix instead of turning her back to the step's heading.
     game.aimOverride = fix ? fix.aim : null;
     if (fix) {
-      key('Space', false);
+      key('KeyQ', false);
       const err = Math.atan2(Math.sin(fix.aim - G.ship.angle), Math.cos(fix.aim - G.ship.angle));
       const brake = G.ship.angVel * 0.6;
       key('KeyD', err - brake > 0.04);
@@ -307,13 +307,13 @@ export function createAutopilot(game, { controls, hud }) {
       return;
     }
     const c = cueText();
-    const burn = !!c && /BURN NOW|hold W|Hold W|tap W|Brake|Too fast/.test(c) && !/Let go|Ease off/.test(c);
+    const burn = !!c && /BURN NOW|hold Space|Hold Space|tap Space|hold Space|Hold Space|tap Space|Brake|Too fast/.test(c) && !/Let go|Ease off/.test(c);
     let aligned = true;
     let steering = false;
     if (G.mode.autoAim) {
-      key('Space', true);
+      key('KeyQ', true);
     } else {
-      key('Space', false);
+      key('KeyQ', false);
       const want = G.aimAngle();
       if (want !== null && !G.ship.landedOn) {
         const err = Math.atan2(Math.sin(want - G.ship.angle), Math.cos(want - G.ship.angle));
@@ -334,7 +334,7 @@ export function createAutopilot(game, { controls, hud }) {
         // well off: the warp waits for "aligned", so without turning first it
         // sat at 1x until the last minute (a3_depart real-pace run: 43 s).
         const winIn = Number(/window in (\d+) s/.exec(c)?.[1] ?? Infinity);
-        const soon = /BURN NOW|hold W|Hold W|tap W|Brake|brake|Too fast|Getting fast|Turn to point|keep the speed|window in [1-5]?[0-9] s\./.test(c)
+        const soon = /BURN NOW|hold Space|Hold Space|tap Space|Brake|brake|Too fast|Getting fast|Turn to point|keep the speed|window in [1-5]?[0-9] s\./.test(c)
           || (winIn <= 120 && !aligned);
         steering = soon && (Math.abs(err) > 0.08 || Math.abs(relVel) > 0.2);
       } else { key('KeyD', false); key('KeyA', false); }

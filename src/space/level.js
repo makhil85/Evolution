@@ -5,7 +5,7 @@
 //
 // Level 1 is read by 6-year-olds, so its lines are short, use everyday words
 // and keep only what to do next. They keep the game's few fixed commands
-// ("BURN NOW", "hold W", "Let go", "Coast", "Too fast") so the banners always
+// ("BURN NOW", "hold Space", "Let go", "Coast", "Too fast") so the banners always
 // say the same thing the same way. Level 4 text is unchanged.
 //
 // Read directly from the launcher's profile (like missions.js and the

@@ -27,7 +27,6 @@ import { predict, coastRel } from './predictor.js';
 import { createBodies } from './planets.js';
 import { createSky } from './sky.js';
 import { createBelt } from './belt.js';
-import { createKuiper } from './ch5/kuiper.js';
 import { createBeltFx } from './beltFx.js';
 import { createDust } from './dust.js';
 import { createShip } from './ship.js';
@@ -127,7 +126,9 @@ const belt = createBelt({ scene, renderer });
 // (a bright band across the sky out there) only got in the way (lead, 2026-10-06).
 if (IS_CH5) belt.group.visible = false;
 // Chapter 5: the Kuiper belt past Neptune (points; it rides the floating origin too).
-const kuiper = OUTER ? createKuiper({ scene }) : null;
+// No Kuiper-belt ring in flight (lead 2026-10-07): at the edge it sat on the
+// horizon the whole time, burning and coasting, and only distracted. The
+// edge cutscene (ch5/edge.js) still shows the Kuiper belt and Oort cloud.
 // Chapter 6's slingshots: the Sun and one planet only (lead, 2026-10-05).
 if (IS_CH6) setMoonPulls(false);
 const dust = createDust({ scene });
@@ -541,7 +542,7 @@ bus.on('flight-mode-menu', async (done) => {
 // starts when the target is the right angle ahead: it must arrive where she
 // arrives. That timing is the hard, invisible part of the whole skill, so on
 // Easy and Medium a banner counts down to the window ("Burn window in 12 s"),
-// says "Hold W now!" when she's in it, and "Let go of W!" once her orbit
+// says "Hold Space now!" when she's in it, and "Let go of Space!" once her orbit
 // reaches the target's. Hohmann-transfer timing, computed from the rails.
 
 const burnCue = document.createElement('div');
@@ -592,7 +593,7 @@ function measurePanelUp() {
 
 /**
  * While the autopilot flies, the banner NARRATES instead of giving orders
- * ("Tap W" to a child whose ship flies itself was confusing). The original
+ * ("Tap Space" to a child whose ship flies itself was confusing). The original
  * order stays in data-raw: the autopilot steers by it.
  */
 function narrate(kind, text) {
@@ -623,7 +624,7 @@ const SLOW_MO = 0.4;
  * "1x speed has to become 0.5 or 0.75x - the earlier pace was good, right now
  * everything is going too fast"). Every time-warp level multiplies THIS, so
  * x4 is still four times normal flight; it just gives a child a little longer
- * to read the banner, turn, and let go of W. Fuel and gravity are per sim
+ * to read the banner, turn, and let go of Space. Fuel and gravity are per sim
  * second, so nothing about the flying gets easier or harder - only calmer.
  */
 const FLIGHT_PACE = 0.75;
@@ -639,7 +640,7 @@ function setCue(kind, text) {
   if (kind && (kind === 'burn' || kind === 'stop'
     || /window in ([0-9]|1[0-9]) s|Turn to point|Falling gently|Falling slowly|Getting fast|Too fast|Time to land|lift off/i.test(text))) game.focusUntil = performance.now() + 2000;
   if (kind && (kind === 'burn' || kind === 'stop' || kind === 'wait')
-    && /BURN NOW|Let go of W|window in [1-3] s\./.test(text)) game.slowUntil = performance.now() + 200;
+    && /BURN NOW|Let go of Space|window in [1-3] s\./.test(text)) game.slowUntil = performance.now() + 200;
   if (game.autopilot?.on && kind) text = narrate(kind, text);
   slowChip.style.display = kind && !game.autopilot?.on && slowMoNow() ? 'block' : 'none';
   if (!kind) { burnCue.style.display = 'none'; return; }
@@ -710,7 +711,7 @@ function updateCaptureCue(thrust) {
   const theName = target === 'moon' ? 'the Moon' : tb.name;
   if (oe.bound && oe.periapsis > R * 1.08 && oe.apoapsis < tb.soi * 0.7) {
     game.aimHint = 'retrograde';
-    if (help) setCue(thrust > 0 ? 'stop' : 'good', thrust > 0 ? 'Let go of W! You’re in orbit.' : `In orbit around ${theName}!`);
+    if (help) setCue(thrust > 0 ? 'stop' : 'good', thrust > 0 ? 'Let go of Space! You’re in orbit.' : `In orbit around ${theName}!`);
     return help;
   }
   // A real crash course only (1.1 R, just above the "in orbit" floor of
@@ -729,7 +730,7 @@ function updateCaptureCue(thrust) {
     const h = rx * vz - rz * vx;
     const sg = h >= 0 ? 1 : -1;
     game.aimHint = Math.atan2((rx / r) * sg, (-rz / r) * sg);
-    if (help) setCue('stop', t(`Your path hits ${theName}! Point along the arrow and tap W to swing wider.`, `Watch out, you’ll hit ${theName}! Follow the arrow and tap W.`));
+    if (help) setCue('stop', t(`Your path hits ${theName}! Point along the arrow and tap Space to swing wider.`, `Watch out, you’ll hit ${theName}! Follow the arrow and tap Space.`));
     return help;
   }
   game.aimHint = 'retrograde';
@@ -741,8 +742,8 @@ function updateCaptureCue(thrust) {
   if (vr < 0 && oe.periapsis > tb.soi * 0.55) swingInSticky = true;
   if (swingInSticky && (vr >= 0 || oe.periapsis < tb.soi * 0.4)) swingInSticky = false;
   if (swingInSticky) {
-    setCue('burn', t(`You’ll pass too far from ${theName} to stay. Point backwards (against your motion) and hold W to swing in closer.`, 'Too far away! Face the way you came and hold W to come closer.'));
-    aimHelp = { phase: 'burn', line: aimLine(t('Nose on the green mark, opposite your motion, and hold W: a small push now swings your path in closer.', 'Face the way you came, then hold W.')) };
+    setCue('burn', t(`You’ll pass too far from ${theName} to stay. Point backwards (against your motion) and hold Space to swing in closer.`, 'Too far away! Face the way you came and hold Space to come closer.'));
+    aimHelp = { phase: 'burn', line: aimLine(t('Nose on the green mark, opposite your motion, and hold Space: a small push now swings your path in closer.', 'Face the way you came, then hold Space.')) };
     return true;
   }
   // Once past the lowest point on a still-too-big loop, keep braking: any
@@ -769,10 +770,10 @@ function updateCaptureCue(thrust) {
   // (Only where a circle would count: further out than ~0.65 of the zone even
   // a perfect circle is too wide, and "let go" / "burn" alternated per frame.)
   if (captureBurnSticky && thrust > 0 && oe.bound && r < tb.soi * 0.65 && Math.hypot(vx, vz) < orbitSpeed * 1.08) {
-    setCue('stop', t('Let go of W! You’re nearly in orbit.', 'Let go of W! Almost there!'));
+    setCue('stop', t('Let go of Space! You’re nearly in orbit.', 'Let go of Space! Almost there!'));
   } else if (captureBurnSticky) {
-    setCue('burn', t('BURN NOW! Point backwards (opposite to the way you’re moving) and hold W to slow down', 'BURN NOW! Face the way you came and hold W to slow down'));
-    aimHelp = { phase: 'burn', line: aimLine(t('Nose on the green mark, opposite your motion, and hold W. The engine pushes against your speed and slows you down.', 'Face the way you came: nose on the green mark. Hold W to slow down.')) };
+    setCue('burn', t('BURN NOW! Point backwards (opposite to the way you’re moving) and hold Space to slow down', 'BURN NOW! Face the way you came and hold Space to slow down'));
+    aimHelp = { phase: 'burn', line: aimLine(t('Nose on the green mark, opposite your motion, and hold Space. The engine pushes against your speed and slows you down.', 'Face the way you came: nose on the green mark. Hold Space to slow down.')) };
   } else {
     // The coast before the burn: say now what's coming, so she can turn
     // round in good time (lead: "backwards" alone wasn't clear).
@@ -781,8 +782,8 @@ function updateCaptureCue(thrust) {
     aimHelp = {
       phase: 'ready', inS,
       line: aimLine(inS > 10
-        ? t(`Get ready: at your lowest point (in about ${inS} s) you’ll turn to face backwards, opposite to your motion, and burn.${inS > 100 ? ' Time warp (1-4) is fine until then.' : ''}`, `Get ready! Soon you face the way you came, then hold W.${inS > 100 ? ' Keys 1 to 4 make time go fast.' : ''}`)
-        : t(`Turn now: at your lowest point (in ${inS} s) you burn facing backwards, opposite to your motion.`, 'Face the way you came now. Soon you hold W.')),
+        ? t(`Get ready: at your lowest point (in about ${inS} s) you’ll turn to face backwards, opposite to your motion, and burn.${inS > 100 ? ' Time warp (1-4) is fine until then.' : ''}`, `Get ready! Soon you face the way you came, then hold Space.${inS > 100 ? ' Keys 1 to 4 make time go fast.' : ''}`)
+        : t(`Turn now: at your lowest point (in ${inS} s) you burn facing backwards, opposite to your motion.`, 'Face the way you came now. Soon you hold Space.')),
     };
   }
   return true;
@@ -864,22 +865,22 @@ function updateLandingCue(thrust, target = game.landTarget) {
   const auto = landSteerOn();
   if (!falling) {
     setCue('burn', auto
-      ? t(`Brake to start your descent: hold W (the ship points itself backwards). ${Math.round(alt)} u up`, `Time to land! Hold W. The ship turns by itself. ${Math.round(alt)} u up`)
-      : t(`Brake to start your descent: point backwards (against your motion) and hold W. ${Math.round(alt)} u up`, `Time to land! Face the way you came and hold W. ${Math.round(alt)} u up`));
-    aimHelp = { up: aimUp, phase: 'burn', line: aimLine(t('Nose on the green mark, opposite your motion, and hold W: slowing down drops your path onto the ground.', 'Face the way you came and hold W to start coming down.')) };
+      ? t(`Brake to start your descent: hold Space (the ship points itself backwards). ${Math.round(alt)} u up`, `Time to land! Hold Space. The ship turns by itself. ${Math.round(alt)} u up`)
+      : t(`Brake to start your descent: point backwards (against your motion) and hold Space. ${Math.round(alt)} u up`, `Time to land! Face the way you came and hold Space. ${Math.round(alt)} u up`));
+    aimHelp = { up: aimUp, phase: 'burn', line: aimLine(t('Nose on the green mark, opposite your motion, and hold Space: slowing down drops your path onto the ground.', 'Face the way you came and hold Space to start coming down.')) };
   } else if (tooFastSticky) {
-    setCue('stop', t(`Too fast! Hold W to brake. Speed ${speed.toFixed(1)}`, 'Too fast! Hold W to slow down.'));
-    aimHelp = { up: aimUp, phase: 'brake', line: aimLine(t('Hold W with the nose on the green mark until the speed is back in the green.', 'Hold W until the speed is green again.')) };
+    setCue('stop', t(`Too fast! Hold Space to brake. Speed ${speed.toFixed(1)}`, 'Too fast! Hold Space to slow down.'));
+    aimHelp = { up: aimUp, phase: 'brake', line: aimLine(t('Hold Space with the nose on the green mark until the speed is back in the green.', 'Hold Space until the speed is green again.')) };
   } else if (thrust > 0 && speed < ship.safeLandingSpeed * 0.45 && !(game.mode.id === 'easy' || game.mode.id === 'medium')) {
-    setCue('stop', t('Ease off W! Let the ship drift down.', 'Let go of W! Float down slowly.'));
+    setCue('stop', t('Ease off Space! Let the ship drift down.', 'Let go of Space! Float down slowly.'));
   } else if (headsUpSticky) {
     setCue('wait', auto
-      ? t(`Getting fast: get ready to hold W. Speed ${speed.toFixed(1)}`, 'Getting fast! Get ready to hold W.')
+      ? t(`Getting fast: get ready to hold Space. Speed ${speed.toFixed(1)}`, 'Getting fast! Get ready to hold Space.')
       : t(`Getting fast: nose on the green arrow, ready to brake. Speed ${speed.toFixed(1)}`, 'Getting fast! Get ready to slow down.'));
-    aimHelp = { up: aimUp, phase: 'land', line: aimLine(t('Speeding up. Get the nose on the green mark now, and brake with W if it says Too fast.', 'Nose on the green mark. Get ready to hold W.')) };
+    aimHelp = { up: aimUp, phase: 'land', line: aimLine(t('Speeding up. Get the nose on the green mark now, and brake with Space if it says Too fast.', 'Nose on the green mark. Get ready to hold Space.')) };
   } else if (manual && err > 0.35) {
     setCue('good', auto
-      ? t(`Falling gently... the ship keeps itself pointed. Hold W when it says Too fast. ${Math.round(alt)} u up`, 'Falling gently. Hold W when it says Too fast.')
+      ? t(`Falling gently... the ship keeps itself pointed. Hold Space when it says Too fast. ${Math.round(alt)} u up`, 'Falling gently. Hold Space when it says Too fast.')
       : t(`Turn to point along the green arrow (← / →), ready to brake. ${Math.round(alt)} u up`, 'Turn to point along the green arrow (← / →).'));
     aimHelp = { up: aimUp, phase: 'land', line: t('Turn now so you’re ready to brake when you need to.', 'Turn now, ready to slow down.') };
   } else {
@@ -896,7 +897,7 @@ function updateLandingCue(thrust, target = game.landTarget) {
  */
 function updateEscapeCue(thrust) {
   if (!game.escapeStep || !cuesOn() || game.cinematic || ship.soi === 'sun') return false;
-  if (ship.landedOn) { setCue('burn', 'Hold W to lift off!'); return true; }
+  if (ship.landedOn) { setCue('burn', 'Hold Space to lift off!'); return true; }
   const oe = orbitElements(ship);
   const body = BODIES[ship.soi]?.name || 'planet';
   const name = body === 'Moon' ? 'the Moon' : body; // "the Moon", but "Jupiter"
@@ -909,9 +910,9 @@ function updateEscapeCue(thrust) {
   // and waiting for that to vanish too overshot Mars (another 0.5 t).
   const returns = pred?.impact?.body === here;
   if (!oe.bound && !returns) {
-    setCue(thrust > 0 ? 'stop' : 'good', thrust > 0 ? `Let go of W! You’re escaping ${name}’s pull.` : `Escaping ${name}’s pull. Coast!`);
+    setCue(thrust > 0 ? 'stop' : 'good', thrust > 0 ? `Let go of Space! You’re escaping ${name}’s pull.` : `Escaping ${name}’s pull. Coast!`);
   } else {
-    setCue('burn', t(`Follow the arrow and hold W to break free of ${name}’s pull`, `Follow the arrow and hold W to fly away from ${name}`));
+    setCue('burn', t(`Follow the arrow and hold Space to break free of ${name}’s pull`, `Follow the arrow and hold Space to fly away from ${name}`));
   }
   return true;
 }
@@ -1029,7 +1030,7 @@ function updateImpactCue() {
   const sg = (rx * vz - rz * vx) >= 0 ? 1 : -1;
   game.aimHint = Math.atan2((rx / r) * sg, (-rz / r) * sg);
   const name = imp.body === 'moon' ? 'the Moon' : BODIES[imp.body]?.name || 'the planet';
-  setCue('stop', t(`Your path hits ${name}! Point along the arrow and tap W to swing wider.`, `Watch out, you’ll hit ${name}! Follow the arrow and tap W.`));
+  setCue('stop', t(`Your path hits ${name}! Point along the arrow and tap Space to swing wider.`, `Watch out, you’ll hit ${name}! Follow the arrow and tap Space.`));
   return true;
 }
 
@@ -1164,7 +1165,7 @@ function updateBurnCue(states, thrust) {
     // A burn that just got her on course: show its bar full, not "coast".
     if (thrust > 0 && burnPlan) help(burnPlan.delivered > burnPlan.dvTarget * 1.1 ? 'over' : 'full', { dvNeed: burnPlan.dvTarget, dvDone: burnPlan.delivered, along: burnPlan.along });
     else help('oncourse');
-    cue(thrust > 0 ? 'stop' : 'good', thrust > 0 ? 'Let go of W! You’re on your way.' : `On course for ${theName}. Coast!`);
+    cue(thrust > 0 ? 'stop' : 'good', thrust > 0 ? 'Let go of Space! You’re on your way.' : `On course for ${theName}. Coast!`);
     return;
   }
 
@@ -1181,7 +1182,7 @@ function updateBurnCue(states, thrust) {
     if (left <= 0.001) { // the burn computer delivers it exactly (Hard: she lets go)
       if (thrust > 0) {
         help(burnPlan.delivered > burnPlan.dvTarget * 1.1 ? 'over' : 'full', bar);
-        cue('stop', 'Let go of W! Coast and watch your dotted line.');
+        cue('stop', 'Let go of Space! Coast and watch your dotted line.');
         return;
       }
       // Coast out to half-way before offering any correction: corrections
@@ -1199,8 +1200,8 @@ function updateBurnCue(states, thrust) {
     if (ship.t - burnPlan.startT <= burnPlan.maxT) {
       help('burn', { ...bar, latched: !!burnPlan.latched });
       cue('burn', game.mode.autoAim
-        ? t('BURN NOW! Tap W to start the booster. It stops by itself.', 'BURN NOW! Tap W. It stops by itself.')
-        : `BURN NOW! ${burnPlan.along ? t('Point along your path', 'Point forward') : RETRO()} and hold W`);
+        ? t('BURN NOW! Tap Space to start the booster. It stops by itself.', 'BURN NOW! Tap Space. It stops by itself.')
+        : `BURN NOW! ${burnPlan.along ? t('Point along your path', 'Point forward') : RETRO()} and hold Space`);
       return;
     }
     burnPlan = null; // window missed: find the next one
@@ -1288,8 +1289,8 @@ function updateBurnCue(states, thrust) {
       game.aimHint = 'retrograde';
       help('fix', { along: false });
       cue('stop', !oe.bound
-        ? t('You’re flying out of the solar system! Point backwards (against your motion) and hold W.', 'Too far! Face the way you came and hold W.')
-        : t(`Your orbit swings way past ${the}. Point backwards (against your motion) and hold W to bring it in.`, 'You’re going too far! Face the way you came and hold W.'));
+        ? t('You’re flying out of the solar system! Point backwards (against your motion) and hold Space.', 'Too far! Face the way you came and hold Space.')
+        : t(`Your orbit swings way past ${the}. Point backwards (against your motion) and hold Space to bring it in.`, 'You’re going too far! Face the way you came and hold Space.'));
       return;
     }
   }
@@ -1299,7 +1300,7 @@ function updateBurnCue(states, thrust) {
     // Mid-burn and the plan no longer works: stop rather than flash
     // "looking for a path" at a child whose thumb is on W.
     help('full');
-    cue('stop', t('Let go of W! Wait for the next burn window.', 'Let go of W! Wait for the next green sign.'));
+    cue('stop', t('Let go of Space! Wait for the next burn window.', 'Let go of Space! Wait for the next green sign.'));
     return;
   }
   if (!(thrust > 0) && !planIsGood(p, planTarget)) {
@@ -1315,7 +1316,7 @@ function updateBurnCue(states, thrust) {
   // "Burn window in 717 s" kept sliding while she coasted past the Moon.)
   if (Math.abs(p.dv) < 0.02) {
     help('oncourse');
-    cue(thrust > 0 ? 'stop' : 'good', thrust > 0 ? 'Let go of W! You’re on your way.' : `On course for ${theName}. Coast!`);
+    cue(thrust > 0 ? 'stop' : 'good', thrust > 0 ? 'Let go of Space! You’re on your way.' : `On course for ${theName}. Coast!`);
     return;
   }
   const burnTime = Math.abs(p.dv) / accelNow;
@@ -1328,8 +1329,8 @@ function updateBurnCue(states, thrust) {
     burnPlan = { target, dvTarget: Math.abs(p.dv), along, delivered: 0, startT: ship.t, maxT: burnTime * 2 + 6, seenAt: ship.t };
     help('burn', { dvNeed: burnPlan.dvTarget, dvDone: 0, along });
     cue('burn', game.mode.autoAim
-      ? t('BURN NOW! Tap W to start the booster. It stops by itself.', 'BURN NOW! Tap W. It stops by itself.')
-      : `BURN NOW! ${along ? t('Point along your path', 'Point forward') : RETRO()} and hold W`);
+      ? t('BURN NOW! Tap Space to start the booster. It stops by itself.', 'BURN NOW! Tap Space. It stops by itself.')
+      : `BURN NOW! ${along ? t('Point along your path', 'Point forward') : RETRO()} and hold Space`);
     return;
   }
   // Close to the window: drop out of warp for her, so she can't fly past it.
@@ -1401,15 +1402,17 @@ function tick(realDt, render = true) {
   const input = controls.sample();
   const paused = modalOpen || game.paused || game.frozen;
 
-  // Easy's booster during a transfer burn: one tap of W starts it and it
+  // Easy's booster during a transfer burn: one tap of Space starts it and it
   // runs until the planned push is done (the burn computer stops it); S
   // stops it early. Lead request: Easy should be start/stop only.
   const liveBurn = burnPlan && ship.t - (burnPlan.seenAt ?? -Infinity) < 0.5 ? burnPlan : null;
-  let wantThrust = input.thrust;
+  // Space fires the main engine too (lead 2026-10-07), like W.
+  const flyThrust = input.fire && input.thrust >= 0 ? 1 : input.thrust;
+  let wantThrust = flyThrust;
   if (liveBurn && game.mode.autoAim && !paused) {
-    if (input.thrust > 0) liveBurn.latched = true;
-    if (input.thrust < 0 || liveBurn.dvTarget - liveBurn.delivered <= 0.001) {
-      if (liveBurn.latched && input.thrust < 0) wantThrust = 0; // S = stop, not reverse
+    if (flyThrust > 0) liveBurn.latched = true;
+    if (flyThrust < 0 || liveBurn.dvTarget - liveBurn.delivered <= 0.001) {
+      if (liveBurn.latched && flyThrust < 0) wantThrust = 0; // S = stop, not reverse
       liveBurn.latched = false;
     }
     if (liveBurn.latched) wantThrust = 1;
@@ -1666,10 +1669,6 @@ function tick(realDt, render = true) {
   bodies.update({ dt: realDt, time: ship.t, positions: states, origin: _origin, camera });
   sky.update({ camera, sunDirection: _sunDir });
   belt.update({ dt: realDt, time: ship.t, origin: _origin, ship: { x: ship.x, z: ship.z }, camera });
-  kuiper?.update(_origin);
-  // The Kuiper belt only once she is out past Uranus: near Jupiter and Saturn
-  // its band across the sky was clutter (lead, 2026-10-06).
-  kuiper?.setVisible(Math.hypot(ship.x, ship.z) > BODIES.uranus.orbit);
   game.beltFx.update(realDt);
   const rel = relativeSpeed(states);
   // Dust is a SENSE of speed, not a speedometer: at a low-orbit 18 u/s the raw

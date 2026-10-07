@@ -141,7 +141,7 @@ export function act1Steps(game) {
       title: 'Your first orbits',
       // Two laps before the sunrise question (lead 2026-10-07: slow the
       // early questions down, let her enjoy the view first).
-      objective: t('Ride two full laps around Earth. Don’t fire the engine; just watch the dotted line and the sunrises.', 'Go around Earth two times. Don’t press W. Just watch!'),
+      objective: t('Ride two full laps around Earth. Don’t fire the engine; just watch the dotted line and the sunrises.', 'Go around Earth two times. Don’t press Space. Just watch!'),
       markers: ['earth'],
       enter() { lapStart(); game.target = 'moon'; },
       check(ctx, states) { return lapped(states, 2); },
@@ -150,7 +150,7 @@ export function act1Steps(game) {
     {
       id: 'a1_satellite_meet', act: 1,
       title: 'Catch the satellite',
-      objective: t('A weather satellite is in a slightly higher orbit. Wait for the BURN NOW banner, then hold W to rise up to meet it.', 'A satellite is just above you. When the green BURN NOW sign shows, hold W to go up to it.'),
+      objective: t('A weather satellite is in a slightly higher orbit. Wait for the BURN NOW banner, then hold Space to rise up to meet it.', 'A satellite is just above you. When the green BURN NOW sign shows, hold Space to go up to it.'),
       aim: 'prograde',
       transfer: 'satellite',
       enter(ctx) {
@@ -267,7 +267,7 @@ export function act1Steps(game) {
     {
       id: 'a1_raise', act: 1,
       title: 'Aim for the Moon',
-      objective: t('Point along your path. Wait for the green BURN signal, then hold W until the dotted line reaches the Moon.', 'Wait for the green BURN NOW sign. Then hold W until the dotted line reaches the Moon.'),
+      objective: t('Point along your path. Wait for the green BURN signal, then hold Space until the dotted line reaches the Moon.', 'Wait for the green BURN NOW sign. Then hold Space until the dotted line reaches the Moon.'),
       markers: ['moon'],
       aim: 'prograde',
       transfer: 'moon',

@@ -26,7 +26,7 @@ function legSteps(game, { from, to, act, say, beat, ids }) {
     {
       id: ids.leave, act,
       title: t(`Leave ${From}`, `Leave ${From}`),
-      objective: t(`Follow the arrow: fly the same way ${From} is moving and hold W until your path breaks free of ${From}’s pull.`, `Follow the arrow and hold W to leave ${From}.`),
+      objective: t(`Follow the arrow: fly the same way ${From} is moving and hold Space until your path breaks free of ${From}’s pull.`, `Follow the arrow and hold Space to leave ${From}.`),
       // No marker on the next planet while she leaves: it is lined up only
       // once she is out (lineup.js), and a distance shown before that jumped
       // the moment she escaped, as if her burn had been ignored (lead, 2026-10-06).
@@ -42,7 +42,7 @@ function legSteps(game, { from, to, act, say, beat, ids }) {
     {
       id: ids.window, act,
       title: t(`Catch the ${To} window`, `Head for ${To}`),
-      objective: t(`Use time warp (1-4) until the banner says BURN NOW, then point along your path and hold W until your dotted line reaches ${To}.`, `Wait for the green BURN NOW sign (keys 1 to 4 make time go fast). Then hold W until your dotted line reaches ${To}.`),
+      objective: t(`Use time warp (1-4) until the banner says BURN NOW, then point along your path and hold Space until your dotted line reaches ${To}.`, `Wait for the green BURN NOW sign (keys 1 to 4 make time go fast). Then hold Space until your dotted line reaches ${To}.`),
       markers: [to],
       aim: 'prograde',
       transfer: to,
@@ -139,7 +139,7 @@ export function partBSteps(game) {
     {
       id: 'c5_leave_neptune', act: 3,
       title: t('Leave Neptune', 'Leave Neptune'),
-      objective: t('Follow the arrow: fly the same way Neptune is moving and hold W until your path breaks free of its pull.', 'Follow the arrow and hold W to leave Neptune.'),
+      objective: t('Follow the arrow: fly the same way Neptune is moving and hold Space until your path breaks free of its pull.', 'Follow the arrow and hold Space to leave Neptune.'),
       // No marker on the next planet while she leaves: it is lined up only
       // once she is out (lineup.js), and a distance shown before that jumped
       // the moment she escaped, as if her burn had been ignored (lead, 2026-10-06).
@@ -155,7 +155,7 @@ export function partBSteps(game) {
     {
       id: 'c5_to_pluto', act: 3,
       title: t('Catch the Pluto window', 'Head for Pluto'),
-      objective: t('Pluto is small and far: wait for BURN NOW, then hold W until your dotted line passes close to Pluto.', 'Wait for the green BURN NOW sign. Then hold W until your dotted line reaches Pluto.'),
+      objective: t('Pluto is small and far: wait for BURN NOW, then hold Space until your dotted line passes close to Pluto.', 'Wait for the green BURN NOW sign. Then hold Space until your dotted line reaches Pluto.'),
       markers: ['pluto'],
       aim: 'prograde',
       transfer: 'pluto',

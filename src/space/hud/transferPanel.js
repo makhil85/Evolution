@@ -1,15 +1,15 @@
 // "Orbit transfer" help panel (bottom centre), shown while a step asks her to
 // move to a new orbit (the satellite, the Moon, Mars, the belt, Jupiter,
 // Europa). The banner at the top says WHAT to do; this panel shows the three
-// numbers behind it, so "hold W" is never a guess (lead playtest: "not clear
-// how long to press W and which direction to point"):
+// numbers behind it, so "hold Space" is never a guess (lead playtest: "not clear
+// how long to press Space and which direction to point"):
 //
 //   WHEN   seconds to the burn window, or NOW
 //   POINT  a dial: the green mark is where the nose must point, the white
 //          arrow is where it points now, with the degrees between and the key
 //          that closes the gap (Easy: the ship turns itself)
 //   PUSH   a bar that fills while she holds W: full = the planned speed
-//          change, with the seconds of W left
+//          change, with the seconds of Space left
 //
 // main.js works out the numbers (updateBurnCue) and passes them to update();
 // null hides the panel.
@@ -87,7 +87,7 @@ export function createTransferPanel(root) {
 
   // PUSH
   const push = el('div', 'sp-xfer__cell sp-xfer__push');
-  push.appendChild(el('div', 'sp-xfer__label', t('Push (hold W)', 'Push (W)')));
+  push.appendChild(el('div', 'sp-xfer__label', t('Push (hold Space)', 'Push (Space)')));
   const bar = el('div', 'sp-xfer__bar');
   const fill = el('div', 'sp-xfer__fill');
   const over = el('div', 'sp-xfer__overfill');
@@ -177,7 +177,7 @@ export function createTransferPanel(root) {
       setText(whenBig, `${Math.max(0, Math.ceil(h.tau ?? 0))} s`);
       setText(whenSub, (h.tau ?? 0) > 100 ? t('time warp is OK', 'keys 1-4: go fast') : t('get ready!', 'get ready!'));
     } else if (ph === 'burn' || ph === 'fix') { setText(whenBig, t('NOW', 'NOW')); setText(whenSub, t('burn window open', 'go go go!')); }
-    else if (ph === 'full' || ph === 'over') { setText(whenBig, t('STOP', 'STOP')); setText(whenSub, t('let go of W', 'let go of W')); }
+    else if (ph === 'full' || ph === 'over') { setText(whenBig, t('STOP', 'STOP')); setText(whenSub, t('let go of Space', 'let go of Space')); }
     else { setText(whenBig, '✓'); setText(whenSub, t('just coast', 'just wait')); }
 
     // POINT
@@ -207,7 +207,7 @@ export function createTransferPanel(root) {
     push.classList.toggle('is-idle', !(need > 0) || ph === 'coast' || ph === 'oncourse' || ph === 'search');
     const left = Math.max(0, need - done) / acc;
     if (ph === 'wait' || ph === 'point') {
-      setText(pushBig, h.auto ? t('Tap W once', 'Tap W once') : t(`Hold W ≈ ${Math.max(0.1, need / acc).toFixed(1)} s`, `Hold W ${Math.max(0.1, need / acc).toFixed(1)} s`));
+      setText(pushBig, h.auto ? t('Tap Space once', 'Tap Space once') : t(`Hold Space ≈ ${Math.max(0.1, need / acc).toFixed(1)} s`, `Hold Space ${Math.max(0.1, need / acc).toFixed(1)} s`));
       setText(pushSub, t(`speed change ${need.toFixed(1)} u/s`, 'fill the bar'));
     } else if (ph === 'burn') {
       setText(pushBig, `${Math.min(100, Math.round(f * 100))}%`);
@@ -216,12 +216,12 @@ export function createTransferPanel(root) {
         : t(`${left.toFixed(1)} s more · let go at 100%`, 'let go when full'));
     } else if (ph === 'full') {
       setText(pushBig, '100% ✓');
-      setText(pushSub, t('full! let go of W', 'full! let go'));
+      setText(pushSub, t('full! let go of Space', 'full! let go'));
     } else if (ph === 'over') {
       setText(pushBig, `${Math.round(f * 100)}%`);
-      setText(pushSub, t('too much! let go of W', 'too much! let go'));
+      setText(pushSub, t('too much! let go of Space', 'too much! let go'));
     } else if (ph === 'fix') {
-      setText(pushBig, t('Hold W', 'Hold W'));
+      setText(pushBig, t('Hold Space', 'Hold Space'));
       setText(pushSub, t('until the banner changes', 'until the sign changes'));
     } else {
       setText(pushBig, ph === 'search' ? '—' : '✓');
@@ -233,25 +233,25 @@ export function createTransferPanel(root) {
     if (ph === 'search') line = t(`No good path to ${h.targetName} yet. Keep coasting (time warp is fine).`, 'Wait. The ship is looking for a way.');
     else if (ph === 'wait') {
       line = h.auto
-        ? t(`Wait for NOW. The ship turns itself ${way}; then tap W once.`, 'Wait for NOW. Then tap W once.')
+        ? t(`Wait for NOW. The ship turns itself ${way}; then tap Space once.`, 'Wait for NOW. Then tap Space once.')
         : t(`Wait for NOW. Before then, turn ${way} until the white arrow meets the green mark.`, `Wait for NOW. ${wayDo} first.`);
     } else if (ph === 'point') {
-      line = h.auto ? t('Almost time! The ship is turning itself. Get ready to tap W.', 'Get ready to tap W!')
-        : lined ? t('Pointed right. Get ready to hold W when it says NOW.', 'Good! Get ready to hold W.')
+      line = h.auto ? t('Almost time! The ship is turning itself. Get ready to tap Space.', 'Get ready to tap Space!')
+        : lined ? t('Pointed right. Get ready to hold Space when it says NOW.', 'Good! Get ready to hold Space.')
           : t(`Point ${way} now: ${turnKey}.`, `Turn now: ${turnKey}.`);
     } else if (ph === 'burn') {
       line = h.auto && h.latched ? t('Booster on! It stops by itself when the bar is full. (S stops it early.)', 'Booster on! It stops by itself.')
-        : h.auto ? t('Tap W! The booster runs by itself and stops when the bar is full. (S stops it early.)', 'Tap W! It stops by itself.')
-        : !lined && errDeg !== null && errDeg > 25 ? t(`Turn first: ${turnKey}, then hold W.`, `Turn first: ${turnKey}.`)
-          : h.autoStop ? t('Hold W. The engine stops itself when the bar is full.', 'Hold W. It stops by itself.')
-            : t('Hold W and let go when the bar reaches 100%.', 'Hold W. Let go when the bar is full.');
-    } else if (ph === 'full') line = t('Bar full! Let go of W.', 'Full! Let go of W.');
-    else if (ph === 'over') line = t('Too much push! Let go of W now. A small fix will come later.', 'Too much! Let go of W.');
-    else if (ph === 'fix') line = t(`Your orbit is off. Point ${way} and hold W.`, `${wayDo} and hold W.`);
+        : h.auto ? t('Tap Space! The booster runs by itself and stops when the bar is full. (S stops it early.)', 'Tap Space! It stops by itself.')
+        : !lined && errDeg !== null && errDeg > 25 ? t(`Turn first: ${turnKey}, then hold Space.`, `Turn first: ${turnKey}.`)
+          : h.autoStop ? t('Hold Space. The engine stops itself when the bar is full.', 'Hold Space. It stops by itself.')
+            : t('Hold Space and let go when the bar reaches 100%.', 'Hold Space. Let go when the bar is full.');
+    } else if (ph === 'full') line = t('Bar full! Let go of Space.', 'Full! Let go of Space.');
+    else if (ph === 'over') line = t('Too much push! Let go of Space now. A small fix will come later.', 'Too much! Let go of Space.');
+    else if (ph === 'fix') line = t(`Your orbit is off. Point ${way} and hold Space.`, `${wayDo} and hold Space.`);
     else if (ph === 'coast') line = t(`Coast. Watch your dotted line reach ${h.targetName}.`, `Wait. You’re flying to ${h.targetName}.`);
     else line = t(`On course for ${h.targetName}. Coast (time warp is fine).`, `You’re on the way to ${h.targetName}!`);
     // The autopilot is flying (Easy): say what IT does, don't give her orders
-    // (play-test: the panel said "tap W once" while the autopilot flew).
+    // (play-test: the panel said "tap Space once" while the autopilot flew).
     if (h.pilot) {
       line = ph === 'burn' ? t('Autopilot: firing the engine now.', 'Autopilot: engine on!')
         : ph === 'wait' || ph === 'point' ? t(`Autopilot: it will turn and fire the engine at NOW.`, 'Autopilot: it fires the engine at NOW.')

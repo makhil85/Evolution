@@ -12,7 +12,7 @@ import { iconInner } from './icons.js';
 import { RESOURCES } from '../contracts.js';
 
 const CONTROL_ROWS = [
-  ['W / S', 'Main engine forward / reverse thrust'],
+  ['Space (or W) / S', 'Fire the main engine / reverse thrust'],
   ['← / → (or A / D)', 'Turn the ship'],
   ['Z / X', 'Nudge sideways, left / right (lining up on an asteroid)'],
   ['T', t('Auto-turn on / off: steer the ship yourself, or let it point itself', 'Auto-turn on or off')],
@@ -20,7 +20,7 @@ const CONTROL_ROWS = [
   ['P', t('Autopilot on / off: it flies to the next stop and you answer the questions', 'Autopilot on or off')],
   ['Esc', 'Pause menu (with "Try again from my last question")'],
   ['Shift', t('Precision (gentle) thrust', 'Gentle push')],
-  ['Space', t('Hold to stop spinning. On Easy, holding Space also turns the ship to follow the arrow.', 'Hold to stop spinning')],
+  ['Q', t('Hold to stop spinning (Space does it too while firing). On Easy, holding Q also turns the ship to follow the arrow.', 'Hold to stop spinning')],
   ['M', 'System map — plan transfers, see where planets will be'],
   ['N', 'Show or hide the small top-down map (bottom right)'],
   ['1 – 4', 'Time warp (only far from planets)'],
