@@ -118,7 +118,11 @@ export function createControls({ bus, element }) {
       const left = on && (down.has('KeyA') || down.has('ArrowLeft'));
       const right = on && (down.has('KeyD') || down.has('ArrowRight'));
       input.precision = on && (down.has('ShiftLeft') || down.has('ShiftRight'));
-      input.steady = on && down.has('Space');
+      // Lead 2026-10-07: Space fires the engine (easier for a child than W;
+      // W still works). It still steadies the spin and, on foot, jumps; Q
+      // steadies without firing.
+      input.fire = on && down.has('Space');
+      input.steady = on && (down.has('Space') || down.has('KeyQ'));
       input.thrust = (fwd ? 1 : 0) - (back ? 1 : 0);
       // +1 = turn right. That is physics.js's convention (turn +1 raises the
       // heading angle, which swings the nose to starboard) and ship.js's

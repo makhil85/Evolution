@@ -112,6 +112,13 @@ export function daySky(ctx, groundY = 360, ground = C.ground) {
 }
 
 /** Night sky with fixed little stars. */
+/** The night colour with no stars: for the films about atoms (lead
+ * 2026-10-07: "atoms only", star dots looked like more atoms). */
+export function plainDark(ctx) {
+  ctx.fillStyle = C.night;
+  ctx.fillRect(0, 0, STAGE_W, STAGE_H);
+}
+
 export function nightSky(ctx, seed = 7) {
   ctx.fillStyle = C.night;
   ctx.fillRect(0, 0, STAGE_W, STAGE_H);

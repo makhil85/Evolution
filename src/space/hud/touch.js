@@ -101,7 +101,9 @@ export function createTouchPad(root, { controls, bus, warpIndex, warpLevels }) {
 
   // --- right thumb: actions ------------------------------------------------
   const actions = el('div', 'sp-touch__actions');
-  const aim = hold(button('is-aim', 'AIM', 'Aim (Space)', 'Space'), 'Space');
+  // Space fires now (lead 2026-10-07), so the AIM / JUMP button holds Q: in
+  // flight it steadies and aims; on foot it jumps (input.steady).
+  const aim = hold(button('is-aim', 'AIM', 'Aim (Q)', 'Q'), 'KeyQ');
   const use = hold(button('is-use', 'E', t('Use: claw, dock, pick up (E)', 'Grab (E)')), 'KeyE');
   const small = el('div', 'sp-touch__small');
   const warp = tap(button('is-warp', 'Warp ×1', 'Time warp', '1-4'), () => {

@@ -43,7 +43,7 @@ function adapt(film) {
 // Level 4 choices are kept about the same length, so the longest is not a giveaway.
 const QUESTIONS = [
   {
-    prompt: ['When the ship pointed straight at the Moon and held W, what happened?', 'The ship pointed at the Moon and held W. What happened?'],
+    prompt: ['When the ship pointed straight at the Moon and held Space, what happened?', 'The ship pointed at the Moon and held Space. What happened?'],
     choices: [
       { text: ['It flew in a straight line all the way to the Moon', 'It flew right to the Moon'] },
       { text: ['Its path turned into a lopsided oval that missed', 'It missed the Moon'], correct: true },
@@ -53,7 +53,7 @@ const QUESTIONS = [
     why: ['You are already zooming sideways round Earth, so a push towards the Moon only bends your circle into a lopsided oval. And the Moon keeps moving, too.', 'You are going fast sideways. A push at the Moon just bends your path.'],
   },
   {
-    prompt: ['To stretch your orbit out to the Moon, which way should the nose point while you hold W?', 'Which way should the nose point to make your path bigger?'],
+    prompt: ['To stretch your orbit out to the Moon, which way should the nose point while you hold Space?', 'Which way should the nose point to make your path bigger?'],
     choices: [
       { text: ['Straight at the Moon, the place you want to go', 'At the Moon'] },
       { text: ['Backwards, opposite to the way you’re moving', 'Face the way you came'] },
@@ -63,7 +63,7 @@ const QUESTIONS = [
     why: ['The engine pushes you the way the nose points. Pushing along your path speeds you up, and the faster you go, the bigger your orbit gets.', 'Pushing forward makes you faster. Faster means a bigger path!'],
   },
   {
-    prompt: ['Why do we go round and wait before we burn?', 'Why do we wait before we hold W?'],
+    prompt: ['Why do we go round and wait before we burn?', 'Why do we wait before we hold Space?'],
     choices: [
       { text: ['So the Moon is in the right place when we arrive', 'So the Moon is there when we get there'], correct: true },
       { text: ['To give the engine time to cool down before the burn', 'To let the engine rest'] },
@@ -75,9 +75,9 @@ const QUESTIONS = [
   {
     prompt: ['You arrive at the Moon too fast. How do you slow down so the Moon can catch you?', 'You get to the Moon too fast. How do you slow down?'],
     choices: [
-      { text: ['Point straight at the Moon and hold W until you land on it', 'Point at the Moon and hold W'] },
-      { text: ['Keep pointing forward, along your path, and hold W even longer', 'Point forward and hold W'] },
-      { text: ['Point backwards (opposite to the way you’re moving), hold W', 'Face the way you came and hold W'], correct: true },
+      { text: ['Point straight at the Moon and hold Space until you land on it', 'Point at the Moon and hold Space'] },
+      { text: ['Keep pointing forward, along your path, and hold Space even longer', 'Point forward and hold Space'] },
+      { text: ['Point backwards (opposite to the way you’re moving), hold Space', 'Face the way you came and hold Space'], correct: true },
     ],
     hint: ['Which way did the nose point when the ship got caught?', 'Which way did the ship face when it got caught?'],
     why: ['Pointing backwards, the engine pushes against your speed and slows you down: a retrograde burn. Slow enough, and the Moon’s gravity catches you into orbit.', 'Facing the way you came slows you down. Then the Moon’s pull catches you!'],
@@ -89,7 +89,7 @@ const CLUES = [
   [null, 'Pointing at the Moon does not work. You miss it!'],
   [null, 'Point the nose forward, the way you are going. Your path grows to the Moon.'],
   [null, 'We wait so the Moon is there when we get there.'],
-  [null, 'Face the way you came and hold W. You slow down. The Moon catches you.'],
+  [null, 'Face the way you came and hold Space. You slow down. The Moon catches you.'],
 ];
 
 export const LESSON_4F = {

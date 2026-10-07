@@ -26,7 +26,7 @@ const REDRAW_MS = 80;
 /**
  * @typedef {object} AimHelp
  * @property {'ready'|'burn'|'land'|'brake'} phase  ready = coasting to the burn; burn = slow down
- *           now; land = falling, nose ready; brake = falling too fast, hold W
+ *           now; land = falling, nose ready; brake = falling too fast, hold Space
  * @property {number|null} err     radians the nose must turn (+ = turn right, D)
  * @property {number|null} [motion] radians from the aim to her direction of travel
  * @property {boolean} auto        Easy: the ship turns itself

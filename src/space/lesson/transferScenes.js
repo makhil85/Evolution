@@ -134,7 +134,7 @@ function film1() {
       captions: [
         [0, two(`Quick flight lesson, ${name()}! This is you, flying round Earth. You are already zooming sideways, super fast.`, `This is you, going round Earth, ${name()}. You are already zooming sideways, super fast!`)],
         [1, two('So why not just point straight at the Moon...', 'What if you point at the Moon...')],
-        [tb, two('...and hold W? BURN!', '...and hold W? BURN!')],
+        [tb, two('...and hold Space? BURN!', '...and hold Space? BURN!')],
         [tb + BURN + 0.2, two('Hmm. The dotted line just turns into a lopsided oval.', 'Hmm. The dotted line just makes a lopsided oval.')],
         [4.6, two('It never gets near the Moon, and the Moon keeps moving too. Missed!', 'It never gets to the Moon. Missed!')],
       ],
@@ -164,7 +164,7 @@ function film2() {
       captions: [
         [0, two('Now point the nose ALONG your path, the way you are already going.', 'Now point the nose forward, the way you are going.')],
         [0.8, two('The engine pushes you the way the nose points.', 'The engine pushes you where the nose points.')],
-        [tb, two('BURN! Hold W and watch the dotted line stretch...', 'BURN! Hold W. Look, the dotted line grows!')],
+        [tb, two('BURN! Hold Space and watch the dotted line stretch...', 'BURN! Hold Space. Look, the dotted line grows!')],
         [tb + BURN + 0.15, two('Engine off. Faster means a bigger orbit: your circle is now a long oval.', 'Faster means bigger. Your circle is now a long oval!')],
         [end - 0.15, two('Its far end reaches all the way out to the Moon!', 'It reaches all the way to the Moon!')],
       ],
@@ -276,7 +276,7 @@ function film4() {
       caught: (tt) => tt >= tb + BURN + 0.4,
       captions: [
         [0, two('This time, turn the ship round: point backwards (opposite to the way you’re moving).', 'This time, turn round. Face the way you came.')],
-        [tb, two('At your lowest point, hold W. BURN! The engine pushes against your speed.', 'At the lowest point, hold W. BURN!')],
+        [tb, two('At your lowest point, hold Space. BURN! The engine pushes against your speed.', 'At the lowest point, hold Space. BURN!')],
         [tb + BURN + 0.2, two('You slow down... and the Moon’s gravity catches you. You’re in orbit round the Moon!', 'You slow down. The Moon catches you!')],
       ],
       labels: (tt) => (tt < tTurn ? [{ text: t('too fast!', 'too fast!'), kind: 'warn' }]

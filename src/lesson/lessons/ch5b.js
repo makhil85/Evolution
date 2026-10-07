@@ -9,7 +9,7 @@
 //
 // Pitfalls carried: the last frame still shows the answer; labels beside the
 // picture, not across it; every string has a Level 1 version.
-import { span, lerp, label, circle, arrow, rect, nightSky } from '../draw.js';
+import { span, lerp, label, circle, arrow, rect, nightSky, plainDark } from '../draw.js';
 
 const TAU = Math.PI * 2;
 
@@ -154,7 +154,7 @@ function thermometer(ctx, x, y, level, text, col) {
 }
 
 function drawColdAtoms(ctx, T) {
-  nightSky(ctx, 57);
+  plainDark(ctx); // atoms only, no star dots
   const show = span(T, 0.5, 1.5);
   ctx.save(); ctx.globalAlpha = show;
   label(ctx, 'On Earth', 230, 50, { size: 22, color: '#ffd27a', halo: 'rgba(0,0,0,0.7)' });
