@@ -481,8 +481,10 @@ export function playZeroG(game) {
 
       // Her: up out of the seat, a slow bob and roll, arms and legs drifting.
       const f = k * out;
-      girl.group.position.set(g0.x + Math.sin(t * 0.7) * 0.03 * f, g0.y + (0.22 + Math.sin(t * 1.1) * 0.05) * f, g0.z);
-      girl.group.rotation.set(r0.x + Math.sin(t * 0.5) * 0.12 * f, r0.y + Math.sin(t * 0.35) * 0.25 * f, r0.z + Math.sin(t * 0.6) * 0.1 * f);
+      // A small lift only (lead 2026-10-07: at 0.27 her head went out through
+      // the canopy): she bobs just off her seat, inside the glass.
+      girl.group.position.set(g0.x + Math.sin(t * 0.7) * 0.02 * f, g0.y + (0.07 + Math.sin(t * 1.1) * 0.025) * f, g0.z);
+      girl.group.rotation.set(r0.x + Math.sin(t * 0.5) * 0.06 * f, r0.y + Math.sin(t * 0.35) * 0.2 * f, r0.z + Math.sin(t * 0.6) * 0.05 * f);
       const set = (n, x, y, z) => { if (bones[n] && rest[n]) bones[n].rotation.set(rest[n].x + x * f, rest[n].y + y * f, rest[n].z + z * f); };
       set('armL', 0, 0, 1.15 + Math.sin(t * 1.3) * 0.2);
       set('armR', 0, 0, -1.15 - Math.sin(t * 1.2 + 1) * 0.2);

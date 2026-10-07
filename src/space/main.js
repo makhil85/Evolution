@@ -37,6 +37,7 @@ import { createTouchPad } from './hud/touch.js';
 import { createFlightCamera } from './camera.js';
 import { createTrajectoryView } from './trajectoryView.js';
 import { createMissions } from './missions.js';
+import { createCatchZone } from './catchZone.js';
 import { planTransfer, planTransferSteps, planIsGood } from './transferPlanner.js';
 import { guardContext } from '../game/contextGuard.js';
 import { createFrameMonitor } from '../game/frameMonitor.js';
@@ -241,6 +242,8 @@ game.camera = camera; // debug: tests read the flight camera
 game.beltFx = createBeltFx(game);
 
 const missions = createMissions(game);
+const catchZone = createCatchZone(game, scene);
+game.catchZone = catchZone;
 // Unlock mode only: the grown-up "Jump" panel (any step of this chapter).
 addJumpPanel({ title: 'Jump to a step', parts: missions.parts(), onJump: (id) => missions.jumpTo(id) });
 game.missions = missions; // debug: window.__space.missions.jump('a1_raise')
@@ -1530,6 +1533,8 @@ function tick(realDt, render = true) {
   }
 
   const states = allStates(ship.t, game.states);
+  // Easy / Medium: the blinking catch zone puts her straight on an orbit.
+  catchZone.update(states, ship, realDt, paused);
   _origin.x = ship.x;
   _origin.z = ship.z;
 
@@ -1553,11 +1558,20 @@ function tick(realDt, render = true) {
   // moons. Back to the view she had once she is out (or the step changes).
   // A moon's zone on the way out still counts as the system (its planet).
   const sysOf = ship.soi !== 'sun' && BODIES[ship.soi] ? (BODIES[ship.soi].parent === 'sun' ? ship.soi : BODIES[ship.soi].parent) : null;
-  const wideEscape = !!game.escapeStep && (sysOf === 'jupiter' || sysOf === 'saturn') && !ship.landedOn && !game.cinematic;
+  // Leaving Earth and the Moon (lead 2026-10-07) too: wide enough to show
+  // the next goal (Mars) as well, so she sees where she is heading.
+  const wideEscape = !!game.escapeStep && (sysOf === 'jupiter' || sysOf === 'saturn' || sysOf === 'earth') && !ship.landedOn && !game.cinematic
+    // Still climbing off the Moon: the normal view (the ground is right there).
+    && !(ship.soi === 'moon' && Math.hypot(ship.x - states.moon.x, ship.z - states.moon.z) < BODIES.moon.radius * 3);
   if (wideEscape !== escapeView.on) {
     escapeView.on = wideEscape;
-    if (wideEscape) { escapeView.mode = flightCam.mode; flightCam.setMode('top'); flightCam.setDistance(BODIES[sysOf].soi * 1.5); }
-    else { flightCam.setMode(escapeView.mode || 'chase'); flightCam.resetZoom(); }
+    if (wideEscape) {
+      escapeView.mode = flightCam.mode;
+      flightCam.setMode('top');
+      const goal = game.target && game.target !== sysOf && states[game.target];
+      const toGoal = goal ? Math.hypot(goal.x - ship.x, goal.z - ship.z) * 1.15 : 0;
+      flightCam.setDistance(Math.min(19000, Math.max(BODIES[sysOf].soi * 1.5, toGoal)));
+    } else { flightCam.setMode(escapeView.mode || 'chase'); flightCam.resetZoom(); }
   }
   // Time warp: the camera holds its direction (her path and the planet
   // beside her both sweep round once per orbit in a second or two). The

@@ -194,7 +194,7 @@ export function createMissions(game) {
       act: ACT_TITLES[step.act] || '',
       title: step.title,
       objective: doneNow ? `Done: ${step.title}!` : step.objective,
-      steps: actSteps.map((s) => ({ text: s.title, done: steps.indexOf(s) < index || (doneNow && s === step) })),
+      steps: actSteps.map((s) => ({ text: s.title, done: steps.indexOf(s) < index || (doneNow && s === step) || !!s.doneEarly?.() })),
     });
   }
   const { hud } = game;
@@ -304,6 +304,8 @@ export function createMissions(game) {
     start() { enterStep(); },
     /** The save this session started from (main.js restores the ship from it). */
     saved: save,
+    /** Redraw the mission card (a step ticked off early, act3's Ceres visit). */
+    refresh() { showStep(); },
     /** Save now (main.js calls this every few seconds while flying). */
     save() { persist(); },
     /** Ask a beat's question the way a step's own beat is asked: counted as

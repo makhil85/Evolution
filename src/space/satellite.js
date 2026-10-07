@@ -920,8 +920,8 @@ export function buildPanelPuzzleScene(game, { toleranceScale = 1 } = {}) {
 
   // Both arrays in frame (the game swings both), from a little to the side
   // so the thin boards never sit edge-on to the camera.
-  camera.position.set(4.4, 0.6, 14.2);
-  camera.lookAt(0, -1.3, 0); // both arrays in view, above the panel at the bottom
+  camera.position.set(5.2, 1.2, 18.5);
+  camera.lookAt(0, -0.9, 0); // both arrays (4.5 u each way) in view, above the panel at the bottom
 
   // Lead 2026-10-07: one held key was too easy. Now BOTH panels swing to
   // and fro by themselves (the satellite lost its pointing); she catches

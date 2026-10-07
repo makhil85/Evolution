@@ -444,7 +444,10 @@ function buildFarBeltGroup() {
       // rare bigger boulder so the belt doesn't read as pure haze. Capped
       // low enough that even the rare big one landing near the ship (see
       // near-rock streaming below) doesn't loom absurdly over hero rocks.
-      const scale = 0.5 + Math.pow(rand(), 2.4) * 40;
+      // Lead 2026-10-07: the big ones looked half the size of Ceres (radius
+      // 7) and loomed past. Now never more than about 1/2 of Ceres, mostly
+      // far smaller, so the field reads as rocks passing far away.
+      const scale = 0.3 + Math.pow(rand(), 2.4) * 3.2;
       s.setScalar(scale);
       m.compose(p, q, s);
       mesh.setMatrixAt(i, m);
@@ -602,7 +605,7 @@ function cellRock(cx, cz) {
 
   const kindKeys = Object.keys(BELT.kinds);
   const kind = kindKeys[Math.floor(rand() * kindKeys.length) % kindKeys.length];
-  const radius = 0.5 + rand() * 7.0; // 1-15 u across
+  const radius = 0.8 + Math.pow(rand(), 1.3) * 1.8; // 1.6-5.2 u across: well under Ceres (14 u) - lead 2026-10-07
   const density = kind === 'metal' ? 0.95 : kind === 'icy' ? 0.4 : 0.65;
   const mass = Math.max(0.3, radius * radius * radius * density);
   const y = (rand() - 0.5) * BELT.thickness * 0.5;

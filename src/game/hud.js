@@ -658,6 +658,11 @@ export class Hud {
     } else {
       this._status = this._status.replace(/^\s*\d{1,3}\s*%/, `${value}%`);
     }
+    // The next goal, said once when it changes (lead 2026-10-07: "explain the
+    // next goal, then remove it from the screen"): a toast, which goes away.
+    const goal = this._status.replace(/^\s*\d{1,3}\s*%\s*[—-]?\s*/, '').trim();
+    if (goal && this._goalSaid !== undefined && goal !== this._goalSaid && value < 100) this.toast(`Next goal: ${goal}`, 'info');
+    if (goal) this._goalSaid = goal;
     // On screen just the number: the "what next" words are the mission card's
     // job, and showing them here too said the same thing twice at the top of
     // the screen. Screen readers and a hover still get the whole line.
