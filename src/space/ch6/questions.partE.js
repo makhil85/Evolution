@@ -1,42 +1,45 @@
-// Chapter 6, Part E question bank (steps 13-18): about one maths question
-// for every science question, as the plan's maths thread asks: add the
-// slingshot boosts, the fuel left, percent of light speed, and distance =
-// speed x time to the nearest star. Same schema as Chapter 5's bank
-// (questions.ch5.js): type 'choice' or 'text', act, beat. Act 6 is Part E
-// (ch6/start.js).
+// Chapter 6, Part E question bank: the way out of the Sun's family, light
+// speed and the trip to a star. About one maths question for every science
+// question. Same schema as Chapter 5's bank (questions.ch5.js): type
+// 'choice' or 'text', act, beat. Act 6 is Part E (ch6/start.js).
 //
 // Every numeric answer is re-derived in scripts/test-ch6-route.mjs, from the
-// same tables the games use (routes.js), so a retune can't leave a question
-// wrong.
-import { STOPS, START_SPEED, FUEL_BUDGET, LIGHT_KMS, CRUISE_PERCENT } from './routes.js';
+// same model the planner uses (routes.js), so a retune can't leave a
+// question wrong.
+import { LIGHT_KMS, CRUISE_PERCENT, FUELS, bestPlan, planTotals } from './routes.js';
 
 const ACT_E = 6;
 
-// The sums the questions use, from the game's own tables.
-const NEP = STOPS.neptune.boost[2]; const JUP = STOPS.jupiter.boost[2]; const SUN = STOPS.sun.boost[3]; // close, close, skimming
-const ROUTE_END = START_SPEED + NEP + JUP + SUN;
-const FUEL_USED = STOPS.neptune.fuel[2] + STOPS.jupiter.fuel[2] + STOPS.sun.fuel[3];
-const FUEL_LEFT = FUEL_BUDGET - FUEL_USED;
+// The sums the questions use, from the planner's own model (10 t of fuel).
+const FUEL = FUELS[0];
+const JS = planTotals(bestPlan('js', FUEL)).speed;
+const JSUN = planTotals(bestPlan('jsun', FUEL)).speed;
+const ICE = JSUN - JS;
 const fmt = (n) => n.toLocaleString('en-US');
 
 /** @type {Object<string, import('../questions.space.js').SpaceQuestion>} */
 export const CH6E_QUESTIONS = {
   c6_route_sum: {
     id: 'c6_route_sum',
-    type: 'text',
+    type: 'choice',
     act: ACT_E,
     beat: 'c6RouteSum',
-    title: 'Adding up the boosts',
-    subject: 'Addition',
+    title: 'Fall in, climb out',
+    subject: 'Energy',
     difficulty: 'Level 4',
     prompt:
-      `At the edge she is going ${START_SPEED} km/s. A close pass of Neptune adds ${NEP} km/s, a close pass of Jupiter adds ${JUP} km/s, ` +
-      `and the Sun dive adds ${SUN} km/s. How fast is she going after all three? (Type a number.)`,
-    answers: [String(ROUTE_END), `${ROUTE_END} km/s`],
-    hint: `Start at ${START_SPEED} and add each boost in turn.`,
-    parentHint: `${START_SPEED} + ${NEP} + ${JUP} + ${SUN} = ${ROUTE_END}. (Forgetting the starting speed gives ${ROUTE_END - START_SPEED}.)`,
-    success: `Yes! ${ROUTE_END} km/s. Every slingshot adds to the total.`,
-    doneMessage: 'Now fly the route!',
+      'Zara lets the ship fall towards the Sun and swing round it, with the engine off. ' +
+      'On the way in she speeds up a lot. How fast is she going once she has climbed back out to where she started?',
+    choices: [
+      { text: 'The same speed as before: the Sun takes back on the way out what it gave on the way in', correct: true },
+      { text: 'Much faster: the Sun gave her free speed' },
+      { text: 'Much slower: the Sun kept her speed' },
+      { text: 'Stopped' },
+    ],
+    hint: 'Energy is never made or lost, only changed. Is anything moving that could give her energy?',
+    parentHint: 'With only the Sun (which isn’t moving past her), her energy is conserved: kinetic energy gained falling in is paid back climbing out. Gains need a moving planet to steal from, or fuel.',
+    success: 'Yes! Same speed. The Sun on its own gives nothing for free: we have to steal energy from moving planets, or use fuel.',
+    doneMessage: 'Now plan the fastest way out!',
     reward: { science: 10 },
   },
 
@@ -45,17 +48,17 @@ export const CH6E_QUESTIONS = {
     type: 'text',
     act: ACT_E,
     beat: 'c6FuelLeft',
-    title: 'Fuel for steering',
+    title: 'What the ice giants add',
     subject: 'Subtraction',
     difficulty: 'Level 4',
     prompt:
-      `The steering tank holds ${FUEL_BUDGET} tonnes. Steering past Neptune uses ${STOPS.neptune.fuel[2]} t, past Jupiter ${STOPS.jupiter.fuel[2]} t, ` +
-      `and the Sun dive ${STOPS.sun.fuel[3]} t. How many tonnes are left over for emergencies? (Type a number.)`,
-    answers: [String(FUEL_LEFT), `${FUEL_LEFT} t`, `${FUEL_LEFT} tonnes`],
-    hint: 'Add up what the three passes use, then take that away from the tank.',
-    parentHint: `${STOPS.neptune.fuel[2]} + ${STOPS.jupiter.fuel[2]} + ${STOPS.sun.fuel[3]} = ${FUEL_USED}; ${FUEL_BUDGET} − ${FUEL_USED} = ${FUEL_LEFT}.`,
-    success: `Right! ${FUEL_LEFT} tonnes spare. A good pilot always keeps some back.`,
-    doneMessage: 'Plan made! First: how does a slingshot work?',
+      `With ${FUEL} t of fuel, flying past Jupiter and Saturn leaves the Sun’s family at ${JS} km/s. ` +
+      `Adding flybys of Uranus and Neptune too makes it ${JSUN} km/s. How many km/s did Uranus and Neptune add? (Type a number.)`,
+    answers: [String(ICE), `${ICE} km/s`],
+    hint: `Take the smaller speed away from the bigger one: ${JSUN} − ${JS}.`,
+    parentHint: `${JSUN} − ${JS} = ${ICE}. They add less than Jupiter and Saturn did: smaller planets have less energy to steal.`,
+    success: `Right! ${ICE} km/s more. Small planets help a little; the giants help the most.`,
+    doneMessage: 'Plan made! Time to fly it.',
     reward: { science: 10 },
   },
 
@@ -67,9 +70,9 @@ export const CH6E_QUESTIONS = {
     title: 'The best slingshot',
     subject: 'Gravity and momentum',
     difficulty: 'Level 4',
-    prompt: 'Of all the planets, a close pass of Jupiter gives the biggest slingshot boost. Why Jupiter?',
+    prompt: 'Of all the planets, a flyby of Jupiter steals the most energy. Why Jupiter?',
     choices: [
-      { text: 'It is the heaviest planet, so its pull swings the ship hardest and it has the most momentum to share', correct: true },
+      { text: 'It is the heaviest planet, so its pull bends the ship’s path the most and it has the most energy to share', correct: true },
       { text: 'It is the closest planet to the Sun' },
       { text: 'It has the most moons to push the ship' },
       { text: 'It is the coldest planet' },
@@ -77,7 +80,7 @@ export const CH6E_QUESTIONS = {
     hint: 'Think of Space pool: which rock could give the most push away without slowing down much?',
     parentHint: 'Jupiter has more than twice the mass of all the other planets put together, and moves at about 13 km/s round the Sun: that is the momentum a slingshot borrows.',
     success: 'Yes! Jupiter is the heavyweight: more than twice all the other planets put together.',
-    doneMessage: 'Next stop: the Sun dive.',
+    doneMessage: 'Fusion drive next!',
     reward: { science: 10 },
   },
 
@@ -96,7 +99,7 @@ export const CH6E_QUESTIONS = {
       { text: 'The drive only works when it is hot' },
       { text: 'It makes no difference where she fires' },
     ],
-    hint: 'Remember the two ships in lesson 6B: one fired far out, one fired close. Which left faster?',
+    hint: 'Remember the lesson: the same push fired far out, or fired at the closest point. Which left faster?',
     parentHint: 'This is the Oberth effect: a burn adds the most energy where the ship is already fastest, at the bottom of the gravity well.',
     success: 'Yes! The same push gave the most speed at the closest point. Only a rock shield could go that close.',
     doneMessage: 'Fusion drive on!',
@@ -145,20 +148,24 @@ export const CH6E_QUESTIONS = {
 /** Level 1 overlay (2nd grade): same ids, same answers' meaning, easier numbers where needed. */
 export const CH6E_LEVEL1 = {
   c6_route_sum: {
-    difficulty: 'Level 1 • adding',
-    prompt: 'Jupiter gives the ship 9 more km/s. The Sun gives 10 more. How much more is that in all? (Type a number.)',
-    answers: ['19', '19 km/s'],
-    hint: 'Start at 10 and count on 9.',
-    parentHint: '9 + 10 = 19. Counting on from the bigger number is the quick way.',
-    success: 'Yes! 19 more. Each planet adds speed.',
+    difficulty: 'Level 1 • energy',
+    prompt: 'Zara falls towards the Sun and swings round it, engine off. When she gets back out, is she faster?',
+    choices: [
+      { text: 'No, the same speed as before', correct: true },
+      { text: 'Yes, much faster' },
+      { text: 'She stops' },
+      { text: 'She goes backwards' },
+    ],
+    hint: 'Going down a slide you speed up. Climbing back up you slow down.',
+    success: 'Yes! The same. The Sun gives speed going in and takes it back going out.',
   },
   c6_fuel_left: {
     difficulty: 'Level 1 • taking away',
-    prompt: 'The tank has 20 tonnes of fuel. Steering uses 8 tonnes. How many tonnes are left? (Type a number.)',
-    answers: ['12', '12 t', '12 tonnes'],
-    hint: 'Count back 8 from 20.',
-    parentHint: '20 − 8 = 12.',
-    success: 'Right! 12 tonnes left.',
+    prompt: `Jupiter and Saturn get us going ${JS} km/s. With Uranus and Neptune too, we go ${JSUN} km/s. How much more is that? (Type a number.)`,
+    answers: [String(ICE), `${ICE} km/s`],
+    hint: `Count up from ${JS} to ${JSUN}.`,
+    parentHint: `${JSUN} − ${JS} = ${ICE}.`,
+    success: `Right! ${ICE} more.`,
   },
   c6_jupiter_boost: {
     difficulty: 'Level 1 • gravity',

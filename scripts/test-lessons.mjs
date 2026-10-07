@@ -15,7 +15,7 @@ const ok = (name, fn) => { fn(); passed += 1; console.log(`  ok  ${name}`); };
 
 const { LESSON_1A, LESSON_1B } = await import('../src/lesson/lessons/ch1.js');
 const { LESSON_2A, LESSON_2B } = await import('../src/lesson/lessons/ch2.js');
-const { LESSON_3A, LESSON_3B } = await import('../src/lesson/lessons/ch3.js');
+const { LESSON_3A, LESSON_3B, LESSON_3C } = await import('../src/lesson/lessons/ch3.js');
 const card = await import('../src/lesson/card.js');
 const { LESSON_4G } = await import('../src/lesson/lessons/ch4.js');
 const { LESSON_4F } = await import('../src/lesson/lessons/flightSchool.js');
@@ -25,9 +25,9 @@ const { LESSON_5C } = await import('../src/lesson/lessons/ch5c.js');
 const { LESSON_6A } = await import('../src/lesson/lessons/ch6a.js');
 const { LESSON_6B } = await import('../src/lesson/lessons/ch6b.js');
 const { LESSON_6C } = await import('../src/lesson/lessons/ch6c.js');
-const LESSONS = [LESSON_1A, LESSON_1B, LESSON_2A, LESSON_2B, LESSON_3A, LESSON_3B, LESSON_4F, LESSON_4G, LESSON_5A, LESSON_5AA, LESSON_5B, LESSON_5C, LESSON_6A, LESSON_6B, LESSON_6C];
+const LESSONS = [LESSON_1A, LESSON_1B, LESSON_2A, LESSON_2B, LESSON_3A, LESSON_3B, LESSON_3C, LESSON_4F, LESSON_4G, LESSON_5A, LESSON_5AA, LESSON_5B, LESSON_5C, LESSON_6A, LESSON_6B, LESSON_6C];
 // Films per lesson: three, unless the plan says otherwise.
-const FILMS = { ch4_flight_school: 4, ch5_momentum: 5, ch5_fusion: 5 };
+const FILMS = { ch4_flight_school: 4, ch5_momentum: 5, ch5_fusion: 5, ch6_slingshot: 4 };
 
 const pair = (v, what) => {
   assert.ok(Array.isArray(v) && v.length === 2, `${what}: needs [Level 4, Level 1]`);

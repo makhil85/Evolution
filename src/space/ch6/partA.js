@@ -1,10 +1,10 @@
-// Chapter 6, Part A: the crew arrives. The opening (opening.js, played on a
-// fresh start) docks the supply ship at Rock B; this step is the hello.
+// Chapter 6, Part A: the crew arrives. The supply ship docks at Rock B
+// (opening.js, after the engine is built in the asteroid belt); this step
+// is the hello.
 // See missions.js for the step format.
 import { t } from '../level.js';
 import { CREW_INFO, who } from './crewInfo.js';
-import { clearPartB } from './partB.js';
-import { clearPartE } from './partE.js';
+import { playCh6Opening } from './opening.js';
 
 export function partASteps(game) {
   const { hud } = game;
@@ -16,9 +16,7 @@ export function partASteps(game) {
       objective: t('The supply ship from Earth has docked at the rock ship. Say hello to the crew who will fly with you.', 'Say hello to your new crew!'),
       markers: [],
       async enter() {
-        // The chapter's first step: a fresh start (or a full restart), so the
-        // stations and the route from a previous go are cleared.
-        clearPartB(); clearPartE();
+        await playCh6Opening(game); // the supply ship docks
         await hud.showDialogue([
           { who: 'Mission Control', text: t('The supply ship is docked. Nobody flies between the stars alone: meet your crew.', 'The supply ship is here. Meet your crew!') },
           intro('biologist', `Hi! I’m ${CREW_INFO.biologist.name}, the biologist. I look after the air, the water and the farm.`, `Hi! I’m ${CREW_INFO.biologist.name}. I look after plants, air and water.`),

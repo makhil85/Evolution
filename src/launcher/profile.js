@@ -103,7 +103,7 @@ export const CHAPTERS = [
   {
     n: 5,
     title: 'Rings to a Star',
-    blurb: 'Fly through Saturn’s rings, out past Neptune and Pluto, find out what powers the stars, and build a ship inside a rock.',
+    blurb: 'Fly through Saturn’s rings, out past Neptune and Pluto to the edge of the Sun’s family, and find out what powers the stars.',
     href: 'chapter5.html',
     store: { 1: 'level5_rings_to_a_star_v1_L1', 4: 'level5_rings_to_a_star_v1' },
     isDone: (s) => s?.complete === true,
@@ -111,7 +111,7 @@ export const CHAPTERS = [
   {
     n: 6,
     title: 'The Long Trip',
-    blurb: 'Meet the crew, build a home inside the rock ship, then slingshot past the planets and the Sun towards the stars.',
+    blurb: 'Back in the asteroid belt: build a ship inside a rock, meet the crew, make it a tiny Earth, then find the fastest way out towards the stars.',
     href: 'chapter6.html',
     store: { 1: 'level6_long_trip_v1_L1', 4: 'level6_long_trip_v1' },
     isDone: (s) => s?.complete === true,

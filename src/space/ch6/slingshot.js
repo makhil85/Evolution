@@ -19,7 +19,7 @@ import { el, openLayer } from '../../play/ui.js';
 import { injectStyles } from '../../lesson/card.js';
 import { t } from '../level.js';
 import { nightSky, label, circle, rect, line, arrow, STAGE_W, STAGE_H } from '../../lesson/draw.js';
-import { STOPS, START_SPEED, routeById, planTotals, windowFor, keptFraction, flightResult } from './routes.js';
+import { STOPS, routeById, planTotals, windowFor, keptFraction, flightResult } from './routes.js';
 import { skipButton } from '../../play/grownUp.js';
 
 const TAU = Math.PI * 2;
@@ -92,7 +92,11 @@ function planet(ctx, id, x, y, r) {
 export function playSlingshots({ bus = null, plan }) {
   injectStyles();
   const route = routeById(plan.route);
-  const { legs } = planTotals(plan);
+  const planned = planTotals(plan);
+  // The stops she flies past (the opening burn and Jupiter's fling inward are not presses).
+  const legs = planned.legs.filter((l) => l.id !== 'burn' && !l.fall);
+  // Straight out: nothing to time, the burn is the whole route.
+  if (!legs.length) return Promise.resolve({ route: plan.route, ...flightResult(plan, []) });
   const card = el('div', 'pl-card ls-card');
   card.dataset.game = 'slingshots';
   const eyebrow = el('div', 'pl-eyebrow');
@@ -134,7 +138,7 @@ export function playSlingshots({ bus = null, plan }) {
     title.textContent = leg.id === 'sun' ? t('Dive past the Sun', 'Dive past the Sun') : `${t('Slingshot past', 'Fly past')} ${pick(STOPS[leg.id].name)}`;
     tip.textContent = leg.id === 'sun'
       ? t('A plain swing round the Sun adds nothing. Fire the drive at the closest point: press when the marker is in the gold!', 'Fire the engine closest to the Sun! Press in the gold.')
-      : t(`Up to +${leg.boost} km/s. Press when the marker is in the gold, right at the closest point.`, `Press in the gold to get +${leg.boost} km/s!`);
+      : t(`Up to +${leg.energyGain} energy. Press when the marker is in the gold, right at the closest point.`, 'Press in the gold to get the most!');
     [...dots.children].forEach((d, k) => { d.className = `ls-dot${k < i ? ' is-done' : k === i ? ' is-active' : ''}`; });
     pressBtn.disabled = false;
   }
@@ -170,7 +174,7 @@ export function playSlingshots({ bus = null, plan }) {
   function drawLeg(ctx, T) {
     const leg = legs[ix];
     const sun = leg.id === 'sun';
-    const R = sun ? 52 : leg.id === 'jupiter' ? 46 : leg.id === 'saturn' ? 40 : leg.id === 'earth' ? 24 : 32;
+    const R = sun ? 52 : leg.id === 'jupiter' ? 46 : leg.id === 'saturn' ? 40 : 32;
     const gap = R + 12 + (4 - leg.close) * 16;
     const cx = 300; const cy = 250;
     // The planet drifts back a little after the press (exaggerated); the Sun never.
@@ -206,14 +210,14 @@ export function playSlingshots({ bus = null, plan }) {
     }
     // the result: kept boost, and (planets) momentum bars
     if (errs[ix] !== undefined && L > APPROACH + 0.2) {
-      const kept = Math.round(leg.boost * keptFraction(errs[ix] ?? 2));
+      const kept = Math.round(leg.energyGain * keptFraction(errs[ix] ?? 2));
       const e = Math.abs(errs[ix] ?? 2);
-      const word = errs[ix] == null ? t('Missed the moment: half the boost', 'Missed! Half the boost')
-        : e <= 0.25 ? t('Perfect!', 'Perfect!') : e <= 1 ? t('Good!', 'Good!') : t('A bit off: half the boost', 'A bit off!');
-      label(ctx, `${word}  +${kept} km/s`, 300, 40, { size: 24, color: e <= 1 ? '#9fe8a8' : '#ffd27a', halo: 'rgba(0,0,0,0.7)' });
+      const word = errs[ix] == null ? t('Missed the moment: half of it', 'Missed! Half of it')
+        : e <= 0.25 ? t('Perfect!', 'Perfect!') : e <= 1 ? t('Good!', 'Good!') : t('A bit off: half of it', 'A bit off!');
+      label(ctx, `${word}  +${kept} ${t('energy', 'energy')}`, 300, 40, { size: 24, color: e <= 1 ? '#9fe8a8' : '#ffd27a', halo: 'rgba(0,0,0,0.7)' });
       if (!sun && after > 0) {
         // Same height both sides: what the planet lost, the ship gained.
-        const h = after * (24 + 56 * (kept / 12));
+        const h = after * (24 + 56 * Math.min(1, kept / 350));
         const bx = 640; const by = 380;
         rect(ctx, bx, by - h, 26, h, '#7fd3ff', 4);
         rect(ctx, bx + 64, by - h, 26, h, '#9fe8a8', 4);
@@ -225,25 +229,21 @@ export function playSlingshots({ bus = null, plan }) {
     }
   }
 
-  /** The side list: each flyby's gain and the running total speed. */
+  /** The side list: each stop's energy, and the plan's speed far away. */
   function drawList(ctx) {
-    const x = 610; let y = 40;
-    rect(ctx, x - 12, 16, 200, 30 + 26 * (legs.length + 2), 'rgba(10,16,32,0.75)', 10);
-    label(ctx, t('Speed', 'Speed'), x, y, { size: 15, color: '#ffd27a', halo: null, align: 'left' });
-    y += 26;
-    label(ctx, `${t('start', 'start')}: ${START_SPEED} km/s`, x, y, { size: 14, color: '#cfe8ff', halo: null, align: 'left' });
-    let speed = START_SPEED;
+    const x = 590; let y = 40;
+    rect(ctx, x - 12, 16, 216, 30 + 26 * (legs.length + 2), 'rgba(10,16,32,0.75)', 10);
+    label(ctx, t('Energy stolen', 'Energy'), x, y, { size: 15, color: '#ffd27a', halo: null, align: 'left' });
     legs.forEach((leg, i) => {
       y += 26;
       const e = errs[i];
       const doneLeg = e !== undefined && (i < ix || L > APPROACH + 0.2);
-      const kept = doneLeg ? Math.round(leg.boost * keptFraction(e ?? 2)) : null;
-      if (kept != null) speed += kept;
+      const kept = doneLeg ? Math.round(leg.energyGain * keptFraction(e ?? 2)) : null;
       const txt = `${pick(STOPS[leg.id].name)}: ${kept != null ? `+${kept}` : '…'}`;
       label(ctx, txt, x, y, { size: 14, color: i === ix ? '#ffffff' : '#cfe8ff', halo: null, align: 'left' });
     });
     y += 30;
-    label(ctx, `${t('Total', 'Total')}: ${speed} km/s`, x, y, { size: 17, color: '#9fe8a8', halo: null, align: 'left' });
+    label(ctx, planned.speed > 0 ? `${t('Plan', 'Plan')}: ${planned.speed} km/s` : t('Plan: the Sun holds us', 'Plan: too slow'), x, y, { size: 15, color: '#9fe8a8', halo: null, align: 'left' });
   }
 
   function draw(T) {
