@@ -13,6 +13,7 @@ dist/artifact-map.json
 
 # Build outputs, like dist/ and dist-hosted/ above.
 dist-single/
+release/
 
 dist-solo/
 dist-solo-hosted/

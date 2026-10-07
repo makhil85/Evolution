@@ -1,0 +1,18 @@
+ROCKET VILLAGE - how to play
+============================
+
+Windows:  double-click PLAY.bat
+Mac:      double-click play.command
+          (the first time, right-click it > Open, because Mac is careful
+           with downloaded files)
+Linux:    run ./play.command
+
+A small black window opens and the game opens in your web browser.
+Keep the black window open while you play; close it to stop the game.
+
+It needs Node.js (free, from https://nodejs.org), or Python. If neither
+is installed, the window says so.
+
+Saves are kept in the browser on this computer.
+Grown-ups: open the game with ?unlock=all at the end of the address to
+unlock every chapter and get Skip / Jump buttons (?unlock=off to undo).

@@ -594,3 +594,12 @@ lines are in place but not tuned.
 - HUD right column starts at 46 px (the Chapters button hid Autopilot).
   Turning hints say ← / → first. Zero-g scene: she lifts only a little.
 - Ch2 lesson 2A truss film: green sides go red near the truck, blue joints.
+
+## Sharing the game as one zip
+
+`npm run package` builds the game and makes `release/RocketVillage.zip`
+(about 12.5 MB): the built game plus `PLAY.bat` (Windows), `play.command`
+(Mac/Linux), `play-server.mjs` (a tiny local web server, no installs) and
+`HOW-TO-PLAY.txt`. The player unzips and double-clicks; it needs Node.js
+(or Python as a fallback). The zip holds whatever is checked out, so pull
+`main` first. Close the game before `npm run package` / `npm ci` on Windows.
