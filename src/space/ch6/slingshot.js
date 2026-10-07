@@ -20,6 +20,7 @@ import { injectStyles } from '../../lesson/card.js';
 import { t } from '../level.js';
 import { nightSky, label, circle, rect, line, arrow, STAGE_W, STAGE_H } from '../../lesson/draw.js';
 import { STOPS, START_SPEED, routeById, planTotals, windowFor, keptFraction, flightResult } from './routes.js';
+import { skipButton } from '../../play/grownUp.js';
 
 const TAU = Math.PI * 2;
 const pick = (pair) => (Array.isArray(pair) ? t(pair[0], pair[1]) : pair);
@@ -286,6 +287,9 @@ export function playSlingshots({ bus = null, plan }) {
     shot() { draw(0); return canvas.toDataURL('image/png'); },
   };
   window.__sling = api;
+  // Unlock mode only: a grown-up can skip the flybys (perfect presses).
+  const skip = skipButton(() => api.solve(), 'ls-btn ls-btn--ghost');
+  if (skip) actions.prepend(skip);
   startLeg(0);
   requestAnimationFrame(frame);
   return done;

@@ -6,6 +6,8 @@ import { Village, BOUNDS } from './game/village.js';
 import { buildAllStructures, PLACEMENTS } from './game/structures.js';
 import { configureRenderer, buildLightRig, freezeShadows, refreshStaticShadows } from './game/toonPipeline.js';
 import { createCharacterController } from './game/physics.js';
+import { createHeldKeys } from './game/heldKeys.js';
+import { addJumpPanel, isGrownUp } from './play/grownUp.js';
 import { loadAvatar } from './game/avatar.js';
 import { createQuestEngine, loadSave, saveGame, QUEST_CHAIN, STORE_KEY } from './game/quests.js';
 import { createEffectRunner, restoreWorld } from './game/worldEffects.js';
@@ -78,7 +80,7 @@ const camera = new THREE.PerspectiveCamera(52, mount.clientWidth / mount.clientH
 // ---------------------------------------------------------------------------
 // Input
 // ---------------------------------------------------------------------------
-const keys = new Set();
+const keys = createHeldKeys(); // also lets go on blur / a lost keyup
 /** True when the keystroke belongs to a text field, not the game. */
 function typingInField(e) {
   const t = e.target;
@@ -91,7 +93,7 @@ addEventListener('keydown', (e) => {
   // question was literally untypeable and it gates the launch.
   if (typingInField(e)) return;
   if (['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','ShiftLeft'].includes(e.code)) e.preventDefault();
-  keys.add(e.code);
+  keys.add(e.code, e.repeat);
 });
 addEventListener('keyup', (e) => keys.delete(e.code));
 
@@ -141,11 +143,12 @@ const START_SOLVED = false;
  *
  * Stops at the launch: pressing that is the moment, and it should be hers.
  */
-function solveEverything(eng) {
+function solveEverything(eng, stopAt = null) {
   const GUARD = 200;
   for (let i = 0; i < GUARD; i++) {
     const step = eng.current();
     if (!step || step.kind === 'launch') break;
+    if (stopAt && step.id === stopAt) return; // grown-up Jump: stop at this step
 
     if (step.questionId) {
       const q = QUESTIONS[step.questionId];
@@ -390,7 +393,10 @@ async function main() {
     // also ask for the solved state by setting this before the module runs.
     || window.__ROCKET_SOLVED === true
     || (START_SOLVED && !flags.has('play'));
-  if (flags.has('reset') || wantSolved) {
+  // ?jumpTo=<step id> (the grown-up Jump panel, unlock mode only): start
+  // over and play the real chain up to that step.
+  const jumpTo = isGrownUp() ? flags.get('jumpTo') : null;
+  if (flags.has('reset') || wantSolved || jumpTo) {
     try { localStorage.removeItem(STORE_KEY); localStorage.removeItem(`${STORE_KEY}_hunt`); } catch { /* private mode */ }
   }
   state = loadSave();
@@ -405,6 +411,28 @@ async function main() {
   // a state the game can actually reach - if a step were unreachable this
   // would stop at it, which makes it a test as well as a demo.
   if (wantSolved) solveEverything(engine);
+  else if (jumpTo) {
+    solveEverything(engine, jumpTo);
+    saveGame(engine.state);
+    flags.delete('jumpTo');
+    history.replaceState(null, '', `${location.pathname}${flags.size ? `?${flags}` : ''}`);
+  }
+  addJumpPanel({
+    title: 'Jump to a step',
+    parts: (() => {
+      let stage = 1;
+      return QUEST_CHAIN.filter((st) => !st.optional).map((st) => {
+        const part = { id: st.id, label: st.title, group: st.kind === 'launch' ? 'Launch' : `Rocket stage ${stage}` };
+        if (st.kind === 'build') stage++;
+        return part;
+      });
+    })(),
+    onJump(id) {
+      const f = new URLSearchParams(location.search);
+      f.set('jumpTo', id); f.set('play', '');
+      location.search = f.toString();
+    },
+  });
 
   // The launch complex, ported from the previous build and cel-shaded. Its five stages
   // register as effect targets so the quest chain builds the rocket exactly the

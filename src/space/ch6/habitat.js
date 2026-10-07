@@ -5,7 +5,8 @@
 // living half (shield, air, water, farm, power, store), bunks for the crew
 // in between. The rock spins slowly, so the floor has gravity.
 //
-// She walks like on the Moon (surface/walker.js; W/S A/D relative to the
+// She walks like in the villages - the spin gives near-Earth weight, so no
+// Moon lope (surface/walker.js gait 'earth'; W/S A/D relative to the
 // camera, Shift runs, Space jumps, drag to look). The crewmate who leads a
 // station stands at it. The next station has a beacon; at a station "E"
 // opens it (onStation(id) - the step opens the card and asks its question),
@@ -13,7 +14,7 @@
 //
 // main.js's runScene contract: { scene, camera, start(), tick(), dispose() }.
 // start() resolves { done: [ids] } once every station in `order` is done.
-// Test hook: scene.debug = { place(x, z), goTo(id), stations, done }.
+// Test hook: scene.debug = { walker, place(x, z), goTo(id), stations, done }.
 import * as THREE from 'three';
 import { createWalker } from '../surface/walker.js';
 import { createOverlay } from '../surface/overlay.js';
@@ -225,7 +226,7 @@ export function createHabitatScene(game, { order = STATIONS.map((s) => s.id), do
   scene.add(beacon);
 
   // Her.
-  const walker = createWalker({ gravity: 9.8 * 0.6 });
+  const walker = createWalker({ gravity: 9.8 * 0.6, gait: 'earth' });
   // There is air in here: no helmet, collar ring or life-support pack.
   walker.helmet.visible = false;
   if (walker.pack) walker.pack.visible = false;
@@ -351,6 +352,7 @@ export function createHabitatScene(game, { order = STATIONS.map((s) => s.id), do
 
   paintStations();
   const debug = {
+    walker,
     stations,
     get done() { return stations.filter((s) => s.done).map((s) => s.id); },
     place(x, z) { walker.place(x, 0, z); },

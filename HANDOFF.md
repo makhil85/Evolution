@@ -55,7 +55,15 @@ flying mode, at both question levels, verified by the autopilot (see Testing).
   `RUN_GAME.bat` in this folder, which starts the Vite dev server on port 5173
   (serves live source, so edits show on reload).
 - Chapter menu: `http://localhost:5173/` (all chapters unlocked by "grown-up
-  mode": `?unlock=all` / `?unlock=off`). Difficulty buttons pick Level 1 or 4.
+  mode": `?unlock=all` / `?unlock=off`, on any page). Difficulty buttons pick
+  Level 1 or 4. In grown-up mode every chapter also shows (`src/play/grownUp.js`):
+  a **Skip (grown-up)** button on every question, lesson film and Ch5/Ch6
+  mini-game card (answers it right, moves on), and a **⏭ Jump** panel (bottom
+  left): Ch1-2 teleport to any puzzle/lab/build site plus "Fill my bag";
+  Ch3 replays the real quest chain up to the chosen step (`?jumpTo=<id>`);
+  Ch4-6 list every mission step by act, and `missions.jumpTo(id)` restarts
+  the chapter at it with the ship landed on / in orbit round the body the
+  steps before it end at, a full tank and 50 of each build resource.
 - Chapter 4 directly: `http://localhost:5173/chapter4.html` (`?touch=1` forces
   the touch pad on a desktop, `?touch=0` hides it).
 - Build: `npx vite build`. Tests: `node scripts/test-space-physics.mjs` (23),
@@ -507,7 +515,9 @@ lines are in place but not tuned.
 - **Opening** (`ch6/opening.js`): Rock B hangs beside her ship
   (`showRockB`, for the whole chapter); the supply ship docks at its hangar
   door; title.
-- **Habitat** (`ch6/habitat.js`, a runScene walk like the Moon's): round hall
+- **Habitat** (`ch6/habitat.js`, a runScene walk; the walker's `gait:
+  'earth'` - no Moon lope, firm footing, the walk clip timed like the
+  villages'): round hall
   inside the rock, power core, six stations, bunks, the crew at their
   stations, beacon on the next. Test hook `game.activeScene.debug`
   (`goTo(id)`, `pressE()`). Station progress is kept in
@@ -533,3 +543,20 @@ lines are in place but not tuned.
   line (pitfall 6): check the server with curl instead.
 - **Not done**: a child playing it; Level 1 tuning; a real-screen pass
   (frame rate in the habitat, the cutscenes).
+
+## Session 2026-10-07: grown-up skip/jump, habitat walk, held keys
+
+- **Grown-up tools** (unlock mode only): see "How to run". Skip goes through
+  each card's own grading/solve path, so saves and rewards are the same as
+  a right answer.
+- **Held keys** (`src/game/heldKeys.js`, Ch1-3 input and the space
+  controls): a Set-shaped tracker that also lets go on blur / hidden tab /
+  pagehide, and drops the auto-repeating key once its repeats go quiet for
+  450 ms (a lost keyup used to leave her walking on her own). Only the last
+  key pressed is watched, because only it repeats (hold Up + tap Right).
+  The long slide the lead saw in Chapter 1 did not reproduce in headless
+  Chromium (she stops in ~0.4 s there), so this guards the lost-keyup cause;
+  re-check on the lead's PC.
+- **Ch6 habitat walk**: `createWalker({ gait: 'earth' })` - 3.2 m/s walk,
+  5.5 run, exponential grip like `game/physics.js`, clip rate = speed / ref
+  (clamped 0.6-1.5) like `game/avatar.js`.

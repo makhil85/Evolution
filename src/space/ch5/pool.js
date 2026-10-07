@@ -14,6 +14,7 @@ import { injectStyles } from '../../lesson/card.js';
 import { t } from '../level.js';
 import { nightSky, label, arrow, circle, STAGE_W, STAGE_H } from '../../lesson/draw.js';
 import { POOL_LEVELS, createPool, shoot, stepPool, runShot, bestShot, momentum } from './poolLogic.js';
+import { skipButton } from '../../play/grownUp.js';
 
 const STEP = 1 / 120;
 const TAU = Math.PI * 2;
@@ -222,6 +223,9 @@ export function playPool({ bus = null } = {}) {
     shot() { draw(); return canvas.toDataURL('image/png'); },
   };
   window.__pool = api;
+  // Unlock mode only: a grown-up can skip this game.
+  const skip = skipButton(() => api.solveAll(), 'ls-btn ls-btn--ghost');
+  if (skip) actions.prepend(skip);
   setLevel(0);
   requestAnimationFrame(frame);
   return done;

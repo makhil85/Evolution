@@ -11,6 +11,7 @@ import { el, openLayer } from '../../play/ui.js';
 import { t } from '../level.js';
 import { injectStyles } from '../../lesson/card.js';
 import { label, circle, rect, nightSky, span, STAGE_W, STAGE_H } from '../../lesson/draw.js';
+import { skipButton } from '../../play/grownUp.js';
 
 const TAU = Math.PI * 2;
 
@@ -185,6 +186,9 @@ export function playRockHunt({ bus = null } = {}) {
     shot() { draw(); return canvas.toDataURL('image/png'); },
   };
   window.__hunt = api;
+  // Unlock mode only: a grown-up can skip this game.
+  const skip = skipButton(() => api.solve(), 'ls-btn ls-btn--ghost');
+  if (skip) actions.prepend(skip);
   renderList();
   requestAnimationFrame(frame);
   return promise;

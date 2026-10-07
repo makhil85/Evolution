@@ -11,6 +11,7 @@
 // wrong answers cost nothing, and a hint always follows.
 
 import { el } from './domUtil.js';
+import { skipButton } from '../../play/grownUp.js';
 
 const PURE_NUMBER = /^\d+(?:\.\d+)?$/;
 
@@ -140,6 +141,15 @@ export function createQuestionModal(host) {
         const continueBtn = el('button', 'sp-btn', 'Continue');
         continueBtn.type = 'button';
         continueBtn.hidden = true;
+        // Unlock mode only: a grown-up can skip (it answers right and moves on).
+        const skip = skipButton(() => {
+          if (answered || failed) return;
+          const right = (question.choices || []).find((c) => c && typeof c === 'object' && c.correct);
+          attempts = 0;
+          grade(right || String((question.answers || [])[0] ?? ''), null);
+          if (answered) finish();
+        }, 'sp-btn');
+        if (skip) actions.append(skip);
         actions.append(continueBtn);
         let failed = false;
 
@@ -185,6 +195,7 @@ export function createQuestionModal(host) {
             if (attempts >= MAX_TRIES) {
               // Out of tries: show the answer; this part of the voyage starts again.
               failed = true;
+              if (skip) skip.hidden = true;
               choicesWrap.classList.add('is-done');
               input.disabled = true;
               submit.disabled = true;
@@ -201,6 +212,7 @@ export function createQuestionModal(host) {
             return;
           }
           answered = true;
+          if (skip) skip.hidden = true;
           attempts += 1; // the winning attempt counts too, so attempts >= 1 always
           if (sourceButton) sourceButton.classList.add('is-right');
           choicesWrap.classList.add('is-done');
