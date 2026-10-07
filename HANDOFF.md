@@ -621,3 +621,11 @@ lines are in place but not tuned.
   (`slingshot.js`) flies the 100 t plan (straight out has no card).
 - **Ch3** gets lesson 3C "Energy never disappears" before the fuel question
   (`rocket_fuel`). Lessons list: `ch3_energy`.
+## Sharing the game as one zip
+
+`npm run package` builds the game and makes `release/RocketVillage.zip`
+(about 12.5 MB): the built game plus `PLAY.bat` (Windows), `play.command`
+(Mac/Linux), `play-server.mjs` (a tiny local web server, no installs) and
+`HOW-TO-PLAY.txt`. The player unzips and double-clicks; it needs Node.js
+(or Python as a fallback). The zip holds whatever is checked out, so pull
+`main` first. Close the game before `npm run package` / `npm ci` on Windows.
