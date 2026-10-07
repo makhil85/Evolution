@@ -50,7 +50,6 @@ import { addJumpPanel } from '../play/grownUp.js';
 import { IS_CH5, IS_CH6, OUTER } from './chapter.js';
 import { CH5_START, CH5_UPGRADES } from './ch5/start.js';
 import { CH6_START } from './ch6/start.js';
-import { playCh6Opening } from './ch6/opening.js';
 import { setMoonPulls } from './gravity.js';
 import { playCh5Opening } from './ch5/opening.js';
 import { t, IS_LEVEL1, LEVEL } from './level.js';
@@ -1849,7 +1848,7 @@ Promise.all([bodies.ready, sky.ready, belt.ready])
       : hud.chooseFlightMode({ modes: MODES, current: 'easy', first: true }).then((id) => id || 'easy');
     pickMode
       .then((id) => applyMode(id, { fresh: fresh && !resumed }))
-      .then(() => (fresh ? (IS_CH6 ? playCh6Opening(game) : IS_CH5 ? playCh5Opening(game) : playIntro(game)) : null))
+      .then(() => (fresh ? (IS_CH6 ? null : IS_CH5 ? playCh5Opening(game) : playIntro(game)) : null))
       .then(() => missions.start())
       // Dev only: resume a lab run after a dev-server reload (lab/labrun.js).
       .then(() => { try { const m = import.meta.env.DEV && localStorage.getItem('lab_autorun'); if (m) import(/* @vite-ignore */ `/src/space/lab/${m}.js`).then((x) => x.autorun?.()); } catch { /* no storage */ } });

@@ -2,14 +2,14 @@
 //
 //   node scripts/test-ch6-route.mjs
 //
-// The route sums (src/space/ch6/routes.js): every route can reach the goal
-// speed inside the fuel tank, but not without choices (the default plan
-// falls short, skimming everything burns too much fuel on two of three);
-// closer always means more boost and more fuel; a better-timed press never
-// keeps less. The Part E question bank re-derives every number from those
-// same tables. Lessons 6B and 6C have the shape every lesson has, and their
-// films draw from start to end. The steps chain is well formed and its beats
-// all have a question.
+// The route sums (src/space/ch6/routes.js, from the asteroid belt): with
+// 10 t a straight burn can't leave the Sun; planets add energy, the giants
+// most, and closer never less; the Sun dive (burn where she is fastest) is
+// the fastest of all; 100 t beats 10 t on every route; a better-timed press
+// never keeps less. The Part E question bank re-derives every number from
+// that model. Lessons 6B and 6C have the shape every lesson has, and their
+// films draw from start to end. The steps chain is well formed and its
+// beats all have a question.
 import assert from 'node:assert/strict';
 import { createServer } from 'vite';
 
@@ -18,45 +18,53 @@ const ok = (name, fn) => { fn(); passed += 1; console.log(`  ok  ${name}`); };
 
 const R = await import('../src/space/ch6/routes.js');
 const await_crew = await import('../src/space/ch6/crewInfo.js');
-const { ROUTES, STOPS, CLOSE_LEVELS, FUEL_BUDGET, GOAL_BOOST, START_SPEED } = R;
+const { ROUTES, STOPS, CLOSE_LEVELS, FUELS } = R;
 
 console.log('routes');
-ok('three routes, each ending with the Sun dive, outermost stop first', () => {
-  assert.equal(ROUTES.length, 3);
-  const order = ['neptune', 'uranus', 'saturn', 'jupiter', 'earth', 'sun'];
-  for (const r of ROUTES) {
-    assert.equal(r.stops.at(-1), 'sun');
+const best = (id, f) => R.planTotals(R.bestPlan(id, f)).speed;
+ok('five routes: straight out, three planet tours (outward), Jupiter then the Sun', () => {
+  assert.deepEqual(ROUTES.map((r) => r.id), ['straight', 'js', 'jsu', 'jsun', 'sun']);
+  const order = ['jupiter', 'saturn', 'uranus', 'neptune'];
+  for (const r of ROUTES.filter((x) => !x.fall)) {
     const ix = r.stops.map((s) => order.indexOf(s));
-    assert.ok(ix.every((v, i) => v >= 0 && (i === 0 || v > ix[i - 1])), `${r.id}: flies inward`);
+    assert.ok(ix.every((v, i) => v >= 0 && (i === 0 || v > ix[i - 1])), `${r.id}: flies outward`);
   }
 });
-ok('closer always gives more boost and costs more fuel', () => {
-  for (const [id, s] of Object.entries(STOPS)) {
-    assert.equal(s.boost.length, CLOSE_LEVELS); assert.equal(s.fuel.length, CLOSE_LEVELS);
-    for (let i = 1; i < CLOSE_LEVELS; i++) {
-      assert.ok(s.boost[i] > s.boost[i - 1], `${id} boost`);
-      assert.ok(s.fuel[i] > s.fuel[i - 1], `${id} fuel`);
+ok('the engine: 10 t gives about 3 km/s, 100 t about 29 km/s', () => {
+  assert.equal(Math.round(R.engineKms(10)), 3);
+  assert.equal(Math.round(R.engineKms(100)), 29);
+});
+ok('with 10 t a straight burn cannot leave the Sun; with 100 t it can', () => {
+  assert.ok(best('straight', FUELS[0]) <= 0);
+  assert.ok(best('straight', FUELS[1]) > 30);
+});
+ok('each planet added steals energy; the giants steal the most (Jupiter > Saturn > Uranus > Neptune)', () => {
+  for (const f of FUELS) {
+    const legs = R.planTotals(R.bestPlan('jsun', f)).legs.filter((l) => l.id !== 'burn');
+    for (const l of legs) assert.ok(l.energyGain > 0, `${f} t ${l.id}`);
+    for (let i = 1; i < legs.length; i++) assert.ok(legs[i].energyGain < legs[i - 1].energyGain, `${f} t ${legs[i].id}`);
+    assert.ok(best('js', f) < best('jsu', f) && best('jsu', f) < best('jsun', f), `${f} t: more planets, more speed`);
+  }
+});
+ok('closer never steals less', () => {
+  for (const f of FUELS) for (const r of ROUTES) {
+    if (!r.stops.length) continue;
+    for (let i = 0; i < r.stops.length; i++) {
+      let prev = -Infinity;
+      for (let c = 1; c <= CLOSE_LEVELS; c++) {
+        const close = r.stops.map(() => 2); close[i] = c;
+        const v = R.simulate({ route: r.id, fuel: f, close }).speed;
+        assert.ok(v >= prev - 1e-9, `${r.id} ${f} t stop ${i} level ${c}`); prev = v;
+      }
     }
   }
 });
-ok('Jupiter is the best planet for a slingshot; the Sun dive (the drive) beats them all', () => {
-  const planets = Object.keys(STOPS).filter((k) => k !== 'sun');
-  for (const p of planets) if (p !== 'jupiter') assert.ok(STOPS.jupiter.boost[3] > STOPS[p].boost[3], p);
-  assert.ok(STOPS.sun.boost[3] > STOPS.jupiter.boost[3]);
-});
-for (const r of ROUTES) {
-  ok(`${r.id}: a plan reaches ${GOAL_BOOST} km/s inside the ${FUEL_BUDGET} t tank, but the default doesn't`, () => {
-    const best = R.planTotals(R.bestPlan(r.id));
-    assert.ok(best.ok, `${r.id} best ${best.boost} km/s, ${best.fuel} t`);
-    assert.equal(R.planTotals(R.newPlan(r.id)).ok, false);
-    // further than "far" or closer than "skimming" can't be set
-    const wild = R.planTotals({ route: r.id, close: r.stops.map(() => 99) });
-    assert.ok(wild.legs.every((l) => l.close === CLOSE_LEVELS));
-  });
-}
-ok('skimming every flyby uses too much fuel on two of the three routes', () => {
-  const over = ROUTES.filter((r) => !R.planTotals({ route: r.id, close: r.stops.map(() => CLOSE_LEVELS) }).inBudget);
-  assert.equal(over.length, 2);
+ok('the Sun dive is the fastest way out with either load; 100 t beats 10 t on every route', () => {
+  for (const f of FUELS) assert.equal(R.fastestRoute(f).route, 'sun');
+  for (const r of ROUTES) assert.ok(best(r.id, FUELS[1]) > best(r.id, FUELS[0]), r.id);
+  // further than "far" or closer than "skimming" can't be set
+  const wild = R.planTotals({ route: 'jsun', fuel: 10, close: [99, 99, 99, 99] });
+  assert.ok(wild.legs.filter((l) => l.close).every((l) => l.close === CLOSE_LEVELS));
 });
 ok('timing: a perfect press keeps all; inside the window at least 70%; a miss keeps half; never more for a worse press', () => {
   assert.equal(R.keptFraction(0), 1);
@@ -66,14 +74,15 @@ ok('timing: a perfect press keeps all; inside the window at least 70%; a miss ke
   for (let e = 0; e <= 3; e += 0.05) { const k = R.keptFraction(e); assert.ok(k <= prev + 1e-12); prev = k; assert.equal(R.keptFraction(-e), k); }
   for (let c = 2; c <= CLOSE_LEVELS; c++) assert.ok(R.windowFor(c) < R.windowFor(c - 1), 'closer = narrower window');
 });
-ok('the flight result adds each kept boost to a running speed', () => {
-  const plan = R.bestPlan('usj');
-  const perfect = R.flightResult(plan, plan.close.map(() => 0));
-  assert.equal(perfect.speed, START_SPEED + R.planTotals(plan).boost);
-  let s = START_SPEED;
-  for (const l of perfect.legs) { s += l.kept; assert.equal(l.speed, s); }
-  const missed = R.flightResult(plan, plan.close.map(() => null));
-  assert.ok(missed.speed < perfect.speed && missed.kept >= Math.floor(R.planTotals(plan).boost / 2) - plan.close.length);
+ok('the flight: perfect presses fly the plan; misses never leave her faster', () => {
+  for (const id of ['jsun', 'sun']) {
+    const plan = R.bestPlan(id, FUELS[1]);
+    const n = R.routeById(id).stops.length;
+    const perfect = R.flightResult(plan, new Array(n).fill(0));
+    assert.equal(perfect.speed, R.planTotals(plan).speed, id);
+    const missed = R.flightResult(plan, new Array(n).fill(null));
+    assert.ok(missed.speed < perfect.speed, id);
+  }
 });
 ok('percent of light and years to a star', () => {
   assert.equal(R.percentOfLight(30000), 10);
@@ -153,24 +162,20 @@ try {
     });
   }
   const L4 = banks[4];
-  const s = STOPS;
   const derived = {
-    c6_route_sum: START_SPEED + s.neptune.boost[2] + s.jupiter.boost[2] + s.sun.boost[3],
-    c6_fuel_left: FUEL_BUDGET - (s.neptune.fuel[2] + s.jupiter.fuel[2] + s.sun.fuel[3]),
+    c6_fuel_left: best('jsun', FUELS[0]) - best('js', FUELS[0]),
     c6_percent_light: R.percentOfLight(R.LIGHT_KMS / 20),
     c6_star_years: Math.round(R.yearsAt(4.4, R.CRUISE_PERCENT)),
   };
-  ok('Level 4 numbers re-derived from the game tables', () => {
+  ok('Level 4 numbers re-derived from the game model', () => {
     for (const [id, v] of Object.entries(derived)) assert.ok(checkSpaceAnswer(L4[id], String(v)), `${id}: ${v}`);
-    // tempting slips are not accepted
-    assert.ok(!checkSpaceAnswer(L4.c6_route_sum, String(derived.c6_route_sum - START_SPEED)), 'forgot the start speed');
+    assert.ok(!checkSpaceAnswer(L4.c6_fuel_left, String(best('jsun', FUELS[0]))), 'the total, not the difference');
     assert.ok(!checkSpaceAnswer(L4.c6_star_years, '0.44'));
     assert.ok(!checkSpaceAnswer(L4.c6_star_years, '4.4'));
   });
-  ok('Level 1 numbers (within 40, counting on and by tens)', () => {
+  ok('Level 1 numbers (small, counting on and by tens)', () => {
     const L1 = banks[1];
-    assert.ok(checkSpaceAnswer(L1.c6_route_sum, String(9 + 10)));
-    assert.ok(checkSpaceAnswer(L1.c6_fuel_left, String(20 - 8)));
+    assert.ok(checkSpaceAnswer(L1.c6_fuel_left, String(derived.c6_fuel_left)));
     assert.ok(checkSpaceAnswer(L1.c6_percent_light, String(10 * 1)));
     assert.ok(checkSpaceAnswer(L1.c6_star_years, String(4 * 10)));
   });
@@ -181,6 +186,9 @@ try {
   const fakeGame = { hud: {}, bus: null, scene: { add() {}, remove() {} }, ship: { x: 60000, z: 0 } };
   const steps = Ch6.ch6Steps(fakeGame);
   Object.assign(L4, QB.partBBank(4));
+  // The engine build (moved here from Chapter 5) brings its own question.
+  const { CH5_QUESTIONS } = await vite.ssrLoadModule('/src/space/ch5/questions.ch5.js');
+  L4.c5_deuterium = CH5_QUESTIONS.c5_deuterium;
   ok('station questions: numbers re-derived from the station tables, both Levels', () => {
     const B4 = QB.partBBank(4); const B1 = QB.partBBank(1);
     for (const bank of [B4, B1]) for (const q of Object.values(bank)) {
@@ -208,7 +216,9 @@ try {
     // every question is asked somewhere: a step's beat, or after a station
     const stationBeats = new Set(Object.values(QB.STATION_BEAT));
     for (const q of Object.values(L4)) assert.ok(steps.some((st) => st.beat === q.beat) || stationBeats.has(q.beat), `${q.id} never asked`);
-    assert.deepEqual(steps.slice(0, 3).map((st) => st.id), ['c6_meet_crew', 'c6_habitat', 'c6_lesson_tiny_earth']);
+    assert.deepEqual(steps.slice(0, 4).map((st) => st.id), ['c6_belt_home', 'c6_design_ship', 'c6_rock_hunt', 'c6_engine']);
+    assert.ok(ids.indexOf('c6_meet_crew') > ids.indexOf('c6_engine'));
+    assert.ok(ids.indexOf('c6_lesson_slingshot') < ids.indexOf('c6_plan_route'), 'the energy lesson before the planner');
     assert.equal(steps.at(-1).id, 'c6_end');
   });
 
@@ -222,9 +232,9 @@ try {
     return new Proxy({}, { get(_, k) { if (k === 'createLinearGradient' || k === 'createRadialGradient') return () => grad; if (k === 'measureText') return () => ({ width: 10 }); return () => {}; }, set() { return true; } });
   };
   for (const L of [LESSON_6B, LESSON_6C]) {
-    ok(`${L.id}: 3 films, both Levels, one right answer of three, a short Level 1 clue, under 45 s each`, () => {
+    ok(`${L.id}: ${L.films.length} films, both Levels, one right answer of three, a short Level 1 clue, under 45 s each`, () => {
       pair(L.eyebrow, 'eyebrow');
-      assert.equal(L.films.length, 3);
+      assert.ok(L.films.length >= 3);
       for (const f of L.films) {
         pair(f.title, 'title');
         for (const b of f.beats) { assert.ok(b.dur > 0); pair(b.cap, 'caption'); }

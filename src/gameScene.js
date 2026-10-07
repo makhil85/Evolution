@@ -48,7 +48,7 @@ import { HOMES } from './game/homesLayout.js';
 import { buildHomes } from './game/homes.js';
 import { MINE_REACH } from './game/pickups.js';
 import { lessonOnce, hasSeen as lessonSeen } from './lesson/card.js';
-import { LESSON_3A, LESSON_3B } from './lesson/lessons/ch3.js';
+import { LESSON_3A, LESSON_3B, LESSON_3C } from './lesson/lessons/ch3.js';
 import { openLaunchTuner } from './game/launchTuner.js';
 
 const mount = document.getElementById('stage');
@@ -656,7 +656,7 @@ async function main() {
     keyBlock.visible = false;
     scene.add(keyBlock);
   }
-  const LESSON_BEFORE = { rocket_thrust: LESSON_3A, bonus_mass: LESSON_3B, bonus_liftoff_mass: LESSON_3B };
+  const LESSON_BEFORE = { rocket_thrust: LESSON_3A, rocket_fuel: LESSON_3C, bonus_mass: LESSON_3B, bonus_liftoff_mass: LESSON_3B };
   onInteract = () => {
     // Hard: the treasure hunt gets the first look at every press.
     if (playMode.treasureHunt && hunt && !crystalFound()) {
@@ -685,7 +685,8 @@ async function main() {
     if (step.questionId) {
       const q = QUESTIONS[step.questionId];
       // A "watch, answer, try it" lesson the first time (LESSONS_PLAN.md):
-      // 3A before Engine Thrust, 3B before the two mass puzzles.
+      // 3A before Engine Thrust, 3C (energy) before the Fuel Mixture, 3B
+      // before the two mass puzzles.
       const lesson = LESSON_BEFORE[step.questionId];
       if (lesson && !lessonSeen(lesson.id)) {
         lessonOnce(lesson).then(() => onInteract());

@@ -1,5 +1,7 @@
-// Chapter 6, Part E (steps 13-20): plan the route, learn how a slingshot
-// steals speed (lesson 6B), fly the slingshots and the Sun dive, the drive
+// Chapter 6, Part E: the fastest way out of the Sun's family. Lesson 6B
+// (energy: the Sun alone gives nothing; steal it from moving planets; burn
+// where you are fastest), then the route planner from the asteroid belt (10 t
+// of fuel, then 100 t: lead 2026-10-07), fly the chosen route, the drive
 // lights (cutscene), how fast light is (lesson 6C), the trip to the nearest
 // star, and the end card. See missions.js for the step format.
 //
@@ -14,7 +16,7 @@ import { playRoutePlanner } from './routePlanner.js';
 import { playSlingshots } from './slingshot.js';
 import { playDriveOn } from './driveOn.js';
 import { who } from './crewInfo.js';
-import { routeById, bestPlan, planTotals, CRUISE_PERCENT, START_SPEED, STOPS } from './routes.js';
+import { routeById, fastestRoute, planTotals, CRUISE_PERCENT, STOPS, FUELS } from './routes.js';
 
 /** Who says what (names from crewInfo.js). */
 export const CREW = {
@@ -44,51 +46,51 @@ export function partESteps(game) {
   const { hud } = game;
   return [
     {
-      id: 'c6_plan_route', act: ACT_E,
-      title: t('Plan the route to the stars', 'Plan the trip'),
-      objective: t('Pick one of three routes, then set how close each flyby passes: enough speed, inside the fuel tank.', 'Pick a route. Get enough speed, but don’t use too much fuel.'),
-      markers: [],
-      async enter() {
-        await hud.showDialogue([
-          { who: CREW.signal, text: t('Scanning ahead... the planets are nearly in a line! That only happens about once every 175 years.', 'Look! The planets are almost in a line!') },
-          { who: 'girl', text: t('Then we can steal speed from them, one after another, all the way in to the Sun.', 'We can get speed from each planet, all the way to the Sun!') },
-          { who: CREW.builder, text: t('Closer passes give more speed, but steering that close burns fuel. The tank only holds so much.', 'Going close gives more speed, but uses more fuel.') },
-        ]);
-        const prev = loadRoute().plan;
-        const res = await playRoutePlanner({ bus: game.bus, initial: prev && routeById(prev.route) ? prev : null });
-        saveRoute({ plan: { route: res.route, close: res.close }, flight: null });
-      },
-      beat: 'c6FuelLeft',
-    },
-    {
       id: 'c6_lesson_slingshot', act: ACT_E,
-      title: t('How does a slingshot work?', 'How do we get speed from a planet?'),
-      objective: t('Watch the lesson on stealing speed, and answer a question after each film.', 'Watch the lesson about getting speed.'),
+      title: t('Stealing energy', 'Borrow speed'),
+      objective: t('Watch the lesson on energy and how to steal it, and answer a question after each film.', 'Watch the lesson about getting speed.'),
       markers: [],
       async enter() {
         await hud.showDialogue([
-          { who: CREW.biologist, text: t('Wait: how can flying past a planet make us faster? Doesn’t its pull just slow us down again on the way out?', 'How can a planet make us faster?') },
-          { who: CREW.signal, text: t('Good question! Let me show you.', 'Let me show you!') },
+          { who: 'girl', text: t('The ship is ready. How do we leave the Sun’s family as fast as we can?', 'How do we go as fast as we can?') },
+          { who: CREW.biologist, text: t('Could we fly in close to the Sun first? We would go really fast down there!', 'Can we fly close to the Sun to go fast?') },
+          { who: CREW.signal, text: t('We would speed up falling in, and slow down again climbing out. Energy never comes for free. Let me show you where it CAN come from.', 'Falling in we speed up, but climbing out we slow down. Let me show you!') },
         ]);
         await lessonOnce(LESSON_6B, { bus: game.bus });
       },
       beat: 'c6RouteSum',
     },
     {
+      id: 'c6_plan_route', act: ACT_E,
+      title: t('Plan the fastest way out', 'Plan the trip'),
+      objective: t(`Find the route that leaves the Sun’s family fastest: first with ${FUELS[0]} t of fuel, then with ${FUELS[1]} t.`, `Find the fastest way out, with ${FUELS[0]} t and then ${FUELS[1]} t of fuel.`),
+      markers: [],
+      async enter() {
+        await hud.showDialogue([
+          { who: 'Mission Control', text: t(`The supply ship can bring ${FUELS[0]} tonnes of fuel now, or ${FUELS[1]} tonnes if you wait. Work out the fastest way out for each.`, `We can send ${FUELS[0]} t of fuel now, or ${FUELS[1]} t later. Find the fastest way for both!`) },
+          { who: CREW.builder, text: t('Every route burns the whole tank once. Where we burn it, and which planets we rob on the way, is up to us.', 'We use all the fuel. Which way we go is up to us!') },
+        ]);
+        const res = await playRoutePlanner({ bus: game.bus });
+        saveRoute({ plan: res.plan, rounds: res.rounds, flight: null });
+      },
+      beat: 'c6FuelLeft',
+    },
+    {
       id: 'c6_fly_slingshots', act: ACT_E,
-      title: t('Fly the slingshots', 'Fly past the planets'),
-      objective: t('At each planet, press right at the closest point to keep the whole boost. At the Sun, fire the drive.', 'Press at the right time at each planet!'),
+      title: t('Fly the route', 'Fly the route'),
+      objective: t(`The supply ship brought ${FUELS[1]} t. Fly your plan: at each planet press right at the closest point; at the Sun, fire the drive.`, 'Press at the right time at each stop!'),
       markers: [],
       async enter() {
         const saved = loadRoute();
-        const plan = saved.plan && routeById(saved.plan.route) ? saved.plan : bestPlan('nj');
+        const plan = saved.plan && routeById(saved.plan.route) ? saved.plan : fastestRoute(FUELS[1]);
+        if (!routeById(plan.route).stops.length) hud.toast(t(`Straight out: all ${plan.fuel} t burned at once.`, 'Burn all the fuel!'), { kind: 'info', ms: 3200 });
         const res = await playSlingshots({ bus: game.bus, plan });
-        saveRoute({ flight: { speed: res.speed, kept: res.kept, legs: res.legs.map((l) => ({ id: l.id, kept: l.kept })) } });
+        saveRoute({ flight: { speed: res.speed, legs: res.legs.map((l) => ({ id: l.id, kept: l.kept })) } });
         game.stats = { ...(game.stats || {}), slingSpeed: res.speed };
-        const best = res.legs.reduce((a, l) => (l.id !== 'sun' && l.kept > (a?.kept ?? -1) ? l : a), null);
+        const best = res.legs.reduce((a, l) => (l.id !== 'sun' && l.kept > (a?.kept ?? -Infinity) ? l : a), null);
         await hud.showDialogue([
-          { who: CREW.doctor, text: t(`Everyone OK? That was a ride! We’re at ${res.speed} km/s.`, `Everyone OK? We are going ${res.speed} km/s!`) },
-          best ? { who: 'girl', text: t(`${STOPS[best.id].name[0]} gave us the most of any planet: +${best.kept} km/s.`, `${STOPS[best.id].name[1]} gave us the most speed!`) } : null,
+          { who: CREW.doctor, text: t(`Everyone OK? That was a ride! We are leaving the Sun’s family at ${res.speed} km/s.`, `Everyone OK? We are going ${res.speed} km/s!`) },
+          best ? { who: 'girl', text: t(`${STOPS[best.id].name[0]} gave us the most of any planet.`, `${STOPS[best.id].name[1]} gave us the most speed!`) } : null,
         ].filter(Boolean));
       },
       beat: 'c6JupiterBoost',
@@ -100,7 +102,7 @@ export function partESteps(game) {
       markers: [],
       async enter() {
         const f = loadRoute().flight;
-        await playDriveOn(game, { speedKms: f?.speed ?? START_SPEED + planTotals(bestPlan('nj')).boost });
+        await playDriveOn(game, { speedKms: Math.max(1, f?.speed ?? planTotals(fastestRoute(FUELS[1])).speed) });
       },
       beat: 'c6SunDive',
     },
@@ -140,15 +142,15 @@ export function partESteps(game) {
       async enter() {
         markSaveComplete(game);
         const f = loadRoute().flight;
-        const r = routeById(loadRoute().plan?.route || 'nj');
+        const r = routeById(loadRoute().plan?.route || 'sun');
         await hud.showEnd({
           eyebrow: t('Chapter 6 complete', 'Chapter 6 done!'),
           title: t('On our way to the stars!', 'Off to the stars!'),
           note: t(`To be continued... cruising at ${CRUISE_PERCENT}% of light speed towards another star.`, 'To be continued...'),
-          route: ['Rock B', ...r.stops.map((id) => t(STOPS[id].name[0], STOPS[id].name[1])), t('the stars', 'the stars')],
+          route: [t('Asteroid belt', 'Asteroid belt'), ...(r.fall ? ['Jupiter'] : []), ...r.stops.map((id) => t(STOPS[id].name[0], STOPS[id].name[1])), t('the stars', 'the stars')],
           stats: {
             'Time played': `${Math.max(1, Math.round((game.stats?.played || 0) / 60))} min`,
-            'Speed from slingshots': `${f?.speed ?? '?'} km/s`,
+            'Speed leaving the Sun': `${f?.speed ?? '?'} km/s`,
             'Cruise speed': `${CRUISE_PERCENT}% of light`,
             'Questions answered': answeredCount(),
           },

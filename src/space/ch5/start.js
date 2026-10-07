@@ -9,8 +9,6 @@ export const CH5_ACT_TITLES = {
   1: 'Part A: To Saturn',
   2: 'Part B: The ice giants',
   3: 'Part B: The edge of the Sun’s family',
-  4: 'Part C: What makes a star shine',
-  5: 'Part D: The rock ship',
 };
 
 /** Her starting orbit: round Jupiter, outside Callisto (1700 u), so the
