@@ -1,5 +1,11 @@
 # Chapter 6: The Long Trip (build plan)
 
+> 2026-10-07 restructure (see HANDOFF.md, session (c)): Chapter 6 now starts
+> in the asteroid belt with the ship build (moved from Chapter 5), and Part E
+> is "the fastest way out": lesson 6B on energy, then a planner with 10 t and
+> 100 t of fuel over five routes (routes.js). The tables below describe the
+> first build; where they differ, HANDOFF.md is current.
+
 Design: the Claude doc "Beyond Europa plan" (D2, Crew and Part E sections)
 https://claude.ai/code/artifact/4a5b1c8d-9a9e-4adb-bc8c-da647b98b08b and
 `chapter6-handoff.md` (2026-10-05). Level 4 first; Level 1 lines written

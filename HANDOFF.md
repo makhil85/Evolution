@@ -595,6 +595,32 @@ lines are in place but not tuned.
   Turning hints say ← / → first. Zero-g scene: she lifts only a little.
 - Ch2 lesson 2A truss film: green sides go red near the truck, blue joints.
 
+## Session 2026-10-07 (c): Ch5/Ch6 restructure, the fastest way out
+
+- **Chapter 5** now ends at the edge: Part B finishes with the fusion lesson
+  (`c5_lesson_fusion`, act 3) and the end card (`c5_end`). The ship build
+  (design board, rock hunt, engine workshop) moved to Chapter 6.
+- **Chapter 6** starts back in the asteroid belt (`CH6_START` r = 11,800 u,
+  the Ch4 belt visible): `ch6/partBuild.js` (act 0) - `c6_belt_home`
+  (why build here), `c6_design_ship`, `c6_rock_hunt`, `c6_engine` (the old
+  Ch5 ending is now the engine's test fire, `playCh5Ending(game)`); then the
+  supply ship docks (`playCh6Opening`, at `c6_meet_crew`), Parts A-C as
+  before. Rock B is shown from the engine step on (steps.js wraps `enter`).
+- **Part E** (`ch6/partE.js`): lesson 6B first (4 films: fall in / climb
+  out, steal from a moving planet, bigger and closer steals more, burn where
+  you are fastest), then the planner, then the flight, drive, light, end.
+- **Route model** (`ch6/routes.js`): real two-body sums from 2.8 AU. Ship
+  1,000 t dry, exhaust 300 km/s (10 t -> 3 km/s, 100 t -> 29 km/s). Routes:
+  straight, Jupiter+Saturn, +Uranus, +Neptune, Jupiter-then-Sun-dive. Score
+  = speed far from the Sun (negative = the Sun still holds her). Best, in
+  km/s, 10 t: straight -14 (can't leave), J+S 10, +U 15, +U+N 18, Sun dive
+  39; 100 t: 39, 50, 51, 52, 135. Per stop the planner shows "energy
+  points" ((km/s)^2/2): Jupiter > Saturn > Uranus > Neptune.
+- **Planner** (`routePlanner.js`): round 1 with 10 t, round 2 with 100 t;
+  try 3 routes, lock one in, then it shows the fastest. The flight card
+  (`slingshot.js`) flies the 100 t plan (straight out has no card).
+- **Ch3** gets lesson 3C "Energy never disappears" before the fuel question
+  (`rocket_fuel`). Lessons list: `ch3_energy`.
 ## Sharing the game as one zip
 
 `npm run package` builds the game and makes `release/RocketVillage.zip`

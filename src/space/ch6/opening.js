@@ -82,7 +82,7 @@ function buildSupplyShip() {
 /** @returns {Promise<void>} */
 export function playCh6Opening(game) {
   const { scene, shipView } = game;
-  const overlay = buildOverlay({ eyebrow: lvl('Chapter 6', 'Chapter 6'), title: lvl('The Long Trip', 'The Long Trip'), sub: lvl('A crew for the stars', 'New friends for the trip!'), startBlack: true });
+  const overlay = buildOverlay({ eyebrow: lvl('Chapter 6 · Part A', 'Chapter 6'), title: lvl('The crew arrives', 'The crew arrives'), sub: lvl('A crew for the stars', 'New friends for the trip!'), startBlack: true });
   document.body.classList.add('in-cinematic');
   game.controls.setEnabled(false);
   game.paused = true;

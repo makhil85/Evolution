@@ -1433,7 +1433,8 @@ function selectBank() {
   // Chapter 5 has its own bank (Level 4 only so far: Level 1 comes later).
   if (IS_CH5) return CH5_QUESTIONS;
   // Chapter 6: the station questions (Part B) and Part E's, Level 1 overlays merged.
-  if (IS_CH6) return { ...partBBank(difficultyLevel()), ...partEBank(difficultyLevel()) };
+  // (The engine build moved here from Chapter 5, with its question.)
+  if (IS_CH6) return { c5_deuterium: CH5_QUESTIONS.c5_deuterium, ...partBBank(difficultyLevel()), ...partEBank(difficultyLevel()) };
   if (difficultyLevel() !== 1) return LEVEL4_SPACE_QUESTIONS;
   const out = {};
   for (const [id, base] of Object.entries(LEVEL4_SPACE_QUESTIONS)) {

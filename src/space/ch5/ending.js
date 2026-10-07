@@ -1,7 +1,7 @@
-// Chapter 5's ending (~22 s, skippable): the rock ship hangs beside her
-// ship; she flies in through the hangar door; the engine's magnet rings
-// light one by one and the engine fires; the rock moves off; then the
-// screen fades to "Coming next: Chapter 6".
+// The rock ship's test fire (~22 s, skippable; was Chapter 5's ending, now
+// played in Chapter 6 after the build in the asteroid belt): the rock ship
+// hangs beside her ship; she flies in through the hangar door; the engine's
+// magnet rings light one by one and the engine fires; the rock moves off.
 //
 // Flight is paused; the rock ship is built for the scene and removed after.
 import * as THREE from 'three';
@@ -81,9 +81,14 @@ export function buildRockShip() {
 }
 
 /** @returns {Promise<void>} */
-export function playCh5Ending(game) {
+/**
+ * The engine's first test fire. Chapter 6 plays it after the build (lead
+ * 2026-10-07: the ship is built in the asteroid belt, at the start of
+ * Chapter 6), with `{ next: false }`: no "Coming next" card at the end.
+ */
+export function playCh5Ending(game, { eyebrow = lvl('The rock ship', 'The rock ship'), next: showNext = false } = {}) {
   const { scene, shipView } = game;
-  const overlay = buildOverlay({ eyebrow: lvl('Chapter 5 · The end', 'The end of Chapter 5'), title: lvl('The rock ship', 'The rock ship'), sub: lvl('Engine half: built and tested', 'The engine works!'), startBlack: false });
+  const overlay = buildOverlay({ eyebrow, title: lvl('The rock ship', 'The rock ship'), sub: lvl('Engine half: built and tested', 'The engine works!'), startBlack: false });
   let next = null; // the "Coming next: Chapter 6" card, over black
   document.body.classList.add('in-cinematic');
   game.controls.setEnabled(false);
@@ -173,8 +178,8 @@ export function playCh5Ending(game) {
       blendCamera(camera, camPos, look, t < 5 ? ease(t / 1.5) : 1);
       if (t > 1 && !overlay._a) { overlay._a = true; overlay.showTitle(); }
       if (t > 4.5 && !overlay._b) { overlay._b = true; overlay.hideTitle(); }
-      if (t > 18 && !overlay._c) { overlay._c = true; overlay.darken(); }
-      if (t > 19 && !next) {
+      if (showNext && t > 18 && !overlay._c) { overlay._c = true; overlay.darken(); }
+      if (showNext && t > 19 && !next) {
         next = buildOverlay({ eyebrow: lvl('Coming next', 'Coming next'), title: lvl('Chapter 6: The Crew', 'Chapter 6: The Crew'), sub: lvl('The other half of the ship, and the friends who fly it', 'New friends join the trip!'), startBlack: true });
         next.showTitle();
       }
