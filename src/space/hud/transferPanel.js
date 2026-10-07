@@ -150,7 +150,7 @@ export function createTransferPanel(root) {
     const wayDo = h.along === false ? 'Face the way you came' : 'Point forward';
     const errDeg = h.err === null || h.err === undefined ? null : Math.round(Math.abs(h.err) * DEG);
     const lined = errDeg !== null && errDeg <= 8;
-    const turnKey = h.err > 0 ? t('hold D ▶ (turn right)', 'hold D ▶') : t('hold A ◀ (turn left)', '◀ hold A');
+    const turnKey = h.err > 0 ? t('hold → (or D) to turn right', 'hold → ▶') : t('hold ← (or A) to turn left', '◀ hold ←');
     const need = Math.max(0, h.dvNeed || 0);
     const done = Math.max(0, h.dvDone || 0);
     const acc = Math.max(0.01, h.accel || 1);

@@ -2,7 +2,7 @@
 // toward Mars. See missions.js for the step format.
 import { BODIES, EVENTS } from '../contracts.js';
 import { refuel } from '../physics.js';
-import { wait, altitudeAbove, askBeat, ensureStatsTracking, fuelSafetyNet, isCaptured, loadSurfaceScene } from './util.js';
+import { wait, altitudeAbove, angleAround, askBeat, ensureStatsTracking, fuelSafetyNet, isCaptured, loadSurfaceScene } from './util.js';
 import { t } from '../level.js';
 import { satelliteRig } from '../satellite.js';
 
@@ -28,14 +28,16 @@ export function act2Steps(game) {
   const satAfterRelease = () => rig.toMoonOrGone(game.missions?.saved?.satellite);
 
   let slingshotSeen = false;
+  let moonLast = null; // a2_circle's lap counter
+  let moonSwept = 0;
   game.bus.on(EVENTS.SLINGSHOT, (e) => { if (e.body === 'moon') slingshotSeen = true; });
 
   return [
     // ------------------------------------------------------------ ACT 2
     {
       id: 'a2_capture', act: 2,
-      title: t('Capture into Moon orbit', 'Go around the Moon'),
-      objective: t('At your lowest point, point backwards (opposite to the way you are moving) and hold W to slow down until your path closes into a loop around the Moon.', 'Near the Moon, turn to face the way you came. Hold W to slow down. Follow the green sign.'),
+      title: t('Get into Moon orbit', 'Get into Moon orbit'),
+      objective: t('Goal: make your path a loop round the Moon. At your lowest point, point backwards (← / →, opposite to the way you are moving) and hold W until the dotted line closes into a circle.', 'Goal: go round the Moon. Turn to face the way you came (← →) and hold W until the dotted line is a circle.'),
       markers: ['moon'],
       aim: 'retrograde',
       capture: 'moon',
@@ -53,8 +55,6 @@ export function act2Steps(game) {
         if (game.ship.soi !== 'moon') return false;
         return isCaptured(game);
       },
-      beat: 'moonOrbit',
-      bonusBeats: ['dockingLights'],
       after() {
         // Braked straight down to the ground (critic): she has landed already,
         // so no "now land" line, and the satellite rides on until liftoff.
@@ -64,13 +64,42 @@ export function act2Steps(game) {
         if (rig.release()) {
           hud.toast(t('Satellite released into Moon orbit - it will relay your messages home!', 'Bye, satellite! It will go around the Moon and send your messages home!'), { kind: 'good', ms: 5000 });
         }
-        hud.toast(t('Captured! Now slow down and land - keep your falling speed in the green.', 'You’re going around the Moon! Now land slowly. Keep the speed in the green.'), { kind: 'good', ms: 4200 });
+        hud.toast(t('Captured! You are in orbit round the Moon.', 'You are going round the Moon!'), { kind: 'good', ms: 4200 });
+      },
+    },
+    // One whole loop round the Moon before the question and the landing
+    // (lead 2026-10-07: make each goal clear - get in orbit, circle the
+    // Moon, then point back and land).
+    {
+      id: 'a2_circle', act: 2,
+      title: t('Circle the Moon', 'Circle the Moon'),
+      objective: t('Goal: go once all the way round the Moon. No need to touch W: just watch the Moon turn below you.', 'Goal: go all the way round the Moon once. Just watch!'),
+      markers: ['moon'],
+      enter() { moonLast = null; moonSwept = 0; },
+      check(ctx, states, stepTime) {
+        rig.frame(ctx, stepTime);
+        if (game.ship.landedOn) return true; // braked straight down already
+        if (game.ship.soi !== 'moon') return false;
+        const a = angleAround(game, 'moon', states);
+        if (moonLast !== null) {
+          let d = a - moonLast;
+          d = Math.atan2(Math.sin(d), Math.cos(d));
+          moonSwept += d;
+        }
+        moonLast = a;
+        return Math.abs(moonSwept) >= Math.PI * 2;
+      },
+      beat: 'moonOrbit',
+      bonusBeats: ['dockingLights'],
+      after() {
+        if (game.ship.landedOn) return;
+        hud.toast(t('Now land: point backwards and slow down. Keep your falling speed in the green.', 'Now land slowly! Keep the speed in the green.'), { kind: 'good', ms: 4200 });
       },
     },
     {
       id: 'a2_land', act: 2,
       title: 'Land on the Moon',
-      objective: t('Point backwards (against your motion) and hold W to slow your fall. Land gently - legs are down.', 'Land slowly and gently. Follow the signs.'),
+      objective: t('Goal: land gently. Point backwards (against your motion, ← / →) and hold W to slow down, then keep your falling speed in the green. Legs are down.', 'Goal: land softly. Turn to face backwards (← →) and hold W to slow down.'),
       markers: ['moon'],
       aim: 'retrograde',
       land: 'moon',
@@ -129,8 +158,8 @@ export function act2Steps(game) {
     },
     {
       id: 'a2_slingshot', act: 2,
-      title: t('Leave Earth behind', 'Slingshot to Mars'),
-      objective: t('Follow the arrow: fly the same way the Moon is moving and hold W. Leaving that way flings you out of Earth’s pull. That’s a slingshot!', 'Follow the arrow and hold W. The Moon will throw you toward Mars. That’s a slingshot!'),
+      title: t('Leave Earth behind', 'Leave Earth behind'),
+      objective: t('Goal: fly out of Earth’s pull, toward Mars. Follow the arrow (the way the Moon is moving) and hold W. Going the way you are already moving saves fuel.', 'Goal: fly away from Earth, toward Mars. Follow the arrow and hold W.'),
       markers: ['mars'],
       // Lead playtest: 'target' pointed her straight at Mars (not how orbits
       // work), and 'prograde' straight after liftoff is straight UP, which
@@ -146,7 +175,7 @@ export function act2Steps(game) {
         if (slingshotSeen) return true;
         return game.ship.soi === 'sun';
       },
-      beat: 'moonSlingshot',
+      beat: 'moonEscape',
     },
     {
       id: 'a2_coast', act: 2,

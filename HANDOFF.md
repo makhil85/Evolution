@@ -560,3 +560,37 @@ lines are in place but not tuned.
 - **Ch6 habitat walk**: `createWalker({ gait: 'earth' })` - 3.2 m/s walk,
   5.5 run, exponential grip like `game/physics.js`, clip rate = speed / ref
   (clamped 0.6-1.5) like `game/avatar.js`.
+
+## Session 2026-10-07 (b): Ch4 pacing, catch zone, goals
+
+- **Calm before questions** (`CALM_S` = 5 s, contracts.js): a step with a
+  `check()` ticks itself off on the mission card, then waits 5 s of unpaused
+  game time before its beat question (`step.calm` overrides). Ch6 stations
+  use `missions.ask(beat, { calm })`. The timer also runs while a walk
+  scene is up (`missions.tickCalm`).
+- **Next goal**: `hud.announce(title, text)` shows a banner for ~6.5 s on
+  every task step ("Next goal: fly to Mars" + the objective). The next
+  target's marker is `kind: 'goal'`: a bigger pulsing box and "Next: Mars".
+- **Catch zone** (`src/space/catchZone.js`, Easy and Medium only): a
+  blinking ring round the step's capture/transfer body (about 100 u at
+  Mars; Jupiter 1500 u, settling at 1400 u between Ganymede and Callisto,
+  clear of the radiation belt; Saturn settles outside its rings). Fly into
+  it: a circular orbit at once, then a glide down to the low orbit (2.2 R).
+  Hard keeps the real capture burn and flybys.
+- **Act 1**: two laps before the sunrise ("16") question; new step
+  `a1_ride` (one lap with the satellite) before flight school. The panel
+  puzzle is now a game: both panels swing (slower on Easy), hold ←/A for
+  the top one and →/D for the bottom one while each gets > 80% light.
+- **Act 2**: `a2_capture` (get in orbit) -> new `a2_circle` (one lap round
+  the Moon, then the moonOrbit question) -> `a2_land`. A "Landed on X!"
+  card covers the surface walk's build (acts/util.js loadSurfaceScene).
+  The Moon-escape question `moon_escape` (beat `moonEscape`) replaces the
+  slingshot one. Leaving Earth uses the top-down escape view, wide enough
+  to show Mars.
+- **Act 3**: `a3_mars_scan` is now an orbit (capture: 'mars'), then the
+  question. Visiting Ceres any time in the belt ticks "Visit Ceres" off
+  (`step.doneEarly`) and asks the dwarf-planet question there. Belt rocks
+  are much smaller (near rocks 1.6-5.2 u across, scenery under 1/2 Ceres).
+- HUD right column starts at 46 px (the Chapters button hid Autopilot).
+  Turning hints say ← / → first. Zero-g scene: she lifts only a little.
+- Ch2 lesson 2A truss film: green sides go red near the truck, blue joints.

@@ -247,6 +247,31 @@ export class Hud {
     this._missionNow = objective;
   }
 
+  /**
+   * The next goal, big across the top for a few seconds, then gone (lead
+   * 2026-10-07: "explain the next goal and then remove it from screen").
+   * @param {string} title  e.g. "Next goal: Mars"
+   * @param {string} [text] what to do
+   */
+  announce(title, text = '', ms = 6500) {
+    if (!this._goal) {
+      this._goal = el('div', 'sp-goal');
+      this._goal.setAttribute('role', 'status');
+      this._goal.setAttribute('aria-live', 'polite');
+      this._goalTitle = el('div', 'sp-goal__title');
+      this._goalText = el('div', 'sp-goal__text');
+      this._goal.append(this._goalTitle, this._goalText);
+      this.root.appendChild(this._goal);
+    }
+    this._goalTitle.textContent = title;
+    this._goalText.textContent = text;
+    this._goalText.hidden = !text;
+    this._goal.classList.remove('is-gone');
+    this._goal.classList.add('is-on');
+    clearTimeout(this._goalTimer);
+    this._goalTimer = setTimeout(() => { this._goal.classList.remove('is-on'); this._goal.classList.add('is-gone'); }, ms);
+  }
+
   // --- contract: per-frame instruments --------------------------------------
 
   /** @param {object} state see CHAPTER4_PLAN.md / the module header for the shape */

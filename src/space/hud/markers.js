@@ -210,7 +210,7 @@ export function createMarkers(root, { leftPanel, rightPanel } = {}) {
           // turn (behind her the projected spot is mirrored).
           if (onScreen) turn = `rotate(${(Math.atan2(m.screenY - ny, m.screenX - nx) * (180 / Math.PI) + 90).toFixed(1)}deg)`;
           x = nx; y = ny; onScreen = false;
-        } else if (m.kind !== 'target') {
+        } else if (m.kind !== 'target' && m.kind !== 'goal') {
           hidden = true;
         }
       }

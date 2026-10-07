@@ -1,9 +1,9 @@
 // Act 3 - Mars flyby and the asteroid belt: scan, mine ore/ice, sample all
 // three kinds, visit Ceres, and build Big Solar Wings before Jupiter.
 // See missions.js for the step format.
-import { BELT, BODIES, SHIP, SOLAR, UPGRADES } from '../contracts.js';
+import { BELT, BODIES, SHIP, SOLAR, UPGRADES, CALM_S } from '../contracts.js';
 import { solarPower } from '../physics.js';
-import { wait, altitudeAbove, captureScale, canAfford, ensureStatsTracking, fuelSafetyNet, hasUpgrade, offerUpgrades } from './util.js';
+import { wait, canAfford, ensureStatsTracking, fuelSafetyNet, hasUpgrade, isCaptured, offerUpgrades } from './util.js';
 import { createMiningController } from './mining.js';
 import { t } from '../level.js';
 
@@ -38,6 +38,22 @@ export function act3Steps(game) {
     const dt = lastShipT === null ? 0 : Math.max(0, Math.min(0.5, t - lastShipT));
     lastShipT = t;
     mining.tick(dt);
+    checkCeres();
+  }
+
+  // Lead 2026-10-07: flying to Ceres counts as visiting it whenever she does
+  // it (even before the mining is done): it is ticked off at once, and the
+  // dwarf-planet question comes there, after a calm moment.
+  let ceresVisited = false;
+  let ceresAsked = false;
+  function checkCeres() {
+    if (ceresVisited || !game.states?.ceres) return;
+    const c = game.states.ceres;
+    if (Math.hypot(game.ship.x - c.x, game.ship.z - c.z) > BODIES.ceres.soi) return;
+    ceresVisited = true;
+    hud.toast(t('You reached Ceres, the dwarf planet! Visit ticked off.', 'You reached Ceres!'), { kind: 'good', ms: 4000 });
+    game.missions?.refresh?.();
+    game.missions?.ask?.('ceresScan', { calm: CALM_S }).then(() => { ceresAsked = true; });
   }
 
   let offering = false;
@@ -63,22 +79,23 @@ export function act3Steps(game) {
     // ------------------------------------------------------------ ACT 3
     {
       id: 'a3_mars_scan', act: 3,
-      title: 'Scan Mars',
-      objective: t('Coast to Mars (time warp is fine far out). The scan starts when Mars’s gravity takes hold.', 'Fly to Mars and wait. Keys 1 to 4 make time go fast.'),
+      title: t('Orbit Mars and scan it', 'Go round Mars'),
+      objective: t('Goal: get into a steady orbit round Mars, then scan it. Coast there (time warp is fine far out); on Easy and Medium fly into the blinking circle and Mars catches you, on Hard brake at your lowest point.', 'Goal: go round Mars. Fly into the blinking circle and Mars catches you!'),
       markers: ['mars'],
-      // Keeps the Mars banner going. Level 1 playtest: the extra-long dotted
-      // line showed a Mars pass far in the future, the previous step ended,
-      // and with no transfer target here she drifted with no guidance.
+      // Keeps the Mars banner going (Level 1 playtest: with no transfer
+      // target she drifted with no guidance). Lead 2026-10-07: a steady orbit
+      // close to Mars first, then the question - not a flyby.
       transfer: 'mars',
+      capture: 'mars',
+      aim: 'retrograde',
       enter() { game.target = 'mars'; },
-      check(ctx, states) {
+      check() {
         fuelSafetyNet(game);
-        // Inside Mars's gravity zone is close enough to scan: a flyby, not a landing.
-        return game.ship.soi === 'mars' || altitudeAbove(game, 'mars', states, BODIES.mars.radius) <= 250 * captureScale(game);
+        return game.ship.soi === 'mars' && isCaptured(game);
       },
       beat: 'marsScan',
       bonusBeats: ['marsCraters'],
-      after() { game.target = 'ceres'; hud.toast('Next stop: the asteroid belt.', { kind: 'info', ms: 3000 }); },
+      after() { game.target = 'ceres'; hud.toast(t('Mars scanned! Now we leave Mars for the asteroid belt.', 'Bye, Mars! Next: the asteroid belt.'), { kind: 'info', ms: 3600 }); },
     },
     {
       id: 'a3_power', act: 3,
@@ -131,11 +148,15 @@ export function act3Steps(game) {
       title: 'Visit Ceres',
       objective: t('Point your telescope at Ceres, the biggest object in the belt (the marker shows where it is).', 'Look at Ceres, the biggest rock in the belt.'),
       markers: ['ceres'],
+      // Already been there (any time in the belt): ticked off, question asked.
+      doneEarly: () => ceresVisited,
+      get beat() { return ceresAsked || ceresVisited ? null : 'ceresScan'; },
       // Lead playtest: flying to Ceres was a second timed transfer from inside
       // the belt, often a 70 s warp wait, for a question about what Ceres IS.
       // A telescope scan from the belt teaches the same thing without the wait.
       async enter() {
         game.target = 'ceres';
+        if (ceresVisited) return;
         hud.toast(t('Telescope locked on Ceres... scanning.', 'Looking at Ceres...'), { kind: 'info', ms: 2600 });
         await wait(2600);
         await hud.showFact({
@@ -150,7 +171,6 @@ export function act3Steps(game) {
         tickMining(); // she can keep mining while she scans
         return true;
       },
-      beat: 'ceresScan',
       after() { if (!game.samples.includes('Ceres salt sample')) game.samples.push('Ceres salt sample'); },
     },
     {

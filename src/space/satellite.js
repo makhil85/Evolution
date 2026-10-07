@@ -24,6 +24,7 @@ import { BODIES, SHIP, SHIP_PALETTE, INK, toScene } from './contracts.js';
 import { bodyState } from './orbits.js';
 import { refuel } from './physics.js';
 import { toonRamp } from '../game/toonPipeline.js';
+import { skipButton } from '../play/grownUp.js';
 
 /** Circular orbit around Earth. Radius ~60u puts it a modest raise above her
  * starting ~38u orbit (BODIES.earth.radius * 1.6) - a small rehearsal of the
@@ -38,11 +39,9 @@ export const SATELLITE = Object.freeze({
   bus: { w: 2.0, h: 0.16, d: 1.1 },
 });
 
-/** The panel puzzle's base numbers - act1.js scales the facing tolerance by
- * game.mode.captureScale. */
-const TOLERANCE_BASE = THREE.MathUtils.degToRad(10);
-const HOLD_NEEDED = 1.0;
-const ROT_SPEED = 1.7; // rad/s of wing turn per full A/D deflection
+/** The panel game: both panels held in the light this long (s). act1.js
+ * passes game.mode.captureScale, which sets how slowly they swing. */
+const HOLD_NEEDED = 1.5;
 
 const _earth = { x: 0, z: 0, vx: 0, vz: 0 };
 
@@ -823,6 +822,11 @@ function injectPuzzleCss() {
     .satp-bar-fill { height:100%; width:0%; background:linear-gradient(90deg,#3a6fd6,#7ff3ff); }
     .satp-bar-fill.satp-hold { background:linear-gradient(90deg,#ffb347,#ffe58a); }
     .satp-msg { margin-top:10px; font-size:13px; color:#9dffb0; min-height:16px; }
+    .satp-needle2 { background:#ffd27a; box-shadow:0 0 8px rgba(255,210,122,.85); }
+    .satp-bar { position:relative; }
+    .satp-goal { position:absolute; left:80%; top:-2px; bottom:-2px; width:2px; background:#fff; opacity:.8; }
+    .satp-bar-fill.is-good { background:linear-gradient(90deg,#2fbf71,#9dffb0); }
+    .satp-label.is-held { color:#9dffb0; opacity:1; }
   `;
   document.head.appendChild(style);
   puzzleCssInjected = true;
@@ -832,23 +836,33 @@ function buildPuzzleOverlay() {
   injectPuzzleCss();
   const wrap = document.createElement('div');
   wrap.className = 'satp-wrap';
-  wrap.innerHTML = '<div class="satp-title">Turn the panel to face the Sun! Hold A / D</div>'
+  wrap.innerHTML = '<div class="satp-title" data-el="title"></div>'
     + '<div class="satp-row">'
-    + '<div class="satp-dial"><div class="satp-sun">☀</div><div class="satp-needle"></div></div>'
+    + '<div class="satp-dial"><div class="satp-sun">☀</div><div class="satp-needle"></div><div class="satp-needle satp-needle2"></div></div>'
     + '<div class="satp-meters">'
-    + '<div class="satp-label">Power</div><div class="satp-bar"><div class="satp-bar-fill" data-el="power"></div></div>'
-    + '<div class="satp-label">Holding steady</div><div class="satp-bar"><div class="satp-bar-fill satp-hold" data-el="hold"></div></div>'
+    + '<div class="satp-label" data-el="l0"></div><div class="satp-bar"><div class="satp-bar-fill" data-el="power"></div><div class="satp-goal"></div></div>'
+    + '<div class="satp-label" data-el="l1"></div><div class="satp-bar"><div class="satp-bar-fill" data-el="power2"></div><div class="satp-goal"></div></div>'
+    + '<div class="satp-label">Both panels charging</div><div class="satp-bar"><div class="satp-bar-fill satp-hold" data-el="hold"></div></div>'
     + '</div></div><div class="satp-msg" data-el="msg"></div>';
   document.body.appendChild(wrap);
-  const needle = wrap.querySelector('.satp-needle');
-  const power = wrap.querySelector('[data-el="power"]');
-  const hold = wrap.querySelector('[data-el="hold"]');
-  const msg = wrap.querySelector('[data-el="msg"]');
+  const q = (k) => wrap.querySelector(`[data-el="${k}"]`);
+  const needles = wrap.querySelectorAll('.satp-needle');
+  const bars = [q('power'), q('power2')];
+  const labels = [q('l0'), q('l1')];
+  const pct = (p) => `${Math.round(p * 100)}%`;
   return {
-    setNeedle(errRad) { needle.style.transform = `rotate(${THREE.MathUtils.radToDeg(errRad)}deg)`; },
-    setPower(p) { power.style.width = `${Math.round(p * 100)}%`; },
-    setHold(f) { hold.style.width = `${Math.round(f * 100)}%`; },
-    setMsg(txt) { msg.textContent = txt; },
+    setTitle(txt) { q('title').textContent = txt; },
+    setLabels(a, b) { labels[0].textContent = a; labels[1].textContent = b; },
+    /** Panel i's error from the Sun (rad), its light (0..1), and whether it's held. */
+    setPanel(i, errRad, p, held, good) {
+      needles[i].style.transform = `rotate(${THREE.MathUtils.radToDeg(errRad)}deg)`;
+      bars[i].style.width = pct(p);
+      bars[i].classList.toggle('is-good', good);
+      labels[i].classList.toggle('is-held', held);
+    },
+    setHold(f) { q('hold').style.width = pct(f); },
+    setMsg(txt) { q('msg').textContent = txt; },
+    add(node) { if (node) wrap.appendChild(node); },
     remove() { wrap.remove(); },
   };
 }
@@ -904,50 +918,67 @@ export function buildPanelPuzzleScene(game, { toleranceScale = 1 } = {}) {
   fill.position.set(-sunDir.x * 6, -2, -sunDir.y * 6);
   scene.add(fill);
 
-  // Framed on the broken array (top half), the slab and the start of the
-  // working array below it, from a little to the side so the thin boards
-  // never sit edge-on to the camera.
-  camera.position.set(3.4, 2.4, 10.6);
-  camera.lookAt(0, 1.2, 0);
+  // Both arrays in frame (the game swings both), from a little to the side
+  // so the thin boards never sit edge-on to the camera.
+  camera.position.set(5.2, 1.2, 18.5);
+  camera.lookAt(0, -0.9, 0); // both arrays (4.5 u each way) in view, above the panel at the bottom
 
-  // `rotY` keeps the puzzle's original bookkeeping: the board's world facing
-  // angle is PI/2 - rotY. Start clearly, kindly wrong.
-  const targetRotY = Math.PI / 2 - sunAngle;
-  let rotY = targetRotY + 2.35;
-  sat.setDeadWingAngle(Math.PI / 2 - rotY);
+  // Lead 2026-10-07: one held key was too easy. Now BOTH panels swing to
+  // and fro by themselves (the satellite lost its pointing); she catches
+  // one with A / Left and the other with D / Right, and must hold both while
+  // each gets more than 80% of the light. Slower swings on Easy.
+  const GOOD = 0.8; // light needed on each panel (cos of the angle off the Sun)
+  const swing = 1.7; // rad either side of the Sun
+  const period = 6 * Math.max(0.6, toleranceScale); // s per swing: Easy 9.6, Medium 6, Hard 4.2
+  const panels = [
+    { phase: 2.2, speed: (2 * Math.PI) / period, angle: 0, held: false },
+    { phase: -0.6, speed: (2 * Math.PI) / (period * 1.37), angle: 0, held: false },
+  ];
+  const setAngle = (i, a) => (i === 0 ? sat.setDeadWingAngle(a) : sat.liveWingPivot && (sat.liveWingPivot.rotation.x = a));
+  for (const [i, p] of panels.entries()) { p.angle = sunAngle + swing * Math.sin(p.phase); setAngle(i, p.angle); }
 
   const overlay = buildPuzzleOverlay();
-  const tolerance = TOLERANCE_BASE * toleranceScale;
+  overlay.setTitle('Both panels are swinging! Catch each one when it faces the Sun.');
+  overlay.setLabels('Top panel: hold A or ←', 'Bottom panel: hold D or →');
+  overlay.add(skipButton(() => solve())); // unlock mode only
 
   let holdTime = 0;
   let done = false;
   let doneAt = 0;
   let resolveDone = null;
   let t = 0;
+  let solving = false;
+  const keyDown = (code) => !!game.controls?.isDown?.(code);
 
   function tick(dt, input, mouse, modalOpen) {
     t += dt;
     sat.tick(dt);
     if (!done) {
       const turn = modalOpen ? 0 : (input?.turn || 0);
-      // Fine control near the Sun (lead playtest: at full speed the wing
-      // crossed the 20-degree window in 0.2 s, faster than a child can let go).
-      // Within 25 degrees it turns at a third of the speed.
-      let err0 = (Math.PI / 2 - rotY) - sunAngle;
-      err0 = Math.atan2(Math.sin(err0), Math.cos(err0));
-      const near = Math.abs(err0) < THREE.MathUtils.degToRad(25);
-      rotY += turn * ROT_SPEED * (near ? 0.34 : 1) * dt;
-      const worldAngle = Math.PI / 2 - rotY;
-      sat.setDeadWingAngle(worldAngle);
-      let err = worldAngle - sunAngle;
-      err = Math.atan2(Math.sin(err), Math.cos(err));
-      const power = Math.max(0, Math.cos(err));
-      overlay.setNeedle(-err);
-      overlay.setPower(power);
-      if (Math.abs(err) <= tolerance) {
-        overlay.setMsg(turn ? 'That’s it! Let go of the key and hold still.' : 'Holding steady...');
+      // Two keys at once read as turn 0, so look at the keys themselves (the
+      // touch pad's single turn axis still catches one panel at a time).
+      const held = solving ? [true, true] : modalOpen ? [false, false] : [
+        keyDown('KeyA') || keyDown('ArrowLeft') || turn < 0,
+        keyDown('KeyD') || keyDown('ArrowRight') || turn > 0,
+      ];
+      let allGood = true;
+      panels.forEach((p, i) => {
+        p.held = held[i];
+        if (!p.held) {
+          p.phase += p.speed * dt;
+          p.angle = sunAngle + swing * Math.sin(p.phase);
+          setAngle(i, p.angle);
+        }
+        let err = p.angle - sunAngle;
+        err = Math.atan2(Math.sin(err), Math.cos(err));
+        const light = Math.max(0, Math.cos(err));
+        const good = light >= GOOD;
+        if (!(good && p.held)) allGood = false;
+        overlay.setPanel(i, -err, light, p.held, good);
+      });
+      if (allGood) {
         holdTime += dt;
-        overlay.setHold(Math.min(1, holdTime / HOLD_NEEDED));
+        overlay.setMsg('Both panels in the sunshine! Keep holding...');
         if (holdTime >= HOLD_NEEDED) {
           done = true;
           doneAt = t;
@@ -955,14 +986,22 @@ export function buildPanelPuzzleScene(game, { toleranceScale = 1 } = {}) {
           overlay.setMsg('Panels online!');
         }
       } else {
-        overlay.setMsg(near ? 'Almost! Slowly now...' : '');
         holdTime = Math.max(0, holdTime - dt * 1.5);
-        overlay.setHold(Math.min(1, holdTime / HOLD_NEEDED));
+        const caughtBad = panels.some((p, i) => p.held && !(Math.cos(p.angle - sunAngle) >= GOOD));
+        overlay.setMsg(caughtBad ? 'That one isn’t facing the Sun: let go and catch it when its bar turns green.'
+          : panels.some((p) => p.held) ? 'Got one! Now catch the other when its bar is green.' : '');
       }
+      overlay.setHold(Math.min(1, holdTime / HOLD_NEEDED));
     } else {
       sat.setGlow(Math.min(1, (t - doneAt) / 0.8));
       if (t - doneAt > 1.5 && resolveDone) { const r = resolveDone; resolveDone = null; r(); }
     }
+  }
+
+  /** Tests and the grown-up skip: both panels to the Sun, held. */
+  function solve() {
+    solving = true;
+    panels.forEach((p, i) => { p.angle = sunAngle; setAngle(i, sunAngle); });
   }
 
   return {
@@ -970,6 +1009,7 @@ export function buildPanelPuzzleScene(game, { toleranceScale = 1 } = {}) {
     camera,
     /** Test handle. */
     satellite: sat,
+    solve,
     start() { return new Promise((resolve) => { resolveDone = resolve; }); },
     tick,
     dispose() {

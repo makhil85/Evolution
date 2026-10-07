@@ -73,38 +73,74 @@ function truck(ctx, x, y) {
   circle(ctx, x - 26, y - 2, 8, C.ink); circle(ctx, x + 28, y - 2, 8, C.ink);
 }
 
-function drawTruss(ctx, T) {
+// Strain colours (lead 2026-10-07): the truss is green at rest and its sides
+// go red as they strain - pulled (tension) red, pushed (squeezed) a deeper
+// orange-red, close enough that a 5th grader reads "red = working hard".
+// The joints are blue, so they stand out against both.
+const PULL = [214, 40, 40];
+const PUSH = [204, 72, 18];
+const REST = [46, 160, 67];
+const JOINT = '#1f5fd6';
+const mix = (rgb, k) => `rgb(${REST.map((w, i) => Math.round(lerp(w, rgb[i], k))).join(',')})`;
+
+function drawTruss(ctx, T, opts = {}) {
   banks(ctx);
   const truss = T >= 6;
-  const k = truss ? lin(T, 6.5, 11) : lin(T, 0.5, 5.5);
+  const k = truss ? lin(T, 6.5, 12) : lin(T, 0.5, 5.5);
   const tx = lerp(110, 690, k);
   const onSpan = clamp((tx - 170) / 460);
   const load = tx > 170 && tx < 630 ? Math.sin(onSpan * Math.PI) : 0;
   const sag = truss ? load * 3 : load * 55;
   const deckY = (x) => 300 + (x > 170 && x < 630 ? sag * Math.sin(((x - 170) / 460) * Math.PI) : 0);
-  // deck
-  ctx.save();
-  ctx.strokeStyle = truss ? C.wood : (load > 0.5 ? C.bad : C.wood);
-  ctx.lineWidth = 12;
-  ctx.beginPath();
-  for (let x = 170; x <= 630; x += 10) { if (x === 170) ctx.moveTo(x, deckY(x)); else ctx.lineTo(x, deckY(x)); }
-  ctx.stroke();
-  ctx.restore();
-  if (truss) {
-    // a row of triangles on top: bottom nodes every 92, top nodes in between
+  if (!truss) {
+    // deck
+    ctx.save();
+    ctx.strokeStyle = load > 0.5 ? C.bad : C.wood;
+    ctx.lineWidth = 12;
+    ctx.beginPath();
+    for (let x = 170; x <= 630; x += 10) { if (x === 170) ctx.moveTo(x, deckY(x)); else ctx.lineTo(x, deckY(x)); }
+    ctx.stroke();
+    ctx.restore();
+  } else {
+    // a row of triangles on top: bottom nodes every 92, top nodes in between.
+    // While the truck is on, each side reddens by how near the truck it is, and
+    // the joints shudder towards the load but can't go anywhere (reduced
+    // motion: colour only).
+    const on = tx > 150 && tx < 650 ? 1 : 0;
+    const strain = (x) => on * (0.08 + 0.92 * Math.exp(-(((x - tx) / 100) ** 2)));
+    const shake = (x, y) => {
+      if (opts.reduced || !on) return [x, y];
+      const s = strain(x) * Math.sin(T * 47 + x * 0.13) * 2.5;
+      const d = Math.hypot(tx - x, 60) || 1;
+      return [x + ((tx - x) / d) * s, y + Math.abs(s) * 0.8];
+    };
     const top = 210;
+    const bot = []; const tops = [];
+    for (let i = 0; i <= 5; i++) bot.push(shake(170 + i * 92, deckY(170 + i * 92)));
+    for (let i = 0; i < 5; i++) tops.push(shake(216 + i * 92, top));
+    const side = (a, b, w, rgb) => {
+      const s = strain((a[0] + b[0]) / 2);
+      line(ctx, a[0], a[1], b[0], b[1], mix(rgb, s), w + 2 * s);
+    };
+    // the deck is stretched (pulled); the top bars are squeezed (pushed); a
+    // diagonal is pushed when it leans up towards the truck, else pulled
+    for (let i = 0; i < 5; i++) side(bot[i], bot[i + 1], 12, PULL);
     for (let i = 0; i < 5; i++) {
-      const x0 = 170 + i * 92; const x1 = x0 + 92; const xm = x0 + 46;
-      line(ctx, x0, deckY(x0), xm, top, C.wood, 7);
-      line(ctx, xm, top, x1, deckY(x1), C.wood, 7);
-      if (i < 4) line(ctx, xm, top, xm + 92, top, C.wood, 7);
+      for (const b of [bot[i], bot[i + 1]]) {
+        const pushed = Math.abs(tops[i][0] - tx) < Math.abs(b[0] - tx);
+        side(b, tops[i], 7, pushed ? PUSH : PULL);
+      }
+      if (i < 4) side(tops[i], tops[i + 1], 7, PUSH);
     }
+    for (const p of [...bot, ...tops]) { circle(ctx, p[0], p[1], 7, '#ffffff'); circle(ctx, p[0], p[1], 5, JOINT); }
   }
   truck(ctx, tx, deckY(tx) - 6);
   if (!truss) {
     if (load > 0.5) label(ctx, 'The plank bends!', 400, 120, { size: 26, color: '#b3261e' });
   } else {
-    const a = span(T, 8, 9);
+    const r = span(T, 8.5, 9.2) * (1 - span(T, 12, 12.5));
+    if (r > 0) label(ctx, 'Red sides are working hard', STAGE_W / 2, 80, { size: 22, color: '#b3261e', alpha: r });
+    const a = span(T, 12.5, 13.5);
     if (a > 0) {
       ctx.save(); ctx.globalAlpha = a;
       arrow(ctx, 390, 230, 200, 290, C.push, 7);
@@ -165,7 +201,8 @@ export const LESSON_2A = {
       beats: [
         { dur: 6, cap: ['A truck drives over a flat plank bridge. In the middle, the plank sags.', 'A truck on a flat plank: it bends!'] },
         { dur: 2.5, cap: ['Now the same bridge with triangles built on top. This is called a truss.', 'Now add triangles on top.'] },
-        { dur: 4, cap: ['The truck crosses and the bridge stays straight: the triangles carry the weight to both banks.', 'It stays straight! The triangles help.'] },
+        { dur: 4, cap: ['As the truck crosses, the sides near it pull and push: they turn red where the load is. But the triangles don’t change shape.', 'The sides turn red near the truck. The triangles keep their shape.'] },
+        { dur: 4, cap: ['The bridge stays straight: the triangles carry the weight to both banks.', 'It stays straight! The triangles help.'] },
       ],
       draw: drawTruss,
       clue: [null, 'Triangles hold the weight up. The bridge stays straight.'],

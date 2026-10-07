@@ -414,3 +414,8 @@ export function flightModesFor(level) {
 
 /** localStorage key for the chosen flying mode (shared by both question Levels). */
 export const FLIGHT_MODE_KEY = 'rocket_village_ch4_flight_mode';
+
+/** Lead 2026-10-07: a question must not pop up the instant a task is done
+ *  (an orbit settles, a puzzle is solved): this many seconds of calm first
+ *  (game time, not counted while paused). missions.js. */
+export const CALM_S = 5;
