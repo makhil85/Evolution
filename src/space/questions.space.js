@@ -60,7 +60,7 @@ const LEVEL4_SPACE_QUESTIONS = {
       'A wing makes lift by deflecting air downward. No air, no lift. The tempting wrong answer is “no gravity”, but gravity is almost as strong in low orbit as on the ground.',
     success:
       'Right! A wing is an air-pusher. Out here there is nothing to push, so the ship turns with small puffs of gas from its thrusters instead.',
-    doneMessage: 'Thrusters online. Tap A and D to feel the little puffs turn the ship.',
+    doneMessage: 'Thrusters online. Tap ← and → (or A and D) to feel the little puffs turn the ship.',
     reward: { science: 10 },
   },
 
@@ -352,32 +352,41 @@ const LEVEL4_SPACE_QUESTIONS = {
     hint: 'On a beach, what rubs out your footprints? Does the Moon have any of that?',
     parentHint: 'With no atmosphere there is no wind or water erosion; only tiny meteorite impacts slowly disturb the dust, over millions of years.',
     success: 'Yes. No air means no wind and no rain. Your footprints here could last for millions of years.',
-    doneMessage: 'Back to the ship. Next: swing around the Moon and let it throw you toward Mars.',
+    doneMessage: 'Back to the ship. Next: take off and leave the Moon behind.',
     reward: { science: 10 },
   },
 
-  slingshot_moon: {
-    id: 'slingshot_moon',
+  // Lead 2026-10-07: leaving the Moon is not a slingshot; ask why it was so
+  // much easier than leaving Earth, and give the energy number after.
+  moon_escape: {
+    id: 'moon_escape',
     type: 'choice',
     act: 2,
-    beat: 'moonSlingshot',
-    title: 'Free speed?',
-    subject: 'Gravity assist',
+    beat: 'moonEscape',
+    title: 'An easy take-off',
+    subject: 'Gravity and energy',
     difficulty: 'Level 4',
     prompt:
-      'Zara swung close behind the Moon as it moved along its path, and she left FASTER than she arrived, without using her engine. ' +
-      'Where did the extra speed come from?',
+      'Leaving Earth took a giant rocket. Zara just left the Moon with a few seconds of her small engine. ' +
+      'Why is it so much easier to escape from the Moon than from Earth?',
+    visual: {
+      rows: [
+        { label: 'Earth pull', tiles: ['1'], arrow: true },
+        { label: 'Moon pull', tiles: ['1/6 as strong'] },
+      ],
+    },
     choices: [
-      { text: 'From the Moon’s own motion: it pulled her along, and the Moon slowed down by a tiny, tiny amount', correct: true },
-      { text: 'The Moon’s gravity made brand-new energy' },
-      { text: 'Her engine fired by itself' },
-      { text: 'Wind blowing from the Sun' },
+      { text: 'The Moon is much smaller, so its gravity is weaker: there is less pull to climb away from', correct: true },
+      { text: 'The Moon is closer to the Sun' },
+      { text: 'Rockets work better in the cold' },
+      { text: 'The Moon pushes rockets away' },
     ],
-    hint: 'Energy is never made from nothing, so something had to give some up. Which big thing was moving?',
+    hint: 'Jumping on the Moon was easy too. What is different about the Moon’s pull?',
     parentHint:
-      'In a gravity assist the spacecraft borrows a little of the planet’s orbital momentum. The planet is so heavy that its change in speed is far too small to measure.',
+      'Escape speed is about 11.2 km/s from Earth but only about 2.4 km/s from the Moon. Kinetic energy grows with speed squared, so leaving the Moon needs only about 1/20 of the energy per kilogram.',
     success:
-      'Exactly. She borrowed a little of the Moon’s speed. The Moon is so heavy it doesn’t notice. That’s a slingshot, and it just saved you fuel.',
+      'Yes! The Moon’s pull is only about 1/6 of Earth’s. To get away from Earth you need about 11 km/s; from the Moon only about 2.4 km/s. ' +
+      'So leaving the Moon takes only about 1/20 of the energy. That’s why a small engine was enough!',
     doneMessage: 'Next stop: Mars! Use time warp (keys 1 to 4) while you’re far from everything.',
     reward: { science: 20 },
   },
@@ -887,7 +896,7 @@ export const LEVEL1_SPACE_QUESTIONS = {
     parentHint:
       'Wings need air to push against; gravity doesn’t need air at all. The tempting “it floats” mixes up “no air” with “no gravity”.',
     success: 'Right! No air, no gliding. So in space the ship folds its wings. It turns with little puffs of gas.',
-    doneMessage: 'Press A and D to turn the ship.',
+    doneMessage: 'Press ← and → to turn the ship.',
   },
 
   zero_g: {
@@ -1043,22 +1052,28 @@ export const LEVEL1_SPACE_QUESTIONS = {
     hint: 'What rubs out footprints on a beach? Does the Moon have any of those things?',
     parentHint: 'No air means no wind or weather. Footprints on the Moon can last millions of years.',
     success: 'Yes! No air, so no wind and no rain. Your footprints here could last for millions of years.',
-    doneMessage: 'Back to the ship. Next: the slingshot!',
+    doneMessage: 'Back to the ship. Next: take off!',
   },
 
-  slingshot_moon: {
-    subject: 'Gravity assist',
-    difficulty: 'Level 1 • where did it come from',
-    prompt: 'Zara flew close behind the moving Moon. She came out FASTER, and she did not use her engine. Where did the extra speed come from?',
+  moon_escape: {
+    subject: 'Gravity',
+    difficulty: 'Level 1 • why is it easy',
+    prompt: 'Leaving Earth took a giant rocket. Leaving the Moon took only Zara’s small engine. Why was the Moon so easy to leave?',
+    visual: {
+      rows: [
+        { label: 'Earth pull', tiles: ['big'], arrow: true },
+        { label: 'Moon pull', tiles: ['small'] },
+      ],
+    },
     choices: [
-      { text: 'The moving Moon pulled her along with it', correct: true },
-      { text: 'Her engine switched on by itself' },
-      { text: 'The Moon made new speed out of nothing' },
-      { text: 'Wind in space pushed her' },
+      { text: 'The Moon is small, so it pulls much less', correct: true },
+      { text: 'The Moon is closer to the Sun' },
+      { text: 'Rockets like the cold' },
+      { text: 'The Moon pushes rockets away' },
     ],
-    hint: 'Grab the edge of a spinning merry-go-round, then let go. You fly off fast. Where did your speed come from?',
-    parentHint: 'She borrowed a tiny bit of the Moon’s motion. The Moon is so heavy that it doesn’t notice the loss.',
-    success: 'Yes! She took a little of the Moon’s speed, like grabbing a merry-go-round. That saved fuel.',
+    hint: 'Remember how high you jumped on the Moon. Is the Moon’s pull big or small?',
+    parentHint: 'The Moon’s gravity is about 1/6 of Earth’s, so leaving it takes only about 1/20 of the energy.',
+    success: 'Yes! The Moon pulls only about 1/6 as hard as Earth. So leaving it takes much, much less fuel: about 1/20!',
     doneMessage: 'On your way to Mars! Keys 1 to 4 make time go fast.',
   },
 

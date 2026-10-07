@@ -218,12 +218,48 @@ export function markSaveComplete(game) {
  * is an ordinary promise rejection this try/catch can handle.
  */
 export async function loadSurfaceScene(game, opts) {
+  // Lead 2026-10-07: after touchdown the screen went blank for a few seconds
+  // while the walk was built, and a child thought she had crashed. A big
+  // "Landed!" card covers that, and stays a moment once the walk starts.
+  const name = BODIES[opts?.body]?.name || 'the surface';
+  const card = landedCard(t(`Landed on ${name}!`, `You landed on ${name}!`),
+    t('A soft, safe touchdown. Climbing down the ladder...', 'Safe and soft! Climbing down...'));
   try {
     const path = '../surface.js';
     const mod = await import(/* @vite-ignore */ path);
-    if (mod?.createSurfaceScene) return mod.createSurfaceScene(game, opts);
+    if (mod?.createSurfaceScene) {
+      const scene = mod.createSurfaceScene(game, opts);
+      setTimeout(card.close, 1800);
+      return scene;
+    }
   } catch { /* surface.js not built yet */ }
+  card.close();
   return null;
+}
+
+/** A full-screen "Landed!" card above everything (the HUD is busy changing over). */
+function landedCard(title, text) {
+  const wrap = document.createElement('div');
+  wrap.setAttribute('role', 'status');
+  wrap.style.cssText = 'position:fixed;inset:0;z-index:9500;display:grid;place-items:center;pointer-events:none;'
+    + 'background:radial-gradient(circle at 50% 45%, rgba(10,14,24,.55), rgba(3,4,8,.92));transition:opacity .6s ease;';
+  wrap.innerHTML = '<div style="text-align:center;padding:26px 40px;border-radius:20px;background:rgba(20,16,13,.9);'
+    + 'border:2px solid #8fe86b;box-shadow:0 12px 40px rgba(0,0,0,.5);font-family:system-ui,sans-serif;color:#eef3ff;">'
+    + '<div style="font-size:44px;line-height:1">\u2705</div>'
+    + '<div data-t style="margin-top:10px;font-size:28px;font-weight:800;color:#b8f5a0"></div>'
+    + '<div data-x style="margin-top:8px;font-size:16px;opacity:.9"></div></div>';
+  wrap.querySelector('[data-t]').textContent = title;
+  wrap.querySelector('[data-x]').textContent = text;
+  document.body.appendChild(wrap);
+  let closed = false;
+  return {
+    close() {
+      if (closed) return;
+      closed = true;
+      wrap.style.opacity = '0';
+      setTimeout(() => wrap.remove(), 650);
+    },
+  };
 }
 
 /** How many questions have been answered so far, read from the same save

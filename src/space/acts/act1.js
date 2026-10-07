@@ -33,17 +33,30 @@ function satelliteMarker(camera, origin, w, h, wx, wz) {
   // just the name - baking the distance in too would print it twice.
   return {
     id: 'satellite',
-    label: 'Satellite',
-    screenX: sx, screenY: sy, onScreen, distance: dist, kind: 'target',
+    label: 'Next: Satellite',
+    screenX: sx, screenY: sy, onScreen, distance: dist, kind: 'goal',
   };
 }
 
 export function act1Steps(game) {
   const { hud, shipView } = game;
 
-  // Lap counter for "ride one full orbit".
+  // Lap counter for "ride full orbits".
   let lapLast = null;
   let lapSwept = 0;
+  /** True once she has swept `laps` full turns round Earth since lapStart(). */
+  function lapStart() { lapLast = null; lapSwept = 0; }
+  function lapped(states, laps) {
+    if (game.ship.soi !== 'earth') return false;
+    const a = angleAround(game, 'earth', states);
+    if (lapLast !== null) {
+      let d = a - lapLast;
+      d = Math.atan2(Math.sin(d), Math.cos(d));
+      lapSwept += d;
+    }
+    lapLast = a;
+    return Math.abs(lapSwept) >= Math.PI * 2 * laps;
+  }
 
   // The satellite: one flight-scene instance (satellite.js's rig, shared with
   // act2.js, which releases it at the Moon).
@@ -101,7 +114,7 @@ export function act1Steps(game) {
         await wait(2600);
       },
       beat: 'wingsFolded',
-      after() { hud.toast(t('Wings folded. Thrusters online. A and D turn the ship.', 'Wings folded away! Press A and D to turn.'), { kind: 'good', ms: 3500 }); },
+      after() { hud.toast(t('Wings folded. Thrusters online. The ← and → arrow keys (or A and D) turn the ship.', 'Wings folded away! Press ← and → to turn.'), { kind: 'good', ms: 3500 }); },
     },
     {
       id: 'a1_float', act: 1,
@@ -125,21 +138,13 @@ export function act1Steps(game) {
     },
     {
       id: 'a1_orbit', act: 1,
-      title: 'Your first orbit',
-      objective: t('Ride one full lap around Earth. Don’t fire the engine; just watch the dotted line.', 'Go all the way around Earth once. Don’t press W. Just watch the dotted line.'),
+      title: 'Your first orbits',
+      // Two laps before the sunrise question (lead 2026-10-07: slow the
+      // early questions down, let her enjoy the view first).
+      objective: t('Ride two full laps around Earth. Don’t fire the engine; just watch the dotted line and the sunrises.', 'Go around Earth two times. Don’t press W. Just watch!'),
       markers: ['earth'],
-      enter() { lapLast = null; lapSwept = 0; game.target = 'moon'; },
-      check(ctx, states) {
-        if (game.ship.soi !== 'earth') return false;
-        const a = angleAround(game, 'earth', states);
-        if (lapLast !== null) {
-          let d = a - lapLast;
-          d = Math.atan2(Math.sin(d), Math.cos(d));
-          lapSwept += d;
-        }
-        lapLast = a;
-        return Math.abs(lapSwept) >= Math.PI * 2;
-      },
+      enter() { lapStart(); game.target = 'moon'; },
+      check(ctx, states) { return lapped(states, 2); },
       beat: 'firstOrbit',
     },
     {
@@ -193,7 +198,7 @@ export function act1Steps(game) {
     {
       id: 'a1_satellite_fix', act: 1,
       title: 'Fix the dead wing',
-      objective: t('Press E, then hold A / D to turn the broken panel until it faces the Sun.', 'Press E. Then hold A or D to turn the wing to face the Sun.'),
+      objective: t('Press E. Both panels swing: hold ← (or A) to catch the top one and → (or D) the bottom one while each faces the Sun.', 'Press E. Hold ← and → to catch both wings when they face the Sun.'),
       // After a reload straight into this step the docking thrusters creep
       // her back alongside (and the model is rebuilt) before E does anything.
       enter(ctx) {
@@ -234,6 +239,16 @@ export function act1Steps(game) {
         // Let her watch it settle on before anything else opens.
         await rig.whenAttached();
       },
+    },
+    // One calm lap with the satellite riding along before the flight-school
+    // lesson (lead 2026-10-07).
+    {
+      id: 'a1_ride', act: 1,
+      title: 'A lap with the satellite',
+      objective: t('The satellite rides on your ship now. Enjoy one lap round Earth while its wings charge your tank.', 'Go round Earth once with the satellite on your ship.'),
+      markers: ['earth'],
+      enter() { lapStart(); rig.ensureAttached(); },
+      check(ctx, states, stepTime) { ridingStep(ctx, stepTime); return lapped(states, 1); },
     },
     // Flight school (lead 2026-10-02): animated films on how a transfer
     // works, with a question after each, before she flies it for real.

@@ -404,6 +404,8 @@ function buildMarkers(states) {
   const w = renderer.domElement.clientWidth;
   const h = renderer.domElement.clientHeight;
   const ids = missions.markerIds ? missions.markerIds() : [game.target];
+  // The next goal gets the big pulsing box and "Next:" (lead 2026-10-07).
+  const goalId = ids.includes(game.target) ? game.target : ids[0];
   for (const id of ids) {
     if (!id || !states[id]) continue;
     const s = states[id];
@@ -428,7 +430,8 @@ function buildMarkers(states) {
     }
     const dist = Math.hypot(s.x - ship.x, s.z - ship.z) - BODIES[id].radius;
     // markers.js appends "· <distance> u" itself; the label is just the name.
-    out.push({ id, label: BODIES[id].name, screenX: sx, screenY: sy, onScreen, distance: Math.max(0, dist), kind: 'target' });
+    const goal = id === goalId;
+    out.push({ id, label: goal ? `Next: ${BODIES[id].name}` : BODIES[id].name, screenX: sx, screenY: sy, onScreen, distance: Math.max(0, dist), kind: goal ? 'goal' : 'target' });
   }
   // Two sources of non-body markers: whatever the current step set on
   // missions.extraMarkers (Act 1's satellite), and the mining controller's
@@ -874,7 +877,7 @@ function updateLandingCue(thrust, target = game.landTarget) {
   } else if (manual && err > 0.35) {
     setCue('good', auto
       ? t(`Falling gently... the ship keeps itself pointed. Hold W when it says Too fast. ${Math.round(alt)} u up`, 'Falling gently. Hold W when it says Too fast.')
-      : t(`Turn to point along the green arrow (A / D), ready to brake. ${Math.round(alt)} u up`, 'Turn to point along the green arrow (A / D).'));
+      : t(`Turn to point along the green arrow (← / →), ready to brake. ${Math.round(alt)} u up`, 'Turn to point along the green arrow (← / →).'));
     aimHelp = { up: aimUp, phase: 'land', line: t('Turn now so you’re ready to brake when you need to.', 'Turn now, ready to slow down.') };
   } else {
     setCue('good', t(`Falling gently... keep the speed in the green. ${Math.round(alt)} u up`, `Good! Falling slowly. Just keep the speed in the green. ${Math.round(alt)} u up`));
@@ -1386,6 +1389,7 @@ function tick(realDt, render = true) {
     const input = controls.sample();
     const mouse = controls.takeMouse();
     activeScene.tick(realDt, input, modalOpen ? { dx: 0, dy: 0, wheel: 0, dragging: false } : mouse, modalOpen);
+    missions.tickCalm(realDt, modalOpen || game.paused || game.frozen);
     touch.update({ onFoot: true, cinematic: false, autoAim: game.mode.autoAim });
     if (render) composer.render();
     return;

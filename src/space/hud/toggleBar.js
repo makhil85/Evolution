@@ -15,7 +15,7 @@ const CSS = `
  * rather than squeezing or wrapping. */
 .sp-toggles { display: flex; gap: 5px; flex-wrap: nowrap; pointer-events: auto; z-index: 6;
   align-self: flex-end; width: max-content; flex: none; }
-.sp-toggles.is-floating { position: fixed; top: 14px; right: 14px; }
+.sp-toggles.is-floating { position: fixed; top: 46px; right: 14px; } /* under the Chapters button */
 .sp-toggles:empty { display: none; }
 .sp-toggles > button { position: static; transform: none; flex: none; white-space: nowrap;
   display: inline-flex; align-items: center; gap: 5px; margin: 0;

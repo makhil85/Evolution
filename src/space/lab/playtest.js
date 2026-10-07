@@ -262,21 +262,13 @@ async function mineOne(kind) {
   await run(4);
 }
 
-/** Solve the satellite panel puzzle by watching the power bar. */
+/** Solve the satellite panel game (both panels caught in the light). */
 async function solvePanel() {
-  const pw = () => parseFloat(document.querySelector('.satp-bar-fill[data-el=power]')?.style.width || '0');
-  let dir = 'KeyD';
-  let prev = pw();
-  key(dir, true);
-  for (let t = 0; t < 20 && g().activeScene; t += 0.05) {
+  g().activeScene?.solve?.();
+  for (let t = 0; t < 6 && g().activeScene; t += 0.05) {
     g().debugRun(0.05, 1 / 60);
     await sleep(0);
-    const now = pw();
-    if (now >= 99.6) key(dir, false);
-    else if (now < prev - 0.5) { key(dir, false); dir = dir === 'KeyD' ? 'KeyA' : 'KeyD'; key(dir, true); }
-    prev = now;
   }
-  key('KeyD', false); key('KeyA', false);
 }
 
 /** Play the Europa walk: walk, drill, and let the finale run. */

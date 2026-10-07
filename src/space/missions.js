@@ -29,7 +29,7 @@
 // Questions never block progress. "Not now" defers the question; deferred
 // questions are asked again at the next step boundary, so every question is
 // still met before the finale.
-import { BODIES, STORE_KEYS, SHIP, UPGRADES } from './contracts.js';
+import { BODIES, STORE_KEYS, SHIP, UPGRADES, CALM_S } from './contracts.js';
 import { bodyState } from './orbits.js';
 import { questionForBeat, getSpaceQuestion } from './questions.space.js';
 import { heroName } from './hud/hud.js';
@@ -148,6 +148,7 @@ export function createMissions(game) {
   let entered = false;   // enter() has settled for the current step
   let busy = false;      // completing (question / after) - don't re-check
   let stepTime = 0;
+  let calm = null; // { left, resolve } while a calm pause runs
   const deferred = new Set(save.deferred || []);
   const answered = new Set(save.answered || []);
 
@@ -184,17 +185,25 @@ export function createMissions(game) {
     });
   }
 
-  function showStep() {
+  /** The mission card; `doneNow` ticks the current step off already (it is
+   *  finished, a calm moment before its question). */
+  function showStep(doneNow = false) {
     const step = steps[index];
     const actSteps = steps.filter((s) => s.act === step.act);
     hud.setMission({
       act: ACT_TITLES[step.act] || '',
       title: step.title,
-      objective: step.objective,
-      steps: actSteps.map((s) => ({ text: s.title, done: steps.indexOf(s) < index })),
+      objective: doneNow ? `Done: ${step.title}!` : step.objective,
+      steps: actSteps.map((s) => ({ text: s.title, done: steps.indexOf(s) < index || (doneNow && s === step) })),
     });
   }
   const { hud } = game;
+
+  /** Wait `sec` of unpaused game time (missions.update counts it down). */
+  function calmFor(sec) {
+    if (!(sec > 0)) return Promise.resolve();
+    return new Promise((resolve) => { calm = { left: sec, resolve }; });
+  }
 
   async function ask(beat) {
     const q = questionForBeat(beat);
@@ -220,6 +229,19 @@ export function createMissions(game) {
     }
   }
 
+  /** The next goal across the top for a few seconds (a task step only:
+   *  dialogue, lessons and cards explain themselves). */
+  function announceGoal(step) {
+    if (!step.check || !hud.announce) return;
+    const name = (id) => (id === 'belt' ? 'the asteroid belt' : BODIES[id]?.name || null);
+    const title = step.land && name(step.land) ? `Next goal: land on ${name(step.land)}`
+      : step.capture && name(step.capture) ? `Next goal: get into orbit round ${name(step.capture)}`
+        : step.transfer && name(step.transfer) ? `Next goal: fly to ${name(step.transfer)}`
+          : `Next: ${step.title}`;
+    const firstOfAct = steps.findIndex((s) => s.act === step.act) === index;
+    hud.announce(firstOfAct && ACT_TITLES[step.act] ? `${ACT_TITLES[step.act]} · ${title}` : title, step.objective || '');
+  }
+
   async function enterStep() {
     entered = false;
     stepTime = 0;
@@ -243,6 +265,7 @@ export function createMissions(game) {
     game.captureTarget = step.capture || null;
     game.landTarget = step.land || null;
     game.escapeStep = !!step.escape;
+    announceGoal(step);
     try { await step.enter?.(game); } catch (e) { console.error('mission enter', step.id, e); }
     entered = true;
   }
@@ -251,6 +274,13 @@ export function createMissions(game) {
     busy = true;
     const step = steps[index];
     try {
+      // A task done in the world (a step with a check: an orbit, a landing, a
+      // puzzle): tick it off, then a calm moment before any question.
+      const hasQuestion = !!(step.beat || step.bonusBeats?.length);
+      if (step.check && hasQuestion) {
+        showStep(true);
+        await calmFor(step.calm ?? CALM_S);
+      }
       if (step.beat) await ask(step.beat);
       // Extra maths/pattern questions tied to the same moment (lead request:
       // more maths), asked the same way so answers and "later" are saved.
@@ -278,7 +308,7 @@ export function createMissions(game) {
     save() { persist(); },
     /** Ask a beat's question the way a step's own beat is asked: counted as
      *  answered, or deferred and asked again later (Chapter 6's stations). */
-    ask(beat) { return ask(beat).then(() => persist()); },
+    ask(beat, { calm: sec = 0 } = {}) { return calmFor(sec).then(() => ask(beat)).then(() => persist()); },
     /**
      * Two wrong tries on a question (lead rule): back to the start of this
      * act - the save from then is put back and the page reloads into it.
@@ -307,7 +337,14 @@ export function createMissions(game) {
     },
     /** True once she has got past the very first step (so the opening has been seen). */
     hasProgress() { return index > 0; },
+    /** Count down a calm pause (also called while a walk scene runs). */
+    tickCalm(dt, paused) {
+      if (!calm || paused) return;
+      calm.left -= dt;
+      if (calm.left <= 0) { const r = calm.resolve; calm = null; r(); }
+    },
     update(dt, states, paused) {
+      this.tickCalm(dt, paused);
       if (paused || busy || !entered) return;
       stepTime += dt;
       const step = steps[index];

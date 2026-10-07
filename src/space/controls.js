@@ -48,7 +48,7 @@ export function createControls({ bus, element }) {
     if (modal || isTyping(e)) return;
     const k = e.code;
     down.add(k, e.repeat);
-    if (k === 'Space') e.preventDefault(); // no page scroll
+    if (k === 'Space' || k.startsWith('Arrow')) e.preventDefault(); // no page scroll
     // Repeats from a held key are ignored so a held 3 doesn't spam warp requests.
     if (!e.repeat) oneShot(k);
   }

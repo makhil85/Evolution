@@ -13,7 +13,7 @@ import { RESOURCES } from '../contracts.js';
 
 const CONTROL_ROWS = [
   ['W / S', 'Main engine forward / reverse thrust'],
-  ['A / D', 'Rotate the ship'],
+  ['← / → (or A / D)', 'Turn the ship'],
   ['Z / X', 'Nudge sideways, left / right (lining up on an asteroid)'],
   ['T', t('Auto-turn on / off: steer the ship yourself, or let it point itself', 'Auto-turn on or off')],
   ['F', t('Freeze everything where it is; press F again to carry on', 'Freeze. Press F again to go on')],

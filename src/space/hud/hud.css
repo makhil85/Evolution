@@ -220,7 +220,9 @@
 .sp-hud .sp-sidebar {
   position: absolute;
   right: 14px;
-  top: 14px;
+  /* Below the page's "← Chapters" button (fixed, top 8px, ~30px tall): the
+   * Autopilot switch at the top of this column was hidden under it. */
+  top: 46px;
   width: 300px;
   display: flex;
   flex-direction: column;
@@ -357,6 +359,16 @@
   border-radius: 10px;
   box-shadow: 0 0 10px rgba(255,120,71,.4);
 }
+/* The next goal: a bigger box that pulses, and a bigger arrow off screen. */
+.sp-hud .sp-marker.is-goal.is-onscreen .sp-marker__bracket {
+  width: 64px; height: 64px; border-width: 3px; border-color: #ffd27a;
+  box-shadow: 0 0 14px rgba(255,210,122,.7);
+  animation: sp-goal-pulse 1.4s ease-in-out infinite;
+}
+.sp-hud .sp-marker.is-goal .sp-marker__arrow { width: 32px; height: 32px; color: #ffd27a; }
+.sp-hud .sp-marker.is-goal .sp-marker__label { border-color: #ffd27a; color: #ffe7b0; }
+@keyframes sp-goal-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.12); opacity: .75; } }
+@media (prefers-reduced-motion: reduce) { .sp-hud .sp-marker.is-goal.is-onscreen .sp-marker__bracket { animation: none; } }
 .sp-hud .sp-marker.is-hazard .sp-marker__arrow,
 .sp-hud .sp-marker.is-hazard .sp-marker__bracket { color: var(--sp-bad); border-color: var(--sp-bad); }
 .sp-hud .sp-marker.is-resource .sp-marker__arrow,
@@ -839,3 +851,15 @@
 /* The one-line banner now sits bottom centre: messages start just above it. */
 .sp-hud .sp-toasts { bottom: 76px; }
 .sp-hud.is-focus .sp-toasts { bottom: 250px; }
+
+/* --- next-goal banner (hud.announce) --------------------------------------- */
+.sp-hud .sp-goal {
+  position: absolute; left: 50%; top: 14%; transform: translate(-50%, -12px);
+  max-width: min(640px, 86vw); padding: 14px 26px; text-align: center;
+  background: rgba(20,16,13,.86); border: 2px solid #ffd27a; border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.45); opacity: 0; pointer-events: none;
+  transition: opacity .5s ease, transform .5s ease; z-index: 6;
+}
+.sp-hud .sp-goal.is-on { opacity: 1; transform: translate(-50%, 0); }
+.sp-hud .sp-goal__title { font-size: calc(15px * var(--hud-scale)); font-weight: 800; color: #ffd27a; letter-spacing: .02em; }
+.sp-hud .sp-goal__text { margin-top: 6px; font-size: calc(12px * var(--hud-scale)); line-height: 1.35; }
