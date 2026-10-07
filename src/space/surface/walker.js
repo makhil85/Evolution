@@ -29,6 +29,13 @@ const WALK_HOP = 0.07;        // m, lope hop height when walking
 const RUN_HOP = 0.24;         // m, a proper bound when running
 const JUMP_V = 2.45;          // m/s take-off speed (a 30 cm jump on Earth)
 
+// gait 'earth' (the Chapter 6 habitat, where the spin makes near-Earth
+// weight): no lope, firm footing, and the walk clip played at its own rate
+// scaled by speed, exactly like the villages (src/game/avatar.js). The
+// numbers keep Chapter 1's stride for her height: her clip cycle covers
+// about 3 of her heights there, here 2.5 m at walking pace.
+const EARTH = Object.freeze({ walk: 3.2, run: 5.5, walkRef: 2.5, runRef: 5.2, grip: 8, turn: 12 });
+
 const _e = new THREE.Euler();
 const _q = new THREE.Quaternion();
 
@@ -120,9 +127,10 @@ function helmetMaterial() {
 }
 
 /**
- * @param {{ gravity: number, look?: object, groundTint?: number }} o
+ * @param {{ gravity: number, look?: object, groundTint?: number, gait?: 'lope'|'earth' }} o
  */
-export function createWalker({ gravity, look = null, groundTint = 0x5a5854 }) {
+export function createWalker({ gravity, look = null, groundTint = 0x5a5854, gait = 'lope' }) {
+  const earth = gait === 'earth';
   const root = new THREE.Group();
   root.name = 'surfaceGirl';
   const choices = { ...defaultChoices(), ...(look || loadLook() || {}) };
@@ -295,22 +303,29 @@ export function createWalker({ gravity, look = null, groundTint = 0x5a5854 }) {
   function move(dt, { dir, run, jump, terrain, collide }) {
     const g = gravity;
     const want = dir.lengthSq() > 0.0001;
-    const speedT = want ? (run ? RUN_SPEED : WALK_SPEED) * Math.min(1, dir.length()) : 0;
+    const speedT = want ? (run ? (earth ? EARTH.run : RUN_SPEED) : (earth ? EARTH.walk : WALK_SPEED)) * Math.min(1, dir.length()) : 0;
     const tx = want ? (dir.x / dir.length()) * speedT : 0;
     const tz = want ? (dir.y / dir.length()) * speedT : 0;
-    // Low traction: slow to start and slow to stop, more so in the air.
-    const acc = onGround ? (want ? 4.2 : 3.4) : 0.8;
-    const dvx = tx - vel.x;
-    const dvz = tz - vel.y;
-    const dl = Math.hypot(dvx, dvz);
-    const step = Math.min(dl, acc * dt);
-    if (dl > 1e-6) { vel.x += (dvx / dl) * step; vel.y += (dvz / dl) * step; }
+    if (earth) {
+      // Firm footing: ease to the wanted speed, stop when she lets go.
+      const k = 1 - Math.exp(-(onGround ? EARTH.grip : EARTH.grip * 0.3) * dt);
+      vel.x += (tx - vel.x) * k;
+      vel.y += (tz - vel.y) * k;
+    } else {
+      // Low traction: slow to start and slow to stop, more so in the air.
+      const acc = onGround ? (want ? 4.2 : 3.4) : 0.8;
+      const dvx = tx - vel.x;
+      const dvz = tz - vel.y;
+      const dl = Math.hypot(dvx, dvz);
+      const step = Math.min(dl, acc * dt);
+      if (dl > 1e-6) { vel.x += (dvx / dl) * step; vel.y += (dvz / dl) * step; }
+    }
 
     if (want) {
       const target = Math.atan2(dir.x, dir.y);
       let d = target - heading;
       d = Math.atan2(Math.sin(d), Math.cos(d));
-      heading += d * Math.min(1, dt * (onGround ? 7 : 2.5));
+      heading += d * Math.min(1, dt * (onGround ? (earth ? EARTH.turn : 7) : 2.5));
     }
 
     pos.x += vel.x * dt;
@@ -350,12 +365,17 @@ export function createWalker({ gravity, look = null, groundTint = 0x5a5854 }) {
     } else {
       ovT.air = 0;
       // The lope: each step is a little hop, T = sqrt(8 h / g).
-      gaitMix += ((run && speed > 1.8 ? 1 : 0) - gaitMix) * Math.min(1, dt * 3);
-      const hop = lerp(WALK_HOP, RUN_HOP, gaitMix);
+      gaitMix += ((run && speed > (earth ? EARTH.walk + 0.4 : 1.8) ? 1 : 0) - gaitMix) * Math.min(1, dt * 3);
+      const hop = earth ? 0 : lerp(WALK_HOP, RUN_HOP, gaitMix);
       const T = Math.sqrt((8 * hop) / g);
       if (speed > 0.12) {
         const prev = hopPhase;
-        hopPhase += dt / T * clamp(speed / lerp(WALK_SPEED, RUN_SPEED, gaitMix), 0.5, 1.3);
+        if (earth) {
+          // The villages' rule: the clip at its own rate times speed / reference
+          // (one hopPhase = one step = half a clip cycle).
+          const ts = clamp(speed / lerp(EARTH.walkRef, EARTH.runRef, gaitMix), 0.6, 1.5);
+          hopPhase += 2 * dt * ts / lerp(act.walk.getClip().duration, act.run.getClip().duration, gaitMix);
+        } else hopPhase += dt / T * clamp(speed / lerp(WALK_SPEED, RUN_SPEED, gaitMix), 0.5, 1.3);
         if (Math.floor(hopPhase) !== Math.floor(prev)) {
           hopCount++;
           const side = hopCount % 2 ? 1 : -1;

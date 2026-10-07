@@ -22,6 +22,7 @@ import {
   PACK_CARDS, PACK_LIMIT, packTotals,
   STATIONS,
 } from './stationsLogic.js';
+import { skipButton } from '../../play/grownUp.js';
 
 const pick = (pair) => (Array.isArray(pair) ? t(pair[0], pair[1]) : pair);
 
@@ -342,6 +343,9 @@ export function playStation(id, { bus = null } = {}) {
     done() { finish(); return closed; },
   };
   window.__station = api;
+  // Unlock mode only: a grown-up can skip the puzzle.
+  const skip = skipButton(() => { api.solve(); finish(); }, 'ls-btn ls-btn--ghost');
+  if (skip) actions.prepend(skip);
   body.refresh(); paint();
   return done;
 }

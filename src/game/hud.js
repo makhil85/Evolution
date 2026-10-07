@@ -32,6 +32,7 @@ import { checkAnswer, getQuestion, parentHintsFor, wrongAnswerMessage } from './
 import { MARKER_COLOR } from './stations.js';
 import { audio } from './audio.js';
 import { loadProfile } from '../launcher/profile.js';
+import { skipButton } from '../play/grownUp.js';
 import { IS_LEVEL1 as IS_L1 } from '../space/level.js';
 
 /**
@@ -597,6 +598,9 @@ export class Hud {
     this._qContinue = el('button', 'rv-btn rv-btn--go', 'Continue');
     this._qContinue.type = 'button';
     this._qContinue.hidden = true;
+    // Unlock mode only: a grown-up can skip (it answers right and moves on).
+    this._qSkip = skipButton(() => this._skip());
+    if (this._qSkip) actions.appendChild(this._qSkip);
     actions.appendChild(this._qClose);
     actions.appendChild(this._qContinue);
     card.appendChild(actions);
@@ -973,8 +977,10 @@ export class Hud {
     this._qContinue.hidden = true;
     this._qContinue.textContent = 'Continue';
     this._qClose.textContent = 'Close';
-    // No way out before answering (lead rule: questions can't be skipped).
+    // No way out before answering (lead rule: questions can't be skipped),
+    // except the grown-up Skip in unlock mode.
     this._qClose.hidden = true;
+    if (this._qSkip) this._qSkip.hidden = false;
 
     this._qParentBody.textContent = '';
     if (q.parentHint) {
@@ -1082,6 +1088,18 @@ export class Hud {
     }
   }
 
+  /** Grown-up Skip: answer it right through the normal grading, then Continue. */
+  _skip() {
+    const session = this._modal;
+    if (!session || session.answered || session.failed) return;
+    const q = session.question;
+    const choice = (q.choices || []).find((c) => c && typeof c === 'object' && c.correct);
+    const text = choice ? String(choice.text ?? '') : String((q.answers || [])[0] ?? '');
+    session.wrongCount = 0; // a skip can never use up the last try
+    this._grade(choice || text, text, null);
+    if (this._modal === session && session.answered) this._qContinue.click();
+  }
+
   _submitText() {
     if (!this._modal) return;
     const given = this._qInput.value.trim();
@@ -1133,6 +1151,7 @@ export class Hud {
       if (session.wrongCount >= this.maxTries) {
         // Out of tries: show the answer, then the chapter starts again.
         session.failed = true;
+        if (this._qSkip) this._qSkip.hidden = true;
         this._qChoices.classList.add('is-done');
         this._qInput.disabled = true;
         this._qSubmit.disabled = true;
@@ -1149,6 +1168,7 @@ export class Hud {
     }
 
     session.answered = true;
+    if (this._qSkip) this._qSkip.hidden = true;
     if (sourceButton) sourceButton.classList.add('is-right');
     this._qChoices.classList.add('is-done');
     this._qInput.disabled = true;

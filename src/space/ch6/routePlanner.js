@@ -19,6 +19,7 @@ import {
   ROUTES, STOPS, CLOSE_LEVELS, CLOSE_NAMES, FUEL_BUDGET, GOAL_BOOST, START_SPEED,
   routeById, newPlan, planTotals, bestPlan,
 } from './routes.js';
+import { skipButton } from '../../play/grownUp.js';
 
 const TAU = Math.PI * 2;
 const pick = (pair) => (Array.isArray(pair) ? t(pair[0], pair[1]) : pair);
@@ -249,6 +250,9 @@ export function playRoutePlanner({ bus = null, initial = null } = {}) {
     shot() { draw(1); return canvas.toDataURL('image/png'); },
   };
   window.__route = api;
+  // Unlock mode only: a grown-up can skip planning (the best plan, then Go).
+  const skip = skipButton(() => { api.solve(); api.go(); }, 'ls-btn ls-btn--ghost');
+  if (skip) actions.prepend(skip);
   render();
   requestAnimationFrame(frame);
   return done;

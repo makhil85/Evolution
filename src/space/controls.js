@@ -10,13 +10,15 @@
 // flight key reads as released. A child typing "180" into a question box must
 // not also be firing the engine.
 
+import { createHeldKeys } from '../game/heldKeys.js';
+
 const TYPING = new Set(['INPUT', 'TEXTAREA', 'SELECT']);
 
 /**
  * @param {{ bus: {on: Function, emit: Function}, element: HTMLElement }} opts
  */
 export function createControls({ bus, element }) {
-  const down = new Set();
+  const down = createHeldKeys(); // a lost keyup must not leave the engine on
   let modal = false;
 
   /** Sampled by the physics loop. Same object every time - read, don't keep. */
@@ -45,7 +47,7 @@ export function createControls({ bus, element }) {
   function onKeyDown(e) {
     if (modal || isTyping(e)) return;
     const k = e.code;
-    down.add(k);
+    down.add(k, e.repeat);
     if (k === 'Space') e.preventDefault(); // no page scroll
     // Repeats from a held key are ignored so a held 3 doesn't spam warp requests.
     if (!e.repeat) oneShot(k);
@@ -153,6 +155,7 @@ export function createControls({ bus, element }) {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('blur', onBlur);
+      down.dispose();
       element.removeEventListener('pointerdown', onPointerDown);
       element.removeEventListener('pointermove', onPointerMove);
       element.removeEventListener('pointerup', onPointerUp);

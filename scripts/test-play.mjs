@@ -9,6 +9,7 @@ import { createMiner } from '../src/play/mining.js';
 import { createHunt, createKeyBlockMesh } from '../src/play/hunt.js';
 import { lockPlayInput, unlockPlayInput, isPlayModalOpen } from '../src/play/ui.js';
 import { createNavArrow } from '../src/play/navArrow.js';
+import { createHeldKeys, REPEAT_QUIET_MS } from '../src/game/heldKeys.js';
 
 let passed = 0;
 const failures = [];
@@ -301,6 +302,35 @@ const mkHunt = (storage, extra = {}) => {
 // The input lock nests and is a no-op without a DOM.
 lockPlayInput(); unlockPlayInput();
 ok(!isPlayModalOpen(), 'input lock is a no-op in node');
+
+// Held keys: a lost keyup costs a moment, not a walk across the map.
+{
+  const listeners = {};
+  const prevAdd = globalThis.addEventListener; const prevRemove = globalThis.removeEventListener; const prevDoc = globalThis.document;
+  globalThis.addEventListener = (t, f) => { listeners[t] = f; };
+  globalThis.removeEventListener = () => {};
+  globalThis.document = { hidden: false, addEventListener: (t, f) => { listeners[t] = f; }, removeEventListener: () => {} };
+  let now = 0;
+  const k = createHeldKeys({ now: () => now });
+  k.add('ArrowUp');
+  now = 5000;
+  ok(k.has('ArrowUp'), 'held key without auto-repeat stays held (touch buttons, a fresh press)');
+  for (let t = 5000; t <= 6000; t += 33) { now = t; k.add('ArrowUp', true); }
+  ok(k.has('ArrowUp'), 'auto-repeating key is held');
+  now += REPEAT_QUIET_MS + 50;
+  ok(!k.has('ArrowUp'), 'repeats gone quiet: the key counts as released (lost keyup)');
+  // Hold Up, tap Right: Up stops repeating but is still held.
+  k.add('ArrowUp'); for (let i = 0; i < 5; i++) { now += 33; k.add('ArrowUp', true); }
+  k.add('ArrowRight'); for (let i = 0; i < 5; i++) { now += 33; k.add('ArrowRight', true); }
+  k.delete('ArrowRight'); now += 2000;
+  ok(k.has('ArrowUp'), 'an older held key is not dropped when another key took the repeats');
+  listeners.blur();
+  ok(!k.has('ArrowUp') && k.size === 0, 'blur lets go of every key');
+  k.add('KeyW'); globalThis.document.hidden = true; listeners.visibilitychange();
+  ok(!k.has('KeyW'), 'a hidden tab lets go of every key');
+  k.dispose();
+  globalThis.addEventListener = prevAdd; globalThis.removeEventListener = prevRemove; globalThis.document = prevDoc;
+}
 
 console.log(`test-play: ${passed} passed, ${failures.length} failed`);
 if (failures.length) process.exit(1);

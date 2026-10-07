@@ -34,6 +34,7 @@
 import { t, LEVEL } from '../space/level.js';
 import { el, openLayer, prefersReducedMotion } from '../play/ui.js';
 import { STAGE_W, STAGE_H } from './draw.js';
+import { skipButton } from '../play/grownUp.js';
 
 const SEEN_PREFIX = 'rocket_village_lesson_';
 const TICK_MS = 50;
@@ -211,6 +212,12 @@ export function playLesson(lesson, { bus = null } = {}) {
   const replayBtn = el('button', 'ls-btn ls-btn--ghost', `↻ ${t('Replay', 'Watch again')}`);
   const nextBtn = el('button', 'ls-btn', 'Next');
   for (const b of [pauseBtn, replayBtn, nextBtn]) b.type = 'button';
+  // Unlock mode only: skip the whole lesson (every question counts as right).
+  const skipBtn = skipButton(() => {
+    films.forEach((f, i) => { if (f.question && !results[i]) results[i] = { film: i, correct: true, tries: 1 }; });
+    finish();
+  }, 'ls-btn ls-btn--ghost');
+  if (skipBtn) actions.append(skipBtn);
   actions.append(dots, pauseBtn, replayBtn, nextBtn);
   card.append(eyebrow, title, stage, actions);
 

@@ -8,6 +8,8 @@
 import * as THREE from 'three';
 import { configureRenderer, freezeShadows, refreshStaticShadows } from '../game/toonPipeline.js';
 import { createCharacterController } from '../game/physics.js';
+import { createHeldKeys } from '../game/heldKeys.js';
+import { addVillageJump } from '../play/grownUp.js';
 import { loadAvatar } from '../game/avatar.js';
 import { createEmotes } from '../game/emotes.js';
 import { guardContext } from '../game/contextGuard.js';
@@ -49,7 +51,7 @@ scene.fog = new THREE.Fog(0x8ed0f5, 70, 230);
 const camera = new THREE.PerspectiveCamera(52, mount.clientWidth / mount.clientHeight, 0.1, 400);
 
 // --- input ------------------------------------------------------------------
-const keys = new Set();
+const keys = createHeldKeys(); // also lets go on blur / a lost keyup
 const typingInField = (e) => {
   const t = e.target;
   return !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
@@ -57,11 +59,10 @@ const typingInField = (e) => {
 addEventListener('keydown', (e) => {
   if (typingInField(e)) return;
   if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'ShiftLeft'].includes(e.code)) e.preventDefault();
-  keys.add(e.code);
+  keys.add(e.code, e.repeat);
   if ((e.code === 'KeyE' || e.code === 'Enter') && !e.repeat && !playBlocked()) interact();
 });
 addEventListener('keyup', (e) => keys.delete(e.code));
-addEventListener('blur', () => keys.clear());
 
 // The camera starts behind her looking north (-z), up the main road.
 let cameraYaw = 0;
@@ -415,6 +416,21 @@ async function main() {
     nav, miner, hunt, nextObjective, applyMode, getMode: () => mode, emotes,
   };
   say(`Chapter 1 ready - Level ${LEVEL}`);
+  // Unlock mode only: the grown-up "Jump" panel.
+  {
+    const kg = tileToWorld(KEY_GATE.tx, KEY_GATE.ty + 1);
+    addVillageJump({
+      spots: [
+        ...STATIONS.map((st) => ({ id: st.quest, label: st.labels[LEVEL], group: 'Puzzles and labs', ...world.stationPosition(st.quest) })),
+        { id: 'keyGate', label: KEY_GATE.label, group: 'Puzzles and labs', x: kg.x, z: kg.z },
+        { id: 'site', label: 'Science Center site', group: 'Build', x: world.foundationPosition.x, z: world.foundationPosition.z },
+      ].filter((p) => Number.isFinite(p.x)),
+      controller,
+      blocked: (x, z) => world.blocked(x, z),
+      heightAt: (x, z) => world.heightAt(x, z),
+      fill() { for (const r of Object.keys(rules.state.resources)) rules.state.resources[r] = Math.max(rules.state.resources[r], 99); rules.save(); refreshHud(); },
+    });
+  }
   // The opening: sweep down over the village to her, title card, a wave.
   story = createChapterStory({
     camera, chasePose, getAvatar: () => avatar, getPlayerPos: () => player.position, chapter: 1, level: LEVEL,

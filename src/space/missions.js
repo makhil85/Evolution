@@ -29,7 +29,8 @@
 // Questions never block progress. "Not now" defers the question; deferred
 // questions are asked again at the next step boundary, so every question is
 // still met before the finale.
-import { BODIES, STORE_KEYS } from './contracts.js';
+import { BODIES, STORE_KEYS, SHIP, UPGRADES } from './contracts.js';
+import { bodyState } from './orbits.js';
 import { questionForBeat, getSpaceQuestion } from './questions.space.js';
 import { heroName } from './hud/hud.js';
 import { IS_CH5, IS_CH6, OUTER } from './chapter.js';
@@ -325,6 +326,54 @@ export function createMissions(game) {
     jump(id) {
       const i = steps.findIndex((s) => s.id === id);
       if (i >= 0) { index = i; enterStep(); }
+    },
+    /** The steps, for the grown-up Jump panel: [{ id, label, group }]. */
+    parts() {
+      return steps.filter((s) => s.id !== 'wip_end').map((s) => ({ id: s.id, label: s.title || s.id, group: ACT_TITLES[s.act] || '' }));
+    },
+    /**
+     * Grown-up Jump (unlock mode): start the chapter again at step `id`. The
+     * ship goes where that step expects her - landed on, or in orbit round,
+     * the body the steps before it ended at - with a full tank and plenty to
+     * build with; then the page reloads into that step.
+     */
+    jumpTo(id) {
+      const i = steps.findIndex((s) => s.id === id);
+      if (i < 0) return false;
+      const sh = game.ship;
+      let at = null;
+      for (let k = i - 1; k >= 0 && !at; k--) {
+        const s = steps[k];
+        if (s.land && BODIES[s.land]) at = { body: s.land, landed: true };
+        else if (s.capture && BODIES[s.capture]) at = { body: s.capture, landed: false };
+      }
+      const ship = { ...sh, angVel: 0, fuel: SHIP.fuelMass };
+      if (at) {
+        const b = BODIES[at.body];
+        if (at.landed) {
+          Object.assign(ship, { landedOn: at.body, soi: at.body, _landAngle: 0, _landDist: b.radius, vx: 0, vz: 0 });
+        } else {
+          const st = bodyState(at.body, sh.t);
+          const r = b.radius * 3;
+          const v = Math.sqrt(b.gm / r);
+          Object.assign(ship, { x: st.x + r, z: st.z, vx: st.vx, vz: st.vz + v, angle: 0, soi: at.body, landedOn: null });
+        }
+      }
+      const resources = { ...game.resources };
+      for (const u of Object.values(UPGRADES)) for (const k of Object.keys(u.cost || {})) resources[k] = Math.max(resources[k] || 0, 50);
+      const data = {
+        ...(loadSave() || {}), stepIndex: i, stepId: id, deferred: [], resources,
+        ship: { x: ship.x, z: ship.z, vx: ship.vx, vz: ship.vz, angle: ship.angle, angVel: 0, fuel: ship.fuel, cargo: ship.cargo, soi: ship.soi, landedOn: ship.landedOn, t: ship.t, _landAngle: ship._landAngle, _landDist: ship._landDist },
+        ...(IS_CH5 ? { phases: phasesNow() } : {}),
+      };
+      restarting = true; // nothing else may overwrite the save on the way out
+      try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+        localStorage.setItem(ACT_KEY, JSON.stringify(data));
+        localStorage.setItem(CKPT_KEY, JSON.stringify(data));
+      } catch { /* private mode */ }
+      location.reload();
+      return true;
     },
   };
 }

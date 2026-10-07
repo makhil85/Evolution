@@ -46,6 +46,7 @@ import { createAimToggle } from './aimToggle.js';
 import { createFreezeButton } from './freeze.js';
 import { createAimDial } from './hud/aimDial.js';
 import { playIntro } from './cinematics.js';
+import { addJumpPanel } from '../play/grownUp.js';
 import { IS_CH5, IS_CH6, OUTER } from './chapter.js';
 import { CH5_START, CH5_UPGRADES } from './ch5/start.js';
 import { CH6_START } from './ch6/start.js';
@@ -240,6 +241,8 @@ game.camera = camera; // debug: tests read the flight camera
 game.beltFx = createBeltFx(game);
 
 const missions = createMissions(game);
+// Unlock mode only: the grown-up "Jump" panel (any step of this chapter).
+addJumpPanel({ title: 'Jump to a step', parts: missions.parts(), onJump: (id) => missions.jumpTo(id) });
 game.missions = missions; // debug: window.__space.missions.jump('a1_raise')
 // Two wrong tries on a question: back to the start of the current act.
 hud.onOutOfTries = () => missions.restartAct();
