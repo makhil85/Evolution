@@ -333,19 +333,27 @@ export function createMissions(game) {
     },
     /**
      * Grown-up Jump (unlock mode): start the chapter again at step `id`. The
-     * ship goes where that step expects her - landed on, or in orbit round,
-     * the body the steps before it ended at - with a full tank and plenty to
-     * build with; then the page reloads into that step.
+     * ship goes in a low orbit round the step's own goal body (its capture /
+     * land / transfer target), else where the steps before it ended (landed
+     * or in orbit), with a full tank and plenty to build with; then the page
+     * reloads into that step.
      */
     jumpTo(id) {
       const i = steps.findIndex((s) => s.id === id);
       if (i < 0) return false;
       const sh = game.ship;
+      // The step's own goal body first (a jump to "fly to Mars" starts in a
+      // low orbit round Mars), else where the steps before it ended.
+      const real = (id) => (id && id !== 'sun' && BODIES[id] ? id : null);
+      const own = steps[i];
       let at = null;
+      const ownBody = real(own.capture) || real(own.land) || real(own.transfer) || (own.transfer ? real(own.markers?.[0]) : null);
+      if (ownBody) at = { body: ownBody, landed: false };
       for (let k = i - 1; k >= 0 && !at; k--) {
         const s = steps[k];
-        if (s.land && BODIES[s.land]) at = { body: s.land, landed: true };
-        else if (s.capture && BODIES[s.capture]) at = { body: s.capture, landed: false };
+        if (real(s.land)) at = { body: s.land, landed: true };
+        else if (real(s.capture) || real(s.transfer)) at = { body: real(s.capture) || real(s.transfer), landed: false };
+        else if (real(s.markers?.[0])) at = { body: s.markers[0], landed: false };
       }
       const ship = { ...sh, angVel: 0, fuel: SHIP.fuelMass };
       if (at) {
@@ -354,7 +362,7 @@ export function createMissions(game) {
           Object.assign(ship, { landedOn: at.body, soi: at.body, _landAngle: 0, _landDist: b.radius, vx: 0, vz: 0 });
         } else {
           const st = bodyState(at.body, sh.t);
-          const r = b.radius * 3;
+          const r = Math.min(b.radius * 2.2, (b.soi || Infinity) * 0.5); // low and stable
           const v = Math.sqrt(b.gm / r);
           Object.assign(ship, { x: st.x + r, z: st.z, vx: st.vx, vz: st.vz + v, angle: 0, soi: at.body, landedOn: null });
         }
