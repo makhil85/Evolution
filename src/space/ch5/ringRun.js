@@ -45,7 +45,8 @@ function buildPanel(goal, onSkip) {
   div.style.zIndex = '30'; // under the HUD's own dialogue and toasts (z 40)
   div.innerHTML = `
     <div class="sp-panel rr-bar" style="position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:22px;padding:8px 20px;border-radius:999px;font-size:calc(12px * var(--hud-scale));font-weight:800;white-space:nowrap">
-      <span>🧊 <b class="tabular rr-ice">0</b> / ${goal.ice}</span><span>🪨 <b class="tabular rr-rock">0</b> / ${goal.rock}</span><span>⏱ <b class="tabular rr-time">0</b></span><span>💥 <b class="tabular rr-bumps">0</b></span>
+      <span>🧊 <b class="tabular rr-ice">0</b> / ${goal.ice}</span><span>🪨 <b class="tabular rr-rock">0</b> / ${goal.rock}</span><span>⏱ <b class="tabular rr-time">0</b></span><span>💥 <b class="tabular rr-bumps">0</b></span><span class="rr-gun">🔫</span>
+      <span class="rr-jam" hidden style="color:var(--sp-bad);font-weight:900">🔒 ${lvl('Gun jammed', 'Wait...')}</span>
     </div>
     <div class="rr-big" style="position:absolute;top:36%;left:0;right:0;text-align:center;font-size:calc(40px * var(--hud-scale));font-weight:900;color:var(--sp-text);text-shadow:0 3px 14px rgba(0,0,0,.7);opacity:0;transition:opacity .25s"></div>
     <div class="sp-panel rr-tip" style="position:absolute;bottom:14px;left:50%;transform:translateX(-50%);max-width:min(640px,92vw);text-align:center;font-size:calc(12.3px * var(--hud-scale));line-height:1.35"></div>`;
@@ -63,6 +64,10 @@ function buildPanel(goal, onSkip) {
       ice.style.color = run.got.ice >= goal.ice ? 'var(--sp-good)' : ''; rock.style.color = run.got.rock >= goal.rock ? 'var(--sp-good)' : '';
       q('.rr-time').textContent = Math.max(0, Math.ceil(run.level.time - run.t));
       q('.rr-bumps').textContent = run.bumps;
+      // While the gun is jammed after a bump, say so on the bar (greyed gun: no shots).
+      const jam = q('.rr-jam'); const jammed = run.ship.stun > 0;
+      jam.hidden = !jammed;
+      q('.rr-gun').style.opacity = jammed ? 0.35 : 1;
     },
     big(text, color = '') { const b = q('.rr-big'); b.textContent = text || ''; b.style.color = color || 'var(--sp-text)'; b.style.opacity = text ? 1 : 0; },
     tip(text) { const e = q('.rr-tip'); e.textContent = text || ''; e.style.display = text ? '' : 'none'; },
@@ -75,6 +80,7 @@ function buildPanel(goal, onSkip) {
       requestAnimationFrame(() => { s.style.transform = 'translate(-50%,-160%)'; s.style.opacity = 0; });
       setTimeout(() => { s.remove(); }, 1100);
     },
+    hideSkip() { if (skip) skip.hidden = true; },
     remove() { div.remove(); },
   };
 }
@@ -196,7 +202,7 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
         burst(e.x, e.y, e.z, 8, e.big ? 0xb0a8a0 : 0xd8f4ff);
         // The gun jams for a moment after a bump (level.stun): say why she can't fire.
         const [sx, sy] = screenOf(e.x, e.y, e.z);
-        panel.pop(sx, sy, lvl('Ouch! Gun jammed', 'Ouch!'), '#ffb4a6');
+        panel.pop(sx, sy, lvl('Ouch! Gun jammed', 'Ouch! Wait'), 'var(--sp-bad)');
       }
     }
   }
@@ -271,6 +277,7 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
       }
       if (run.over) {
         phase = 'done'; clock = 0;
+        panel.hideSkip(); // the run is over: no more skipping
         // Goal met ends the run early: a clear moment with a burst of sparkles.
         if (goalMet(run)) { panel.big(lvl('Goal reached!', 'You did it!'), 'var(--sp-good)'); burst(run.ship.x, run.ship.y, run.ship.z - 6, 24, 0xbff5a0); }
         else panel.big(lvl('Time up!', 'Time up!'), 'var(--sp-amber)');

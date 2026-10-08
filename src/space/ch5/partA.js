@@ -36,9 +36,11 @@ async function playRingRun(game) {
     st.ringRun = { ...(st.ringRun || {}), [level]: Math.max(res.water, st.ringRun?.[level] || 0) };
     game.missions?.save();
     if (!res.met) {
+      // An easier level exists only below the one she just played.
+      const easier = Object.keys(LEVELS).indexOf(level) > 0;
       await hud.showFact({
         title: t('Not enough yet!', 'Not enough yet!'),
-        body: t(`You got ${res.ice} of ${res.goal.ice} ice and ${res.rock} of ${res.goal.rock} rock. Fly the ring again: line up on a chunk before you fire. You can pick an easier level too.`,
+        body: t(`You got ${res.ice} of ${res.goal.ice} ice and ${res.rock} of ${res.goal.rock} rock. Fly the ring again: line up on a chunk before you fire.${easier ? ' You can pick an easier level too.' : ''}`,
           `You got ${res.ice} of ${res.goal.ice} ice and ${res.rock} of ${res.goal.rock} rock. Try again!`),
       });
       continue;

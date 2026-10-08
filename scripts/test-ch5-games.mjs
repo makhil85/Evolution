@@ -156,9 +156,12 @@ ok('a bump jams the gun for a moment', () => {
   stepRun(run, 1 / 60, idle());
   assert.equal(run.bumps, 1);
   const fire = { turn: 0, thrust: 0, fire: true };
-  for (let i = 0; i < 12; i++) stepRun(run, 1 / 60, fire); // 0.2 s: still jammed
+  const jam = LEVELS.easy.stun;
+  assert.ok(jam >= 0.5, `jam ${jam} s too short to notice`);
+  for (let i = 0; i < Math.round(jam * 0.5 * 60); i++) stepRun(run, 1 / 60, fire); // half way through: still jammed
   assert.equal(run.shots, 0, 'fired while jammed');
-  for (let i = 0; i < 30; i++) stepRun(run, 1 / 60, fire); // past the jam
+  assert.ok(run.ship.stun > 0, 'the jam is visible to the panel');
+  for (let i = 0; i < Math.round(jam * 0.6 * 60); i++) stepRun(run, 1 / 60, fire); // past the jam
   assert.ok(run.shots >= 1, 'gun never came back');
 });
 ok('the grown-up skip ends the run with the goal met', () => {

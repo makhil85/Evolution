@@ -16,17 +16,17 @@
 export const LEVELS = Object.freeze({
   easy: {
     id: 'easy', label: 'Easy', time: 45, speed: 38, spawnEvery: 1, aimShare: 0.35, bigShare: 0.12, rockShare: 0.3, bigHits: 2,
-    stun: 0.3, goal: { ice: 12, rock: 6 },
+    stun: 0.8, goal: { ice: 12, rock: 6 },
     aimHelp: 1.6, blurb: 'Fewer, slower chunks. Your shots home in a little. Big rocks take 2 hits.',
   },
   medium: {
     id: 'medium', label: 'Medium', time: 55, speed: 52, spawnEvery: 0.6, aimShare: 0.05, bigShare: 0.2, rockShare: 0.3, bigHits: 3,
-    stun: 0.6, goal: { ice: 16, rock: 9 },
+    stun: 0.9, goal: { ice: 16, rock: 9 },
     aimHelp: 0.8, blurb: 'More ice and rock, coming faster. Big rocks take 3 hits.',
   },
   hard: {
     id: 'hard', label: 'Hard', time: 65, speed: 68, spawnEvery: 0.42, aimShare: 0.05, bigShare: 0.28, rockShare: 0.3, bigHits: 5,
-    stun: 0.9, goal: { ice: 22, rock: 12 },
+    stun: 1.1, goal: { ice: 22, rock: 12 },
     aimHelp: 0, blurb: 'A thick part of the ring. Big rocks take 5 hits. Aim carefully!',
   },
 });
