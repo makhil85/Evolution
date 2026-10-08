@@ -1388,6 +1388,7 @@ function tick(realDt, render = true) {
     // Flight is frozen while a mini-scene runs: no physics, no warp, and the
     // solar system simply waits for her to climb back aboard.
     const input = controls.sample();
+    game.kidSteering = false; // on foot or in a mini-scene: not flying
     const mouse = controls.takeMouse();
     activeScene.tick(realDt, input, modalOpen ? { dx: 0, dy: 0, wheel: 0, dragging: false } : mouse, modalOpen);
     missions.tickCalm(realDt, modalOpen || game.paused || game.frozen);
@@ -1398,6 +1399,10 @@ function tick(realDt, render = true) {
 
   const input = controls.sample();
   const paused = modalOpen || game.paused || game.frozen;
+  // Is she steering by hand right now? Questions wait until she has let go
+  // for a while (missions.js, QUIET_S); the autopilot's own key presses don't count.
+  game.kidSteering = !game.autopilot?.on && !ship.landedOn && !game.cinematic
+    && !!(input.thrust || input.turn || input.strafe || input.fire);
 
   // Easy's booster during a transfer burn: one tap of Space starts it and it
   // runs until the planned push is done (the burn computer stops it); S
