@@ -22,7 +22,7 @@ async function playRingRun(game) {
     const pick = await hud.choose({
       eyebrow: t('Ring run', 'Ring run'),
       title: t('How thick is the ice?', 'How much ice?'),
-      body: t('Arrows or WASD steer, Space fires. Blast white ice for water and grey rock for metal and stone. Big rocks take a few hits.', 'Arrows to steer. Space to shoot. Shoot white ice and grey rock.'),
+      body: t('Arrows or WASD steer, Space fires. Line up on white ice (water) and grey rock (metal and stone). A bump jams your gun for a moment, and big rocks need a true aim.', 'Arrows to steer. Space to shoot. Line up on the ice and rock. A bump jams your gun.'),
       options: Object.values(LEVELS).map((L) => ({
         id: L.id, label: L.label, tag: L.id === level ? t('Suggested', 'Try this') : '',
         blurb: `${L.blurb} ${t(`Goal: ${L.goal.ice} ice, ${L.goal.rock} rock.`, `Get ${L.goal.ice} ice, ${L.goal.rock} rock.`)}`,

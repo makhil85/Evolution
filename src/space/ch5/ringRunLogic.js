@@ -15,18 +15,18 @@
 
 export const LEVELS = Object.freeze({
   easy: {
-    id: 'easy', label: 'Easy', time: 45, speed: 38, spawnEvery: 0.85, bigShare: 0.12, rockShare: 0.3, bigHits: 2,
-    goal: { ice: 10, rock: 5 },
+    id: 'easy', label: 'Easy', time: 45, speed: 38, spawnEvery: 1, aimShare: 0.35, bigShare: 0.12, rockShare: 0.3, bigHits: 2,
+    stun: 0.3, goal: { ice: 12, rock: 6 },
     aimHelp: 1.6, blurb: 'Fewer, slower chunks. Your shots home in a little. Big rocks take 2 hits.',
   },
   medium: {
-    id: 'medium', label: 'Medium', time: 55, speed: 52, spawnEvery: 0.6, bigShare: 0.2, rockShare: 0.3, bigHits: 3,
-    goal: { ice: 16, rock: 9 },
+    id: 'medium', label: 'Medium', time: 55, speed: 52, spawnEvery: 0.6, aimShare: 0.05, bigShare: 0.2, rockShare: 0.3, bigHits: 3,
+    stun: 0.6, goal: { ice: 16, rock: 9 },
     aimHelp: 0.8, blurb: 'More ice and rock, coming faster. Big rocks take 3 hits.',
   },
   hard: {
-    id: 'hard', label: 'Hard', time: 65, speed: 68, spawnEvery: 0.42, bigShare: 0.28, rockShare: 0.3, bigHits: 5,
-    goal: { ice: 22, rock: 12 },
+    id: 'hard', label: 'Hard', time: 65, speed: 68, spawnEvery: 0.42, aimShare: 0.05, bigShare: 0.28, rockShare: 0.3, bigHits: 5,
+    stun: 0.9, goal: { ice: 22, rock: 12 },
     aimHelp: 0, blurb: 'A thick part of the ring. Big rocks take 5 hits. Aim carefully!',
   },
 });
@@ -40,6 +40,7 @@ export const RECOIL = 0.9; // how far one shot pushes her back
 export const MAX_KICK = 1.2; // she never drifts back further than this, however fast she fires
 export const BIG_R = 2.6; // at or above this, a big rock: it takes level.bigHits shots
 export const BIG_ROCK = 3; // rock from one big rock (a small rock gives 1)
+export const BIG_REACH = 0.6; // a shot breaks a big rock only if it passes this share of its radius from the middle
 const STEER = 22; // top sideways speed
 const STEER_ACC = 7; // how quickly she reaches it
 
@@ -55,6 +56,12 @@ export function rng(seed) {
   };
 }
 
+/**
+ * How close a shot must pass (in the box's units) to hit a chunk. Small chunks
+ * are forgiving; a big rock needs a true aim, so steering is what breaks it.
+ */
+export const reachOf = (c) => (c.big ? c.r * BIG_REACH : c.r + 0.5);
+
 /** Water from one blasted chunk: it goes up with the chunk's volume. */
 export const waterFor = (r) => Math.max(1, Math.round(r * r * r * 4));
 
@@ -63,7 +70,7 @@ export function createRun(levelId = 'easy', seed = 7) {
   const run = {
     level: L, rand: rng(seed + L.time),
     t: 0, over: false,
-    ship: { x: 0, y: 0, vx: 0, vy: 0, z: 0, vz: 0, cool: 0, hitFlash: 0 },
+    ship: { x: 0, y: 0, vx: 0, vy: 0, z: 0, vz: 0, cool: 0, stun: 0, hitFlash: 0 },
     ice: [], bolts: [], bursts: [],
     spawnClock: 0.5, nextId: 1,
     water: 0, blasted: 0, bumps: 0, shots: 0, cracks: 0,
@@ -79,8 +86,8 @@ function spawn(run) {
   const big = rand() < level.bigShare;
   const rock = big || rand() < level.rockShare;
   const r = big ? BIG_R + rand() * 1.6 : 0.7 + rand() * 1.3;
-  // Half of them come straight at where she is, so she has to act.
-  const aimed = rand() < 0.5;
+  // Some come straight at where she is, so she has to act (fewer on harder levels).
+  const aimed = rand() < level.aimShare;
   const x = aimed ? run.ship.x + (rand() - 0.5) * 4 : (rand() * 2 - 1) * BOX.w;
   const y = aimed ? run.ship.y + (rand() - 0.5) * 3 : (rand() * 2 - 1) * BOX.h;
   run.ice.push({
@@ -114,9 +121,11 @@ export function stepRun(run, dt, input) {
   // up and pushed her out of the picture (play-test).
   if (ship.z > MAX_KICK) { ship.z = MAX_KICK; ship.vz = Math.min(ship.vz, 0); }
   ship.cool = Math.max(0, ship.cool - dt);
+  ship.stun = Math.max(0, ship.stun - dt);
   ship.hitFlash = Math.max(0, ship.hitFlash - dt);
 
-  if (input.fire && ship.cool === 0) {
+  // A bump jams the gun for a moment (see level.stun), so she can't just spam Space through a crash.
+  if (input.fire && ship.cool === 0 && ship.stun === 0) {
     ship.cool = COOLDOWN;
     ship.vz += RECOIL * 6; // backwards is +z
     run.shots++;
@@ -148,7 +157,7 @@ export function stepRun(run, dt, input) {
       if (c.dead) continue;
       const cz0 = c.z - level.speed * dt;
       if (!(b.z <= c.z + c.r && z0 >= cz0 - c.r)) continue;
-      if (Math.hypot(c.x - b.x, c.y - b.y) > c.r + 0.5) continue;
+      if (Math.hypot(c.x - b.x, c.y - b.y) > reachOf(c)) continue;
       b.life = 0;
       c.hp -= 1;
       if (c.hp > 0) { run.cracks++; c.cracked = (c.cracked || 0) + 1; ev.push({ type: 'crack', x: b.x, y: b.y, z: c.z + c.r, left: c.hp }); }
@@ -177,17 +186,27 @@ export function stepRun(run, dt, input) {
     c.dead = true;
     run.bumps++;
     ship.hitFlash = 0.6;
+    ship.stun = level.stun;
     ev.push({ type: 'bump', x: c.x, y: c.y, z: c.z, big: c.big });
   }
 
   run.ice = run.ice.filter((c) => !c.dead && c.z < 30);
   run.bolts = run.bolts.filter((b) => b.life > 0);
-  if (run.t >= level.time) { run.over = true; ev.push({ type: 'end' }); }
+  // Both goals met: the run ends there, so the kid gets the "Goal reached!" moment at once.
+  if (goalMet(run)) { run.over = true; ev.push({ type: 'end', met: true }); }
+  else if (run.t >= level.time) { run.over = true; ev.push({ type: 'end', met: false }); }
   return ev;
 }
 
 /** Has she collected the level's goal? */
 export const goalMet = (run) => run.got.ice >= run.level.goal.ice && run.got.rock >= run.level.goal.rock;
+
+/** Grown-up skip (unlock mode): the goal counts as met, and the run ends. */
+export function skipRun(run) {
+  run.got.ice = Math.max(run.got.ice, run.level.goal.ice);
+  run.got.rock = Math.max(run.got.rock, run.level.goal.rock);
+  run.over = true;
+}
 
 /** The score card's numbers. */
 export function result(run) {
@@ -214,11 +233,13 @@ export function botInput(run) {
     tx = ship.x + Math.sign(Math.abs(ship.x) > BOX.w - 3 ? -ship.x : dx) * 8;
     ty = ship.y + Math.sign(Math.abs(ship.y) > BOX.h - 2 ? -ship.y : dy) * 4;
   } else {
-    const prey = ahead.find((c) => c.z < (c.big ? -70 : -30));
+    // Aim at what the goal still needs (ice, or rock once the ice is in), else anything.
+    const need = (c) => (c.rock ? run.got.rock < run.level.goal.rock : run.got.ice < run.level.goal.ice);
+    const prey = ahead.find((c) => c.z < (c.big ? -70 : -30) && need(c)) || ahead.find((c) => c.z < (c.big ? -70 : -30));
     if (prey) { tx = prey.x; ty = prey.y; }
   }
   const turn = clamp((tx - ship.x) / 2, -1, 1);
   const thrust = clamp((ty - ship.y) / 2, -1, 1);
-  const inLine = ahead.some((c) => c.z < -20 && Math.hypot(c.x - ship.x, c.y - ship.y) < c.r + 0.4);
+  const inLine = ahead.some((c) => c.z < -20 && Math.hypot(c.x - ship.x, c.y - ship.y) < reachOf(c) * 0.8);
   return { turn, thrust, fire: inLine };
 }
