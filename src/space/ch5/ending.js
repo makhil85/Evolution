@@ -151,7 +151,10 @@ export function playCh5Ending(game, { eyebrow = lvl('Engine half', 'Engine half'
 
   // Her frame. S points at the Sun; the starship sits out along P, away from her.
   // Zp is the drive's way (out and away from her); its nose is -Zp.
-  const S = new THREE.Vector3(-game.ship.x, 0, -game.ship.z);
+  // The Sun's real direction: the Sun's light sits at the Sun (planets.js sunLight).
+  const S0 = new THREE.Vector3(-game.ship.x, 0, -game.ship.z);
+  const sunW = game.bodies?.sunLight ? game.bodies.sunLight.getWorldPosition(new THREE.Vector3()) : null;
+  const S = sunW ? new THREE.Vector3(sunW.x, 0, sunW.z) : S0.clone();
   if (S.lengthSq() < 1e-6) S.set(-1, 0, 0);
   S.normalize();
   const P = new THREE.Vector3(-S.z, 0, S.x);
@@ -168,21 +171,6 @@ export function playCh5Ending(game, { eyebrow = lvl('Engine half', 'Engine half'
   ship.setField(0);
   ship.group.quaternion.copy(qShip);
   ship.group.visible = false;
-  // The starship's lit windows and lamps are authored above the bloom threshold
-  // (1.25). Up close they make a bright cross that floods the frame, so they are
-  // held just under it here (only the plume and the field are left to glow).
-  const lamps = [];
-  ship.group.traverse((o) => {
-    const m = o.material;
-    if (o.isMesh && m && m.isMeshBasicMaterial && !m.transparent) lamps.push(m);
-  });
-  const holdLamps = () => {
-    for (const m of lamps) {
-      const k = Math.max(m.color.r, m.color.g, m.color.b);
-      if (k > 1.2) m.color.multiplyScalar(1.2 / k);
-    }
-  };
-
   const rockShip = buildRockShip();
   const rock = rockShip.group;
   const rockMesh = rock.children[0]; // the rock; the door, windows, bell and rings are not used here
@@ -207,8 +195,9 @@ export function playCh5Ending(game, { eyebrow = lvl('Engine half', 'Engine half'
     C.clone().addScaledVector(Xs, 8.5).addScaledVector(UP, 2.6).addScaledVector(Zp, -2.5),
     C.clone().addScaledVector(Xs, 15).addScaledVector(UP, 6).addScaledVector(Zp, 5),
     H.clone().addScaledVector(Xs, 22).addScaledVector(UP, 8).addScaledVector(Zp, -10),
-    M.clone().addScaledVector(wide, 40),
-    M.clone().addScaledVector(wide, 50),
+    // Close enough at the end that her small ship still reads beside it.
+    M.clone().addScaledVector(wide, 30),
+    M.clone().addScaledVector(wide, 34),
   ], false, 'centripetal');
   const lookPath = new THREE.CatmullRomCurve3([
     C.clone(),
@@ -378,7 +367,6 @@ export function playCh5Ending(game, { eyebrow = lvl('Engine half', 'Engine half'
       ship.setDrive(ease((t - 10) / 4));
       ship.setField(0.6 * ease((t - 13.5) / 1.5) * (1 - 0.4 * ease((t - 19) / 2)));
       ship.update(dt, t);
-      holdLamps();
 
       // The rock: it shrinks, flattens into a thin cap, then fades out.
       rock.visible = t < FIRE_AT;

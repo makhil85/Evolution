@@ -159,13 +159,17 @@ export function createStarship({ detail = 'near' } = {}) {
   const toon = (color, emissive = 0x000000) => track(new THREE.MeshToonMaterial({ color, emissive, gradientMap: toonRamp }));
   const glow = (hex, k) => track(new THREE.MeshBasicMaterial({ color: new THREE.Color(hex).multiplyScalar(k) }));
   const M = {
-    hull: toon(0xf4f7fa, 0x7a8694),
-    pale: toon(0xf6fbff, 0x7a8694),
+    // A small emissive lift keeps the shadow side light; more than this pushed
+    // the sunlit side past the bloom threshold (1.25) and a white cross
+    // flooded the frame (the test-fire cutscene). The radiators are a touch
+    // greyer than the hull so the big flat fins don't blow out.
+    hull: toon(0xf4f7fa, 0x313640),
+    pale: toon(0xd9e0e8, 0x262a32),
     dark: toon(0x5a6478, 0x2c3440),
     orange: toon(0xff8a3d, 0x3a1a08),
     rock: track(new THREE.MeshToonMaterial({ vertexColors: true, emissive: 0x1a1816, gradientMap: toonRamp })),
-    win: glow(0xffd58a, 1.6),
-    portGlow: glow(0xcffaff, 2.2),
+    win: glow(0xffd58a, 1.3),
+    portGlow: glow(0xcffaff, 1.3),
   };
 
   // Geometry is collected per material, then merged once per bucket.
