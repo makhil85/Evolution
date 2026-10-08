@@ -8,8 +8,8 @@
 // the game):
 //   1. Why a black hole is black: so much stuff squeezed so small that its pull
 //      stops even light. The star shrinks to a dot; the light beams fall back.
-//   2. Why it glows: gas falls in, swirls in a disk, rubs and heats to millions of
-//      degrees. A quasar's disk can outshine all the stars of its galaxy. Real
+//   2. Why it glows: gas falls in, swirls in a disk, rubs and heats to hundreds of
+//      thousands of degrees (hotter than any star's surface). A quasar's disk can outshine all the stars of its galaxy. Real
 //      quasars are billions of light-years away; our galaxy's middle is quiet.
 //   3. Why the stars look in the wrong place: gravity bends light. A star behind
 //      the hole looks pushed away from it, and lined up exactly it makes a ring.
@@ -32,8 +32,10 @@ function glow(ctx, x, y, r, col) {
 
 const SQUEEZE = [2, 6]; // the star shrinks to a dot
 const LIGHT = [6.5, 9.5]; // the light beams go out, and fall back
+const FINAL_1 = 14; // the end of film 1: what opts.reduced shows (no motion)
 
-function drawBlack(ctx, T) {
+function drawBlack(ctx, T, opts = {}) {
+  if (opts.reduced) T = FINAL_1;
   nightSky(ctx, 61);
   const cx = 400; const cy = 215;
   const k = span(T, SQUEEZE[0], SQUEEZE[1]);
@@ -44,17 +46,19 @@ function drawBlack(ctx, T) {
     if (k > 0.05 && k < 1) label(ctx, 'the same stuff...', cx, cy - 150, { size: 17, color: '#ffe27a', halo: HALO });
   }
   if (T >= SQUEEZE[1]) {
-    // A black hole: the stuff of a star in a dot. Its light comes back down.
+    // A black hole: the stuff of a star in a dot. Light leaves it, climbs a little,
+    // and gravity turns it back: every ray falls back into the hole.
     const q = span(T, LIGHT[0], LIGHT[1]);
     for (let i = 0; i < 8; i++) {
       const a = (i / 8) * TAU + 0.2;
       ctx.save(); ctx.strokeStyle = 'rgba(255,240,170,0.9)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
       ctx.beginPath();
       for (let s = 0; s <= 24; s++) {
-        const u = (s / 24) * q;                 // how far along the ray the light has got
-        const r = 16 + u * 170;
-        // Gravity bends each ray round as it goes out (a curve, not a straight line).
-        const ang = a + 0.6 * u * u;
+        const m = (s / 24) * q;                 // how far along its path the light has got (1 = back at the hole)
+        // Out and back: at most about 120 px from the hole, so it never reaches the captions.
+        const r = 16 + 104 * 4 * m * (1 - m);
+        // Gravity bends each ray round as it goes (a curve, not a straight line).
+        const ang = a + 0.6 * m * m;
         const x = cx + Math.cos(ang) * r; const y = cy + Math.sin(ang) * r;
         if (s === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
       }
@@ -82,7 +86,10 @@ const GALAXY_DOTS = (() => {
   return out;
 })();
 
-function drawGlow(ctx, T) {
+const FINAL_2 = 16.5; // the end of film 2: what opts.reduced shows (the disk stops spinning)
+
+function drawGlow(ctx, T, opts = {}) {
+  if (opts.reduced) T = FINAL_2;
   nightSky(ctx, 77);
   const cx = 300; const cy = 210;
   if (T < 11.5) {
@@ -103,7 +110,8 @@ function drawGlow(ctx, T) {
       ctx.restore();
     }
     circle(ctx, cx, cy, 30, '#000000');
-    if (T > 2.5 && T < 6.5) label(ctx, 'millions of degrees!', cx, cy + 116, { size: 18, color: '#ffe27a', halo: HALO });
+    // Hundreds of thousands of degrees: hotter than any star's surface, but not millions.
+    if (T > 2.5 && T < 6.5) label(ctx, 'hundreds of thousands of degrees!', cx, cy + 116, { size: 18, color: '#ffe27a', halo: HALO });
     if (T < 2.5) label(ctx, 'gas falls in and swirls round', cx, cy + 116, { size: 17, color: '#cfe8ff', halo: HALO });
   }
   if (T >= 6.5) {
@@ -128,7 +136,10 @@ function drawGlow(ctx, T) {
 
 const TRUE_BETA = 0.5; // the star's real offset from the hole (Einstein radii)
 
-function drawLensing(ctx, T) {
+const FINAL_3 = 14; // the end of film 3: the ring (opts.reduced shows it, no motion)
+
+function drawLensing(ctx, T, opts = {}) {
+  if (opts.reduced) T = FINAL_3;
   nightSky(ctx, 91);
   const cx = 400; const cy = 205; const RE = 120; // the Einstein radius on this picture
   const beta = lerp(TRUE_BETA, 0, span(T, 7, 11));
@@ -144,8 +155,9 @@ function drawLensing(ctx, T) {
   }
   if (T < 3) label(ctx, 'where it really is', cx + TRUE_BETA * RE, cy - 36, { size: 15, color: '#cfe8ff', halo: HALO });
   // The hole, with a ring of light round it once the star lines up.
-  circle(ctx, cx, cy, 36, 'rgba(255,190,90,0.35)');
-  circle(ctx, cx, cy, 22, '#000000');
+  // The black shadow is 0.4 of the Einstein radius, the same ratio as the game and the holodeck (lensLogic.js SHADOW_SHARE).
+  circle(ctx, cx, cy, RE * 0.5, 'rgba(255,190,90,0.35)');
+  circle(ctx, cx, cy, RE * 0.4, '#000000');
   if (beta < 0.12) {
     ctx.save(); ctx.strokeStyle = `rgba(255,236,170,${1 - beta / 0.12})`; ctx.lineWidth = 6;
     ctx.beginPath(); ctx.arc(cx, cy, RE, 0, TAU); ctx.stroke(); ctx.restore();
@@ -185,7 +197,7 @@ export const LESSON_7D = {
       title: ['Why the disk glows', 'Why it glows'],
       beats: [
         { dur: 2.5, cap: ['Gas falls towards a black hole and swirls round it in a disk, like water going down a drain.', 'Gas swirls round a black hole, like water down a drain.'] },
-        { dur: 4, cap: ['The gas rubs against itself as it swirls, so it heats up to millions of degrees. Hot gas glows.', 'The gas rubs and gets very hot. Hot things glow!'] },
+        { dur: 4, cap: ['The gas rubs against itself as it swirls, so it heats up to hundreds of thousands of degrees. Hot gas glows.', 'The gas rubs and gets super hot, hotter than the Sun. Hot things glow!'] },
         { dur: 5, cap: ['A quasar is a black hole eating gas like this. Its disk can shine brighter than all the stars of its galaxy!', 'A quasar is a black hole eating gas. It shines brighter than a whole galaxy!'] },
         { dur: 5, cap: ['Real quasars are billions of light-years away, in other galaxies. Our galaxy’s middle has a black hole, but it is quiet.', 'Real quasars are billions of light-years away. Ours is quiet.'] },
       ],
@@ -193,12 +205,12 @@ export const LESSON_7D = {
       question: {
         prompt: ['Why does the gas in the disk glow so brightly?', 'Why does the gas glow?'],
         choices: [
-          { text: ['It rubs as it swirls, so it gets millions of degrees hot', 'It rubs and gets very hot'], correct: true },
+          { text: ['It rubs as it swirls, so it gets super hot', 'It rubs and gets super hot'], correct: true },
           { text: ['The black hole is on fire, the way wood burns in a campfire', 'The black hole is on fire like wood'] },
           { text: ['Sunlight bounces off it from far away', 'Sunlight bounces off it'] },
         ],
         hint: ['What happens to things when they rub together, like your hands?', 'Rubbing makes heat. Hot things glow.'],
-        why: ['As the gas swirls it rubs and heats up to millions of degrees. Hot gas glows, and a quasar’s disk can outshine a whole galaxy.', 'Rubbing makes it hot, and hot gas glows!'],
+        why: ['As the gas swirls it rubs and heats up to hundreds of thousands of degrees. Hot gas glows, and a quasar’s disk can outshine a whole galaxy.', 'Rubbing makes it super hot, and hot gas glows!'],
       },
       clue: [null, 'The gas rubs and gets very hot, so it glows.'],
     },

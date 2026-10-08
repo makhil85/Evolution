@@ -227,6 +227,15 @@ try {
     });
   });
 
+  ok('lesson 7D: the disk is hundreds of thousands of degrees, never millions (the corona is the millions)', () => {
+    assert.ok(!JSON.stringify(LESSON_7D).includes('millions of degrees'));
+    assert.ok(JSON.stringify(LESSON_7D).includes('hundreds of thousands of degrees'));
+  });
+  ok('lesson 7D: every film draws in reduced-motion mode (the final picture) without throwing', () => {
+    const fake = new Proxy({}, { get(_, k) { if (k === 'createRadialGradient' || k === 'createLinearGradient') return () => ({ addColorStop() {} }); if (k === 'measureText') return () => ({ width: 10 }); return () => {}; }, set() { return true; } });
+    for (const f of LESSON_7D.films) for (const T of [0, 4, 9, 14]) f.draw(fake, T, { level: 4, t: (a) => a, reduced: true, asking: false });
+  });
+
   console.log('holodeck');
   const holo = buildHolodeckScene({});
   ok('the holodeck: at most 60 draw calls and 150k triangles, and it builds with no browser', () => {

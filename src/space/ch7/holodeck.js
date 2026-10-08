@@ -70,7 +70,8 @@ void main() {
   float th = 0.5 * (beta + aSign * root) * uThetaE;
   vec3 dir = cos(th) * uHole + sin(th) * e;
   float mu = abs(0.5 + aSign * (beta * beta + 2.0) / (2.0 * max(beta, 1e-3) * root));
-  vI = aBright * min(mu, 2.2) * step(uShadow, abs(th)) * uShow;
+  // Capped below the bloom threshold (1.25): with colours at most 1.0 only the disk edge, jets and ring bloom.
+  vI = aBright * min(mu, 1.15) * step(uShadow, abs(th)) * uShow;
   vCol = aColor;
   gl_PointSize = uPx * aSize * (0.8 + 0.1 * min(mu, 4.0));
   gl_Position = projectionMatrix * modelViewMatrix * vec4(dir * uRsky, 1.0);
@@ -335,7 +336,7 @@ export function buildHolodeckScene(game = {}) {
     if (!caption) return;
     caption.querySelector('.holo-title').textContent = p === 'load'
       ? t('Holodeck: loading a quasar, 2.4 billion light-years away...', 'The holodeck: loading a quasar. It is very, very far away...')
-      : t('Quasar 3C 273. Its light has been on its way for 2.4 billion years.', 'A quasar! Its light has been coming for a very long time.');
+      : t('A quasar like 3C 273. Its light has been on its way for 2.4 billion years.', 'A quasar! Its light has been coming for a very long time.');
     caption.querySelector('.holo-hint').textContent = p === 'fly'
       ? t('Arrows: turn. Up and down: closer or further.', 'Arrows: turn. Up and down: closer or further.')
       : '';
