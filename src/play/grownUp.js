@@ -1,5 +1,5 @@
-// Grown-up tools, only in unlock mode (?unlock=all on any page; ?unlock=off
-// turns it off): skip a question or a lesson film, and jump to any part of a
+// Grown-up tools, only in check mode (?unlock=all in the page's address; lead
+// 2026-10-08: never remembered, normal play is the default): skip a question or a lesson film, and jump to any part of a
 // chapter, so a grown-up can check a later part without playing up to it.
 // A child using the menu never sees any of it.
 //
@@ -8,17 +8,10 @@
 //   addJumpPanel({ title, parts, onJump })
 //                            a small corner panel listing the chapter's parts;
 //                            parts = [{ id, label, group? }], onJump(id)
-import { UNLOCK_KEY } from '../launcher/profile.js';
+import { unlockAll } from '../launcher/profile.js';
 
 export function isGrownUp() {
-  try {
-    const q = new URLSearchParams(location.search).get('unlock');
-    if (q === 'all') localStorage.setItem(UNLOCK_KEY, '1');
-    if (q === 'off') localStorage.removeItem(UNLOCK_KEY);
-    return localStorage.getItem(UNLOCK_KEY) === '1';
-  } catch {
-    return false;
-  }
+  return unlockAll();
 }
 
 const SKIP_TEXT = 'Skip (grown-up) ⏭';
