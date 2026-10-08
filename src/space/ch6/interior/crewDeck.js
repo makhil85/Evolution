@@ -133,10 +133,10 @@ export function buildDeck(kit) {
   b.box(2.1, 0.06, 0.8, mats.accentBlue, 5.4, 0.73, 29);
   b.box(1.6, 0.04, 0.9, mats.coveCool, 5.4, 2.9, 29);
   solids.push({ rect: [5.4, 29, 2.2, 0.9] });
-  // The scanner arch by the door: two posts and a beam, with a light under it.
-  for (const z of [27.9, 30.1]) { b.cyl(0.09, 0.09, 2.5, mats.metal, 3.6, 1.25, z, { seg: 10 }); solids.push({ disc: [3.6, z, 0.15] }); }
-  b.box(0.25, 0.22, 2.5, mats.metal, 3.6, 2.6, 29);
-  b.box(0.1, 0.04, 2.2, mats.coveCool, 3.6, 2.47, 29);
+  // The scanner: a slim gantry over the biobed, two posts 1.6 m apart (either side of the bed) with a beam and a light under it.
+  for (const z of [28.2, 29.8]) { b.cyl(0.07, 0.07, 2.5, mats.metal, 5.4, 1.25, z, { seg: 10 }); solids.push({ disc: [5.4, z, 0.15] }); }
+  b.box(0.25, 0.2, 1.8, mats.metal, 5.4, 2.6, 29);
+  b.box(0.1, 0.04, 1.6, mats.coveCool, 5.4, 2.47, 29);
   // The cabinet on the back wall, with a lit door.
   b.box(0.5, 1.2, 1.4, mats.panel, 7.45, 0.6, 27.3);
   b.box(0.02, 0.8, 1.1, mats.coveCool, 7.19, 0.7, 27.3);
@@ -145,6 +145,18 @@ export function buildDeck(kit) {
   // The screen on the room's near wall.
   const medScreen = kit.screen(1.4, 0.8, { title: 'SICK BAY', accent: PALETTE.teal, seed: 77 });
   medScreen.position.set(4.9, 1.7, 26.14); group.add(medScreen);
+  // A red-and-white cross on the far wall, and a privacy curtain on a track by the cabinet.
+  const crossCv = document.createElement('canvas'); crossCv.width = 128; crossCv.height = 128;
+  const cg = crossCv.getContext('2d');
+  cg.fillStyle = '#ffffff'; cg.fillRect(0, 0, 128, 128);
+  cg.fillStyle = '#d23b3b'; cg.fillRect(48, 16, 32, 96); cg.fillRect(16, 48, 96, 32);
+  const crossTex = kit.own(new THREE.CanvasTexture(crossCv)); crossTex.colorSpace = THREE.SRGBColorSpace;
+  const cross = new THREE.Mesh(kit.own(new THREE.PlaneGeometry(0.6, 0.6)), kit.own(new THREE.MeshBasicMaterial({ map: crossTex })));
+  cross.position.set(4.7, 2.3, 31.86); cross.rotation.y = Math.PI; group.add(cross);
+  const curtainMat = kit.own(new THREE.MeshToonMaterial({ color: 0xcfe9e6, gradientMap: toonRamp }));
+  b.box(0.05, 0.05, 3.6, mats.metal, 6.8, 2.5, 28.9);   // the track
+  b.box(0.04, 2.3, 3.5, curtainMat, 6.8, 1.3, 28.9);    // the curtain, hung from it
+  solids.push({ rect: [6.8, 28.9, 0.2, 3.6] });
   // End of quest: medbay
 
   // --- the lounge (like Ten Forward): its far wall is a window that bows out ------

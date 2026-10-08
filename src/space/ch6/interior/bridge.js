@@ -189,11 +189,15 @@ export function buildDeck(kit) {
 
   // Quest: message (the dish on its console; the quest's spots are below)
   const dishConsole = desk(DISH_AT[0], DISH_AT[1], AD + Math.PI, 1.8, { title: 'DISH', accent: PALETTE.teal, seed: 23 });
-  const dishPost = new THREE.Mesh(kit.own(new THREE.CylinderGeometry(0.03, 0.03, 0.5, 8)), mats.metal); dishPost.position.set(0.62, 1.05, -0.05);
-  const dishBowl = new THREE.Mesh(kit.own(new THREE.SphereGeometry(0.22, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2)), mats.wall);
-  dishBowl.position.set(0.62, 1.32, -0.05); dishBowl.rotation.x = -Math.PI * 0.35; // tilted up, open towards her
+  const dishPost = new THREE.Mesh(kit.own(new THREE.CylinderGeometry(0.05, 0.05, 0.66, 10)), mats.metal); dishPost.position.set(0.55, 1.12, -0.1);
+  // The dish: a white bowl (radius 0.4) with a teal rim, its head tilted so the bowl opens up and towards her.
+  const dishHead = new THREE.Group(); dishHead.position.set(0.55, 1.45, -0.1); dishHead.rotation.x = -2.2;
+  const dishBowl = new THREE.Mesh(kit.own(new THREE.SphereGeometry(0.4, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2)), toon(0xf4f8fb, { side: THREE.DoubleSide }));
+  const dishRim = new THREE.Mesh(kit.own(new THREE.TorusGeometry(0.4, 0.03, 8, 40).rotateX(Math.PI / 2)), teal);
+  dishHead.add(dishBowl, dishRim);
   const dishLamp = kit.lamp(PALETTE.teal); dishLamp.position.set(-0.62, 0.85, -0.05);
-  dishConsole.add(dishPost, dishBowl, dishLamp);
+  const dishSign = kit.sign('COMMS', { w: 0.5, h: 0.14, color: PALETTE.teal }); dishSign.position.set(-0.5, 0.45, 0.31);
+  dishConsole.add(dishPost, dishHead, dishLamp, dishSign);
 
   // The science bays: a console each, facing the centre.
   for (const k of [1, -1]) {

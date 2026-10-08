@@ -99,14 +99,15 @@ export const coolantMinutes = () => COOLANT.tankLitres / COOLANT.leakPerMin;
 
 /** The dish turns in steps, in degrees, clockwise from straight up. Earth is 130 degrees; "locked" is 5 either side. */
 export const DISH = Object.freeze({ step: 10, earth: 130, locked: 5, sun: 250 });
-export const LIGHT = Object.freeze({ minPerBillionKm: 55, earthBillionKm: 6 });
+// The ship is in the asteroid belt, so Earth is near: 400 million km away.
+export const LIGHT = Object.freeze({ minPerBillionKm: 55, earthMillionKm: 400 });
 /** The gap between two angles, in degrees, the short way round. */
 export const angleGap = (a, b) => Math.abs((((a - b) % 360) + 540) % 360 - 180);
 /** The dish after one turn: dir -1 left, +1 right. */
 export const dishTurn = (deg, dir) => (((deg + dir * DISH.step) % 360) + 360) % 360;
 export const dishOnEarth = (deg) => angleGap(deg, DISH.earth) <= DISH.locked;
-/** Hours for light (a message) to cross `billionKm`. */
-export const lightHours = (billionKm) => (billionKm * LIGHT.minPerBillionKm) / 60;
+/** Minutes for light (a message) to cross `millionKm` (light: 55 minutes per billion km). */
+export const lightMinutes = (millionKm) => (millionKm * LIGHT.minPerBillionKm) / 1000;
 
 // --- pollen -----------------------------------------------------------------------------
 

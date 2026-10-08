@@ -3,8 +3,8 @@
 // crewmate (their tip at the top), and has a Done button that lights once the
 // puzzle is solved. The same look and contract as stations.js.
 //
-// Mouse: the buttons, the valves and the dish. Keys: Tab / arrows move between
-// buttons (the browser's own focus), Enter or Space presses.
+// Mouse: the buttons, the valves and the dish. Keys: Tab moves between buttons
+// (the browser's own focus), Enter or Space presses.
 //
 // Opens in the play-mode modal layer like the other cards and pauses the game
 // through the bus's 'ui-modal'. Test hook while open:
@@ -52,7 +52,19 @@ const CSS = `
 .qz-flower { min-height: 72px; border-radius: 14px; border: 2px solid rgba(255,255,255,.18); background: #1a2540; color: inherit; font: inherit; font-weight: 800; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
 .qz-flower.is-holding { outline: 3px solid #ffd27a; outline-offset: 2px; }
 .qz-flower.is-fruit { background: rgba(255,120,120,.22); border-color: #ff8a8a; }
-.qz-dust { width: 12px; height: 12px; border-radius: 50%; background: #ffd27a; }
+.qz-art { position: relative; display: block; width: 40px; height: 40px; }
+.qz-art::before { content: ''; position: absolute; inset: 0; border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 24%, #ffb3cf 0 24%, transparent 25%),
+    radial-gradient(circle at 76% 41%, #ffb3cf 0 24%, transparent 25%),
+    radial-gradient(circle at 67% 73%, #ffb3cf 0 24%, transparent 25%),
+    radial-gradient(circle at 33% 73%, #ffb3cf 0 24%, transparent 25%),
+    radial-gradient(circle at 24% 41%, #ffb3cf 0 24%, transparent 25%); }
+.qz-art::after { content: ''; position: absolute; left: 50%; top: 50%; width: 30%; height: 30%; transform: translate(-50%, -50%); border-radius: 50%; background: #ffd27a; }
+.qz-art.is-bud::before { background: radial-gradient(ellipse at 50% 58%, #7fc97f 0 36%, transparent 37%); }
+.qz-art.is-bud::after { background: #c8f0c8; width: 16%; height: 16%; top: 30%; }
+.qz-art.is-berry::before { background: radial-gradient(circle at 50% 56%, #e0474c 0 36%, transparent 37%); }
+.qz-art.is-berry::after { background: #3f9e5a; width: 26%; height: 14%; top: 26%; border-radius: 50% 50% 40% 40%; }
 .qz-count { font-size: 20px; font-weight: 900; }
 `;
 function injectCss() {
@@ -118,7 +130,7 @@ function medbayBody(changed) {
     el: wrap, ok: () => medbayTotals(s).ok,
     solve() { Object.assign(s, medbayAnswer()); changed(); },
     state: () => ({ scanned: [...s.scanned], bike: s.bike }), refresh,
-    tip: t('Out in space the rays get through. Each metre of rock halves them, so the ship keeps us behind the rock. Scan every badge, then set the bike. In spin gravity our bones need exercise every day.', 'Scan each badge. Exercise keeps our bones strong.'),
+    tip: t('In this game, each metre of rock halves the rays, so the ship keeps us behind the rock. Scan every badge, then set the bike. In spin gravity our bones need exercise every day.', 'Scan each badge. Exercise keeps our bones strong.'),
   };
 }
 
@@ -141,7 +153,7 @@ function coolantBody(changed) {
     }
   }
   const msg = el('div', 'qz-note');
-  const legend = el('div', 'qz-note', t('Tap a valve to open it (blue) or shut it. Coolant runs from the tank (left) to the core (right), through open valves only.', 'Tap a valve to open or shut it. Coolant goes from the tank to the core.'));
+  const legend = el('div', 'qz-note', t('Tap a valve to open it (blue) or shut it. Coolant runs from the tank (left) to the core (right), through open valves only. Wet (light blue) cells are where the coolant reaches.', 'Tap a valve to open or shut it. Light blue: the coolant reaches it.'));
   wrap.append(grid, legend, msg);
   function refresh() {
     const flow = coolantFlow(open);
@@ -213,7 +225,7 @@ function messageBody(changed) {
     const on = dishOnEarth(deg);
     note.className = `qz-note${on ? '' : ' qz-warn'}`;
     note.textContent = on ? t('Locked on Earth! The message is on its way home.', 'Locked on Earth!')
-      : t(`Turn the dish until it points at Earth (the blue dot). Each press turns it ${DISH.step} degrees; the beam is thin, so aim it well. It is ${angleGap(deg, DISH.earth)}° out.`, 'Point the dish at the blue dot.');
+      : t(`Turn the dish until it points at Earth (the blue dot). Each press turns it ${DISH.step} degrees. It is ${angleGap(deg, DISH.earth)}° out.`, 'Point the dish at the blue dot.');
   }
   return {
     el: wrap, ok: () => dishOnEarth(deg),
@@ -241,23 +253,28 @@ function pollenBody(changed) {
       const holding = st.holding === f.id; const fruit = st.fruit.includes(f.id);
       b.className = `qz-flower${holding ? ' is-holding' : ''}${fruit ? ' is-fruit' : ''}`;
       b.replaceChildren();
-      if (f.role === 'dust') b.append(el('i', 'qz-dust'));
+      b.append(flowerArt(f.role, fruit));
       b.append(el('span', null, f.role === 'dust' ? t('Yellow dust', 'Pollen') : fruit ? t('Strawberry', 'Berry') : t('Bud', 'Bud')));
     }
     count.textContent = `${t('Strawberries', 'Strawberries')}: ${st.fruit.length} / ${PAIRS}`;
     note.className = `qz-note${problem ? ' qz-warn' : ''}`;
-    note.textContent = problem === 'order' ? t('Pick up the pollen first: tap a flower with yellow dust, then the bud that is its partner.', 'Yellow dust first, then its partner.')
-      : problem === 'partner' ? t('That is not its partner. Take the pollen to the bud it goes with.', 'Not its partner. Try the other bud.')
-        : pollinated(st) ? t(`Every bud has a strawberry now. Count them: ${PAIRS}! No bees needed.`, `All ${PAIRS} have a strawberry!`)
-          : st.holding ? t('Now tap the bud that is its partner.', 'Now tap its partner.')
-            : t('No bees out here: tap a flower with yellow dust, then its partner, for each pair.', 'Tap the dust, then its partner.');
+    note.textContent = problem === 'order' ? t('In this game the pollen goes first: tap a flower with yellow dust, then the bud it works with.', 'Yellow dust first, then its bud.')
+      : problem === 'partner' ? t('Not that one: each yellow-dust flower only works with its own bud. Try the other bud.', 'Not that bud. Try the other one.')
+        : pollinated(st) ? t(`Every bud has a strawberry now. Count them: ${PAIRS}!`, `All ${PAIRS} have a strawberry!`)
+          : st.holding ? t('Now tap the bud that goes with it.', 'Now tap its bud.')
+            : t('Tap a flower with yellow dust, then its bud, for each pair.', 'Tap the dust, then its bud.');
   }
   return {
     el: wrap, ok: () => pollinated(st),
     solve() { st = runPollen(pollenAnswer()).state; problem = null; changed(); },
     state: () => ({ holding: st.holding, fruit: [...st.fruit] }), refresh,
-    tip: t('Strawberries need pollen carried from one flower to another, and there are no bees out here. Our hands do their job: pollen first, then its partner.', 'No bees out here: carry the pollen by hand.'),
+    tip: t('In this game each bud takes pollen from its partner flower. Real strawberries need lots of pollen grains, carried by bees on Earth. Out here we do the bees’ job with a soft brush.', 'Each bud takes pollen from its partner flower. We do the bees’ job with a brush.'),
   };
+}
+
+/** A flower drawn in CSS: five petals and a yellow centre; a bud is a green tip; a berry a red fruit on a green cap. */
+function flowerArt(role, fruit) {
+  return el('i', `qz-art${role === 'dust' ? ' is-dust' : ' is-bud'}${fruit ? ' is-berry' : ''}`);
 }
 
 const BODIES = { medbay: medbayBody, coolant: coolantBody, message: messageBody, pollen: pollenBody };

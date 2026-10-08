@@ -122,10 +122,13 @@ ok('locked on Earth within 5 degrees either side: 125 is in, 124 and 136 are out
   assert.ok(!Q.dishOnEarth(124)); assert.ok(!Q.dishOnEarth(136));
   assert.ok(!Q.dishOnEarth(120)); assert.ok(!Q.dishOnEarth(0));
 });
-ok('the light: 6 billion km at 55 minutes a billion is 5.5 hours', () => {
-  assert.equal(Q.lightHours(6), 5.5);
-  assert.equal(Q.lightHours(6), (6 * 55) / 60);
-  assert.equal(Q.lightHours(1) * 60, 55);
+ok('the light: 400 million km (the asteroid belt to Earth) at 55 minutes a billion is 22 minutes, a whole number', () => {
+  assert.equal(Q.lightMinutes(400), 22);
+  assert.equal(Q.lightMinutes(400), (400 * 55) / 1000);
+  assert.equal(Q.lightMinutes(1000), 55);
+  assert.equal(Q.lightMinutes(100), 5.5);
+  assert.ok(Number.isInteger(Q.lightMinutes(Q.LIGHT.earthMillionKm)));
+  assert.ok(Q.LIGHT.earthMillionKm < 1000, 'Earth is closer than a billion km: the ship is in the belt');
 });
 
 console.log('pollen');
@@ -193,15 +196,17 @@ try {
     assert.ok(!checkSpaceAnswer(L4.c6_dose_half, String(64 / 3)), 'a third, not halving');
     assert.ok(checkSpaceAnswer(L4.c6_leak_minutes, String(Q.COOLANT.tankLitres / Q.COOLANT.leakPerMin)));
     assert.ok(!checkSpaceAnswer(L4.c6_leak_minutes, String(Q.COOLANT.tankLitres * Q.COOLANT.leakPerMin)), 'multiplied, not divided');
-    assert.ok(checkSpaceAnswer(L4.c6_light_delay, String((6 * 55) / 60)));
-    assert.ok(!checkSpaceAnswer(L4.c6_light_delay, String(6 * 55)), 'minutes, not hours');
+    assert.ok(checkSpaceAnswer(L4.c6_light_delay, String((400 * 55) / 1000)));
+    assert.ok(checkSpaceAnswer(L4.c6_light_delay, '22 min'));
+    assert.ok(!checkSpaceAnswer(L4.c6_light_delay, String(400 * 55)), 'forgot to divide by a billion');
+    assert.ok(!checkSpaceAnswer(L4.c6_light_delay, String(6 * 55)), 'six billion km, not Earth');
     assert.ok(checkSpaceAnswer(L4.c6_berries_each, String((60 * 12) / 5)));
     assert.ok(!checkSpaceAnswer(L4.c6_berries_each, String(60 * 12)), 'the whole farm, not each');
   });
-  ok('Level 1 numbers: halving 8, counting by twos to 10, one hour a billion km, 10 times 2', () => {
+  ok('Level 1 numbers: halving 8, counting by twos to 10, 5 minutes per 100 million km, 10 times 2', () => {
     assert.ok(checkSpaceAnswer(L1.c6_dose_half, String(8 / 2)));
     assert.ok(checkSpaceAnswer(L1.c6_leak_minutes, String(10 / 2)));
-    assert.ok(checkSpaceAnswer(L1.c6_light_delay, String(5)));
+    assert.ok(checkSpaceAnswer(L1.c6_light_delay, String(4 * 5))); // about 5 minutes per 100 million km
     assert.ok(checkSpaceAnswer(L1.c6_berries_each, String(10 * 2)));
   });
   ok('each quest has its question (its beat), each beat once', () => {

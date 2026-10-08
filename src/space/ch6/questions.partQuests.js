@@ -1,9 +1,9 @@
 // Chapter 6, life on board question bank: one question after each quest, on
 // the sum that quest is built on (halving the rays through the shield, the
-// minutes until a tank is empty, light's trip home, berries for each of us).
+// minutes until a tank is empty, light's trip to Earth, berries for each of us).
 // Same schema as questions.partB.js. Numbers come from questsLogic.js and are
 // re-derived in scripts/test-ch6-quests.mjs.
-import { OUTSIDE_DOSE, DAY_LIMIT, doseThrough, COOLANT, coolantMinutes, LIGHT, lightHours, FARM, berriesEach } from './questsLogic.js';
+import { OUTSIDE_DOSE, DAY_LIMIT, doseThrough, COOLANT, coolantMinutes, LIGHT, lightMinutes, FARM, berriesEach } from './questsLogic.js';
 import { CREW_SIZE } from './stationsLogic.js';
 
 const ACT_Q = 2;
@@ -12,7 +12,7 @@ export const CH6Q_QUESTIONS = {
   c6_dose_half: {
     id: 'c6_dose_half', type: 'text', act: ACT_Q, beat: 'c6Medbay',
     title: 'Behind the rock', subject: 'Halving', difficulty: 'Level 4',
-    prompt: `Outside the shield a badge would get ${OUTSIDE_DOSE} units a day. Each metre of shield halves it. How many units a day would a badge get through 3 metres? (Type a number.)`,
+    prompt: `In this game, each metre of rock halves the rays. Outside the shield a badge would get ${OUTSIDE_DOSE} units a day. How many units a day would a badge get through 3 metres of rock? (Type a number.)`,
     answers: [String(doseThrough(OUTSIDE_DOSE, 3))],
     hint: `Halve it once for each metre: ${OUTSIDE_DOSE} → ${OUTSIDE_DOSE / 2} → ...`,
     parentHint: `${OUTSIDE_DOSE} / 2 / 2 / 2 = ${doseThrough(OUTSIDE_DOSE, 3)}. Three halvings are the same as dividing by 8.`,
@@ -24,21 +24,21 @@ export const CH6Q_QUESTIONS = {
     id: 'c6_leak_minutes', type: 'text', act: ACT_Q, beat: 'c6Coolant',
     title: 'Running dry', subject: 'Division', difficulty: 'Level 4',
     prompt: `The coolant tank holds ${COOLANT.tankLitres} litres. The leak lets out ${COOLANT.leakPerMin} litres every minute. How many minutes until the tank is empty? (Type a number.)`,
-    answers: [String(coolantMinutes()), `${coolantMinutes()} minutes`],
+    answers: [String(coolantMinutes()), `${coolantMinutes()} minutes`, `${coolantMinutes()} min`],
     hint: `How many ${COOLANT.leakPerMin}s make ${COOLANT.tankLitres}? Try 10 of them first.`,
-    parentHint: `${COOLANT.tankLitres} ÷ ${COOLANT.leakPerMin} = ${coolantMinutes()} minutes. (${COOLANT.leakPerMin} × 10 = 250, and 6 more makes 400.)`,
+    parentHint: `${COOLANT.tankLitres} ÷ ${COOLANT.leakPerMin} = ${coolantMinutes()} minutes. (${COOLANT.leakPerMin} × 10 = 250; 150 more is six more ${COOLANT.leakPerMin}s, so 10 + 6 = 16.)`,
     success: `Yes! ${coolantMinutes()} minutes. We fixed it in time, and the core is cool.`,
     doneMessage: 'The coolant flows. Bolt is pleased!',
     reward: { science: 10 },
   },
   c6_light_delay: {
     id: 'c6_light_delay', type: 'text', act: ACT_Q, beat: 'c6Message',
-    title: 'The long way home', subject: 'Multiplication', difficulty: 'Level 4',
-    prompt: `Light takes about ${LIGHT.minPerBillionKm} minutes to travel 1 billion km. Earth is ${LIGHT.earthBillionKm} billion km from the ship. About how many hours does a message take to get there? (Type a number.)`,
-    answers: [String(lightHours(LIGHT.earthBillionKm)), `${lightHours(LIGHT.earthBillionKm)} hours`],
-    hint: `First ${LIGHT.earthBillionKm} × ${LIGHT.minPerBillionKm} minutes. Then divide by 60 to get hours.`,
-    parentHint: `${LIGHT.earthBillionKm} × ${LIGHT.minPerBillionKm} = ${LIGHT.earthBillionKm * LIGHT.minPerBillionKm} minutes; ÷ 60 = ${lightHours(LIGHT.earthBillionKm)} hours (5 hours and 30 minutes).`,
-    success: `Yes! ${lightHours(LIGHT.earthBillionKm)} hours one way. Earth hears us and answers about eleven hours later.`,
+    title: 'The trip home', subject: 'Multiplication', difficulty: 'Level 4',
+    prompt: `Light takes about ${LIGHT.minPerBillionKm} minutes to travel 1 billion km. The ship is in the asteroid belt, and Earth is ${LIGHT.earthMillionKm} million km away. How many minutes does a message take to reach Earth? (Type a number.)`,
+    answers: [String(lightMinutes(LIGHT.earthMillionKm)), `${lightMinutes(LIGHT.earthMillionKm)} minutes`, `${lightMinutes(LIGHT.earthMillionKm)} min`],
+    hint: `${LIGHT.earthMillionKm} million is 4 lots of 100 million. Light takes ${LIGHT.minPerBillionKm} ÷ 10 = 5.5 minutes for 100 million km.`,
+    parentHint: `1 billion is 1000 million, so ${LIGHT.earthMillionKm} million is 0.4 of ${LIGHT.minPerBillionKm} minutes: ${LIGHT.minPerBillionKm} ÷ 10 = 5.5 minutes for each 100 million km, and 4 × 5.5 = ${lightMinutes(LIGHT.earthMillionKm)} minutes.`,
+    success: `Yes! ${lightMinutes(LIGHT.earthMillionKm)} minutes one way. If Earth answers straight away, their reply reaches us about ${2 * lightMinutes(LIGHT.earthMillionKm)} minutes after we sent ours.`,
     doneMessage: 'The message is on its way home!',
     reward: { science: 10 },
   },
@@ -49,7 +49,7 @@ export const CH6Q_QUESTIONS = {
     answers: [String(berriesEach())],
     hint: `First the berries from all the plants: ${FARM.plants} × ${FARM.berriesPerWeek}. Then share them into ${CREW_SIZE} equal piles.`,
     parentHint: `${FARM.plants} × ${FARM.berriesPerWeek} = ${FARM.plants * FARM.berriesPerWeek} berries; ÷ ${CREW_SIZE} = ${berriesEach()} each.`,
-    success: `Yes! ${berriesEach()} berries each a week. Mira's flowers did that, one by one.`,
+    success: `Yes! ${berriesEach()} berries each a week. Mira's brush did the bees' job, one flower at a time.`,
     doneMessage: 'The farm feeds us all. Mira is glad!',
     reward: { science: 10 },
   },
@@ -58,7 +58,7 @@ export const CH6Q_QUESTIONS = {
 export const CH6Q_LEVEL1 = {
   c6_dose_half: {
     difficulty: 'Level 1 • halves',
-    prompt: 'A badge gets 8 units a day outside the rock. Each metre of rock halves it. How many get through 1 metre? (Type a number.)',
+    prompt: 'In this game, each metre of rock halves the rays. A badge gets 8 units a day outside the rock. How many get through 1 metre? (Type a number.)',
     answers: ['4', 'four'],
     hint: 'Half of 8 is...',
     parentHint: 'Half of 8 is 4. (Two metres would let 2 through.)',
@@ -67,18 +67,18 @@ export const CH6Q_LEVEL1 = {
   c6_leak_minutes: {
     difficulty: 'Level 1 • counting by twos',
     prompt: 'The tank holds 10 cups. A leak drips 2 cups every minute. How many minutes until it is empty? (Type a number.)',
-    answers: ['5', 'five'],
+    answers: ['5', 'five', '5 min'],
     hint: 'Count by 2s: 2, 4, 6, ...',
     parentHint: '10 ÷ 2 = 5 minutes: 2, 4, 6, 8, 10.',
     success: 'Yes! 5 minutes.',
   },
   c6_light_delay: {
-    difficulty: 'Level 1 • counting hours',
-    prompt: 'Light takes 1 hour to go 1 billion km. Earth is 5 billion km away. How many hours does a message take? (Type a number.)',
-    answers: ['5', 'five'],
-    hint: 'One hour for each billion km.',
-    parentHint: '5 billion km is 5 hours.',
-    success: 'Yes! 5 hours one way.',
+    difficulty: 'Level 1 • counting by tens',
+    prompt: 'Light takes about 5 minutes to go 100 million km. Earth is 400 million km away. How many minutes does a message take? (Type a number.)',
+    answers: ['20', 'twenty', '20 minutes', '20 min'],
+    hint: 'Count 5 minutes for each 100 million km: 5, 10, 15, ...',
+    parentHint: '4 lots of 5 minutes = 20 minutes. (Really it is 5.5 minutes per 100 million km, so about 22 minutes; Level 4 does the exact sum.)',
+    success: 'Yes! About 20 minutes to reach Earth.',
   },
   c6_berries_each: {
     difficulty: 'Level 1 • counting by twos',
