@@ -17,17 +17,18 @@
 // walk map. The static parts go in one batch; the screens and the star window
 // are their own meshes so they can move.
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { PALETTE } from './kit.js';
 import { toonRamp } from '../../../game/toonPipeline.js';
 
 // The kit pieces this deck uses (models.js names; loaded before the deck is built).
 export const MODELS = [
   'walls/WallAstra_Straight', 'walls/WallBand_Straight', 'walls/TopPlastic_Straight', 'walls/BottomMetal_Straight',
-  'columns/Column_Astra',
+  'columns/Column_Round',
+  'platforms/Platform_Metal_Curve', 'decals/Decal_1', 'decals/Decal_Logo',
   'props/Prop_Light_Small', 'props/Prop_Vent_Small', 'props/Prop_Vent_Wide', 'props/Prop_Rail_Round_Big',
   'props/Prop_Crate4', 'props/Prop_Barrel_Large', 'props/Prop_Cable_1',
   'platforms/Door_Frame_Square',
-  'kenney/desk_chair', 'kenney/desk_chairArms', 'kenney/desk_computer',
 ];
 
 const R = 9;                  // the round wall's corners reach 9 m from the centre (18 m across)
@@ -52,6 +53,10 @@ const AS = Math.PI + 0.85;                        // the shield console, on the 
 const SHIELD_AT = [4.0 * Math.sin(AS), 4.0 * Math.cos(AS)];
 // A light or a vent lies flat in its own frame; this turns it so it stands on a wall (its thin side faces the room).
 const FLAT_TO_WALL = new THREE.Matrix4().set(0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1);
+// The kit's wall cap (3 m to 5 m above the floor) squashed to 0.6 m, for the corridor's 3.6 m ceiling.
+const CAP = new THREE.Matrix4().makeTranslation(0, 3, 0).multiply(new THREE.Matrix4().makeScale(1, 0.3, 1)).multiply(new THREE.Matrix4().makeTranslation(0, -3, 0));
+// A console's tilt: its LCARS slope (about 63 degrees from flat) faces up and forward.
+const SLOPE = -Math.atan(0.5);
 /** A point on the corridor's bend (a = angle on the circle of radius CORR). */
 const corrPoint = (a) => [CORR + CORR * Math.sin(a), CORR * Math.cos(a)];
 const angDiff = (p, q) => Math.abs(Math.atan2(Math.sin(p - q), Math.cos(p - q)));
@@ -80,6 +85,16 @@ function boundsOf(list) {
   return box;
 }
 
+// A console's side profile, as (z, y) in metres from its middle and its floor: the plinth, the LCARS slope on the front.
+const CONSOLE = [[-0.4, 0.05], [0.38, 0.05], [0.4, 0.36], [0.18, 0.8], [-0.4, 0.8]];
+/** A side profile (z, y) extruded across x (w wide, centred), with a bevel: the console's body. */
+function profileGeo(w, prof, bevel = 0.02) {
+  const sh = new THREE.Shape(prof.map(([z, y]) => new THREE.Vector2(z, y)));
+  const g = new THREE.ExtrudeGeometry(sh, { depth: w, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 2, curveSegments: 1 });
+  // The extrusion (depth) becomes x, the shape's x becomes z (the front), its y stays up.
+  return g.applyMatrix4(new THREE.Matrix4().set(0, 0, -1, w / 2, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1));
+}
+
 export function buildDeck(kit) {
   const { mats } = kit;
   const M = kit.models; // null when the kit did not load: the same layout in code
@@ -94,7 +109,7 @@ export function buildDeck(kit) {
   // Ceilings are seen from below, where the cool sky light never reaches; this lighter stuff reads better.
   const ceilMat = toon(0xd9d2c6, { emissive: 0x3a3630 });
   // The dome: cooler and brighter than the warm ceilings, so it reads as a dome.
-  const domeMat = toon(0xd3dded, { emissive: 0x1c2430 });
+  const domeMat = toon(0xb9c4d6, { emissive: 0x161c28 });
 
   /** A flat band of arc (faces up), centred on (x, z) at height y. */
   const band = (b, r0, r1, a0, a1, mat, { x = 0, y = 0, z = 0, down = false } = {}) => {
@@ -116,29 +131,38 @@ export function buildDeck(kit) {
     if (s !== 1) g.scale(s, s, s);
     return { g, mat: m.material };
   });
+  /** A kit piece's material in a tint (a copy, shared by its parts): the kit's decals and trims are bright, a deck wants them quieter. */
+  const tints = new Map();
+  const tinted = (mat, c) => {
+    if (!c) return mat;
+    const key = `${mat.uuid}|${c}`;
+    if (!tints.has(key)) { const m = mat.clone(); m.color.multiply(new THREE.Color(c)); tints.set(key, kit.own(m)); }
+    return tints.get(key);
+  };
   /** A free piece, its middle (x, z) on the floor at (x, z) with its foot at y, turned ry. Without the kit, a proxy box [w, h, d, mat]. */
-  const putPiece = (b, name, x, y, z, ry = 0, { s = 1, centre = true, proxy = null } = {}) => {
+  const putPiece = (b, name, x, y, z, ry = 0, { s = 1, centre = true, proxy = null, tint = null } = {}) => {
     if (!M) { if (proxy) b.box(proxy[0], proxy[1], proxy[2], proxy[3], x, y + proxy[1] / 2, z, ry); return; }
     const list = partsOf(name, { s });
     if (centre) {
       const box = boundsOf(list);
       for (const { g } of list) g.translate(-(box.min.x + box.max.x) / 2, -box.min.y, -(box.min.z + box.max.z) / 2);
     }
-    for (const { g, mat } of list) b.add(g, mat, x, y, z, ry);
+    for (const { g, mat } of list) b.add(g, tinted(mat, tint), x, y, z, ry);
   };
   /**
    * Stand kit pieces on a wall line: the line is at distance F from C along the angle a (its points are
    * C + F (sin a, cos a)), and the room is on the side `side` of it (-1: towards C, +1: away from it).
    * The pieces' room face (their largest x) lands on the line and their middle on the point t along
    * it. The pieces of one wall share one origin: `ref` (default the first name) sets it, so a
-   * cornice or a floor trim lines up with the panel it belongs to.
+   * cornice or a floor trim lines up with the panel it belongs to. `refPre` is the ref's own
+   * transform (default `pre`; null when the ref is not changed, e.g. a squashed cap).
    */
-  const standOn = (b, names, { C = [0, 0], a, F, side, t = 0, y = 0, s = 1, pre = null, ref = names[0] }) => {
+  const standOn = (b, names, { C = [0, 0], a, F, side, t = 0, y = 0, s = 1, pre = null, refPre = pre, ref = names[0] }) => {
     if (!M) return;
     const th = a - (side * Math.PI) / 2; // the piece's own x points into the room, its z along the wall
     const N = [Math.sin(a), Math.cos(a)]; const T = [Math.cos(a), -Math.sin(a)];
     const x = C[0] + F * N[0] + t * T[0]; const z = C[1] + F * N[1] + t * T[1];
-    const box = boundsOf(partsOf(ref, { s, pre }));
+    const box = boundsOf(partsOf(ref, { s, pre: refPre }));
     const sh = [-box.max.x, -box.min.y, -(box.min.z + box.max.z) / 2];
     for (const name of names) {
       for (const { g, mat } of partsOf(name, { s, pre })) { g.translate(sh[0], sh[1], sh[2]); b.add(g, mat, x, y, z, th); }
@@ -153,21 +177,24 @@ export function buildDeck(kit) {
   const cb = kit.batch();
   const corr = { ring: [CORR, 0, 38.3, 41.95], from: A_LIFT, to: A_END };
   floors.push(kit.floor(cb, corr));
-  band(cb, 38.3, 41.95, A_LIFT, A_END, ceilMat, { x: CORR, y: 3.05, down: true });
+  band(cb, 38.3, 41.95, A_LIFT, A_END, ceilMat, { x: CORR, y: 3.6, down: true });
   if (M) {
-    // Two 4 m panels a side (the arc is 7.4 m), a wall light on each, a vent in the ceiling.
+    // Two 4 m panels a side (the arc is 7.4 m), each with a cornice on top (the kit's cap, squashed to fit
+    // the 3.6 m corridor), a wall light on each, a vent in the ceiling.
     for (const s of [1.85, 5.55]) {
       const a = A_LIFT + s / CORR;
       standOn(cb, ['walls/WallAstra_Straight', 'walls/BottomMetal_Straight'], { C: [CORR, 0], a, F: 38.3, side: 1 });
       standOn(cb, ['walls/WallAstra_Straight', 'walls/BottomMetal_Straight'], { C: [CORR, 0], a, F: 41.95, side: -1 });
+      standOn(cb, ['walls/TopPlastic_Straight'], { C: [CORR, 0], a, F: 38.3, side: 1, pre: CAP, refPre: null, ref: 'walls/WallAstra_Straight' });
+      standOn(cb, ['walls/TopPlastic_Straight'], { C: [CORR, 0], a, F: 41.95, side: -1, pre: CAP, refPre: null, ref: 'walls/WallAstra_Straight' });
       standOn(cb, [LIGHT], { C: [CORR, 0], a, F: 38.4, side: 1, y: 2.45, pre: FLAT_TO_WALL });
       standOn(cb, [LIGHT], { C: [CORR, 0], a, F: 41.85, side: -1, y: 2.45, pre: FLAT_TO_WALL });
     }
     const v = corrPoint(A_LIFT + 3.7 / CORR);
-    putPiece(cb, 'props/Prop_Vent_Wide', v[0], 2.99, v[1], A_LIFT + 3.7 / CORR, { proxy: [1.9, 0.06, 0.3, mats.trim] });
+    putPiece(cb, 'props/Prop_Vent_Wide', v[0], 3.55, v[1], A_LIFT + 3.7 / CORR, { proxy: [1.9, 0.06, 0.3, mats.trim] });
   } else {
-    kit.wallArc(cb, CORR, 0, 38.3, A_LIFT, A_END, { h: 3.05 });
-    kit.wallArc(cb, CORR, 0, 41.95, A_LIFT, A_END, { h: 3.05 });
+    kit.wallArc(cb, CORR, 0, 38.3, A_LIFT, A_END, { h: 3.6 });
+    kit.wallArc(cb, CORR, 0, 41.95, A_LIFT, A_END, { h: 3.6 });
   }
   cb.flush(group);
   // The corridor's walls are solids (the room-side faces are at 38.3 and 41.95).
@@ -200,15 +227,29 @@ export function buildDeck(kit) {
 
   // The floor runs to the outer wall, so it meets the corridor at the entrance gap.
   floors.push(shapeToDeck(kit.floor(bb, { disc: [0, 0, R] })));
+  // A grey metal dais under the captain: four of the kit's quarter plates (4 m radius). Each plate's centre is
+  // its (2, 2) corner, so each is turned and set to put that corner on the origin.
+  if (M) {
+    for (let q = 0; q < 4; q++) {
+      const ry = (q * Math.PI) / 2;
+      const c = [2 * (Math.cos(ry) + Math.sin(ry)), 2 * (Math.cos(ry) - Math.sin(ry))];
+      for (const { g, mat } of partsOf('platforms/Platform_Metal_Curve')) bb.add(g, mat, -c[0], 0.004, -c[1], ry);
+    }
+  }
 
   // The raised back half-ring: a 12 cm step (riser and lit edge), a different floor, the rail.
   const BACK = [Math.PI / 2 + GAP_BAY, 1.5 * Math.PI - GAP_BAY];
   band(bb, RR + 0.2, RF, BACK[0], BACK[1], mats.deck, { y: 0.12 });
   arcWall(bb, RR + 0.2, 0.12, BACK[0], BACK[1], mats.wallDark, { inside: true });
   band(bb, RR + 0.2, RR + 0.38, BACK[0], BACK[1], glowBlue, { y: 0.125 });
-  // Rings inlaid in the floor: one round the middle, one across the front.
-  band(bb, 3.0, 3.1, 0, Math.PI * 2, inlay, { y: 0.003 });
+  // Rings inlaid in the floor: one round the middle (on the dais), one across the front.
+  band(bb, 3.0, 3.1, 0, Math.PI * 2, inlay, { y: 0.009 });
   band(bb, 6.4, 6.5, -1.3, 1.3, inlay, { y: 0.003 });
+  // Decals on the floor, used sparingly: the deck's number on the step by the door, a logo on the dais in front of the captain.
+  if (M) {
+    putPiece(bb, 'decals/Decal_1', 0, 0.124, -6.6, 0, { tint: PALETTE.peach });
+    putPiece(bb, 'decals/Decal_Logo', 0, 0.009, 2.5, 0, { s: 0.8, tint: 0x9c8552 }); // a muted gold: the kit's is loud
+  }
   // The rail: a closed half-ring of quarter arcs (the kit's round rail, 4 m radius, scaled to RR), open at the two sides.
   if (M) {
     putPiece(bb, 'props/Prop_Rail_Round_Big', 0, 0.12, 0, 0, { s: RR / 4, centre: false });
@@ -277,27 +318,60 @@ export function buildDeck(kit) {
   bb.add(new THREE.TorusGeometry(A - 0.03, 0.05, 6, 96).rotateX(Math.PI / 2), glowCool, 0, 3.02, 0);
   // The viewscreen: a framed, curved window on the front wall, between two pilasters.
   arcWall(bb, 8.6, 2.95, -0.66, 0.66, mats.trim, { y: 2.025, inside: true });
-  for (const s of [-1, 1]) standOn(bb, ['columns/Column_Astra'], { a: s * 0.74, F: A - 0.33, side: -1 });
+  // Round pilasters (the kit's column, 5 m high): half of each stands out from the wall.
+  for (const s of [-1, 1]) standOn(bb, ['columns/Column_Round'], { a: s * 0.74, F: A - 0.5, side: -1 });
   const sw = kit.starWindow(9.5, 2.35, { speed: 0.003 });
   const scr = new THREE.Mesh(kit.own(inward(new THREE.CylinderGeometry(8.45, 8.45, 2.35, 48, 1, true, -0.6, 1.2))), kit.own(new THREE.MeshBasicMaterial({ map: sw.mesh.material.map })));
   scr.position.set(0, 2.025, 0); bridge.add(scr);
 
-  // A chair facing the viewscreen (the kit's chair, scaled to her size: she is 1.3 m).
-  // The captain's has the arms and sits in the middle; the helm and ops chairs have none.
-  const chair = (x, z, { s = 3.0, arms = true } = {}) => {
-    putPiece(bb, arms ? 'kenney/desk_chairArms' : 'kenney/desk_chair', x, 0, z, 0, { s, proxy: [0.8, 0.9, 0.8, mats.trim] });
+  // The chairs are built here (the kit's were boxy): a star-based pedestal, a seat, a tall curved back with a gold
+  // cap, and armrests with a glowing panel each. They face +z, the viewscreen. The captain's is the hero; the
+  // others are the same at 0.8 scale.
+  const upholstery = toon(0xa8482c); // warm burnt orange
+  const frameDark = toon(0x3e434e);
+  const gold = toon(PALETTE.gold);
+  /** A curved slab for a chair's back: a plan annulus (radii r0..r1) round the seat, from -z to +-half, h high. */
+  const sector = (r0, r1, half, h) => {
+    const sh = new THREE.Shape(); const N = 14;
+    for (let i = 0; i <= N; i++) { const p = -half + (2 * half * i) / N; const v = [r1 * Math.sin(p), r1 * Math.cos(p)]; if (i) sh.lineTo(...v); else sh.moveTo(...v); }
+    for (let i = N; i >= 0; i--) { const p = -half + (2 * half * i) / N; sh.lineTo(r0 * Math.sin(p), r0 * Math.cos(p)); }
+    // The shape's y is minus the plan's z: turned flat, its extrusion goes up.
+    return new THREE.ExtrudeGeometry(sh, { depth: h, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 2, curveSegments: 1 }).rotateX(-Math.PI / 2);
+  };
+  const chair = (x, z, { k = 1, arms = true } = {}) => {
+    const at = (geo, mat, dx, dy, dz) => { bb.add(geo.translate(dx, dy, dz).scale(k, k, k), mat, x, 0, z); };
+    at(new THREE.LatheGeometry([[0, 0], [0.3, 0], [0.33, 0.03], [0.3, 0.05], [0.07, 0.11], [0.06, 0.4], [0.12, 0.46], [0, 0.49]].map(([r, y]) => new THREE.Vector2(r, y)), 18), frameDark, 0, 0, 0);
+    at(new THREE.TorusGeometry(0.31, 0.012, 6, 36).rotateX(Math.PI / 2), gold, 0, 0.05, 0);
+    at(new RoundedBoxGeometry(0.66, 0.12, 0.62, 2, 0.05), upholstery, 0, 0.55, 0);
+    at(new THREE.BoxGeometry(0.66, 0.025, 0.025), gold, 0, 0.5, 0.32);
+    at(sector(0.36, 0.46, 0.8, 0.9), upholstery, 0, 0.6, 0);
+    at(sector(0.355, 0.465, 0.82, 0.04), gold, 0, 1.49, 0);
+    if (arms) {
+      for (const sd of [-1, 1]) {
+        at(new RoundedBoxGeometry(0.09, 0.1, 0.44, 2, 0.03), frameDark, sd * 0.38, 0.68, 0.02);
+        at(new RoundedBoxGeometry(0.08, 0.14, 0.3, 2, 0.03), frameDark, sd * 0.36, 0.56, 0);
+        at(new THREE.BoxGeometry(0.05, 0.012, 0.3), glowBlue, sd * 0.38, 0.733, 0.02);
+      }
+    }
     solids.push(shapeToDeck({ rect: [x, z, 0.8, 0.8] }));
   };
-  chair(0, -0.2, { s: 3.4 });
-  band(bb, 1.5, 1.62, 0, Math.PI * 2, glowBlue, { y: 0.006, z: -0.2 }); // the ring round her chair
+  chair(0, -0.2);
+  band(bb, 1.5, 1.62, 0, Math.PI * 2, glowBlue, { y: 0.009, z: -0.2 }); // the ring round her chair
 
-  // A console desk: the kit's desk with its computer, a lit LCARS screen on the top. `ry` turns
-  // the desk's front (+z) to where she should stand.
+  // A console (TNG style): a bevelled plinth with a sloped front, its LCARS screen set into the slope, a lit
+  // edge along the top and the foot. `ry` turns its front (+z) to where she should stand. Its solid is 1.5 x 0.85.
+  const consoleMat = toon(0x8e96a4);
   const desk = (x, z, ry, scr) => {
     const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry;
-    putPiece(bb, 'kenney/desk_computer', x, 0, z, ry, { s: 2.6, proxy: [1.4, 0.95, 0.6, mats.panel] });
-    const s = kit.screen(1.2, 0.46, { seed: Math.round(x * 13 + z * 7), ...scr });
-    s.position.set(0, 1.02, 0.22); s.rotation.x = -Math.PI / 2 + 0.55;
+    const at = (geo, mat, dx, dy, dz) => bb.add(geo.translate(dx, dy, dz), mat, x, 0, z, ry);
+    at(profileGeo(1.5, CONSOLE), consoleMat, 0, 0, 0);
+    at(new RoundedBoxGeometry(1.6, 0.07, 0.94, 2, 0.03), mats.panel, 0, 0.035, 0);
+    at(new THREE.BoxGeometry(1.46, 0.02, 0.04), glowBlue, 0, 0.805, 0.18);
+    at(new THREE.BoxGeometry(1.46, 0.03, 0.03), glowBlue, 0, 0.37, 0.41);
+    // The bevel stands the slope 2 cm proud of the profile, so the screen sits 3.5 cm out from the profile's slope.
+    at(new THREE.BoxGeometry(1.28, 0.48, 0.01).rotateX(SLOPE), mats.black, 0, 0.589, 0.308);
+    const s = kit.screen(1.2, 0.42, { seed: Math.round(x * 13 + z * 7), ...scr });
+    s.position.set(0, 0.596, 0.321); s.rotation.x = SLOPE;
     g.add(s);
     bridge.add(g);
     solids.push(shapeToDeck({ rect: [x, z, 1.5, 0.85], rot: ry }));
@@ -308,7 +382,7 @@ export function buildDeck(kit) {
     const x0 = k * A; const xf = k * BAY_X;
     const len = Math.abs(xf - x0);
     if (M) {
-      for (const zs of [1, -1]) for (const xc of [k * 10.4, k * 13.4]) standOn(bb, WALL, { a: zs > 0 ? 0 : Math.PI, F: BAY_W, side: -1, t: zs > 0 ? xc : -xc });
+      for (const zs of [1, -1]) for (const xc of [k * 10.5, k * 14.5]) standOn(bb, WALL, { a: zs > 0 ? 0 : Math.PI, F: BAY_W, side: -1, t: zs > 0 ? xc : -xc });
       for (const zc of [-1.3, 1.3]) standOn(bb, WALL, { a: (k * Math.PI) / 2, F: BAY_X, side: -1, t: -k * zc });
       standOn(bb, [LIGHT], { a: 0, F: BAY_W - 0.1, side: -1, t: k * 11.4, y: 2.5, pre: FLAT_TO_WALL });
       standOn(bb, [LIGHT], { a: Math.PI, F: BAY_W - 0.1, side: -1, t: -k * 11.4, y: 2.5, pre: FLAT_TO_WALL });
@@ -335,14 +409,14 @@ export function buildDeck(kit) {
   }
 
   for (const s of [-1, 1]) {
-    chair(s * 2.1, -0.7);
-    chair(s * 1.9, 3.0, { arms: false }); // the helm and ops operators, facing the screen
-    desk(s * 1.9, 4.2, Math.PI, { title: s < 0 ? 'NAV' : 'SYSTEMS', accent: s < 0 ? PALETTE.blue : PALETTE.peach, seed: 41 + s });
+    chair(s * 2.1, -0.7, { k: 0.8 });
+    chair(s * 1.9, 3.0, { k: 0.8, arms: false }); // the helm and ops operators, facing the screen
+    desk(s * 1.9, 4.6, Math.PI, { title: s < 0 ? 'NAV' : 'SYSTEMS', accent: s < 0 ? PALETTE.blue : PALETTE.peach, seed: 41 + s });
   }
 
-  // The shield console, built into the rail (its panel faces the centre).
+  // The shield console, built into the rail (its panel faces the centre). Its lamp sits on the top.
   const shGroup = desk(SHIELD_AT[0], SHIELD_AT[1], AS + Math.PI, { title: 'SHIELD', accent: PALETTE.lilac, seed: 21 });
-  const lamp = kit.lamp(PALETTE.gold); lamp.position.set(-0.55, 1.1, 0.2); shGroup.add(lamp);
+  const lamp = kit.lamp(PALETTE.gold); lamp.position.set(-0.55, 0.85, -0.1); shGroup.add(lamp);
 
   // The dome: a shallow sphere cap from the rim up to the apex, with two light rings.
   const RS = (R * R + (APEX - RIM) ** 2) / (2 * (APEX - RIM));
