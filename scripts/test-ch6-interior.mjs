@@ -10,6 +10,9 @@
 // station of decks.js has a spot on its deck and a status lamp.
 import assert from 'node:assert/strict';
 import { createServer } from 'vite';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
 
 let passed = 0;
 const ok = (name, fn) => { fn(); passed += 1; console.log(`  ok  ${name}`); };
@@ -60,12 +63,28 @@ try {
   const { STATIONS } = await vite.ssrLoadModule('/src/space/ch6/stationsLogic.js');
   const map = await vite.ssrLoadModule('/src/space/ch6/interior/walkmap.js');
   const LIFT_FLOOR = { rect: [0, -1.2, 2.4, 2.4] };
+  // The model kits load in the browser only: a stand-in that draws nothing.
+  // A deck's walk map comes from its own layout, never from the meshes.
+  const THREE = await vite.ssrLoadModule('three');
+  const { DECK_MODELS } = await vite.ssrLoadModule('/src/space/ch6/interior/decks.js');
+  const models = {
+    style: 'toon', names: () => [...DECK_MODELS], add() {}, object: () => new THREE.Group(),
+    size: () => new THREE.Vector3(4, 3, 4), min: () => new THREE.Vector3(-2, 0, -2), dispose() {},
+  };
+  ok('every model a deck asks for is in the imported kit', () => {
+    const fs = require('node:fs');
+    const man = JSON.parse(fs.readFileSync(new URL('../public/assets/models/scifi/manifest.json', import.meta.url)));
+    for (const n of DECK_MODELS) {
+      const [set, name] = n.split('/');
+      assert.ok((man[set] || []).includes(name), `missing model ${n}`);
+    }
+  });
   ok('every station is on exactly one deck', () => {
     for (const s of STATIONS) assert.equal(DECKS.filter((d) => d.stations.includes(s.id)).length, 1, s.id);
     assert.deepEqual(STATIONS.map((s) => deckOf(s.id)).filter((x) => !x), []);
   });
   for (const spec of DECKS) {
-    const kit = createKit();
+    const kit = createKit({ models });
     const d = spec.build(kit);
     const m = map.createWalkMap({ floors: [...d.floors, LIFT_FLOOR], solids: d.solids });
     // Flood fill from the lift door with her body (the fits() test), 0.25 m steps.

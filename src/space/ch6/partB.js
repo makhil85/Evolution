@@ -6,7 +6,7 @@
 // make her redo the finished ones. A station counts as done only after its
 // question, so two missed tries (an act restart) bring that station back.
 import { t, LEVEL } from '../level.js';
-import { createInteriorScene } from './interior/ship.js';
+import { createInteriorScene, preloadInterior } from './interior/ship.js';
 import { playStation } from './stations.js';
 import { STATION_BEAT } from './questions.partB.js';
 import { CALM_S } from '../contracts.js';
@@ -33,7 +33,9 @@ export function partBSteps(game) {
           { who: 'girl', text: t('Then let’s build it. Show me round!', 'Let’s build it! Show me!') },
         ]);
         const done = new Set(loadDone());
+        const models = await preloadInterior();
         await game.runScene(createInteriorScene(game, {
+          models,
           done: [...done],
           async onStation(id) {
             await playStation(id, { bus: game.bus });

@@ -21,7 +21,8 @@ import { CREW_INFO } from '../crewInfo.js';
 import { buildCrew } from '../crew.js';
 import { createKit } from './kit.js';
 import { createWalkMap } from './walkmap.js';
-import { DECKS, deckOf, START_DECK } from './decks.js';
+import { DECKS, DECK_MODELS, deckOf, START_DECK } from './decks.js';
+import { loadModels } from './models.js';
 
 const REACH = 1.6;     // how close to a station's spot to press E
 const LIFT = { x0: -1.2, x1: 1.2, z0: -2.4, z1: 0 };
@@ -51,11 +52,19 @@ function buildLift(kit) {
   return { group: g, door, floor: { rect: [0, -1.2, 2.4, 2.4] } };
 }
 
+let modelsReady = null;
+/** Load the decks' model pieces (once). Await it before createInteriorScene. */
+export function preloadInterior({ style } = {}) {
+  modelsReady ??= loadModels(DECK_MODELS, { style }).catch((err) => { console.error('[interior] models failed to load', err); modelsReady = null; return null; });
+  return modelsReady;
+}
+
 /**
  * @param {object} game
- * @param {{ order?: string[], done?: string[], onStation: (id:string) => Promise<any>, startDeck?: string }} opts
+ * @param {{ order?: string[], done?: string[], onStation: (id:string) => Promise<any>, startDeck?: string, models?: object }} opts
+ *   models: the result of preloadInterior() (a deck without models falls back to its own code-built parts)
  */
-export function createInteriorScene(game, { order = STATIONS.map((s) => s.id), done: doneAlready = [], onStation, startDeck = START_DECK }) {
+export function createInteriorScene(game, { order = STATIONS.map((s) => s.id), done: doneAlready = [], onStation, startDeck = START_DECK, models = null }) {
   const renderer = game.renderer;
   const hud = game.hud || null;
   const scene = new THREE.Scene();
@@ -66,7 +75,7 @@ export function createInteriorScene(game, { order = STATIONS.map((s) => s.id), d
   scene.add(new THREE.HemisphereLight(0xe6ecff, 0x4a4454, 1.1));
   const key = new THREE.DirectionalLight(0xfff1e0, 0.6); key.position.set(3, 10, 4); scene.add(key);
 
-  const kit = createKit();
+  const kit = createKit({ models });
   const crew = buildCrew();
   const decks = {};
   for (const spec of DECKS) {
