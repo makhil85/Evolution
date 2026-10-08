@@ -338,7 +338,7 @@ export function buildDeck(kit) {
   b.add(new THREE.PlaneGeometry(2 * LX, LZE - CL).rotateX(Math.PI / 2), lowCeil, 0, CH - 0.02, (CL + LZE) / 2);
   for (let z = CL + 2; z < LZE - 0.5; z += 2) b.box(2 * LX, 0.03, 0.05, mats.trim, 0, CH - 0.035, z);
   b.box(14, 0.05, 0.25, mats.coveCool, 0, 3.42, 48.2);
-  piece('decals/Decal_Logo', 0, CH - 0.03, 45.9, 0, { pre: new THREE.Matrix4().makeRotationZ(Math.PI), tint: 0x9c8552 }); // a muted gold logo on the ceiling, the right way up
+  if (M) piece('decals/Decal_Logo', 0, CH - 0.03, 45.9, 0, { pre: new THREE.Matrix4().makeRotationZ(Math.PI), tint: 0x9c8552 }); // a muted gold logo on the ceiling, the right way up
   // The lounge's side walls, the kit's panels (their room faces at x ±8).
   wallRun([-LX, CL], [-LX, LZE], [1, 0]);
   wallRun([LX, CL], [LX, LZE], [-1, 0]);
