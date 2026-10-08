@@ -37,6 +37,13 @@ import * as THREE from 'three';
 import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { toonRamp, outlineMaterial } from '../../game/toonPipeline.js';
 
+/**
+ * Its length in the flight scene, in scene units: about 13x her ship (1.2 u),
+ * not the true ~46x, so she never looks like a speck beside it in the
+ * cutscenes (lead issue b). group.scale.setScalar(FLIGHT_LENGTH / dims.length).
+ */
+export const FLIGHT_LENGTH = 16;
+
 const CAP_Z = -135; // the cap's centre
 const CAP_R = 67.5; // its radius (lumps take the width to ~145 m)
 const RING_RO = 62; // the habitat ring's outer radius
