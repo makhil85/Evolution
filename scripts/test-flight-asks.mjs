@@ -15,7 +15,9 @@
 const docListeners = {};
 const bodyChildren = [];
 // A canvas stand-in for the satellite's texture (every call a no-op).
-const ctxStub = new Proxy({}, { get: (t, k) => (k in t ? t[k] : () => ({ data: [] })), set: (t, k, v) => { t[k] = v; return true; } });
+// Any call or property (gradients, colour stops, image data) is a chainable no-op.
+const chain = new Proxy(function chainFn() {}, { get: (t, k) => (k === Symbol.toPrimitive ? () => 0 : chain), set: () => true, apply: () => chain });
+const ctxStub = new Proxy({}, { get: (t, k) => (k in t ? t[k] : chain), set: (t, k, v) => { t[k] = v; return true; } });
 const makeEl = (tag = 'div') => {
   const listeners = {};
   return {
@@ -55,6 +57,8 @@ const { BODIES } = await vite.ssrLoadModule('/src/space/contracts.js');
 const { bodyState } = await vite.ssrLoadModule('/src/space/orbits.js');
 const { createMissions } = await vite.ssrLoadModule('/src/space/missions.js');
 const { askBeat } = await vite.ssrLoadModule('/src/space/acts/util.js');
+// hud.js sends every blocking card through this queue; the stub hud does the same.
+const { inModalTurn } = await vite.ssrLoadModule('/src/space/hud/modalQueue.js');
 
 const results = [];
 const check = (name, ok, detail = '') => results.push({ name, ok: !!ok, detail });
@@ -66,6 +70,7 @@ const tick = (missions, sec, steer = false, game) => {
 const flush = () => new Promise((r) => setTimeout(r, 25));
 
 /** A stub game: hud records cards and asked questions; the ship sits where the test puts it. */
+let modalOpen = false; // the stub hud's "a card is up" flag (the Ready button hides under it)
 function makeGame({ soi = 'mars', orbit = true, t = 0 } = {}) {
   const asked = [];
   let active = 0; let maxActive = 0;
@@ -73,14 +78,14 @@ function makeGame({ soi = 'mars', orbit = true, t = 0 } = {}) {
   const hud = {
     setMission: (m) => cards.push(m),
     announce() {}, toast() {}, showFact: async () => {}, showDialogue: async () => {},
-    openUpgrades: async () => null, isModalOpen: () => false,
-    askQuestion: async (q) => {
+    openUpgrades: async () => null, isModalOpen: () => modalOpen,
+    askQuestion: (q) => inModalTurn(async () => {
       active++; maxActive = Math.max(maxActive, active);
       asked.push(q.beat || q.id || q.title);
       await new Promise((r) => setTimeout(r, 5));
       active--;
       return { correct: true };
-    },
+    }),
   };
   const bus = { on: () => () => {}, emit() {}, off() {} };
   const b = BODIES[soi];
@@ -98,8 +103,9 @@ function makeGame({ soi = 'mars', orbit = true, t = 0 } = {}) {
     kidSteering: false, autopilot: { on: false }, target: null, prediction: null, upgradesOwned: new Set(),
     customTargets: {}, activeScene: null, cinematic: null,
     belt: { isInBelt: () => false, nearRocks: [], highlight() {}, mine() { return {}; }, tally() {} },
-    shipView: { setClaw() {}, setSolarWings() {}, setLegs() {} }, beltFx: null,
+    shipView: { group: { add() {}, remove() {} }, setClaw() {}, setSolarWings() {}, setLegs() {} }, beltFx: null,
     getMiningTally: () => null,
+    bodies: { root: { add() {}, remove() {} } },
   };
   return { game, asked, cards, getMax: () => maxActive };
 }
@@ -163,6 +169,36 @@ const readyButtons = () => bodyChildren.filter((el) => el.className === 'sp-read
   check('no ready button on an unbound pass (not a stable orbit)', readyButtons().length === 0, `buttons ${readyButtons().length}`);
 }
 
+{
+  // Burning away without pressing Ready: the step goes on (no waiting in space).
+  const { game } = makeGame({ soi: 'mars' });
+  const missions = createMissions(game);
+  game.missions = missions;
+  missions.jump('a3_power');
+  await flush();
+  const btn = readyButtons()[0];
+  game.ship.vz += 5000; // an escape: no longer a closed loop
+  await new Promise((r) => setTimeout(r, 800));
+  check('burning away without Ready lets the step go on', !!btn && btn.removed === true, `button ${btn ? (btn.removed ? 'removed' : 'still up') : 'missing'}`);
+}
+{
+  // A card is up: the Ready button hides under it, and comes back after.
+  const { game } = makeGame({ soi: 'mars' });
+  const missions = createMissions(game);
+  game.missions = missions;
+  missions.jump('a3_power');
+  await flush();
+  const btn = readyButtons()[0];
+  modalOpen = true;
+  await new Promise((r) => setTimeout(r, 700));
+  const hidden = btn && btn.style.display === 'none';
+  modalOpen = false;
+  await new Promise((r) => setTimeout(r, 700));
+  check('the Ready button hides while a card is up, and shows again after', hidden && btn.style.display === '', `hidden ${hidden}, after ${btn && JSON.stringify(btn.style.display)}`);
+  btn?.fire('click');
+  await flush();
+}
+
 // --- 2. the quiet gate ------------------------------------------------------
 {
   const { game, asked } = makeGame({ soi: 'jupiter', orbit: false });
@@ -212,6 +248,36 @@ const readyButtons = () => bodyChildren.filter((el) => el.className === 'sp-read
   tick(missions, 3, false, game);
   await flush();
   check('the longer pause also finishes (the first is never lost)', a && asked.includes('ceresScan'), `asked ${asked.join(',')}`);
+}
+
+// --- 6. blocking cards take turns (hud.js routes every card through modalQueue.js) ---
+{
+  const { inModalTurn } = await vite.ssrLoadModule('/src/space/hud/modalQueue.js');
+  let current = null; let clashes = 0; const seen = [];
+  // A fake card host: opening a card over another one is a clash (the real host would replace it).
+  const card = (name, ms) => inModalTurn(() => new Promise((resolve) => {
+    if (current) clashes++;
+    current = name; seen.push(`open ${name}`);
+    setTimeout(() => { current = null; seen.push(`close ${name}`); resolve(name); }, ms);
+  }));
+  const ps = [card('question', 30), card('fact', 5), card('dialogue', 5)];
+  const names = await Promise.all(ps);
+  check('overlapping cards take turns in the order asked, and all resolve', names.join(',') === 'question,fact,dialogue' && clashes === 0,
+    `${seen.join(' > ')}, clashes ${clashes}`);
+  const thrown = inModalTurn(() => { throw new Error('boom'); }).catch(() => 'caught');
+  const after = await inModalTurn(() => 'next');
+  check('a card that throws does not block the next one', (await thrown) === 'caught' && after === 'next');
+}
+
+// --- 7. the orbit waits are real seconds, not game time at a fast warp ---------
+{
+  const { game } = makeGame({ soi: 'mars' });
+  game.warpIndex = 3; // x64
+  const { orbitFor } = await vite.ssrLoadModule('/src/space/acts/util.js');
+  const t0 = Date.now();
+  await orbitFor(game, 1, { lap: false });
+  const took = (Date.now() - t0) / 1000;
+  check('an orbit wait of 1 s takes about 1 real second at x64', took >= 0.9 && took < 2, `took ${took.toFixed(2)} s`);
 }
 
 // --- 5. a Ceres flyby counts from a3_power's check -----------------------------

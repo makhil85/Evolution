@@ -1805,8 +1805,10 @@ game.runScene = async (sceneObj) => {
   } finally {
     activeScene = null;
     game.activeScene = null;
-    // Back aboard at real time: a walk never leaves the ship at a fast warp.
-    game.warpIndex = 0; game.warpBoost = false;
+    // Back at the controls at real time after a WALK (the lift, the decks, the
+    // Moon's surface): a walk never leaves the ship at a fast warp. Cabin and
+    // panel scenes keep the warp she chose.
+    if (sceneObj.onFoot) { game.warpIndex = 0; game.warpBoost = false; }
     renderPass.scene = scene;
     renderPass.camera = camera;
     document.body.classList.remove('in-scene');

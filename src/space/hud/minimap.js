@@ -13,8 +13,11 @@
 // on that planet while her path is inside its pull, and zooms out as the path
 // stretches into a longer oval. The current target and a guess at the next
 // stop (Uranus, then Neptune) sit at the rim, in their true direction, as dim
-// arrows. When the path breaks out, the map hands over to the Sun's view. Every
-// change of centre or size is EASED (view below): the map never jumps.
+// arrows with a name on a dark pill. The planet view and the Sun's view switch
+// with hysteresis (leave above 1.0 of the planet's pull, come back below 0.9),
+// so the map never flips frame to frame. Every change of centre or size is
+// EASED (blendAt, ZOOM_STEP, SLIDE_STEP): the map never jumps - except that a
+// ship that reaches the disc's edge is brought back in at once (SNAP_SHARE).
 
 import { el } from './domUtil.js';
 import { BODIES, BELT } from '../contracts.js';
@@ -26,23 +29,38 @@ const REDRAW_MS = 100; // ~10 Hz is plenty for a map, and cheap
 const ZOOM_STEP = 0.12;
 /** The most the centre may slide, in one redraw, as a share of the map's size. */
 const SLIDE_STEP = 0.10;
-const _c = { x: 0, z: 0, vx: 0, vz: 0 };
+/** A ship further out than this share of the map's radius: zoom to it at once. */
+const SNAP_SHARE = 0.9;
+/** Planet view while her path is inside this share of the planet's pull (hysteresis). */
+const LEAVE_PULL = 1.0;
+const RETURN_PULL = 0.9;
 
-function centreAt(id, t) {
-  if (id === 'sun') return { x: 0, z: 0 };
+// Scratch objects: the map is redrawn 10 times a second, so the hot loops write
+// into these instead of allocating a point per body and per path sample.
+const _c = { x: 0, z: 0, vx: 0, vz: 0 }; // bodyState's own scratch
+const _p = { x: 0, z: 0 }; // out-parameter of centreInto / blendInto
+const _q = { x: 0, z: 0 };
+
+function centreInto(id, t, out) {
+  if (id === 'sun') { out.x = 0; out.z = 0; return out; }
   const s = bodyState(id, t, _c);
-  return { x: s.x, z: s.z };
+  out.x = s.x; out.z = s.z;
+  return out;
 }
 
 /**
- * The centre point the map shows at time t. A settled view is simply the body
- * `v.to`. While the view is still sliding over (v.e < 1) it is the point it
- * started from, blended toward the body, so the change of centre is continuous.
+ * The centre point the map shows at time t (into `out`). A settled view is
+ * simply the body `v.to`. While the view is still sliding over (v.e < 1) it is
+ * the point it started from, blended toward the body, so the change of centre
+ * is continuous.
  */
-function blendAt(v, t) {
-  const to = centreAt(v.to, t);
-  if (v.e >= 1 || !v.fromPt) return to;
-  return { x: v.fromPt.x + (to.x - v.fromPt.x) * v.e, z: v.fromPt.z + (to.z - v.fromPt.z) * v.e };
+function blendInto(v, t, out) {
+  centreInto(v.to, t, out);
+  if (v.e < 1 && v.fromPt) {
+    out.x = v.fromPt.x + (out.x - v.fromPt.x) * v.e;
+    out.z = v.fromPt.z + (out.z - v.fromPt.z) * v.e;
+  }
+  return out;
 }
 
 /** The planets (and dwarf planets) round the Sun, from the inside out. */
@@ -60,18 +78,22 @@ function titleFor(id) {
   return `Around ${BODIES[id]?.name || id} · top view`;
 }
 
-/** Her path (the dotted line) in the view's frame, moment by moment. */
-function pathIn(v, pts, times) {
-  const out = [];
-  if (pts && times) {
-    const n = Math.min(times.length, pts.length / 2);
-    const stride = n > 200 ? 2 : 1;
-    for (let i = 0; i < n; i += stride) {
-      const c = blendAt(v, times[i]);
-      out.push({ x: pts[2 * i] - c.x, z: pts[2 * i + 1] - c.z });
-    }
+/**
+ * Her path (the dotted line) in the view's frame, moment by moment, written
+ * into `buf` as x,z pairs. Returns the number of points.
+ */
+function pathInto(buf, v, pts, times) {
+  if (!pts || !times) return 0;
+  const n = Math.min(times.length, pts.length / 2);
+  const stride = n > 200 ? 2 : 1;
+  let k = 0;
+  for (let i = 0; i < n; i += stride) {
+    blendInto(v, times[i], _p);
+    buf[2 * k] = pts[2 * i] - _p.x;
+    buf[2 * k + 1] = pts[2 * i + 1] - _p.z;
+    k++;
   }
-  return out;
+  return k;
 }
 
 /**
@@ -79,32 +101,36 @@ function pathIn(v, pts, times) {
  * and the target (plus a guess at the stop after it, round the Sun).
  */
 function wantedRadius(st, v, want, target, next) {
-  const C = blendAt(v, st.time);
-  const rel = (x, z, t) => { const c = t === undefined ? C : blendAt(v, t); return { x: x - c.x, z: z - c.z }; };
-  const ship = rel(st.ship.x, st.ship.z);
-  const shipD = Math.hypot(ship.x, ship.z);
+  blendInto(v, st.time, _p);
+  const shipD = Math.hypot(st.ship.x - _p.x, st.ship.z - _p.z);
   const targetInFrame = !!target && target !== want && (BODIES[target].parent === want || want === 'sun');
-  const tp = targetInFrame && st.bodies[target] ? rel(st.bodies[target].x, st.bodies[target].z) : null;
-  const np = next && want === 'sun' && st.bodies[next] ? rel(st.bodies[next].x, st.bodies[next].z) : null;
+  let tx = 0; let tz = 0; let hasT = false;
+  if (targetInFrame && st.bodies[target]) {
+    blendInto(v, st.time, _p);
+    tx = st.bodies[target].x - _p.x; tz = st.bodies[target].z - _p.z; hasT = true;
+  }
+  let nx = 0; let nz = 0; let hasN = false;
+  if (next && want === 'sun' && st.bodies[next]) {
+    blendInto(v, st.time, _p);
+    nx = st.bodies[next].x - _p.x; nz = st.bodies[next].z - _p.z; hasN = true;
+  }
   let R = Math.max(shipD, want === 'sun' ? 0 : BODIES[want].radius * 3);
   if (want === 'sun') {
     // Out round the Sun she may be heading anywhere: frame her, the target
     // and a guess at the stop after it (the next planet out), not her path.
-    if (!tp) R = shipD * 1.3;
-    if (np) R = Math.max(R, Math.hypot(np.x, np.z));
-  } else {
-    const cap = Math.max(shipD, tp ? Math.hypot(tp.x, tp.z) : 0) * 2.2 || Infinity;
-    if (st.path && st.times) {
-      const n = Math.min(st.times.length, st.path.length / 2);
-      const stride = n > 200 ? 2 : 1;
-      for (let i = 0; i < n; i += stride) {
-        const p = rel(st.path[2 * i], st.path[2 * i + 1], st.times[i]);
-        const d = Math.hypot(p.x, p.z);
-        if (d > R && d < cap) R = d;
-      }
+    if (!hasT) R = shipD * 1.3;
+    if (hasN) R = Math.max(R, Math.hypot(nx, nz));
+  } else if (st.path && st.times) {
+    const cap = Math.max(shipD, hasT ? Math.hypot(tx, tz) : 0) * 2.2 || Infinity;
+    const n = Math.min(st.times.length, st.path.length / 2);
+    const stride = n > 200 ? 2 : 1;
+    for (let i = 0; i < n; i += stride) {
+      blendInto(v, st.times[i], _p);
+      const d = Math.hypot(st.path[2 * i] - _p.x, st.path[2 * i + 1] - _p.z);
+      if (d > R && d < cap) R = d;
     }
   }
-  if (tp) R = Math.max(R, Math.hypot(tp.x, tp.z) + (BODIES[target].soi || 0) * 0.3);
+  if (hasT) R = Math.max(R, Math.hypot(tx, tz) + (BODIES[target].soi || 0) * 0.3);
   return R * 1.12;
 }
 
@@ -125,9 +151,12 @@ export function createMinimap(root, { onOpenMap } = {}) {
   let size = 0;
   // The view: `to` is the body it is centred on; `e` (0..1) how far it has slid
   // in from `fromPt` (the old centre, where it was) and `fromId` (that body, drawn
-  // fading out); `R` the map's radius in game units. See blendAt and draw().
+  // fading out); `R` the map's radius in game units. See blendInto and draw().
   let view = null;
   let frameInfo = null; // the last drawn frame, for the tests (frame())
+  let pathBuf = new Float64Array(0); // her path, rebuilt each redraw
+  // Which planet's pull she is inside, for the planet view's hysteresis.
+  let hold = { id: null, inside: true };
 
   function resize() {
     const css = wrap.clientWidth || 230;
@@ -154,11 +183,18 @@ export function createMinimap(root, { onOpenMap } = {}) {
     const pts = st.path;
     const times = st.times;
     const local = st.soi && st.soi !== 'sun' && BODIES[st.soi] ? st.soi : null;
-    let want = local || 'sun';
-    if (local && pts && times && times.length) {
-      const n = Math.min(times.length, pts.length / 2);
-      const c = centreAt(local, times[n - 1]);
-      if (Math.hypot(pts[2 * (n - 1)] - c.x, pts[2 * (n - 1) + 1] - c.z) > BODIES[local].soi * 0.98) want = BODIES[local].parent || 'sun';
+    if (local !== hold.id) hold = { id: local, inside: true };
+    let want = 'sun';
+    if (local) {
+      if (pts && times && times.length) {
+        const n = Math.min(times.length, pts.length / 2);
+        centreInto(local, times[n - 1], _q);
+        const far = Math.hypot(pts[2 * (n - 1)] - _q.x, pts[2 * (n - 1) + 1] - _q.z) / BODIES[local].soi;
+        // Hysteresis: out of the planet view only well past its pull, back in only well inside it.
+        if (hold.inside && far > LEAVE_PULL) hold.inside = false;
+        else if (!hold.inside && far < RETURN_PULL) hold.inside = true;
+      }
+      want = hold.inside ? local : (BODIES[local].parent || 'sun');
     }
     // Leaving a planet's system: an escape step, seen from the planet (lead 2026-10-08).
     const leaving = !!st.escape && want !== 'sun';
@@ -170,36 +206,47 @@ export function createMinimap(root, { onOpenMap } = {}) {
     let first = false;
     if (!view) { view = { to: want, fromId: null, fromPt: null, e: 1, R: 0 }; first = true; }
     else if (view.to !== want) {
-      view.fromPt = blendAt(view, st.time);
+      // Start from where the map shows now (blended, if it was still sliding).
+      const at = { x: 0, z: 0 };
+      blendInto(view, st.time, at);
+      view.fromPt = at;
       view.fromId = view.to;
       view.to = want;
       view.e = 0;
     }
 
     // Zoom and slide, each at most a set share per redraw. The size first
-    // (log steps, so growing and shrinking are alike), then the centre.
+    // (log steps, so growing and shrinking are alike), then the centre. A ship
+    // beyond SNAP_SHARE of the disc is brought back in at once.
     const Rwant = Math.max(wantedRadius(st, view, want, target, next), 1e-9);
-    if (first) view.R = Rwant;
+    blendInto(view, st.time, _p);
+    const shipOut = Math.hypot(st.ship.x - _p.x, st.ship.z - _p.z) > SNAP_SHARE * view.R;
+    if (first || shipOut) view.R = Rwant;
     else {
       const k = Math.max(-ZOOM_STEP, Math.min(ZOOM_STEP, Math.log(Rwant / view.R)));
       view.R *= Math.exp(k);
     }
     if (view.e < 1) {
-      const to = centreAt(view.to, st.time);
-      const span = Math.hypot(to.x - view.fromPt.x, to.z - view.fromPt.z);
+      centreInto(view.to, st.time, _q);
+      const span = Math.hypot(_q.x - view.fromPt.x, _q.z - view.fromPt.z);
       view.e = span > 0 ? Math.min(1, view.e + SLIDE_STEP * view.R / span) : 1;
       if (view.e >= 1) { view.e = 1; view.fromPt = null; view.fromId = null; }
     }
 
     const R = view.R;
-    const C = blendAt(view, st.time);
-    const rel = (x, z, t) => { const c = t === undefined ? C : blendAt(view, t); return { x: x - c.x, z: z - c.z }; };
-    const path = pathIn(view, pts, times);
-    const ship = rel(st.ship.x, st.ship.z);
+    blendInto(view, st.time, _p);
+    const Cx = _p.x; const Cz = _p.z;
+    const pathN = pts && times ? Math.min(times.length, pts.length / 2) : 0;
+    const stride = pathN > 200 ? 2 : 1;
+    const pathCount = Math.ceil(pathN / stride);
+    if (pathBuf.length < 2 * pathCount) pathBuf = new Float64Array(2 * pathCount);
+    const path = pathCount ? pathBuf : null;
+    const nPath = pathCount ? pathInto(pathBuf, view, pts, times) : 0;
     const scale = (W / 2 - 14) / R;
-    const X = (p) => cx + p.x * scale;
-    const Y = (p) => cy + p.z * scale;
-    frameInfo = { centre: want, C: { x: C.x, z: C.z }, R, e: view.e };
+    const X = (x) => cx + x * scale;
+    const Y = (z) => cy + z * scale;
+    const sxRel = st.ship.x - Cx; const szRel = st.ship.z - Cz;
+    frameInfo = { centre: want, C: { x: Cx, z: Cz }, R, e: view.e };
 
     // Frame.
     ctx.save();
@@ -212,10 +259,9 @@ export function createMinimap(root, { onOpenMap } = {}) {
     // The asteroid belt, round the Sun, while the Sun is in view.
     const beltA = view.to === 'sun' ? view.e : (view.fromId === 'sun' ? 1 - view.e : 0);
     if (beltA > 0 && BELT.inner * scale < W) {
-      const sp = X(rel(0, 0)); const sq = Y(rel(0, 0));
       ctx.globalAlpha = beltA;
       ctx.beginPath();
-      ctx.arc(sp, sq, ((BELT.inner + BELT.outer) / 2) * scale, 0, Math.PI * 2);
+      ctx.arc(X(-Cx), Y(-Cz), ((BELT.inner + BELT.outer) / 2) * scale, 0, Math.PI * 2);
       ctx.strokeStyle = 'rgba(205, 191, 169, 0.16)';
       ctx.lineWidth = Math.max(2, (BELT.outer - BELT.inner) * scale);
       ctx.stroke();
@@ -229,8 +275,8 @@ export function createMinimap(root, { onOpenMap } = {}) {
       // A gas giant's moons are left out while she leaves its system.
       const hideMoons = (P === 'jupiter' || P === 'saturn') && (leaving || view.e < 1);
       const alphaP = P === view.to ? view.e : 1 - view.e;
-      const pc = centreAt(P, st.time);
-      const PX = X({ x: pc.x - C.x, z: pc.z - C.z }); const PY = Y({ x: pc.x - C.x, z: pc.z - C.z });
+      centreInto(P, st.time, _q);
+      const PX = X(_q.x - Cx); const PY = Y(_q.z - Cz);
       ctx.save();
       ctx.globalAlpha = alphaP;
       if (!hideMoons) {
@@ -244,9 +290,8 @@ export function createMinimap(root, { onOpenMap } = {}) {
           ctx.strokeStyle = id === target ? 'rgba(255, 207, 92, 0.45)' : 'rgba(255, 238, 214, 0.12)';
           ctx.lineWidth = 1;
           ctx.stroke();
-          const p = rel(st.bodies[id].x, st.bodies[id].z);
           ctx.beginPath();
-          ctx.arc(X(p), Y(p), Math.max(2.5, b.radius * scale), 0, Math.PI * 2);
+          ctx.arc(X(st.bodies[id].x - Cx), Y(st.bodies[id].z - Cz), Math.max(2.5, b.radius * scale), 0, Math.PI * 2);
           ctx.fillStyle = bodyColor(id);
           ctx.fill();
         }
@@ -261,17 +306,18 @@ export function createMinimap(root, { onOpenMap } = {}) {
 
     // The target and the guessed next stop, when they are on the map. Out at
     // the rim (leaving a system) they become arrows, further below.
-    const inFrame = (p) => Math.hypot(X(p) - cx, Y(p) - cy) <= W / 2 - 14;
+    const inFrame = (x, z) => Math.hypot(X(x) - cx, Y(z) - cy) <= W / 2 - 14;
     const targetInFrame = !!target && target !== want && (BODIES[target].parent === want || want === 'sun');
-    const tPos = target && st.bodies[target] && (targetInFrame || leaving) ? rel(st.bodies[target].x, st.bodies[target].z) : null;
-    const nPos = next && st.bodies[next] ? rel(st.bodies[next].x, st.bodies[next].z) : null;
-    const tIn = !!tPos && inFrame(tPos);
-    const nIn = !!nPos && inFrame(nPos);
+    const tPos = target && st.bodies[target] && (targetInFrame || leaving)
+      ? { x: st.bodies[target].x - Cx, z: st.bodies[target].z - Cz } : null;
+    const nPos = next && st.bodies[next] ? { x: st.bodies[next].x - Cx, z: st.bodies[next].z - Cz } : null;
+    const tIn = !!tPos && inFrame(tPos.x, tPos.z);
+    const nIn = !!nPos && inFrame(nPos.x, nPos.z);
 
     // The guessed next stop: a fainter ring.
     if (nIn) {
       ctx.beginPath();
-      ctx.arc(X(nPos), Y(nPos), 6, 0, Math.PI * 2);
+      ctx.arc(X(nPos.x), Y(nPos.z), 6, 0, Math.PI * 2);
       ctx.strokeStyle = 'rgba(255, 207, 92, 0.45)';
       ctx.lineWidth = 1.2;
       ctx.setLineDash([3, 3]);
@@ -281,20 +327,19 @@ export function createMinimap(root, { onOpenMap } = {}) {
 
     // The target: a ring you can't miss, and its name.
     if (tIn) {
-      const tx = X(tPos); const ty = Y(tPos);
       const pulse = 7 + 2 * Math.sin(performance.now() / 300);
       ctx.beginPath();
-      ctx.arc(tx, ty, pulse, 0, Math.PI * 2);
+      ctx.arc(X(tPos.x), Y(tPos.z), pulse, 0, Math.PI * 2);
       ctx.strokeStyle = '#ffcf5c';
       ctx.lineWidth = 1.6;
       ctx.stroke();
     }
 
     // Her dotted path.
-    if (path.length > 1) {
+    if (nPath > 1 && path) {
       ctx.beginPath();
-      ctx.moveTo(X(path[0]), Y(path[0]));
-      for (let i = 1; i < path.length; i++) ctx.lineTo(X(path[i]), Y(path[i]));
+      ctx.moveTo(X(path[0]), Y(path[1]));
+      for (let i = 1; i < nPath; i++) ctx.lineTo(X(path[2 * i]), Y(path[2 * i + 1]));
       ctx.setLineDash([4, 4]);
       ctx.strokeStyle = 'rgba(127, 243, 255, 0.9)';
       ctx.lineWidth = 1.6;
@@ -303,7 +348,7 @@ export function createMinimap(root, { onOpenMap } = {}) {
     }
 
     // The ship: an arrow pointing the way her nose points.
-    const sx = X(ship); const sy = Y(ship);
+    const sx = X(sxRel); const sy = Y(szRel);
     const a = st.ship.angle;
     ctx.save();
     ctx.translate(sx, sy);
@@ -323,9 +368,25 @@ export function createMinimap(root, { onOpenMap } = {}) {
 
     ctx.restore(); // clip
 
+    // A label on a dark pill, so it reads over anything underneath (never bare on the path).
+    const pill = (text, x, y, align, colour, alpha) => {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.font = '600 10px system-ui, -apple-system, "Segoe UI", sans-serif';
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = align;
+      const w = ctx.measureText(text).width + 8;
+      const left = align === 'right' ? x - w : align === 'left' ? x : x - w / 2;
+      ctx.fillStyle = 'rgba(12, 10, 9, 0.85)';
+      ctx.fillRect(left, y - 7, w, 14);
+      ctx.fillStyle = colour;
+      ctx.fillText(text, left + 4, y);
+      ctx.restore();
+    };
     // A dim arrow at the rim, in the true direction of a body off the map, and its name.
     const rim = (p, label, colour, alpha) => {
-      const ang = Math.atan2(Y(p) - cy, X(p) - cx);
+      const sxp = X(p.x) - cx; const syp = Y(p.z) - cy;
+      const ang = Math.atan2(syp, sxp);
       const rr = W / 2 - 16;
       const ax = cx + Math.cos(ang) * rr; const ay = cy + Math.sin(ang) * rr;
       ctx.save();
@@ -337,46 +398,38 @@ export function createMinimap(root, { onOpenMap } = {}) {
       ctx.fillStyle = colour;
       ctx.fill();
       ctx.restore();
-      const lr = rr - 12;
-      const lx = cx + Math.cos(ang) * lr; const ly = Math.max(26, Math.min(W - 6, cy + Math.sin(ang) * lr));
-      ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.font = '600 10px system-ui, -apple-system, "Segoe UI", sans-serif';
-      ctx.fillStyle = colour;
-      ctx.textAlign = Math.cos(ang) > 0.35 ? 'right' : Math.cos(ang) < -0.35 ? 'left' : 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(label, lx, ly);
-      ctx.restore();
+      const lr = rr - 16;
+      const lx = cx + Math.cos(ang) * lr; const ly = Math.max(26, Math.min(W - 8, cy + Math.sin(ang) * lr));
+      pill(label, lx, ly, Math.cos(ang) > 0.35 ? 'right' : Math.cos(ang) < -0.35 ? 'left' : 'center', colour, alpha);
     };
 
     // The target's name, outside the clip so the rim never cuts it off.
     const bodyName = (id) => (id === 'moon' ? 'the Moon' : BODIES[id].name);
     if (tIn) {
-      const tx = X(tPos); const ty = Y(tPos);
+      const tx = X(tPos.x); const ty = Y(tPos.z);
       ctx.font = '700 11px system-ui, -apple-system, "Segoe UI", sans-serif';
       ctx.fillStyle = '#ffcf5c';
       ctx.textBaseline = 'alphabetic';
       // On the side away from her arrow, so the two never overlap; stay
       // inside the circle either way.
-      const sxT = X(ship);
-      let right = sxT < tx;
+      let right = sx < tx;
       if (right && tx > W - 60) right = false;
       if (!right && tx < 60) right = true;
       ctx.textAlign = right ? 'left' : 'right';
-      ctx.fillText(bodyName(target), tx + (right ? 11 : -11), Math.max(26, Math.min(W - 6, ty + (Y(ship) < ty ? 16 : -8))));
+      ctx.fillText(bodyName(target), tx + (right ? 11 : -11), Math.max(26, Math.min(W - 6, ty + (sy < ty ? 16 : -8))));
     } else if (tPos && leaving) {
-      rim(tPos, bodyName(target), '#ffcf5c', 0.8);
+      rim(tPos, bodyName(target), '#ffcf5c', 0.9);
     }
 
     if (nIn) {
       ctx.font = '600 10px system-ui, -apple-system, "Segoe UI", sans-serif';
       ctx.fillStyle = 'rgba(255, 207, 92, 0.75)';
       ctx.textBaseline = 'alphabetic';
-      const nx = X(nPos); const ny = Y(nPos);
+      const nx = X(nPos.x); const ny = Y(nPos.z);
       ctx.textAlign = nx > cx ? 'right' : 'left';
       ctx.fillText(`then ${BODIES[next].name}`, nx + (nx > cx ? -10 : 10), Math.max(26, Math.min(W - 6, ny - 9)));
     } else if (nPos && leaving) {
-      rim(nPos, `then ${BODIES[next].name}`, '#ffcf5c', 0.5);
+      rim(nPos, `then ${BODIES[next].name}`, '#ffcf5c', 0.6);
     }
 
     // Rim and title.

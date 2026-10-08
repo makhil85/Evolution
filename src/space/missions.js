@@ -40,7 +40,7 @@ import { ch5Steps } from './ch5/steps.js';
 import { CH6_ACT_TITLES } from './ch6/start.js';
 import { ch6Steps } from './ch6/steps.js';
 import { phasesNow, restorePhases } from './ch5/lineup.js';
-import { inQuestionTurn } from './acts/util.js';
+import { inModalTurn } from './hud/modalQueue.js';
 import { orbitElements } from './physics.js';
 
 const ACT_TITLES_CH4 = {
@@ -268,33 +268,38 @@ export function createMissions(game) {
       const onKey = (e) => { if (e.code === 'Enter' && !document.querySelector('.sp-modal.is-open')) go(); };
       btn.addEventListener('click', () => { btn.blur(); go(); });
       addEventListener('keydown', onKey);
-      // The autopilot flies on by itself after a short look.
+      // The autopilot flies on by itself after a short look (never under a card).
       let apFor = 0;
-      auto = setInterval(() => { apFor = game.autopilot?.on ? apFor + 0.5 : 0; if (apFor >= 8) go(); }, 500);
+      auto = setInterval(() => {
+        // Burned away without pressing it: she is on her way, so the step goes on.
+        if (!inClosedOrbit()) { go(); return; }
+        // Her map card, a fact, a question: the button stays out of the way.
+        const card = hud.isModalOpen();
+        btn.style.display = card ? 'none' : '';
+        apFor = game.autopilot?.on && !card ? apFor + 0.5 : 0;
+        if (apFor >= 8) go();
+      }, 500);
     });
   }
 
-  /** Ask a beat's question once she has let go of the controls. One at a
-   *  time (inQuestionTurn): the card is shared, and a second question would
-   *  replace the first, whose answer would then never come back. */
-  function ask(beat) {
+  /** Ask a beat's question once she has let go of the controls. hud.askQuestion
+   *  takes the card's turn (modalQueue.js), so questions never replace each other. */
+  async function ask(beat) {
     const q = questionForBeat(beat);
-    if (!q) return Promise.resolve();
-    return inQuestionTurn(async () => {
-      await untilQuiet();
-      const res = await hud.askQuestion(personalise(q));
-      if (res.correct) {
-        answered.add(q.id);
-        deferred.delete(q.id);
-        if (q.reward?.resources) {
-          for (const [k, v] of Object.entries(q.reward.resources)) game.resources[k] = (game.resources[k] || 0) + v;
-        }
-        if (q.doneMessage) hud.toast(personalise(q).doneMessage, { kind: 'good', ms: 4500 });
-      } else {
-        deferred.add(q.id);
-        hud.toast('No problem. Mission Control will ask you again later.', { kind: 'info', ms: 3000 });
+    if (!q) return;
+    await untilQuiet();
+    const res = await hud.askQuestion(personalise(q));
+    if (res.correct) {
+      answered.add(q.id);
+      deferred.delete(q.id);
+      if (q.reward?.resources) {
+        for (const [k, v] of Object.entries(q.reward.resources)) game.resources[k] = (game.resources[k] || 0) + v;
       }
-    });
+      if (q.doneMessage) hud.toast(personalise(q).doneMessage, { kind: 'good', ms: 4500 });
+    } else {
+      deferred.add(q.id);
+      hud.toast('No problem. Mission Control will ask you again later.', { kind: 'info', ms: 3000 });
+    }
   }
 
   async function askDeferred() {
@@ -325,7 +330,7 @@ export function createMissions(game) {
     // straight on from a departure that is still under way): her call.
     if (departs(step) && !departs(steps[index - 1]) && game.ship.soi !== 'sun' && !game.ship.landedOn && inClosedOrbit()) {
       game.escapeStep = false; game.aimHint = null; game.transferTarget = null; game.captureTarget = null;
-      await readyToLeave();
+      await inModalTurn(readyToLeave); // in the card queue: no card opens under the button
     }
     showStep();
     // First step of an act: remember the save as it is now, the place the
@@ -434,10 +439,12 @@ export function createMissions(game) {
         for (const r of rs) r();
       }
       if (!calms.length || paused) return;
-      for (const c of calms) c.left -= dt;
-      const due = calms.filter((c) => c.left <= 0);
-      calms = calms.filter((c) => c.left > 0);
-      for (const c of due) c.resolve();
+      // In place (no new list each frame): finish the ones that are due.
+      for (let i = calms.length - 1; i >= 0; i--) {
+        const c = calms[i];
+        c.left -= dt;
+        if (c.left <= 0) { calms.splice(i, 1); c.resolve(); }
+      }
     },
     update(dt, states, paused) {
       this.tickCalm(dt, paused);

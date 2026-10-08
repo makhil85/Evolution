@@ -14,11 +14,18 @@
 
 // A canvas stand-in: every drawing call is a no-op, and text is recorded.
 const texts = [];
+// Any other call or property (gradients, image data for the satellite's texture) is a chainable no-op.
+const chain = new Proxy(function chainFn() {}, {
+  get: (t, k) => (k === Symbol.toPrimitive ? () => 0 : chain),
+  set: () => true,
+  apply: () => chain,
+});
 const ctxStub = new Proxy({}, {
   get(target, key) {
     if (key === 'fillText') return (s) => { texts.push(String(s)); };
+    if (key === 'measureText') return (s) => ({ width: String(s).length * 6 });
     if (key in target) return target[key];
-    return () => {};
+    return chain;
   },
   set(target, key, value) { target[key] = value; return true; },
 });
@@ -182,6 +189,24 @@ function maxJumps(seen) {
   check('closed orbit round Mars: centred on Mars throughout', seen.every((s) => s.centre === 'mars'));
   check('closed orbit round Mars: no scale or centre jump over 15%', j.scale <= JUMP && j.centre <= JUMP,
     `scale ${(j.scale * 100).toFixed(1)}% centre ${(j.centre * 100).toFixed(1)}%`);
+}
+
+// --- Edge cases: no path, no target, a flip-flop at the pull's edge -----------
+{
+  const seen = drawRun(escapeRun('jupiter'), { target: 'saturn' });
+  let flips = 0;
+  for (let i = 1; i < seen.length; i++) if (seen[i].centre !== seen[i - 1].centre) flips++;
+  check('Jupiter escape: the view changes centre once (no flip-flop at the pull edge)', flips <= 1, `${flips} changes`);
+}
+{
+  const map = createMinimap(fakeEl());
+  let ok = true;
+  try {
+    map.update({ time: 0, bodies: Object.fromEntries(Object.keys(BODIES).map((id) => [id, bodyState(id, 0, {})])), ship: { x: 1e5, z: 0, angle: 0 }, soi: 'sun' });
+    fakeNow += 100;
+    map.update({ time: 1, bodies: Object.fromEntries(Object.keys(BODIES).map((id) => [id, bodyState(id, 1, {})])), ship: { x: 2e5, z: 0, angle: 0 }, soi: 'earth', escape: true });
+  } catch (e) { ok = false; console.log(e); }
+  check('a map with no path and no target draws without error', ok);
 }
 
 let failed = 0;
