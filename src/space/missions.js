@@ -29,7 +29,8 @@
 // Questions never block progress. "Not now" defers the question; deferred
 // questions are asked again at the next step boundary, so every question is
 // still met before the finale.
-import { BODIES, STORE_KEYS, SHIP, UPGRADES, CALM_S } from './contracts.js';
+import { BODIES, STORE_KEYS, SHIP, UPGRADES, CALM_S, QUIET_S } from './contracts.js';
+import { t } from './level.js';
 import { bodyState } from './orbits.js';
 import { questionForBeat, getSpaceQuestion } from './questions.space.js';
 import { heroName } from './hud/hud.js';
@@ -149,6 +150,8 @@ export function createMissions(game) {
   let busy = false;      // completing (question / after) - don't re-check
   let stepTime = 0;
   let calm = null; // { left, resolve } while a calm pause runs
+  let quiet = 0; // seconds since she last steered by hand (main.js sets game.kidSteering)
+  let quietWait = null; // { resolve } while a question waits for hands-off flying
   const deferred = new Set(save.deferred || []);
   const answered = new Set(save.answered || []);
 
@@ -205,9 +208,51 @@ export function createMissions(game) {
     return new Promise((resolve) => { calm = { left: sec, resolve }; });
   }
 
+  /** Hands-off flying before a question (QUIET_S): none needed on foot or in a mini-scene. */
+  function untilQuiet() {
+    if (game.activeScene || quiet >= QUIET_S) return Promise.resolve();
+    return new Promise((resolve) => { quietWait = { resolve }; });
+  }
+
+  /**
+   * In orbit, and the next step leaves it: she looks round as
+   * long as she likes and leaves when she presses "Ready" (lead 2026-10-08,
+   * instead of a guessed wait). The autopilot presses it after a short look.
+   */
+  function readyToLeave() {
+    const name = BODIES[game.ship.soi]?.name || 'here';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'sp-ready';
+    btn.textContent = t('Ready for the next adventure? ▶', 'Ready for the next adventure? ▶');
+    btn.title = t(`Leave ${name} for the next stop (Enter)`, 'Go on (Enter)');
+    Object.assign(btn.style, {
+      position: 'fixed', left: '50%', bottom: '92px', transform: 'translateX(-50%)', zIndex: 40, cursor: 'pointer',
+      padding: '12px 22px', borderRadius: '999px', border: '2px solid #ffd27a', background: 'rgba(20, 28, 48, .92)',
+      color: '#ffe3a8', font: '800 17px system-ui, sans-serif', boxShadow: '0 6px 24px rgba(0,0,0,.45)',
+    });
+    hud.setMission({
+      act: ACT_TITLES[steps[index].act] || '', title: t(`In orbit round ${name}`, `Going around ${name}`),
+      objective: t(`Look round ${name} as long as you like. Press "Ready for the next adventure" when you want to go on.`, `Look at ${name}! Press "Ready" when you want to go on.`),
+      steps: [],
+    });
+    document.body.appendChild(btn);
+    return new Promise((resolve) => {
+      let auto = 0;
+      const go = () => { clearInterval(auto); removeEventListener('keydown', onKey); btn.remove(); resolve(); };
+      const onKey = (e) => { if (e.code === 'Enter' && !document.querySelector('.sp-modal.is-open')) go(); };
+      btn.addEventListener('click', () => { btn.blur(); go(); });
+      addEventListener('keydown', onKey);
+      // The autopilot flies on by itself after a short look.
+      let apFor = 0;
+      auto = setInterval(() => { apFor = game.autopilot?.on ? apFor + 0.5 : 0; if (apFor >= 8) go(); }, 500);
+    });
+  }
+
   async function ask(beat) {
     const q = questionForBeat(beat);
     if (!q) return;
+    await untilQuiet();
     const res = await hud.askQuestion(personalise(q));
     if (res.correct) {
       answered.add(q.id);
@@ -246,6 +291,12 @@ export function createMissions(game) {
     entered = false;
     stepTime = 0;
     const step = steps[index];
+    // Leaving an orbit (round a planet or moon; not from the ground, nor
+    // straight on from a liftoff that is still climbing): her call.
+    if (step.escape && !steps[index - 1]?.escape && game.ship.soi !== 'sun' && !game.ship.landedOn) {
+      game.escapeStep = false; game.aimHint = null; game.transferTarget = null; game.captureTarget = null;
+      await readyToLeave();
+    }
     showStep();
     // First step of an act: remember the save as it is now, the place the
     // two-tries rule restarts from. (complete() has just saved the new index.)
@@ -341,6 +392,8 @@ export function createMissions(game) {
     hasProgress() { return index > 0; },
     /** Count down a calm pause (also called while a walk scene runs). */
     tickCalm(dt, paused) {
+      if (!paused) quiet = game.kidSteering ? 0 : quiet + dt;
+      if (quietWait && (game.activeScene || quiet >= QUIET_S)) { const r = quietWait.resolve; quietWait = null; r(); }
       if (!calm || paused) return;
       calm.left -= dt;
       if (calm.left <= 0) { const r = calm.resolve; calm = null; r(); }

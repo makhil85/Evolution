@@ -172,8 +172,6 @@ if (touch.enabled) {
   if (hint) hint.textContent = t('Tap for the big map', 'Tap for the big map');
 }
 const flightCam = createFlightCamera({ camera, baseFov: RENDER.fov });
-/** The wide escape view (see the camera update in tick): on, and the mode to go back to. */
-const escapeView = { on: false, mode: null };
 
 // --- the ship's starting orbit -------------------------------------------------
 
@@ -1393,6 +1391,7 @@ function tick(realDt, render = true) {
     // Flight is frozen while a mini-scene runs: no physics, no warp, and the
     // solar system simply waits for her to climb back aboard.
     const input = controls.sample();
+    game.kidSteering = false; // on foot or in a mini-scene: not flying
     const mouse = controls.takeMouse();
     activeScene.tick(realDt, input, modalOpen ? { dx: 0, dy: 0, wheel: 0, dragging: false } : mouse, modalOpen);
     missions.tickCalm(realDt, modalOpen || game.paused || game.frozen);
@@ -1403,6 +1402,10 @@ function tick(realDt, render = true) {
 
   const input = controls.sample();
   const paused = modalOpen || game.paused || game.frozen;
+  // Is she steering by hand right now? Questions wait until she has let go
+  // for a while (missions.js, QUIET_S); the autopilot's own key presses don't count.
+  game.kidSteering = !game.autopilot?.on && !ship.landedOn && !game.cinematic
+    && !!(input.thrust || input.turn || input.strafe || input.fire);
 
   // Easy's booster during a transfer burn: one tap of Space starts it and it
   // runs until the planned push is done (the burn computer stops it); S
@@ -1558,26 +1561,10 @@ function tick(realDt, render = true) {
   // The chase camera stays straight behind her (lead, 2026-10-06). It used
   // to swing up to 55% of the way toward a nearby planet, so the view kept
   // turning by itself and left/right turns looked reversed.
-  // Leaving Jupiter's or Saturn's system (lead, 2026-10-06): a top-down view
-  // of roughly the whole system, so she sees her path climb out past the
-  // moons. Back to the view she had once she is out (or the step changes).
-  // A moon's zone on the way out still counts as the system (its planet).
-  const sysOf = ship.soi !== 'sun' && BODIES[ship.soi] ? (BODIES[ship.soi].parent === 'sun' ? ship.soi : BODIES[ship.soi].parent) : null;
-  // Leaving Earth and the Moon (lead 2026-10-07) too: wide enough to show
-  // the next goal (Mars) as well, so she sees where she is heading.
-  const wideEscape = !!game.escapeStep && (sysOf === 'jupiter' || sysOf === 'saturn' || sysOf === 'earth') && !ship.landedOn && !game.cinematic
-    // Still climbing off the Moon: the normal view (the ground is right there).
-    && !(ship.soi === 'moon' && Math.hypot(ship.x - states.moon.x, ship.z - states.moon.z) < BODIES.moon.radius * 3);
-  if (wideEscape !== escapeView.on) {
-    escapeView.on = wideEscape;
-    if (wideEscape) {
-      escapeView.mode = flightCam.mode;
-      flightCam.setMode('top');
-      const goal = game.target && game.target !== sysOf && states[game.target];
-      const toGoal = goal ? Math.hypot(goal.x - ship.x, goal.z - ship.z) * 1.15 : 0;
-      flightCam.setDistance(Math.min(19000, Math.max(BODIES[sysOf].soi * 1.5, toGoal)));
-    } else { flightCam.setMode(escapeView.mode || 'chase'); flightCam.resetZoom(); }
-  }
+  // Leaving a planet's system the camera stays behind her too (lead,
+  // 2026-10-08: play is always seen from the girl and her rocket; only a
+  // cutscene may cut away). The side map shows the orbit stretching out
+  // instead (minimap.js, escape: true).
   // Time warp: the camera holds its direction (her path and the planet
   // beside her both sweep round once per orbit in a second or two). The
   // autopilot's turns are followed gently. Both ease back afterwards.
@@ -1752,6 +1739,7 @@ function tick(realDt, render = true) {
     times: ship.landedOn ? null : game.prediction?.times,
     target: game.transferTarget && BODIES[game.transferTarget] ? game.transferTarget : game.target,
     hidden: !!game.cinematic,
+    escape: !!game.escapeStep,
   });
   prof('hud', _th);
   const _tk = performance.now();

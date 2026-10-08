@@ -422,3 +422,8 @@ export const FLIGHT_MODE_KEY = 'rocket_village_ch4_flight_mode';
  *  (an orbit settles, a puzzle is solved): this many seconds of calm first
  *  (game time, not counted while paused). missions.js. */
 export const CALM_S = 5;
+
+/** Lead 2026-10-08: no question while she steers the rocket herself (thrust,
+ *  turn, side jets, fire); once she lets go, this many seconds of hands-off
+ *  flying first. Not on foot or in a mini-scene. missions.js. */
+export const QUIET_S = 12;

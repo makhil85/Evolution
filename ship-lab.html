@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ship Lab</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #05060a; overflow: hidden; font: 13px system-ui, sans-serif; }
+    canvas { display: block; }
+    #labInfo { position: fixed; left: 8px; top: 8px; z-index: 70; color: #ffcc99; background: rgba(0,0,0,.55); padding: 4px 8px; border-radius: 6px; pointer-events: none; }
+  </style>
+</head>
+<body>
+  <!-- Dev-only (not in the build): Chapter 6's ship for the stars, outside and in.
+         ?view=interior&deck=bridge   walk a deck (WASD, Shift, drag to look, E)
+         ?view=ship                   the starship model (drag to orbit, wheel to zoom)
+         ?view=crew                   the crew and robots in a row
+       window.__shipLab: ready, view, scene, debug (interior), ship (model),
+         cam(name) set point, frames(n) run n frames, stats() light check,
+         info() draw calls / triangles. See src/space/ch6/lab/shipLab.js. -->
+  <div id="labInfo"></div>
+  <script type="module" src="/src/space/ch6/lab/shipLab.js"></script>
+</body>
+</html>

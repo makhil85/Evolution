@@ -1,14 +1,14 @@
-// The ring run (Chapter 5): she flies inside Saturn's rings, dodging ice and
-// blasting chunks for water. A mini-scene on main.js's runScene contract;
-// the rules are in ringRunLogic.js.
+// The ring run (Chapter 5): she flies inside Saturn's rings, blasting white
+// ice (water) and grey rock (metal and stone) to reach the level's goal. A
+// mini-scene on main.js's runScene contract; the rules are in ringRunLogic.js.
 //
-// Arrows or WASD steer (left/right, up/down), Space fires. Grey boulders are
-// too big to blast: shots bounce off, so she dodges them.
+// Arrows or WASD steer (left/right, up/down), Space fires. Big rocks crack
+// and glow with each hit until they break (2 / 3 / 5 hits by level).
 import * as THREE from 'three';
 import { BODIES, TEXTURE_BASE } from '../contracts.js';
 import { createRings } from '../rings.js';
 import { t as lvl } from '../level.js';
-import { createRun, stepRun, result, botInput } from './ringRunLogic.js';
+import { createRun, stepRun, result, botInput, goalMet } from './ringRunLogic.js';
 
 const R = 2400; // Saturn's radius in the scene (only the look matters)
 const STEP = 1 / 60;
@@ -32,14 +32,14 @@ function iceGeometry(seed, r, big) {
   return geo;
 }
 
-/** A small HUD for the run: water, time, bumps, and the count-in. */
-function buildPanel() {
+/** A small HUD for the run: ice and rock against the goal, time, bumps, and the count-in. */
+function buildPanel(goal) {
   const div = document.createElement('div');
   div.className = 'rr-panel';
   div.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:30;font:600 18px system-ui,sans-serif;color:#eaf6ff;text-shadow:0 2px 6px rgba(0,0,0,.6)';
   div.innerHTML = `
     <div style="position:absolute;top:64px;left:50%;transform:translateX(-50%);display:flex;justify-content:center;gap:34px;background:rgba(6,10,22,.7);padding:8px 22px;border-radius:999px">
-      <span>💧 <b class="rr-water">0</b></span><span>⏱ <b class="rr-time">0</b></span><span>💥 <b class="rr-bumps">0</b></span>
+      <span>🧊 <b class="rr-ice">0</b> / ${goal.ice}</span><span>🪨 <b class="rr-rock">0</b> / ${goal.rock}</span><span>⏱ <b class="rr-time">0</b></span><span>💥 <b class="rr-bumps">0</b></span>
     </div>
     <div class="rr-big" style="position:absolute;top:38%;left:0;right:0;text-align:center;font-size:64px;opacity:0;transition:opacity .25s"></div>
     <div class="rr-tip" style="position:absolute;bottom:34px;left:50%;transform:translateX(-50%);text-align:center;font-size:17px;background:rgba(6,10,22,.7);padding:8px 18px;border-radius:12px"></div>`;
@@ -47,7 +47,9 @@ function buildPanel() {
   const q = (c) => div.querySelector(c);
   return {
     set(run) {
-      q('.rr-water').textContent = run.water;
+      const ice = q('.rr-ice'); const rock = q('.rr-rock');
+      ice.textContent = run.got.ice; rock.textContent = run.got.rock;
+      ice.style.color = run.got.ice >= goal.ice ? '#8fe86b' : ''; rock.style.color = run.got.rock >= goal.rock ? '#8fe86b' : '';
       q('.rr-time').textContent = Math.max(0, Math.ceil(run.level.time - run.t));
       q('.rr-bumps').textContent = run.bumps;
     },
@@ -116,7 +118,7 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
   }
 
   // No ring dust (lead, 2026-10-06): thousands of tiny points streaming past
-  // hid the ice she has to shoot. Only the chunks and boulders move.
+  // hid the ice she has to shoot. Only the ice and rock move.
 
   // Her ship joins this scene for the run (put back when it ends).
   const shipParent = shipView.group.parent;
@@ -129,7 +131,9 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
   shipView.group.scale.setScalar(0.32); // the logic's hit radius fits a ship this size
 
   const iceMatSmall = new THREE.MeshStandardMaterial({ color: 0xe9f4ff, roughness: 0.55, metalness: 0, flatShading: true, emissive: 0x4a86c0, emissiveIntensity: 0.7 });
-  const iceMatBig = new THREE.MeshStandardMaterial({ color: 0x7d7a78, roughness: 0.95, flatShading: true });
+  const rockMat = new THREE.MeshStandardMaterial({ color: 0x8a7a68, roughness: 0.95, flatShading: true });
+  // Big rocks: one material per crack count, glowing hotter with each hit.
+  const bigMats = Array.from({ length: 6 }, (_, k) => new THREE.MeshStandardMaterial({ color: 0x6f6b68, roughness: 0.95, flatShading: true, emissive: 0xff7a2a, emissiveIntensity: k * 0.35 }));
   const meshes = new Map();
   const boltGeo = new THREE.CylinderGeometry(0.12, 0.12, 2.6, 6).rotateX(Math.PI / 2);
   const boltMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0x7ff3ff).multiplyScalar(3) });
@@ -137,8 +141,8 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
   const bursts = [];
   const burstGeo = new THREE.IcosahedronGeometry(0.25, 0);
 
-  const panel = buildPanel();
   const run = createRun(level, seed);
+  const panel = buildPanel(run.level.goal);
   const debug = { run, auto: false, events: [] };
 
   let phase = 'count'; // count -> play -> done
@@ -168,13 +172,14 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
     for (const e of ev) {
       debug.events.push(e.type);
       if (e.type === 'blast') {
-        burst(e.x, e.y, e.z, 10, 0xd8f4ff);
+        const rock = e.kind === 'rock';
+        burst(e.x, e.y, e.z, e.big ? 16 : 10, rock ? 0xc8b49a : 0xd8f4ff);
         const [sx, sy] = screenOf(e.x, e.y, e.z);
-        panel.pop(sx, sy, `+${e.water} 💧`);
-      } else if (e.type === 'bounce') {
-        burst(e.x, e.y, e.z, 4, 0xffd27a);
+        panel.pop(sx, sy, rock ? `+${e.rock} 🪨` : '+1 🧊', rock ? '#e8d2b0' : '#9fe8ff');
+      } else if (e.type === 'crack') {
+        burst(e.x, e.y, e.z, 5, 0xffb060);
         const [sx, sy] = screenOf(e.x, e.y, e.z);
-        panel.pop(sx, sy, lvl('Too big!', 'Too big!'), '#ffd27a');
+        panel.pop(sx, sy, lvl(`Crack! ${e.left} more`, `${e.left} more!`), '#ffd27a');
       } else if (e.type === 'bump') {
         burst(e.x, e.y, e.z, 8, e.big ? 0xb0a8a0 : 0xd8f4ff);
       }
@@ -184,7 +189,10 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
   function sync(dt) {
     const s = run.ship;
     // The ship: where she is, banking into turns, kicked back by each shot.
-    shipNode.position.set(s.x, s.y, s.z * 3);
+    // The camera rides most of the kick with her, so she stays in the same
+    // place on screen: it used to jump 3x the kick towards the lens on every
+    // shot (the flicker) and, firing non-stop, out of the picture.
+    shipNode.position.set(s.x, s.y, s.z);
     shipNode.rotation.set(Math.max(-0.3, Math.min(0.3, s.vy * 0.012)), 0, Math.max(-0.6, Math.min(0.6, -s.vx * 0.025)));
     shipView.setThrottle(0.7);
     shipView.setTurn(s.vx / 22);
@@ -195,10 +203,11 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
       live.add(c.id);
       let m = meshes.get(c.id);
       if (!m) {
-        m = new THREE.Mesh(iceGeometry(c.shape + 1, c.r, c.big), c.big ? iceMatBig : iceMatSmall);
+        m = new THREE.Mesh(iceGeometry(c.shape + 1, c.r, c.big), c.big ? bigMats[0] : c.rock ? rockMat : iceMatSmall);
         scene.add(m);
         meshes.set(c.id, m);
       }
+      if (c.big) m.material = bigMats[Math.min(bigMats.length - 1, c.cracked || 0)];
       m.position.set(c.x, c.y, c.z);
       m.rotation.set(c.spin, c.spin * 0.7, 0);
     }
@@ -219,7 +228,7 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
       if (m.userData.life <= 0) { scene.remove(m); m.material.dispose(); bursts.splice(i, 1); }
     }
     // Chase camera: behind and a little above, leaning with her.
-    camera.position.set(s.x * 0.7, s.y * 0.7 + 3.6, 12.5 + s.z * 0.6);
+    camera.position.set(s.x * 0.7, s.y * 0.7 + 3.6, 12.5 + s.z * 0.8);
     camera.up.set(-s.vx * 0.004, 1, 0).normalize();
     camera.lookAt(s.x * 0.85, s.y * 0.8 + 0.6, -30);
     // (No full-screen red flash on a hit: flashing the whole background read
@@ -245,7 +254,7 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
         const inp = debug.auto ? botInput(run) : { turn: input.turn, thrust: input.thrust, fire: input.steady };
         onEvents(stepRun(run, STEP, inp));
       }
-      if (run.over) { phase = 'done'; clock = 0; panel.big(lvl('Out of the ice!', 'You made it!')); }
+      if (run.over) { phase = 'done'; clock = 0; panel.big(goalMet(run) ? lvl('Goal reached!', 'You did it!') : lvl('Time up!', 'Time up!')); }
     } else if (phase === 'done' && clock > 1.6) {
       phase = 'gone';
       finish(result(run));
@@ -258,8 +267,9 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
     camera,
     debug,
     start() {
-      panel.tip(lvl('Arrows steer · Space fires · grey boulders are too big to blast, so dodge them',
-        'Arrows to steer. Space to shoot. Dodge the grey rocks!'));
+      const L = run.level;
+      panel.tip(lvl(`Arrows steer · Space fires · get ${L.goal.ice} ice 🧊 and ${L.goal.rock} rock 🪨 · big rocks take ${L.bigHits} hits`,
+        `Arrows to steer. Space to shoot. Get ${L.goal.ice} ice and ${L.goal.rock} rock!`));
       return done;
     },
     tick,
@@ -273,7 +283,7 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
       shipView.setTurn(0);
       for (const m of meshes.values()) m.geometry.dispose();
       for (const m of bursts) m.material.dispose();
-      [iceMatSmall, iceMatBig, boltGeo, boltMat, burstGeo, satMat, ringTex].forEach((x) => x.dispose());
+      [iceMatSmall, rockMat, ...bigMats, boltGeo, boltMat, burstGeo, satMat, ringTex].forEach((x) => x.dispose());
       rings.dispose?.();
     },
   };
