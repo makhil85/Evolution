@@ -3,12 +3,14 @@
 ## Models (always)
 
 - **Main session: Opus 5.5** (`claude-opus-5-5`).
-- **Subagents: Opus 5.5 at medium effort** (lead, 2026-10-02; replaces the
-  earlier Sonnet 5.5 rule). Spawn them as `subagent_type: "opus-medium"`
-  (`.claude/agents/opus-medium.md`: `model: opus`, `effort: medium`).
-- Keep subagents few (2-3 at a time at most) so the work stays inside the
-  5-hour usage window. Cap review rounds at 2; fix small findings in the main
-  session instead of sending another agent round.
+- **Coordinator (main session, Opus 5.5 high):** makes the level-1 and
+  level-2 plans, writes each task's metric, integrates, tests and commits.
+- **Subagents: Haiku 5.5 at high effort** (`claude-haiku-5-5`; lead,
+  2026-10-08; replaces the Opus-medium rule). Makers and critics both. Spawn
+  them as `subagent_type: "haiku-high"` (`.claude/agents/haiku-high.md`).
+- **5 subagents at a time** (lead). Each gets only the context it needs: its
+  task, the files it owns, the metric. Loop: maker -> critic -> one fix round.
+- Keep each PR small enough to finish inside one session.
 
 ## Standing rules
 
