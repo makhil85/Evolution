@@ -17,6 +17,7 @@
 // Echo (signal) stands by the core console, Bolt (builder) by the crates.
 // The coolant tank in the hall's near corner is the quest 'coolant' (Bolt leads it).
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { toonRamp } from '../../../game/toonPipeline.js';
 import { PALETTE } from './kit.js';
 
@@ -25,11 +26,9 @@ export const MODELS = [
   'walls/WallAstra_Straight', 'walls/BottomMetal_Straight', 'walls/TopPlastic_Straight',
   'columns/Column_Pipes',
   'platforms/Platform_Round1', 'platforms/Platform_Squares', 'platforms/Door_Frame_Square',
-  'props/Prop_Rail_Round_Big', 'props/Prop_Computer', 'props/Prop_AccessPoint', 'props/Prop_PipeHolder',
-  'props/Prop_Light_Small', 'props/Prop_Light_Wide', 'props/Prop_Vent_Small', 'props/Prop_Cable_1',
+  'props/Prop_Rail_Round_Big', 'props/Prop_Computer', 'props/Prop_PipeHolder',
+  'props/Prop_Light_Small', 'props/Prop_Light_Wide', 'props/Prop_Vent_Small',
   'props/Prop_Crate3', 'props/Prop_Crate4', 'props/Prop_Chest', 'props/Prop_Barrel_Large',
-  'decals/Decal_3', 'decals/Decal_Line_Straight',
-  'kenney/machine_generatorLarge', 'kenney/machine_barrelLarge',
 ];
 
 const CORE = { x: 0, z: 14 };
@@ -175,21 +174,24 @@ export function buildDeck(kit) {
   for (const x of [-3.5, 3.5]) b.box(0.1, 0.08, 14, mats.trim, x, CARGO_H - 0.04, 30);
 
   // --- walls -----------------------------------------------------------------------------
+  // The wall runs (line, from, to). Each run that meets another wall at a joint goes 0.15 m past it, so no corner has a gap
+  // (the doors are left open: their runs stop at the door).
+  const J = 0.15;
+  const CORR_RUNS = [[LINE.corrL, 0, 5 + J], [LINE.corrR, -5 - J, 0]];
+  const HALL_RUNS = [[LINE.nearHall, -5 - J, -1.3], [LINE.nearHall, 1.3, 5 + J], [LINE.hallL, 8 - J, 23], [LINE.hallR, -23, -8 + J],
+    [LINE.hallFar, -8 - J, -1.8], [LINE.hallFar, 1.8, 8 + J], [LINE.chamL, -2.035 - J, 2.035 + J], [LINE.chamR, -2.035 - J, 2.035 + J]];
+  const CARGO_RUNS = [[LINE.cargoL, 23 - J, 37], [LINE.cargoR, -37, -23 + J], [LINE.cargoFar, -6.875 - J, 6.875 + J]];
   if (M) {
     // The corridor: 5 m a side, 3.2 m high, its cornice squashed to fit.
-    wallRun(b, LINE.corrL, 0, 5, { cap: 0.2 });
-    wallRun(b, LINE.corrR, -5, 0, { cap: 0.2 });
+    for (const [line, t0, t1] of CORR_RUNS) wallRun(b, line, t0, t1, { cap: 0.2 });
     // The hall: its near wall either side of the corridor door, the sides, the chamfers, the far wall either side of the cargo door.
-    for (const [line, from, to] of [[LINE.nearHall, -5, -1.3], [LINE.nearHall, 1.3, 5], [LINE.hallL, 8, 23], [LINE.hallR, -23, -8],
-      [LINE.hallFar, -8, -1.8], [LINE.hallFar, 1.8, 8], [LINE.chamL, -2.135, 2.135], [LINE.chamR, -2.135, 2.135]]) {
+    for (const [line, from, to] of HALL_RUNS) {
       wallRun(b, line, from, to, { cap: true });
       // The upper band, 5 m to 7 m: the same panels squashed, with no trim.
       wallRun(b, line, from, to, { trim: false, sy: BAND_SY, y: 5 });
     }
     // The cargo bay: 5 m high, with a cornice and a trim all round.
-    wallRun(b, LINE.cargoL, 23, 37, { cap: true });
-    wallRun(b, LINE.cargoR, -37, -23, { cap: true });
-    wallRun(b, LINE.cargoFar, -6.875, 6.875, { cap: true });
+    for (const [line, t0, t1] of CARGO_RUNS) wallRun(b, line, t0, t1, { cap: true });
   } else {
     kit.wall(b, -1.6, 0, -1.6, 5, { h: CORR_H }); kit.wall(b, 1.6, 0, 1.6, 5, { h: CORR_H });
     kit.wall(b, -5, 5, -1.3, 5, { h: HALL_H }); kit.wall(b, 1.3, 5, 5, 5, { h: HALL_H });
@@ -203,11 +205,7 @@ export function buildDeck(kit) {
     kit.wall(b, -7, 37, 7, 37, { h: CARGO_H });
   }
   // The walls are solids (on the outside of their room faces; the lintels are over the doors, so they block nothing).
-  for (const [line, t0, t1] of [[LINE.corrL, 0, 5], [LINE.corrR, -5, 0], [LINE.nearHall, -5, -1.3], [LINE.nearHall, 1.3, 5],
-    [LINE.hallL, 8, 23], [LINE.hallR, -23, -8], [LINE.hallFar, -8, -1.8], [LINE.hallFar, 1.8, 8],
-    [LINE.chamL, -2.135, 2.135], [LINE.chamR, -2.135, 2.135], [LINE.cargoL, 23, 37], [LINE.cargoR, -37, -23], [LINE.cargoFar, -6.875, 6.875]]) {
-    solids.push(wallSolid(line, t0, t1));
-  }
+  for (const [line, t0, t1] of [...CORR_RUNS, ...HALL_RUNS, ...CARGO_RUNS]) solids.push(wallSolid(line, t0, t1));
 
   // The corridor's doorframe and the hall's door (kit.door draws the sliding leaves in it). The lintels over the
   // doors are plain panels with a trim (the kit's dark skirt stretched over them reads as a black block).
@@ -227,6 +225,7 @@ export function buildDeck(kit) {
   // A kit dais (6 m, its top at 0.14 m) under the core, with a floor plate on the hall's floor by the cargo door.
   putPiece(b, 'platforms/Platform_Round1', cx, 0, cz);
   putPiece(b, 'platforms/Platform_Squares', 0, 0.004, 20.5);
+  b.add(new THREE.RingGeometry(6.4, 6.5, 64).rotateX(-Math.PI / 2), mats.accentBlue, cx, 0.006, cz); // a thin inlay round the dais
   b.cyl(2.1, 2.2, 0.35, mats.metal, cx, 0.175, cz); // plinth
   b.add(new THREE.RingGeometry(2.6, 2.8, 64).rotateX(-Math.PI / 2), mats.accentBlue, cx, M ? 0.15 : 0.01, cz); // floor ring
   b.cyl(0.9, 0.9, 6.55, mats.glass, cx, 3.625, cz, { seg: 32 }); // the glass column, 0.35 to 6.9
@@ -249,17 +248,34 @@ export function buildDeck(kit) {
   plasmaCore.position.set(cx, 3.65, cz);
   group.add(plasmaCore);
   // Light rings climb the column. Basic material below bloom range, so they read as lit, not glowing.
+  // The six rings are one instanced mesh (one draw call); their matrices are set by setRings().
   const ringMat = own(new THREE.MeshBasicMaterial({ color: 0x8ff4ff }));
   const ringGeo = own(new THREE.TorusGeometry(0.93, 0.035, 8, 40).rotateX(Math.PI / 2));
-  const rings = Array.from({ length: 6 }, () => {
-    const m = new THREE.Mesh(ringGeo, ringMat); m.position.set(cx, 1, cz); group.add(m); return m;
-  });
+  const rings = new THREE.InstancedMesh(ringGeo, ringMat, 6);
+  rings.frustumCulled = false;
+  group.add(rings);
+  const ringM = new THREE.Matrix4(); const ringP = new THREE.Vector3(); const ringS = new THREE.Vector3(); const ringQ = new THREE.Quaternion();
+  /** Each ring climbs the column (0.6 m to 6.6 m) and is hidden (scale 0) at the very top and bottom of its climb. */
+  const setRings = (t) => {
+    for (let i = 0; i < 6; i++) {
+      const u = (t * 0.3 + i / 6) % 1;
+      const k = u > 0.04 && u < 0.96 ? 1 + 0.05 * Math.sin(Math.PI * u) : 0; // radius 0.93..0.98: just outside the glass (0.9)
+      ringP.set(cx, 0.6 + u * 6.0, cz); ringS.setScalar(k);
+      rings.setMatrixAt(i, ringM.compose(ringP, ringQ, ringS));
+    }
+    rings.instanceMatrix.needsUpdate = true;
+  };
+  setRings(0);
   b.add(new THREE.RingGeometry(0.95, 1.1, 40).rotateX(-Math.PI / 2), ringMat, cx, 0.36, cz); // a ring on the plinth
 
   // The upper level: a ring walkway and railing, seen from below (decoration, not walkable).
   const GY = 4.0;
   // The underside is light (it is lit from below only) with a cool light band round it.
-  b.add(new THREE.RingGeometry(4.0, 5.4, 64).rotateX(Math.PI / 2), mats.wall, cx, GY - 0.12, cz); // underside, facing down
+  // The underside: eight 45-degree wedges, alternating panel and trim, and a trim rim at its outer edge.
+  for (let i = 0; i < 8; i++) {
+    b.add(new THREE.RingGeometry(4.0, 5.4, 8, 1, (i * Math.PI) / 4, Math.PI / 4).rotateX(Math.PI / 2), i % 2 ? mats.trim : mats.panel, cx, GY - 0.12, cz);
+  }
+  b.add(new THREE.TorusGeometry(5.4, 0.05, 6, 64).rotateX(Math.PI / 2), mats.trim, cx, GY - 0.12, cz);
   b.add(new THREE.RingGeometry(4.45, 4.57, 64).rotateX(Math.PI / 2), mats.coveCool, cx, GY - 0.14, cz);
   // Kit rails round the walkway, at its inner and outer edges (each a ring of four quarters, 1 m high).
   for (const r of [4.0, 5.4]) {
@@ -314,27 +330,29 @@ export function buildDeck(kit) {
     for (const [line, t] of [[LINE.hallL, 10.0], [LINE.hallL, 19.0], [LINE.hallR, -10.0], [LINE.hallR, -19.0]]) onWall(b, LIGHT, line, t, 2.4);
     for (const [line, t] of [[LINE.hallL, 22.3], [LINE.hallR, -22.3]]) onWall(b, VENT, line, t, 0.4);
   }
-  // The core's ring walkway has two kit generators in the far corners, as engine-room clutter.
-  putPiece(b, 'kenney/machine_generatorLarge', -6.3, 0, 21.6, 0);
-  putPiece(b, 'kenney/machine_generatorLarge', 6.3, 0, 21.6, Math.PI);
-  putPiece(b, 'kenney/machine_barrelLarge', -4.4, 0, 22.1, 0);
-  putPiece(b, 'kenney/machine_barrelLarge', 4.4, 0, 22.1, 0);
-  solids.push({ rect: [-6.3, 21.6, 1.0, 1.3], rot: 0 }, { rect: [6.3, 21.6, 1.0, 1.3], rot: 0 });
-  solids.push({ rect: [-4.4, 22.1, 0.75, 0.75], rot: 0 }, { rect: [4.4, 22.1, 0.75, 0.75], rot: 0 });
+  // Two barrels a side in the hall's far corners, as engine-room clutter (the kit's barrels, no new materials).
+  for (const [x, z] of [[-6.4, 21.6], [-5.7, 22.2], [6.4, 21.6], [5.7, 22.2]]) {
+    putPiece(b, 'props/Prop_Barrel_Large', x, 0, z, 0.4);
+    solids.push({ rect: [x, z, 0.55, 0.55], rot: 0 });
+  }
 
   // Quest: coolant (the tank, its screen and lamp; the quest's spots are below). A coolant tank: a round tank with a
-  // domed top, two bands, a valve, and two pipes running to the wall (no pedestal).
+  // domed top, two light bands, a valve, a teal glow on its floor ring, and two pipes running to the wall (no pedestal).
   const TANK = { x: -4.2, z: 6.2 };
   b.add(new THREE.LatheGeometry([[0, 0], [0.56, 0], [0.56, 0.12], [0.5, 0.16], [0.5, 1.5], [0.42, 1.66], [0.2, 1.74], [0.1, 1.8], [0, 1.82]]
     .map(([r, y]) => new THREE.Vector2(r, y)), 24), mats.metal, TANK.x, 0, TANK.z);
-  for (const y of [0.5, 1.1]) b.add(new THREE.TorusGeometry(0.52, 0.035, 8, 32).rotateX(Math.PI / 2), mats.trim, TANK.x, y, TANK.z);
+  for (const y of [0.5, 1.1]) b.add(new THREE.TorusGeometry(0.52, 0.035, 8, 32).rotateX(Math.PI / 2), mats.wall, TANK.x, y, TANK.z);
   b.cyl(0.08, 0.08, 0.2, mats.trim, TANK.x, 1.9, TANK.z, { seg: 12 }); // the valve on top
-  const pipeLen = (TANK.x - 0.5) - (-7.875); const pipeX = (TANK.x - 0.5 - 7.875) / 2;
+  // Two pipes from the tank's west side, ending 1.8 m short of the chamfer wall (at x -6.0).
+  const pipeLen = (TANK.x - 0.5) - (-6.0); const pipeX = ((TANK.x - 0.5) + (-6.0)) / 2;
   for (const y of [0.6, 1.25]) b.cyl(0.06, 0.06, pipeLen, mats.trim, pipeX, y, TANK.z, { rz: Math.PI / 2, seg: 12 });
+  b.add(new THREE.RingGeometry(0.62, 0.8, 40).rotateX(-Math.PI / 2), kit.glow(PALETTE.teal, 1.2), TANK.x, 0.01, TANK.z); // the teal glow on the floor
   solids.push({ disc: [TANK.x, TANK.z, 0.56] });
   const tankScreen = kit.screen(0.8, 0.5, { title: 'COOLANT', seed: 33, accent: PALETTE.teal });
   tankScreen.position.set(TANK.x + 0.51, 1.1, TANK.z); tankScreen.rotation.y = Math.PI / 2; group.add(tankScreen); screens.push(tankScreen);
-  const coolLamp = kit.lamp(PALETTE.gold); coolLamp.position.set(TANK.x, 2.1, TANK.z); group.add(coolLamp);
+  // The lamp: a bigger gold glow on top of the valve (the station's lamp, the shell recolours its material).
+  const coolLamp = new THREE.Mesh(own(new THREE.SphereGeometry(0.16, 16, 10)), kit.glow(PALETTE.gold, 1.6));
+  coolLamp.position.set(TANK.x, 2.1, TANK.z); group.add(coolLamp);
   // End of quest: coolant
 
   // --- cargo bay -------------------------------------------------------------------------
@@ -350,40 +368,63 @@ export function buildDeck(kit) {
     putPiece(b, name, x, y, z, ry);
     if (y === 0) solids.push({ rect: [x, z, w, d], rot: ry });
   }
-  // Cables on the floor, from the loader's side to the racks.
-  putPiece(b, 'props/Prop_Cable_1', -1.8, 0, 26.2, 0.3);
-  putPiece(b, 'props/Prop_Cable_1', 2.6, 0, 27.4, 1.2);
-  // A cargo floodlight on each side wall, and a floor plate under the middle of the bay.
+  // A cargo floodlight on each side wall, and floor plates: under the middle of the bay, and three by the loader and the racks.
   if (M) for (const line of [LINE.cargoL, LINE.cargoR]) onWall(b, 'props/Prop_Light_Wide', line, line === LINE.cargoL ? 35.2 : -35.2, 2.4);
   putPiece(b, 'platforms/Platform_Squares', 0, 0.004, 27.6);
+  putPiece(b, 'platforms/Platform_Squares', -4.2, 0.004, 30.5);
+  putPiece(b, 'platforms/Platform_Squares', 4.2, 0.004, 29.6);
 
-  // A cargo loader by the outer door: body, cab, a mast with forks, four wheels.
+  // A forklift by the outer door, built from rounded parts (its front is +z): a gold body, an overhead guard, a seat and a
+  // steering wheel, a mast of two uprights with a carriage, two tapered forks, black tyres with metal hubs (the front pair smaller).
   const L = { x: -4.6, z: 34.6 };
-  b.box(2.4, 0.9, 3.0, goldMat, L.x, 0.75, L.z);
-  b.box(1.8, 0.9, 1.0, goldMat, L.x, 1.65, L.z - 0.7);
-  for (const dx of [-0.8, 0.8]) b.box(0.12, 2.4, 0.12, mats.metal, L.x + dx, 1.5, L.z + 1.45);
-  for (const dx of [-0.6, 0.6]) b.box(0.12, 0.1, 0.7, mats.metal, L.x + dx, 0.25, L.z + 1.85);
-  for (const dx of [-1.1, 1.1]) for (const dz of [-1.0, 1.0]) b.cyl(0.35, 0.35, 0.28, mats.black, L.x + dx, 0.35, L.z + dz, { rz: Math.PI / 2 });
+  b.add(new RoundedBoxGeometry(2.2, 0.8, 2.8, 2, 0.12), goldMat, L.x, 0.6, L.z - 0.2); // body
+  for (const dx of [-0.95, 0.95]) for (const dz of [-1.5, 0.2]) b.cyl(0.05, 0.05, 1.8, mats.trim, L.x + dx, 1.9, L.z + dz); // guard posts
+  b.add(new RoundedBoxGeometry(2.0, 0.1, 1.9, 2, 0.04), goldMat, L.x, 2.8, L.z - 0.65); // roof
+  b.add(new RoundedBoxGeometry(0.55, 0.12, 0.55, 2, 0.04), mats.panel, L.x, 1.1, L.z - 0.9); // seat
+  b.add(new RoundedBoxGeometry(0.55, 0.5, 0.1, 2, 0.03), mats.panel, L.x, 1.4, L.z - 1.2); // seat back
+  b.add(new THREE.TorusGeometry(0.18, 0.02, 6, 20).rotateX(-Math.PI / 3), mats.black, L.x, 1.5, L.z - 0.55); // steering wheel
+  for (const dx of [-0.5, 0.5]) b.add(new RoundedBoxGeometry(0.14, 2.3, 0.14, 2, 0.03), mats.metal, L.x + dx, 1.45, L.z + 1.35); // mast uprights
+  b.add(new RoundedBoxGeometry(1.2, 0.8, 0.12, 2, 0.03), mats.metal, L.x, 1.5, L.z + 1.42); // carriage plate
+  for (const dx of [-0.5, 0.5]) {
+    const fork = new THREE.BoxGeometry(0.12, 0.1, 1.3); // tapered: its tip is half as deep
+    const p = fork.attributes.position;
+    for (let i = 0; i < p.count; i++) if (p.getZ(i) > 0) p.setY(i, p.getY(i) * 0.5);
+    b.add(fork, mats.metal, L.x + dx, 0.25, L.z + 2.1);
+  }
+  for (const [dx, dz, r, w] of [[-1.15, -1.0, 0.35, 0.3], [1.15, -1.0, 0.35, 0.3], [-1.1, 0.95, 0.25, 0.22], [1.1, 0.95, 0.25, 0.22]]) {
+    b.cyl(r, r, w, mats.black, L.x + dx, r, L.z + dz, { rz: Math.PI / 2, seg: 16 }); // tyre
+    b.cyl(r * 0.4, r * 0.4, w + 0.02, mats.metal, L.x + dx, r, L.z + dz, { rz: Math.PI / 2, seg: 12 }); // hub
+  }
   solids.push({ rect: [L.x, L.z, 2.4, 3.0] }, { rect: [L.x, L.z + 1.85, 1.4, 0.8] });
 
-  // Shelving racks with supplies: along the left wall, and by the cargo door on the right.
+  // Shelving racks with supplies: along the left wall, and by the cargo door on the right. The boxes are rounded and
+  // of four sizes, with a trim label band; the lower shelf has a small crate at its end.
+  const BOX_SIZES = [[0.46, 0.3, 0.4], [0.56, 0.4, 0.44], [0.38, 0.26, 0.36], [0.5, 0.34, 0.48]]; // [depth, height, width along the shelf]
   const rack = (x, z, len) => {
     for (const dz of [-len / 2, len / 2]) for (const dx of [-0.4, 0.4]) b.box(0.06, 2.4, 0.06, mats.panel, x + dx, 1.2, z + dz);
-    for (const y of [0.5, 1.2, 1.9]) {
+    [0.5, 1.2, 1.9].forEach((y, row) => {
       b.box(0.9, 0.06, len, mats.trim, x, y, z);
-      [cardMat, crateMat, blueMat].forEach((m, k) => {
-        for (let s = -len / 2 + 0.4 + k * 0.25; s < len / 2 - 0.3; s += 0.9) b.box(0.5, 0.34, 0.5, m, x + (k % 2 ? 0.06 : -0.06), y + 0.2, z + s);
-      });
-    }
+      const end = len / 2 - (row === 0 ? 0.9 : 0.2); // the lower shelf keeps its end for the crate
+      let i = 0;
+      for (let s = -len / 2 + 0.2; s < end; i++) {
+        const [dep, h, w] = BOX_SIZES[(i + row) % BOX_SIZES.length];
+        if (s + w > end) break;
+        const mat = [cardMat, crateMat, blueMat][(i + row) % 3]; const off = i % 2 ? 0.08 : -0.06;
+        b.add(new RoundedBoxGeometry(dep, h, w, 2, 0.03), mat, x + off, y + 0.03 + h / 2, z + s + w / 2);
+        b.box(0.02, h * 0.25, w * 0.6, mats.trim, x + off + dep / 2 + 0.01, y + 0.03 + h * 0.7, z + s + w / 2); // the label band
+        s += w + 0.08;
+      }
+    });
+    putPiece(b, 'props/Prop_Crate3', x, 0.53, z + len / 2 - 0.5, 0, { s: 0.4 });
     solids.push({ rect: [x, z, 0.9, len] });
   };
   rack(-6.1, 29.5, 7.0);
   rack(6.1, 25.9, 3.4);
 
-  // The packing console (station 'pack'): its front faces the crates' side, the spot is on the other.
-  const pack = kit.console(0, 33.2, -Math.PI / 2, { w: 2.2, screen: { title: 'PACK', seed: 51 } });
-  group.add(pack.group); solids.push(pack.solid); screens.push(pack.screen);
-  // Same as the core console: the lamp on a short post at the desk's end (the pack desk turns, so its end is at z + 1.08).
+  // The packing desk (station 'pack'): three kit computers in a row along its 2.2 m front (its front faces the spot, at
+  // -x); the lamp on a short post at the desk's end, as the core's.
+  for (const z of [32.5, 33.2, 33.9]) putPiece(b, 'props/Prop_Computer', 0, 0, z, -Math.PI / 2);
+  solids.push({ rect: [0, 33.2, 2.2, 0.85], rot: -Math.PI / 2 });
   b.cyl(0.04, 0.04, 0.19, mats.trim, 0, 0.955, 34.28);
   const packLamp = kit.lamp(); packLamp.position.set(0, 1.12, 34.28); group.add(packLamp);
 
@@ -404,16 +445,14 @@ export function buildDeck(kit) {
   const sealed = kit.sign('Outer door sealed', { w: 3.0, h: 0.36, color: PALETTE.gold });
   sealed.position.set(0, 4.72, 36.3); sealed.rotation.y = Math.PI; group.add(sealed);
 
-  // Floor markings: a gold band across the bay in front of the outer door (tinted decals, the kit's are loud).
-  for (const x of [-4, 0, 4]) putPiece(b, 'decals/Decal_Line_Straight', x, 0.005, 35.6, Math.PI / 2, { tint: 0xffc65a });
+  // Floor marking: a gold band across the bay in front of the outer door (one strip in the forklift's gold, no extra draw call).
+  b.box(12, 0.01, 0.22, goldMat, 0, 0.006, 35.6);
 
   // Signs: ENGINEERING over the corridor door, CARGO BAY over the cargo door.
   const engSign = kit.sign('Engineering', { w: 2.4, h: 0.36 });
   engSign.position.set(0, 2.95, 3.8); engSign.rotation.y = Math.PI; group.add(engSign);
   const cargoSign = kit.sign('Cargo bay', { w: 1.8, h: 0.36 });
   cargoSign.position.set(0, 3.9, 22.8); cargoSign.rotation.y = Math.PI; group.add(cargoSign);
-  // The deck's number on the corridor floor.
-  putPiece(b, 'decals/Decal_3', 0, 0.004, 1.9, 0, { tint: 0xc9a46a });
 
   // Doors: the corridor door into the hall, the wide door into the cargo bay (its frame from the kit).
   putPiece(b, 'platforms/Door_Frame_Square', 0, 0, 23, 0, { s: 0.72 });
@@ -421,16 +460,12 @@ export function buildDeck(kit) {
   const cargoDoor = kit.door(0, 23, 0, { w: 3.2, h: 3.0 });
   group.add(hallDoor.group, cargoDoor.group);
 
-  // The corridor's wall fittings: an access point on the left, a wall light on the right.
-  if (M) {
-    // The access point stands out from the wall: its back on the wall, its front 0.44 m into the corridor.
-    standOn(b, ['props/Prop_AccessPoint'], { ...LINE.corrL, F: LINE.corrL.F - 0.44, t: 1.8, y: 1.1 });
-    solids.push({ rect: [-1.255, 1.8, 0.44, 1.3], rot: 0 });
-    onWall(b, LIGHT, LINE.corrR, -2.5, 2.4);
-  }
+  // The corridor's wall light, on the right.
+  if (M) onWall(b, LIGHT, LINE.corrR, -2.5, 2.4);
 
-  // The hall's two weak point lights (the deck's allowance): by the corridor door (the core glows on its own), and in the cargo bay.
-  const coreLight = new THREE.PointLight(0xfff1e0, 1.5, 0, 1); coreLight.position.set(-2.0, 5.5, 9.0); group.add(coreLight);
+  // The hall's two weak point lights (the deck's allowance): by the coolant tank, beside the corridor door (it lights the
+  // quest's corner, and sits well off the core, so the core view stays under the brightness ceiling), and in the cargo bay.
+  const coreLight = new THREE.PointLight(0xfff1e0, 2.0, 0, 1); coreLight.position.set(-3.2, 5.6, 7.2); group.add(coreLight);
   const cargoLight = new THREE.PointLight(0xfff1e0, 1.0, 0, 1); cargoLight.position.set(0, 3.8, 30); group.add(cargoLight);
 
   b.flush(group);
@@ -471,14 +506,7 @@ export function buildDeck(kit) {
       // The core breathes, and its light rings climb the column and fade at the ends.
       plasma.color.copy(plasmaBase).multiplyScalar(1.6 + 0.2 * Math.sin(t * 2.4));
       const s = 1 + 0.05 * Math.sin(t * 2.4); plasmaCore.scale.set(s, 1, s);
-      // A ring is hidden at the very top and bottom of its climb (no fade on a shared material).
-      for (let i = 0; i < rings.length; i++) {
-        const m = rings[i];
-        const u = (t * 0.3 + i / rings.length) % 1;
-        m.position.y = 0.6 + u * 6.0;
-        m.scale.setScalar(1 + 0.05 * Math.sin(Math.PI * u)); // radius 0.93..0.98: just outside the glass (0.9)
-        m.visible = u > 0.04 && u < 0.96;
-      }
+      setRings(t);
       // The screens flicker gently, each out of step with the next.
       for (let i = 0; i < screens.length; i++) screens[i].material.color.setScalar(1.12 + 0.04 * Math.sin(t * 6 + i * 1.7));
     },
