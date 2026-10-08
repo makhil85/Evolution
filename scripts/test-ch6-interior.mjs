@@ -84,6 +84,10 @@ try {
     for (const s of STATIONS) assert.equal(DECKS.filter((d) => d.stations.includes(s.id)).length, 1, s.id);
     assert.deepEqual(STATIONS.map((s) => deckOf(s.id)).filter((x) => !x), []);
   });
+  // If the kits fail to load (preloadInterior gives null), every deck still builds from code alone.
+  ok('every deck builds without the model kits', () => {
+    for (const spec of DECKS) spec.build(createKit({ models: null }));
+  });
   for (const spec of DECKS) {
     const kit = createKit({ models });
     const d = spec.build(kit);
