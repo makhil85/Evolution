@@ -31,8 +31,8 @@ const WAVE_T = 1.6; // seconds for a robot's wave
 
 const clamp01 = (x) => Math.min(1, Math.max(0, x));
 const smooth = (x) => { const u = clamp01(x); return u * u * (3 - 2 * u); };
-/** A wave's strength over its WAVE_T seconds: eased in, held, eased out. */
-const waveEnv = (u) => smooth(u / 0.25) * (1 - smooth((u - 0.75) / 0.25));
+/** A wave's strength over its WAVE_T seconds: eased in over 40%, held briefly, eased out over 40%. */
+const waveEnv = (u) => smooth(u / 0.4) * (1 - smooth((u - 0.6) / 0.4));
 /** How much of the gap to close this frame (frame-rate free). */
 const ease = (k, dt) => 1 - Math.exp(-k * dt);
 /** A seeded random 0..1, so each figure's idle is the same every run. */
