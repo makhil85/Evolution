@@ -2,16 +2,18 @@
 //
 //   node scripts/test-ch5-games.mjs
 //
-// The ring run (src/space/ch5/ringRunLogic.js): a steady player clears every
-// level with few bumps and its ice and rock goal met, sitting still gets hit,
-// big rocks take 2 / 3 / 5 shots, shots kick her back (but never out of the
-// picture), and a level plays the same each go.
+// The ring run (src/space/ch5/ringRunLogic.js): a steady player meets every
+// level's goal and stops there, sitting still gets hit, a clumsy player (fire
+// only) passes Easy but not Medium or Hard, a steering bot takes 15 to 40 s,
+// big rocks take 2 / 3 / 5 shots and need a true aim, a bump jams the gun,
+// shots kick her back (but never out of the picture), and a level plays the
+// same each go.
 // Space pool (poolLogic.js): every level can be won with good shots, bumps
 // keep the total momentum, and a bad shot doesn't win.
 // Part D (designBoard.js, rockHunt.js, workshop.js): each design question has
 // one right answer, the fuel sum works, and exactly one rock passes the list.
 import assert from 'node:assert/strict';
-import { createRun, stepRun, botInput, result, LEVELS, waterFor, BIG_R, BIG_ROCK, MAX_KICK, SHIP_R } from '../src/space/ch5/ringRunLogic.js';
+import { createRun, stepRun, botInput, result, skipRun, LEVELS, waterFor, BIG_R, BIG_ROCK, MAX_KICK, SHIP_R } from '../src/space/ch5/ringRunLogic.js';
 import { DESIGN_STEPS } from '../src/space/ch5/designBoard.js';
 import { CHECKS, ROCKS, failures } from '../src/space/ch5/rockHunt.js';
 import { STATIONS } from '../src/space/ch5/workshop.js';
@@ -38,16 +40,15 @@ ok('three levels, each longer and busier than the last', () => {
 });
 for (const level of ['easy', 'medium', 'hard']) {
   for (const seed of [1, 7, 42]) {
-    ok(`${level} (seed ${seed}): a steady player ends with water and few bumps; sitting still gets hit`, () => {
+    ok(`${level} (seed ${seed}): a steady player meets the goal and stops there, with few bumps; sitting still gets hit`, () => {
       const bot = play(level, botInput, seed).res;
       const still = play(level, idle, seed).res;
-      assert.equal(bot.seconds, LEVELS[level].time);
-      assert.ok(bot.water >= 300, `water ${bot.water}`);
-      assert.ok(bot.bumps <= 3, `bumps ${bot.bumps}`);
-      // The goal is well inside what a steady player gets (a child gets less).
-      assert.ok(bot.met && bot.ice >= bot.goal.ice * 1.5 && bot.rock >= bot.goal.rock * 1.3, `got ${bot.ice}/${bot.rock} of ${bot.goal.ice}/${bot.goal.rock}`);
-      assert.ok(!still.met);
-      assert.ok(still.bumps >= 15, `idle bumps ${still.bumps}`);
+      // The run ends as soon as both goals are met (before the clock runs out).
+      assert.ok(bot.met && bot.seconds < LEVELS[level].time, `met at ${bot.seconds} s`);
+      assert.ok(bot.ice >= bot.goal.ice && bot.rock >= bot.goal.rock, `got ${bot.ice}/${bot.rock}`);
+      assert.ok(bot.water > 0 && bot.bumps <= 3, `water ${bot.water} bumps ${bot.bumps}`);
+      assert.ok(!still.met && still.seconds === LEVELS[level].time);
+      assert.ok(still.bumps >= 8, `idle bumps ${still.bumps}`);
       assert.equal(still.water, 0);
     });
   }
@@ -117,6 +118,57 @@ ok('steering stays inside the run', () => {
   const run = createRun('easy', 1);
   for (let i = 0; i < 600; i++) stepRun(run, 1 / 60, { turn: 1, thrust: 1, fire: false });
   assert.ok(run.ship.x <= 12 && run.ship.y <= 6);
+});
+ok('a clumsy player (fire only, no steering) passes Easy but not Medium or Hard', () => {
+  const fireOnly = () => ({ turn: 0, thrust: 0, fire: true });
+  const met = (level) => [...Array(40).keys()].filter((i) => play(level, fireOnly, (i + 1) * 104729).res.met).length;
+  const [e, m, h] = [met('easy'), met('medium'), met('hard')];
+  assert.ok(e >= 24, `easy ${e}/40`); // a six-year-old can still win
+  assert.ok(m <= 14, `medium ${m}/40`);
+  assert.ok(h <= 4, `hard ${h}/40`);
+});
+ok('a steering bot meets every goal in 15 to 40 s (median), on every level', () => {
+  for (const level of ['easy', 'medium', 'hard']) {
+    const secs = [];
+    for (let i = 0; i < 40; i++) { const r = play(level, botInput, (i + 1) * 7919).res; if (r.met) secs.push(r.seconds); }
+    secs.sort((a, b) => a - b);
+    assert.ok(secs.length >= 36, `${level} met ${secs.length}/40`);
+    const median = secs[secs.length >> 1];
+    assert.ok(median >= 15 && median <= 40, `${level} median ${median} s`);
+  }
+});
+ok('a big rock needs a true aim (Hard, no aim help): a sloppy shot passes by, a straight one breaks a crack', () => {
+  const shoot = (offset) => {
+    const run = createRun('hard', 1);
+    run.spawnClock = 1e9; run.ice.length = 0;
+    run.ice.push({ id: 1, x: offset, y: 0, z: -200, r: BIG_R, big: true, rock: true, hp: LEVELS.hard.bigHits, spin: 0, spinRate: 0, shape: 1 });
+    stepRun(run, 1 / 60, { turn: 0, thrust: 0, fire: true });
+    for (let i = 0; i < 240; i++) stepRun(run, 1 / 60, idle());
+    return run;
+  };
+  assert.equal(shoot(BIG_R * 0.95).cracks, 0, 'sloppy shot hit');
+  assert.equal(shoot(0.5).cracks, 1, 'straight shot missed');
+});
+ok('a bump jams the gun for a moment', () => {
+  const run = createRun('easy', 1);
+  run.spawnClock = 1e9; run.ice.length = 0;
+  run.ice.push({ id: 1, x: 0, y: 0, z: 0, r: 1, big: false, rock: false, hp: 1, spin: 0, spinRate: 0, shape: 1 });
+  stepRun(run, 1 / 60, idle());
+  assert.equal(run.bumps, 1);
+  const fire = { turn: 0, thrust: 0, fire: true };
+  const jam = LEVELS.easy.stun;
+  assert.ok(jam >= 0.5, `jam ${jam} s too short to notice`);
+  for (let i = 0; i < Math.round(jam * 0.5 * 60); i++) stepRun(run, 1 / 60, fire); // half way through: still jammed
+  assert.equal(run.shots, 0, 'fired while jammed');
+  assert.ok(run.ship.stun > 0, 'the jam is visible to the panel');
+  for (let i = 0; i < Math.round(jam * 0.6 * 60); i++) stepRun(run, 1 / 60, fire); // past the jam
+  assert.ok(run.shots >= 1, 'gun never came back');
+});
+ok('the grown-up skip ends the run with the goal met', () => {
+  const run = createRun('hard', 1);
+  skipRun(run);
+  assert.ok(run.over && result(run).met);
+  assert.equal(stepRun(run, 1 / 60, idle()).length, 0);
 });
 
 console.log('space pool');
