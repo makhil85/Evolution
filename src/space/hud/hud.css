@@ -77,6 +77,9 @@
 .sp-hud .sp-map.is-open .sp-map__close,
 .sp-hud .sp-upgrade,
 .sp-hud .sp-warp__pip,
+.sp-hud .sp-warp__auto-btn,
+.sp-hud .sp-energy__toggle,
+.sp-hud .sp-toggles > button,
 .sp-hud .sp-dialogue__next {
   pointer-events: auto;
 }
@@ -196,6 +199,46 @@
 .sp-hud .sp-solar__status.is-low { color: var(--sp-bad); }
 .sp-hud .sp-solar__status.is-ok { color: var(--sp-good); }
 
+/* Pull + Sun, one box (lead): a one-line summary button; the two detail
+ * sections below it show only when opened. The box itself is the sp-panel
+ * look, so the button and the body carry no panel styling of their own. */
+.sp-hud .sp-panel.sp-energy { padding: 0; overflow: hidden; }  /* beats the small-screen .sp-panel padding */
+.sp-hud button.sp-energy__toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  padding: 10px 10px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.sp-hud button.sp-energy__toggle:hover { background: rgba(255, 255, 255, 0.04); }
+.sp-hud button.sp-energy__toggle:focus-visible { outline: 2px solid var(--sp-cool-glass); outline-offset: -2px; }
+.sp-hud .sp-energy__summary {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: calc(11.5px * var(--hud-scale));  /* the column's label size: the whole line must fit its narrow width */
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sp-hud .sp-energy__summary > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sp-hud .sp-energy__sep { color: var(--sp-muted); font-weight: 600; }
+.sp-hud .sp-energy__chev { margin-left: auto; flex: none; width: calc(12px * var(--hud-scale)); height: calc(12px * var(--hud-scale)); color: var(--sp-amber); transition: transform 140ms ease; }
+.sp-hud .sp-energy__body { padding: 8px 13px 10px; border-top: 1px solid var(--sp-line); }
+.sp-hud .sp-energy__sec + .sp-energy__sec { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--sp-line); }
+.sp-hud .sp-energy.is-collapsed .sp-energy__body { display: none; }
+.sp-hud .sp-energy.is-collapsed .sp-energy__chev { transform: rotate(-90deg); }
+
 /* Warp indicator */
 .sp-hud .sp-warp { display: flex; align-items: center; gap: 6px; }
 .sp-hud .sp-warp__pip {
@@ -214,6 +257,31 @@
 .sp-hud .sp-warp__reason { margin-top: 6px; font-size: calc(11.5px * var(--hud-scale)); color: var(--sp-bad); display: flex; gap: 5px; line-height: 1.35; }  /* -> 15px */
 .sp-hud .sp-warp__reason svg { width: calc(11.5px * var(--hud-scale)); height: calc(11.5px * var(--hud-scale)); flex: none; margin-top: 1px; }
 .sp-hud .sp-warp__reason.is-hidden { display: none; }
+/* Autopilot on: the pips make way for two big buttons, its speed limit (lead). */
+.sp-hud .sp-warp__auto { display: flex; gap: 6px; }
+.sp-hud button.sp-warp__auto-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 7px 9px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid var(--sp-line-strong);
+  color: var(--sp-muted);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.sp-hud button.sp-warp__auto-btn b { font-size: calc(15px * var(--hud-scale)); font-weight: 900; color: var(--sp-text); line-height: 1.1; }  /* -> 20px */
+.sp-hud button.sp-warp__auto-btn span { font-size: calc(10.8px * var(--hud-scale)); line-height: 1.2; }  /* -> 14px */
+.sp-hud button.sp-warp__auto-btn:hover { border-color: var(--sp-accent); }
+.sp-hud button.sp-warp__auto-btn:focus-visible { outline: 2px solid var(--sp-cool-glass); outline-offset: 1px; }
+.sp-hud button.sp-warp__auto-btn.is-active { background: var(--sp-accent-soft); border-color: var(--sp-accent); }
+.sp-hud button.sp-warp__auto-btn.is-active b { color: #fff; }
 
 /* --- right column: mission + orbit ---------------------------------------
  * Widened (was 262px) to match the instrument column's breathing room. */
@@ -799,6 +867,7 @@
  * point, the landing): only what she needs stays - speed/height, fuel, the
  * map and the objective line. The pull meter, solar power, warp, cargo, the
  * orbit card and the mission step list come back when she's coasting. */
+.sp-hud.is-focus .sp-energy__body,
 .sp-hud.is-focus .sp-pull,
 .sp-hud.is-focus .sp-solar,
 .sp-hud.is-focus .sp-warp-panel,

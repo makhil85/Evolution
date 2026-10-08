@@ -15,7 +15,7 @@
 
 import { el, svg, num, frac, pct, group, fmtNum } from './domUtil.js';
 import { iconInner } from './icons.js';
-import { BODIES, SHIP, RADIATION, WARP_LEVELS } from '../contracts.js';
+import { BODIES, SHIP, RADIATION, WARP_LEVELS, AP_WARP_SLOW, AP_WARP_FAST } from '../contracts.js';
 import { t } from '../level.js';
 
 function bodyLabel(id) {
@@ -36,7 +36,7 @@ function buildBar(toneFn) {
   };
 }
 
-export function createInstruments(root, { onWarp } = {}) {
+export function createInstruments(root, { onWarp, onAutoWarp } = {}) {
   // --- left column: speed, pull, solar --------------------------------
   const left = el('div', 'sp-instruments sp-instruments--left');
 
@@ -60,8 +60,9 @@ export function createInstruments(root, { onWarp } = {}) {
   speedPanel.appendChild(altRow);
   left.appendChild(speedPanel);
 
-  // Pull meter (gravity)
-  const pullPanel = el('div', 'sp-panel sp-pull');
+  // Pull meter (gravity) and solar power: both detail sections of ONE box
+  // (assembled after the solar block below).
+  const pullPanel = el('div', 'sp-energy__sec sp-pull');
   const pullTitle = el('div', 'sp-panel__title');
   pullTitle.appendChild(svg(iconInner('gravity')));
   pullTitle.appendChild(document.createTextNode('Pull of Gravity'));
@@ -84,10 +85,9 @@ export function createInstruments(root, { onWarp } = {}) {
   farSlot.appendChild(el('div', 'sp-pull__capt', t('2× as far → ÷4', 'Farther: weaker')));
   pullMini.append(nowSlot, farSlot);
   pullPanel.appendChild(pullMini);
-  left.appendChild(pullPanel);
 
   // Solar power
-  const solarPanel = el('div', 'sp-panel sp-solar');
+  const solarPanel = el('div', 'sp-energy__sec sp-solar');
   const solarTitle = el('div', 'sp-panel__title');
   solarTitle.appendChild(svg(iconInner('solar')));
   solarTitle.appendChild(document.createTextNode('Solar Power'));
@@ -100,7 +100,38 @@ export function createInstruments(root, { onWarp } = {}) {
   solarPanel.appendChild(solarBar.root);
   const solarStatus = el('div', 'sp-solar__status is-ok', 'Enough power for the claw.');
   solarPanel.appendChild(solarStatus);
-  left.appendChild(solarPanel);
+
+  // One box for both (lead): collapsed it is a single summary line that is a
+  // button; a click shows the two detail sections, another click hides them.
+  // Collapsed by default, and the choice is remembered (try/catch: private mode).
+  const energyPanel = el('div', 'sp-panel sp-energy is-collapsed');
+  const energyToggle = el('button', 'sp-energy__toggle');
+  energyToggle.type = 'button';
+  const pullSum = el('span', null, 'Pull: none');
+  const sunSum = el('span', null, '☀ 100%');
+  const summary = el('span', 'sp-energy__summary');
+  summary.append(pullSum, el('span', 'sp-energy__sep', '·'), sunSum);
+  const energyChev = svg(iconInner('chevronDown'));
+  energyChev.classList.add('sp-energy__chev');
+  energyToggle.append(summary, energyChev);
+  energyPanel.appendChild(energyToggle);
+  const energyBody = el('div', 'sp-energy__body');
+  energyBody.append(pullPanel, solarPanel);
+  energyPanel.appendChild(energyBody);
+  left.appendChild(energyPanel);
+
+  const DETAILS_KEY = 'rocket_village_hud_details';
+  function setDetails(open, remember = true) {
+    energyPanel.classList.toggle('is-collapsed', !open);
+    energyToggle.setAttribute('aria-expanded', String(!!open));
+    if (remember) {
+      try { localStorage.setItem(DETAILS_KEY, open ? '1' : '0'); } catch { /* private mode */ }
+    }
+  }
+  energyToggle.addEventListener('click', () => { energyToggle.blur(); setDetails(energyPanel.classList.contains('is-collapsed')); });
+  let detailsOpen = false;
+  try { detailsOpen = localStorage.getItem(DETAILS_KEY) === '1'; } catch { /* private mode */ }
+  setDetails(detailsOpen, false);
 
   // --- fuel + cargo + warp: same column, flowing below solar -------------
   // (Originally a second, bottom-anchored absolute block: at 900px tall that
@@ -109,7 +140,9 @@ export function createInstruments(root, { onWarp } = {}) {
   const suppliesPanel = el('div', 'sp-panel sp-supplies');
   const suppliesTitle = el('div', 'sp-panel__title');
   suppliesTitle.appendChild(svg(iconInner('fuel')));
-  suppliesTitle.appendChild(document.createTextNode('Fuel + Cargo'));
+  // Reads "Fuel" alone while the hold is empty (see update()).
+  const suppliesLabel = document.createTextNode('Fuel + Cargo');
+  suppliesTitle.appendChild(suppliesLabel);
   suppliesPanel.appendChild(suppliesTitle);
 
   const fuelGauge = el('div', 'sp-gauge');
@@ -151,7 +184,8 @@ export function createInstruments(root, { onWarp } = {}) {
   const warpPanel = el('div', 'sp-panel sp-warp-panel');
   const warpTitle = el('div', 'sp-panel__title');
   warpTitle.appendChild(svg(iconInner('warp')));
-  warpTitle.appendChild(document.createTextNode('Time Warp'));
+  const warpLabel = document.createTextNode('Time Warp');
+  warpTitle.appendChild(warpLabel);
   warpPanel.appendChild(warpTitle);
   const warpRow = el('div', 'sp-warp');
   // The pips are buttons (lead): a click asks for that warp, like keys 1-4.
@@ -164,6 +198,24 @@ export function createInstruments(root, { onWarp } = {}) {
     return pip;
   });
   warpPanel.appendChild(warpRow);
+  // While the autopilot flies, the pips make way for two big buttons (lead):
+  // they set how fast it may go, not the warp itself. Index 1 = ×4 (Slow);
+  // WARP_LEVELS.length = no limit (Fast, the cruise boost allowed), the same
+  // number as the autopilot's own (contracts.js).
+  const autoRow = el('div', 'sp-warp__auto');
+  autoRow.hidden = true;
+  const autoBtn = (name, sub, idx, tip) => {
+    const b = el('button', 'sp-warp__auto-btn');
+    b.type = 'button';
+    b.title = tip;
+    b.append(el('b', null, name), el('span', null, sub));
+    b.addEventListener('click', () => { b.blur(); onAutoWarp?.(idx); });
+    return b;
+  };
+  const autoSlow = autoBtn('Slow', t('×4: a calm pace', '×4'), AP_WARP_SLOW, 'The autopilot flies at most ×4');
+  const autoFast = autoBtn('Fast', t('as fast as it can go', 'the fastest'), AP_WARP_FAST, 'The autopilot flies as fast as it can');
+  autoRow.append(autoSlow, autoFast);
+  warpPanel.appendChild(autoRow);
   const warpReason = el('div', 'sp-warp__reason is-hidden');
   warpReason.appendChild(svg(iconInner('warning')));
   const warpReasonText = el('span', null, '');
@@ -263,6 +315,14 @@ export function createInstruments(root, { onWarp } = {}) {
       fuelValue.textContent = `${pct(state.fuel, state.fuelMax)}%`;
     }
 
+    // Cargo: its gauge only while there is some in the hold (lead). The title
+    // follows, so an empty ship reads "Fuel" alone.
+    const hasCargo = num(state.cargo, 0) >= 0.05;
+    if (changed('hasCargo', hasCargo)) {
+      cargoGauge.hidden = !hasCargo;
+      suppliesLabel.nodeValue = hasCargo ? 'Fuel + Cargo' : 'Fuel';
+    }
+
     // Cargo + a visual "heavier = slower to speed up" -------------------
     if (changed('cargo', state.cargo) || changed('cargoMax', state.cargoMax)) {
       const f = frac(state.cargo, state.cargoMax);
@@ -284,6 +344,8 @@ export function createInstruments(root, { onWarp } = {}) {
     if (state.gravity && (changed('gBody', state.gravity.body) || changed('gAccel', state.gravity.accel) || changed('gDist', state.gravity.distance))) {
       const { body, accel, distance } = state.gravity;
       const a = num(accel, 0);
+      // The word on the summary line (same cut-offs as the note below).
+      pullSum.textContent = `Pull: ${a <= 0.0005 ? 'none' : a > 1 ? 'strong' : a > 0.05 ? 'medium' : 'weak'}`;
       if (a <= 0.0005) {
         pullBody.textContent = 'Free fall — no strong pull';
         pullNote.textContent = '';
@@ -307,6 +369,7 @@ export function createInstruments(root, { onWarp } = {}) {
     if (state.solar && (changed('solarFrac', state.solar.fractionOfEarth) || changed('power', state.power) || changed('powerNeeded', state.powerNeeded))) {
       const frEarth = num(state.solar.fractionOfEarth, 1);
       solarPct.textContent = `${frEarth >= 0.1 ? Math.round(frEarth * 100) : (frEarth * 100).toFixed(1)}%`;
+      sunSum.textContent = `☀ ${solarPct.textContent}`;
       solarBar.set(Math.max(0.02, frEarth));
       const enough = num(state.power, 0) >= num(state.powerNeeded, 0);
       solarStatus.textContent = enough
@@ -317,6 +380,17 @@ export function createInstruments(root, { onWarp } = {}) {
 
     // Time warp -----------------------------------------------------------
     if (changed('warpUseful', state.warpUseful)) warpPanel.style.display = state.warpUseful === false ? 'none' : '';
+    // Autopilot on: its speed buttons replace the pips, and the title says so.
+    if (changed('apOn', state.autopilotOn)) {
+      const flying = !!state.autopilotOn;
+      warpRow.hidden = flying;
+      autoRow.hidden = !flying;
+      warpLabel.nodeValue = flying ? t('Autopilot speed', 'Speed') : 'Time Warp';
+    }
+    if (changed('apMax', state.autopilotWarpMax)) {
+      autoSlow.classList.toggle('is-active', state.autopilotWarpMax === AP_SLOW);
+      autoFast.classList.toggle('is-active', state.autopilotWarpMax !== AP_SLOW);
+    }
     if (changed('warp', state.warp) || changed('warpAllowed', state.warpAllowed) || changed('warpReason', state.warpReason)) {
       // Above the top button (Chapter 5's cruise): the top pip says how fast.
       const top = WARP_LEVELS.length - 1;
