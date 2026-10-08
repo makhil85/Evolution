@@ -255,7 +255,7 @@ function buildBuilderBot() {
     });
     return { sh, el, fingers };
   };
-  const armR = arm(1); const armL = arm(-1);
+  const armR = arm(1); const armL = arm(-1); const arms = [armR, armL];
 
   // The lathe parts above are centred on their origin, so a breath can scale them about their middle.
   return {
@@ -292,7 +292,7 @@ function buildBuilderBot() {
       armL.el.rotation.z = -(0.2 + 0.05 * Math.sin(t * 0.9 + 1.4));
       // The claws open and close slowly, and grip a little more on a wave.
       const grip = 0.12 + 0.08 * Math.sin(t * 1.3) + 0.12 * env;
-      for (const a of [armR, armL]) for (const f of a.fingers) f.p.rotation.z = -f.f * grip;
+      for (const a of arms) for (const f of a.fingers) f.p.rotation.z = -f.f * grip;
     },
     wave() { waveT = 0; },
     dispose() { k.dispose(); },
