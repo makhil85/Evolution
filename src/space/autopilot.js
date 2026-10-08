@@ -18,7 +18,11 @@
 import { t } from './level.js';
 import { OUTER } from './chapter.js';
 import { toggleBar, paintToggle } from './hud/toggleBar.js';
-import { BODIES } from './contracts.js';
+import { BODIES, WARP_LEVELS } from './contracts.js';
+
+// Its speed limit (game.autopilotWarpMax, an index into WARP_LEVELS) starts at
+// Fast: no limit, the cruise boost allowed. Slow (×4) is set by the warp panel.
+const AP_FAST = WARP_LEVELS.length;
 
 const MANUAL_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyZ', 'KeyX', 'Space', 'KeyQ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 
@@ -53,6 +57,8 @@ export function createAutopilot(game, { controls, hud }) {
   function setOn(v, why) {
     if (on === !!v) return;
     on = !!v;
+    // Each time it is switched on, it starts at Fast (today's behaviour).
+    if (on) game.autopilotWarpMax = AP_FAST;
     btn.classList.toggle('is-on', on);
     btn.setAttribute('aria-pressed', String(on));
     paint();
@@ -357,7 +363,8 @@ export function createAutopilot(game, { controls, hud }) {
       // Far from the window it warps even when not lined up (it turns once
       // the countdown is under two minutes, above).
       if (n !== null && (aligned || n > 120)) warp = n > 600 ? 4 : n > 120 ? 3 : n > 30 ? 2 : n > 5 ? 1 : 0;
-      G.bus.emit('warp-request', warp);
+      // The warp panel's Slow / Fast limit (lead): never faster than it allows.
+      G.bus.emit('warp-request', Math.min(warp, G.autopilotWarpMax ?? AP_FAST));
     }
     await frame();
   }

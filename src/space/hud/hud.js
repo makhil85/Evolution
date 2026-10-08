@@ -73,7 +73,11 @@ export class Hud {
     this._buildMission();
     this._buildRadiationSlot(); // instruments.js appends its own radiation banner; nothing to build here, kept for clarity
     // Clicking a warp pip asks for that warp, exactly like keys 1-4.
-    this.instruments = createInstruments(this.root, { onWarp: (i) => this.bus.emit('warp-request', i) });
+    // With the autopilot on, its Slow / Fast buttons set how fast it may go.
+    this.instruments = createInstruments(this.root, {
+      onWarp: (i) => this.bus.emit('warp-request', i),
+      onAutoWarp: (i) => this.bus.emit('autopilot-warp-limit', i),
+    });
     // The belt's mined tally sits under the mission card (acts/mining.js feeds it).
     this.tally = createTally(this._sidebar, { onOpenBay: () => this.bus.emit('upgrade-bay-request') });
     this.instruments.setOrbitInto(this._sidebar);

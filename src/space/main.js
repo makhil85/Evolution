@@ -295,6 +295,9 @@ bus.on('ui-modal', (open) => { modalOpen = !!open; });
 // One past the top level is the autopilot's cruise warp (AUTOPILOT_WARP,
 // physics.js decides where it applies); keys and buttons stop at the top.
 bus.on('warp-request', (i) => { game.warpIndex = Math.max(0, Math.min(WARP_LEVELS.length - 1, i)); game.warpBoost = i >= WARP_LEVELS.length; });
+// The Slow / Fast buttons while the autopilot flies: the most warp it may ask
+// for (autopilot.js holds its warp to this).
+bus.on('autopilot-warp-limit', (i) => { game.autopilotWarpMax = Math.max(0, Math.min(WARP_LEVELS.length, i)); });
 bus.on('camera-cycle', () => {
   const m = flightCam.cycle();
   hud.toast(m === 'chase' ? 'Camera: behind the ship' : m === 'orbit' ? 'Camera: free look (drag to spin)' : 'Camera: top view: best for reading your path', { ms: 2200 });
@@ -1707,8 +1710,10 @@ function tick(realDt, render = true) {
     // Chapter 5's cruise runs faster than the top button says: show it.
     warp: OUTER && warpState.warp > WARP_LEVELS[game.warpIndex] ? warpState.warp : WARP_LEVELS[game.warpIndex],
     // The warp buttons only when there's a long wait ahead (lead: over 100 s);
-    // keys 1-4 work any time.
-    warpUseful: game.warpIndex > 0 || waitAhead() > 100,
+    // keys 1-4 work any time. While the autopilot flies, its speed buttons live here.
+    warpUseful: game.warpIndex > 0 || waitAhead() > 100 || !!game.autopilot?.on,
+    autopilotOn: !!game.autopilot?.on,
+    autopilotWarpMax: game.autopilotWarpMax,
     warpAllowed: warpState.warpAllowed,
     warpReason: warpState.reason,
     soiBody: ship.soi,
