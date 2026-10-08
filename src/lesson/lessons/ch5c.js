@@ -339,8 +339,8 @@ export const LESSON_5C = {
         prompt: ['What is one water molecule made of?', 'What is water made of?'],
         choices: [
           { text: ['2 hydrogen atoms and 1 oxygen atom', '2 hydrogens and 1 oxygen'], correct: true },
-          { text: ['1 ice atom', '1 ice atom'] },
-          { text: ['Carbon and iron', 'Carbon and iron'] },
+          { text: ['1 ice atom, very big and very cold, too', 'One ice ball, all the same'] },
+          { text: ['Carbon and iron, mixed in with the ice', 'Carbon and iron, like a rock'] },
         ],
         hint: ['Count the atoms in the last picture, and read their letters.', 'Count the balls.'],
         why: ['H₂O: two H (hydrogen) and one O (oxygen). Ice, steam and water are all the same molecule.', 'Water is 2 hydrogens and 1 oxygen!'],
@@ -371,9 +371,9 @@ export const LESSON_5C = {
       question: {
         prompt: ['Where does the energy from fusion come from?', 'Where does the Sun’s light come from?'],
         choices: [
-          { text: ['Burning, like a fire', 'Fire'] },
+          { text: ['Burning, like a big fire in a fireplace', 'Fire, like a campfire'] },
           { text: ['A tiny bit of mass turns into energy', 'A tiny bit of stuff turns into light'], correct: true },
-          { text: ['Electricity from the planets', 'Electricity'] },
+          { text: ['Electricity sent down from the planets', 'Electricity from the planets all day long'] },
         ],
         hint: ['Look at the scales: which side was heavier, and where did the difference go?', 'Look at the scales.'],
         why: ['The helium weighs a little less than the hydrogen that made it. That bit of mass becomes energy (E = mc²), and c² is enormous, so it is a lot of energy.', 'A tiny bit of stuff turns into light!'],
@@ -384,7 +384,7 @@ export const LESSON_5C = {
       title: ['The Sun against a coal Sun', 'Sun or coal?'],
       beats: [
         { dur: 4, cap: ['What if the Sun were a huge lump of coal, burning? Watch the years go by.', 'What if the Sun was made of coal?'] },
-        { dur: 5, cap: ['The coal Sun is gone in a few thousand years: before the pyramids were old.', 'The coal Sun burns out fast!'] },
+        { dur: 5, cap: ['The coal Sun is gone in a few thousand years: about as long as the pyramids have stood.', 'The coal Sun burns out fast!'] },
         { dur: 4, cap: ['The real Sun, burning by fusion, shines for about 10 billion years.', 'The real Sun shines for a very long time.'] },
         { dur: 7, cap: ['One kilogram of fusion fuel gives as much energy as about 20 million kilograms of coal.', '1 kilo of fusion fuel = about 20 million kilos of coal!'] },
       ],

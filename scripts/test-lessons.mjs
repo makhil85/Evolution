@@ -114,11 +114,29 @@ ok('Chapter 5 fusion: the coal figure is about 20 million (hydrogen to helium, ~
   assert.ok(coal.question.why[0].includes('about 20 million times less'), 'why line');
   assert.ok(!JSON.stringify(LESSON_5C).includes('10 million'), 'no stale 10 million figure');
   assert.ok(!JSON.stringify(LESSON_5C).includes('1 cup'), 'no stale cup figure');
+  assert.ok(LESSON_5C.films[4].beats.some((b) => b.cap[0].includes('about as long as the pyramids have stood')), 'pyramid comparison is about 5,000 years');
 });
 ok('Chapter 5 momentum: "Catching up" has number choices, and 2 is the right answer', () => {
   const q = LESSON_5AA.films[2].question;
   assert.deepEqual(q.choices.map((c) => c.text[0]).sort(), ['1', '2', '4']);
   assert.equal(q.choices.find((c) => c.correct).text[0], '2');
+  assert.deepEqual(q.choices.map((c) => c.text[1]).sort(), ['Speed 1', 'Speed 2', 'Speed 4']);
+  assert.equal(q.choices.find((c) => c.correct).text[1], 'Speed 2');
+  assert.ok(LESSON_5AA.films[2].beats[0].cap[0].includes('same-size chunks'), 'the chunks are the same size');
+});
+// Balance (critic, 2026-10-08): in a Chapter 5 lesson question the right answer is never the
+// uniquely longest choice, at either Level, so a child cannot pick the longest one.
+ok('Chapter 5: no lesson question has the right answer as the uniquely longest choice (both Levels)', () => {
+  for (const L of [LESSON_5A, LESSON_5AA, LESSON_5B, LESSON_5C]) {
+    L.films.forEach((f, i) => {
+      if (!f.question) return;
+      for (const lvl of [0, 1]) {
+        const right = f.question.choices.find((c) => c.correct).text[lvl].length;
+        const others = f.question.choices.filter((c) => !c.correct).map((c) => c.text[lvl].length);
+        assert.ok(!(right > Math.max(...others)), `${L.id} film ${i + 1} level ${lvl === 0 ? 4 : 1}: right answer is the longest (${right} vs ${Math.max(...others)})`);
+      }
+    });
+  }
 });
 ok('captions are held long enough to read', () => {
   for (const L of LESSONS) {

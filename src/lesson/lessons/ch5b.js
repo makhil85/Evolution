@@ -209,9 +209,9 @@ export const LESSON_5B = {
       question: {
         prompt: ['Neptune has 17 times the mass of Earth. How heavy would you feel on its cloud tops?', 'How heavy would you feel on Neptune?'],
         choices: [
-          { text: ['17 times heavier', '17 times heavier'] },
+          { text: ['You would be 17 times heavier, crushed flat', '17 times heavier, crushed flat'] },
           { text: ['About the same, just a little heavier', 'Just a little heavier'], correct: true },
-          { text: ['Weightless, floating', 'Floating'] },
+          { text: ['Weightless, floating like in a space ship', 'Floating in the air, like a balloon'] },
         ],
         hint: ['What did the scales say on Neptune?', 'Look at the scales.'],
         why: ['Its pull is 17 times bigger for its mass, but you are 4 times as far from its middle, which makes it 16 times weaker. 17 ÷ 16 is just over 1.', 'Just a little heavier than on Earth!'],

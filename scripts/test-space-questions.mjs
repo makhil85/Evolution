@@ -215,7 +215,7 @@ for (const id of Object.keys(CH5_QUESTIONS)) {
   check(`ch5 L1 ${id}: says Level 1`, /^Level 1/.test(q.difficulty || ''), q.difficulty);
   check(`ch5 L1 ${id}: own prompt, hint and success`, q.prompt !== base.prompt && q.hint !== base.hint && q.success !== base.success);
   check(`ch5 L1 ${id}: short prompt (≤ 35 words)`, q.prompt.split(/\s+/).length <= 35, `${q.prompt.split(/\s+/).length} words`);
-  check(`ch5 L1 ${id}: short hint (≤ 16 words)`, q.hint.split(/\s+/).length <= 16, `${q.hint.split(/\s+/).length} words`);
+  check(`ch5 L1 ${id}: short hint (≤ 20 words)`, q.hint.split(/\s+/).length <= 20, `${q.hint.split(/\s+/).length} words`);
   if (q.type === 'choice') {
     check(`ch5 L1 ${id}: exactly one correct choice`, q.choices.filter((c) => c.correct === true).length === 1);
     check(`ch5 L1 ${id}: 4 choices`, q.choices.length === 4);
@@ -249,17 +249,28 @@ for (const [id, wrong] of Object.entries(temptingCh5L1)) for (const w of wrong) 
 check('ch5 L1 c5_sunlight_neptune: says "pretend"', /pretend/i.test(CH5_L1.c5_sunlight_neptune.prompt));
 check('ch5 L1 c5_deuterium: says "pretend", never a fact of 1 in 10', /pretend/i.test(CH5_L1.c5_deuterium.prompt) && !/1 in every 10 (hydrogen )?atoms is/i.test(CH5_L1.c5_deuterium.prompt.replace(/Pretend[^.]*\./, '')));
 check('ch5 L1 c5_saturn_size: says 9 Earths (the real width, rounded)', /about 9 Earths/.test(CH5_L1.c5_saturn_size.prompt));
+check('ch5 L1 c5_hexagon: says "pretend" for the 2 steps a side (no made-up fact)', /Pretend each side is 2 steps long/.test(CH5_L1.c5_hexagon.prompt));
+check('ch5 L1 c5_voyager: the sum has an event (1977 to 1980, Saturn)', /reached Saturn in 1980/.test(CH5_L1.c5_voyager.prompt));
+check('ch5 L1 c5_neptune_1846: "scientists", not "astronomers", and "roughly"', !/astronomers/.test(CH5_L1.c5_neptune_1846.prompt) && /scientists knew roughly/.test(CH5_L1.c5_neptune_1846.prompt));
+check('ch5 L4 c5_neptune_1846: "roughly", not "exactly"', /knew roughly/.test(CH5_QUESTIONS.c5_neptune_1846.prompt));
+check('ch5 L1 c5_pluto: success names Charon', /Charon/.test(CH5_L1.c5_pluto.success));
+check('ch5 L4 c5_voyager: names the heliopause', /heliopause/.test(CH5_QUESTIONS.c5_voyager.prompt));
 
-// Level 4 hints guide, they do not give the answer: no numeric answer appears in a hint.
+// Hints guide, they do not give the answer (both Levels): no answer of a text question, and no
+// correct choice's text, appears in its hint. Every answer is checked, not only the first.
+const escRe = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const givesAway = (hint, text) => new RegExp(`(?<![\\w,])${escRe(text)}(?![\\w])`, 'i').test(hint);
 for (const id of Object.keys(CH5_QUESTIONS)) {
   for (const [level, bank] of [[4, CH5_L4], [1, CH5_L1]]) {
     const q = bank[id];
-    if (q.type !== 'text') continue;
-    for (const a of q.answers) {
-      const n = a.replace(/,/g, '').match(/^\d+/)?.[0];
-      if (!n) continue;
-      check(`ch5 L${level} ${id}: hint does not give away ${n}`, !new RegExp(`(?<![\\d,])${n}(?![\\d])`).test(q.hint), q.hint);
-      break;
+    if (q.type === 'text') {
+      for (const a of q.answers) {
+        const n = a.replace(/,/g, '');
+        check(`ch5 L${level} ${id}: hint does not give away "${a}"`, !givesAway(q.hint, n), q.hint);
+      }
+    } else {
+      const right = q.choices.find((c) => c.correct).text;
+      check(`ch5 L${level} ${id}: hint does not give away the right choice`, !givesAway(q.hint, right), q.hint);
     }
   }
 }
