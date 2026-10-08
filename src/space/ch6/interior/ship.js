@@ -4,7 +4,7 @@
 // She walks a deck like a village (surface/walker.js, gait 'earth'; W/S A/D
 // relative to the camera, Shift runs, Space jumps, drag to look), walls and
 // props stop her (walkmap.js), doors slide open as she comes, and in the lift
-// "E" (or 1-4) picks a deck. The crewmate who leads a station stands by it;
+// the keys 1-4 pick a deck. The crewmate who leads a station stands by it;
 // the next station has a beacon (on another deck, the beacon is on the lift
 // and a toast says which deck). At a station "E" opens it (onStation(id)).
 // The walk takes its spots from the caller: stations (STATIONS, the default)
@@ -30,9 +30,61 @@ import { loadModels } from './models.js';
 const REACH = 1.6;     // how close to a station's spot to press E
 const LIFT = { x0: -1.2, x1: 1.2, z0: -2.4, z1: 0 };
 const LIFT_TIME = 1.4; // doors shut, fade, travel, fade in
+export const LIFT_OUT = { x: 0, z: 0.6, face: 0 }; // where she steps out: just past the door, facing away from it
+const CAM_PULL = 12;     // how fast the chase camera pulls in towards a wall or a roof (1/s)
+const CAM_LET = 4;       // how fast it lets out again (1/s)
+const CAM_LET_MAX = 0.8; // and by no more than this share of its distance a second (1/s)
+const CAM_PULL_MAX = 1;  // ... and pulls in by no more than this share a second (1/s)
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const angDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
 const inLift = (x, z) => x > LIFT.x0 && x < LIFT.x1 && z > LIFT.z0 && z < LIFT.z1 - 0.2;
+
+// The chase camera's sight line (chaseDistance). These scratch values are set per call, so a frame allocates nothing.
+const SIGHT = { map: null, roof: null, x: 0, z: 0, ty: 0, fx: 0, fz: 0, cp: 1, sp: 0 };
+const BODY_R = 0.15; // the camera keeps this far from a wall: the hard limit
+const SOFT_R = 0.6;  // and eases to this margin, so a door frame or corner it is about to pass pulls it in early
+/** Is the camera clear at distance d on her sight line, with margin r (no wall, and under the roof)? */
+function sightClear(d, r) {
+  const s = SIGHT;
+  const cx = s.x - s.fx * d * s.cp; const cz = s.z - s.fz * d * s.cp;
+  return s.map.fits(cx, cz, r) && s.ty + 0.3 + d * s.sp < s.roof(cx, cz) - 0.35;
+}
+/** How far along the sight line (at most `want`) the camera stays clear with margin r, found to a few mm. */
+function clearDist(want, r) {
+  if (!sightClear(0, r)) return 0;
+  // Out from her in 0.1 m steps until the sight line is blocked (or the wanted distance), then bisected.
+  let ok = 0; let bad = null;
+  for (let d = 0.1; ; d += 0.1) {
+    const x = Math.min(d, want);
+    if (sightClear(x, r)) { ok = x; if (x >= want) return want; } else { bad = x; break; }
+  }
+  for (let i = 0; i < 6; i++) { const m = (ok + bad) / 2; if (sightClear(m, r)) ok = m; else bad = m; }
+  return ok;
+}
+/** How often the hard limit had to hold the camera back (the tests read it). */
+export const chaseStats = { held: 0 };
+
+/**
+ * The chase camera's distance this frame (m), along her sight line. `p` = { x, z, ty (her eye
+ * height), yaw, pitch, want (the distance she asked for) }; `map` her walk map; `roof(x, z)` the roof
+ * above a point (deck.roof); `prev` last frame's distance.
+ * The hard limit is the first wall or roof on the line, at the body's margin: the camera is never past
+ * it. Its target is the same line at the bigger margin SOFT_R, and the camera eases to that: in fast
+ * (CAM_PULL), out slowly (CAM_LET, and by no more than CAM_LET_MAX of its distance a second).
+ */
+export function chaseDistance(map, roof, p, prev, dt) {
+  const s = SIGHT;
+  s.map = map; s.roof = roof; s.x = p.x; s.z = p.z; s.ty = p.ty;
+  s.fx = Math.sin(p.yaw); s.fz = Math.cos(p.yaw); s.cp = Math.cos(p.pitch); s.sp = Math.sin(p.pitch);
+  const want = Math.max(0, p.want);
+  const hard = clearDist(want, BODY_R);
+  const target = sightClear(0, SOFT_R) ? Math.min(hard, clearDist(want, SOFT_R)) : hard;
+  let next = prev + (target - prev) * (1 - Math.exp(-dt * (target < prev ? CAM_PULL : CAM_LET)));
+  // Each way is also held to a share of the distance a second: a corner swept into the line glides in.
+  next = next < prev ? Math.max(next, prev * (1 - CAM_PULL_MAX * dt)) : Math.min(next, prev * (1 + CAM_LET_MAX * dt));
+  if (next > hard) { chaseStats.held += 1; return hard; }
+  return next;
+}
 
 /** The lift car every deck shares (built once per deck, at the origin). */
 function buildLift(kit) {
@@ -88,7 +140,9 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
     d.group.add(lift.group);
     d.lift = lift;
     d.spec = spec;
-    d.map = createWalkMap({ floors: [...d.floors, lift.floor], solids: d.solids });
+    // The roof above each point: the deck's own (its rooms are not all one height), else its ceiling.
+    d.roof = d.ceilingAt ?? (() => d.ceiling ?? 3.2);
+    d.map =createWalkMap({ floors: [...d.floors, lift.floor], solids: d.solids });
     decks[spec.id] = d;
   }
 
@@ -148,6 +202,8 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
 
   const overlay = createOverlay();
   const cam = { yaw: 0, pitch: 0.3, dist: 4.6 };
+  let camDist = cam.dist; // how far the camera is now (eased, see chaseDistance)
+  const chaseP = { x: 0, z: 0, ty: 0, yaw: 0, pitch: 0, want: 0 }; // reused each frame
   const _move = new THREE.Vector2();
   const _v = new THREE.Vector3();
   let clock = 0; let busy = false; let disposed = false; let prevE = false; let prevJump = false;
@@ -235,7 +291,7 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
     const k = lift.t / LIFT_TIME;
     const spec = decks[lift.to].spec;
     setFade(k < 0.35 ? k / 0.35 : k < 0.65 ? 1 : Math.max(0, 1 - (k - 0.65) / 0.35), `DECK ${spec.n}  ·  ${t(spec.name[0], spec.name[1]).toUpperCase()}`);
-    if (!lift.swapped && k >= 0.5) { lift.swapped = true; showDeck(lift.to, { x: 0, z: -1.0, face: 0 }); }
+    if (!lift.swapped && k >= 0.5) { lift.swapped = true; showDeck(lift.to, LIFT_OUT); }
     if (k >= 1) {
       lift = null; setFade(0);
       const n = nextStation();
@@ -252,15 +308,11 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
     }
     const fx = Math.sin(cam.yaw); const fz = Math.cos(cam.yaw);
     const tx = walker.pos.x; const tz = walker.pos.z; const ty = walker.pos.y + 1.0;
-    const ceil = (deck.ceiling ?? 3.2) - 0.35;
-    // Pull the camera in until it is over the floor (not in a wall), and under the ceiling.
-    let dist = cam.dist;
-    for (let k = 0; k < 10; k++) {
-      const cx = tx - fx * dist * Math.cos(cam.pitch); const cz = tz - fz * dist * Math.cos(cam.pitch);
-      if (deck.map.fits(cx, cz, 0.15) && ty + 0.3 + dist * Math.sin(cam.pitch) < ceil) break;
-      dist *= 0.82;
-    }
-    camera.position.set(tx - fx * dist * Math.cos(cam.pitch), Math.min(ceil, ty + 0.3 + dist * Math.sin(cam.pitch)), tz - fz * dist * Math.cos(cam.pitch));
+    // Back off from walls and the roof, eased (chaseDistance): no popping as she walks along them.
+    chaseP.x = tx; chaseP.z = tz; chaseP.ty = ty; chaseP.yaw = cam.yaw; chaseP.pitch = cam.pitch; chaseP.want = cam.dist;
+    camDist = chaseDistance(deck.map, deck.roof, chaseP, camDist, dt);
+    const dist = camDist;
+    camera.position.set(tx - fx * dist * Math.cos(cam.pitch), ty + 0.3 + dist * Math.sin(cam.pitch), tz - fz * dist * Math.cos(cam.pitch));
     camera.lookAt(tx, ty, tz);
   }
 
@@ -297,9 +349,9 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
     beaconRing.scale.setScalar(1 + 0.08 * Math.sin(clock * 3));
     beaconArrow.position.y = 2.5 + 0.12 * Math.sin(clock * 2.2);
     beaconArrow.rotation.y = clock * 1.5;
-    // The beacon on the lift: hidden while she is in it.
+    // The beacon on the lift: hidden while she is by the lift door (in it, or just out of it).
     const nx = nextStation();
-    beacon.visible = !!nx && !(nx.deck !== deck.spec.id && hz < 0.6 && Math.abs(hx) < 1.6);
+    beacon.visible = !!nx && !(nx.deck !== deck.spec.id && hz < 1.0 && Math.abs(hx) < 1.6);
     if (lift) runLift(dt);
     updateCamera(dt, modal && !lift ? null : mouse);
 
@@ -316,7 +368,7 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
     if (near && !modal) {
       _v.set(near.x, near.y ?? 2.2, near.z).applyMatrix4(deck.group.matrixWorld).project(camera);
       overlay.showPrompt((_v.x * 0.5 + 0.5) * w, (-_v.y * 0.5 + 0.5) * h, `${t(near.title[0], near.title[1])} · ${CREW_INFO[near.lead].name}`);
-      if (pressedE) use(near);
+      if (pressedE) use(near).catch((e) => console.error('[ship] station', e));
     } else overlay.hidePrompt();
     overlay.draw(dt);
     if (finishSoon > 0) { finishSoon -= dt; if (finishSoon <= 0) finish({ done: stations.filter((s) => s.done).map((s) => s.id) }); }
@@ -341,7 +393,7 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
     /** Go straight to a deck (no lift ride). */
     showDeck(id) { showDeck(id); return deck.spec.id; },
     takeLift,
-    pressE() { const st = stations.find((s) => s.deck === deck.spec.id && !s.done && Math.hypot(walker.pos.x - s.x, walker.pos.z - s.z) < REACH); if (st) use(st); return st?.id; },
+    pressE() { const st = stations.find((s) => s.deck === deck.spec.id && !s.done && Math.hypot(walker.pos.x - s.x, walker.pos.z - s.z) < REACH); if (st) use(st).catch((e) => console.error('[ship] station', e)); return st?.id; },
     /** Put the camera on one of the deck's set points (for screenshots); null goes back to following her. */
     view(name) { const v = deck.views?.find((x) => x.name === name); viewPin = v || null; return !!v; },
   };

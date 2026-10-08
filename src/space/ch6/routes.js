@@ -218,8 +218,11 @@ export function keptFraction(err) {
   return 0.5;
 }
 
-/** Timing window half-width in seconds of slowed-down time, by closeness. */
-export const windowFor = (close) => [0.9, 0.7, 0.5, 0.35][Math.max(1, Math.min(CLOSE_LEVELS, close)) - 1];
+/** The flying mode's share of the timing window (Easy wider, Hard narrower; Chapter 6 has no other flying to tell them apart). */
+export const WINDOW_BY_MODE = Object.freeze({ easy: 1.5, medium: 1, hard: 0.6 });
+
+/** Timing window half-width in seconds of slowed-down time, by closeness and flying mode. */
+export const windowFor = (close, mode = 'medium') => [0.9, 0.7, 0.5, 0.35][Math.max(1, Math.min(CLOSE_LEVELS, close)) - 1] * (WINDOW_BY_MODE[mode] ?? 1);
 
 /**
  * The flight's result: the plan flown with her timing presses (`errs`, one

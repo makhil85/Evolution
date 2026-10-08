@@ -67,15 +67,16 @@ export function partBuildSteps(game) {
       title: t('Build the engine half', 'Build the engine'),
       objective: t('Mine the rock, make the fuel, print the magnet rings, fit them, and test fire.', 'Dig, make fuel, make parts, then fire the engine!'),
       markers: [],
-      async enter() { await playWorkshop({ bus: game.bus }); },
-      beat: 'c5Deuterium',
-      async after() {
-        // The test fire (the rock is built for the scene; Rock B hangs by her
-        // ship again afterwards).
+      async enter() {
+        await playWorkshop({ bus: game.bus });
+        // The test fire first, so she sees the engine work; then its question
+        // (complete() asks the beat after enter). The rock is built for the
+        // scene; Rock B hangs by her ship again afterwards.
         game._rockB?.remove?.();
         await playCh5Ending(game);
         showRockB(game);
       },
+      beat: 'c5Deuterium',
     },
   ];
 }
