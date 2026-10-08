@@ -26,6 +26,9 @@ export const PHYSICS_DT = 1 / 120;
 
 /** Allowed time-warp multipliers (keys 1-4). Warp > 1 is refused near bodies. */
 export const WARP_LEVELS = [1, 4, 16, 64];
+// The autopilot's speed limit (an index into WARP_LEVELS): Slow = ×4, Fast = no limit (the cruise boost allowed).
+export const AP_WARP_SLOW = 1;
+export const AP_WARP_FAST = WARP_LEVELS.length;
 /** The autopilot's cruise warp, out between the planets only (physics.js stepWorld). */
 export const AUTOPILOT_WARP = 256;
 /**

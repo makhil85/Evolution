@@ -202,7 +202,7 @@
 /* Pull + Sun, one box (lead): a one-line summary button; the two detail
  * sections below it show only when opened. The box itself is the sp-panel
  * look, so the button and the body carry no panel styling of their own. */
-.sp-hud .sp-energy { padding: 0; overflow: hidden; }
+.sp-hud .sp-panel.sp-energy { padding: 0; overflow: hidden; }  /* beats the small-screen .sp-panel padding */
 .sp-hud button.sp-energy__toggle {
   display: flex;
   align-items: center;
@@ -231,6 +231,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.sp-hud .sp-energy__summary > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .sp-hud .sp-energy__sep { color: var(--sp-muted); font-weight: 600; }
 .sp-hud .sp-energy__chev { margin-left: auto; flex: none; width: calc(12px * var(--hud-scale)); height: calc(12px * var(--hud-scale)); color: var(--sp-amber); transition: transform 140ms ease; }
 .sp-hud .sp-energy__body { padding: 8px 13px 10px; border-top: 1px solid var(--sp-line); }
@@ -866,6 +867,7 @@
  * point, the landing): only what she needs stays - speed/height, fuel, the
  * map and the objective line. The pull meter, solar power, warp, cargo, the
  * orbit card and the mission step list come back when she's coasting. */
+.sp-hud.is-focus .sp-energy__body,
 .sp-hud.is-focus .sp-pull,
 .sp-hud.is-focus .sp-solar,
 .sp-hud.is-focus .sp-warp-panel,

@@ -18,11 +18,10 @@
 import { t } from './level.js';
 import { OUTER } from './chapter.js';
 import { toggleBar, paintToggle } from './hud/toggleBar.js';
-import { BODIES, WARP_LEVELS } from './contracts.js';
+import { BODIES, AP_WARP_FAST } from './contracts.js';
 
 // Its speed limit (game.autopilotWarpMax, an index into WARP_LEVELS) starts at
-// Fast: no limit, the cruise boost allowed. Slow (×4) is set by the warp panel.
-const AP_FAST = WARP_LEVELS.length;
+// Fast (AP_WARP_FAST: no limit, the cruise boost allowed). Slow (×4) is set by the warp panel.
 
 const MANUAL_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyZ', 'KeyX', 'Space', 'KeyQ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 
@@ -58,7 +57,7 @@ export function createAutopilot(game, { controls, hud }) {
     if (on === !!v) return;
     on = !!v;
     // Each time it is switched on, it starts at Fast (today's behaviour).
-    if (on) game.autopilotWarpMax = AP_FAST;
+    if (on) game.autopilotWarpMax = AP_WARP_FAST;
     btn.classList.toggle('is-on', on);
     btn.setAttribute('aria-pressed', String(on));
     paint();
@@ -91,7 +90,7 @@ export function createAutopilot(game, { controls, hud }) {
     if (on) userOff = true;
     setOn(!on, 'Autopilot off. You have the controls.');
   }
-  btn.addEventListener('click', toggle);
+  btn.addEventListener('click', () => { btn.blur(); toggle(); });
   addEventListener('keydown', (e) => {
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
     if (e.code === 'KeyP' && !e.repeat) { toggle(); return; }
@@ -364,7 +363,7 @@ export function createAutopilot(game, { controls, hud }) {
       // the countdown is under two minutes, above).
       if (n !== null && (aligned || n > 120)) warp = n > 600 ? 4 : n > 120 ? 3 : n > 30 ? 2 : n > 5 ? 1 : 0;
       // The warp panel's Slow / Fast limit (lead): never faster than it allows.
-      G.bus.emit('warp-request', Math.min(warp, G.autopilotWarpMax ?? AP_FAST));
+      G.bus.emit('warp-request', Math.min(warp, G.autopilotWarpMax ?? AP_WARP_FAST));
     }
     await frame();
   }

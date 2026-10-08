@@ -15,7 +15,7 @@
 
 import { el, svg, num, frac, pct, group, fmtNum } from './domUtil.js';
 import { iconInner } from './icons.js';
-import { BODIES, SHIP, RADIATION, WARP_LEVELS } from '../contracts.js';
+import { BODIES, SHIP, RADIATION, WARP_LEVELS, AP_WARP_SLOW, AP_WARP_FAST } from '../contracts.js';
 import { t } from '../level.js';
 
 function bodyLabel(id) {
@@ -128,7 +128,7 @@ export function createInstruments(root, { onWarp, onAutoWarp } = {}) {
       try { localStorage.setItem(DETAILS_KEY, open ? '1' : '0'); } catch { /* private mode */ }
     }
   }
-  energyToggle.addEventListener('click', () => setDetails(energyPanel.classList.contains('is-collapsed')));
+  energyToggle.addEventListener('click', () => { energyToggle.blur(); setDetails(energyPanel.classList.contains('is-collapsed')); });
   let detailsOpen = false;
   try { detailsOpen = localStorage.getItem(DETAILS_KEY) === '1'; } catch { /* private mode */ }
   setDetails(detailsOpen, false);
@@ -201,9 +201,7 @@ export function createInstruments(root, { onWarp, onAutoWarp } = {}) {
   // While the autopilot flies, the pips make way for two big buttons (lead):
   // they set how fast it may go, not the warp itself. Index 1 = ×4 (Slow);
   // WARP_LEVELS.length = no limit (Fast, the cruise boost allowed), the same
-  // number as AP_FAST in autopilot.js.
-  const AP_SLOW = 1;
-  const AP_FAST = WARP_LEVELS.length;
+  // number as the autopilot's own (contracts.js).
   const autoRow = el('div', 'sp-warp__auto');
   autoRow.hidden = true;
   const autoBtn = (name, sub, idx, tip) => {
@@ -211,11 +209,11 @@ export function createInstruments(root, { onWarp, onAutoWarp } = {}) {
     b.type = 'button';
     b.title = tip;
     b.append(el('b', null, name), el('span', null, sub));
-    b.addEventListener('click', () => onAutoWarp?.(idx));
+    b.addEventListener('click', () => { b.blur(); onAutoWarp?.(idx); });
     return b;
   };
-  const autoSlow = autoBtn('Slow', t('×4: a calm pace', '×4'), AP_SLOW, 'The autopilot flies at most ×4');
-  const autoFast = autoBtn('Fast', t('as fast as it can go', 'the fastest'), AP_FAST, 'The autopilot flies as fast as it can');
+  const autoSlow = autoBtn('Slow', t('×4: a calm pace', '×4'), AP_WARP_SLOW, 'The autopilot flies at most ×4');
+  const autoFast = autoBtn('Fast', t('as fast as it can go', 'the fastest'), AP_WARP_FAST, 'The autopilot flies as fast as it can');
   autoRow.append(autoSlow, autoFast);
   warpPanel.appendChild(autoRow);
   const warpReason = el('div', 'sp-warp__reason is-hidden');
@@ -387,7 +385,7 @@ export function createInstruments(root, { onWarp, onAutoWarp } = {}) {
       const flying = !!state.autopilotOn;
       warpRow.hidden = flying;
       autoRow.hidden = !flying;
-      warpLabel.nodeValue = flying ? 'Autopilot speed' : 'Time Warp';
+      warpLabel.nodeValue = flying ? t('Autopilot speed', 'Speed') : 'Time Warp';
     }
     if (changed('apMax', state.autopilotWarpMax)) {
       autoSlow.classList.toggle('is-active', state.autopilotWarpMax === AP_SLOW);
