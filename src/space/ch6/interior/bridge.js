@@ -86,6 +86,11 @@ export function buildDeck(kit) {
   solids.push(kit.wallArc(cb, CORR, 0, 41.95, A_LIFT, A_END, { h: 3.2 }));
   cb.flush(group);
 
+  // A small LCARS panel on the corridor's inner wall (the bend's inside).
+  const deckTag = kit.screen(1.0, 0.6, { title: 'DECK 1', accent: PALETTE.lilac, seed: 61 });
+  deckTag.position.set(CORR + 38.27 * Math.sin(A_LIFT + 0.1), 1.6, 38.27 * Math.cos(A_LIFT + 0.1));
+  deckTag.rotation.y = A_LIFT + 0.1; group.add(deckTag);
+
   const door = kit.door(DOOR[0], DOOR[1], YAW, { w: 3.0, h: 2.5 });
   group.add(door.group);
   // The name over the door, seen from the corridor.
@@ -211,7 +216,7 @@ export function buildDeck(kit) {
     { name: 'entrance', pos: [e[0], 1.6, e[1]], look: [...toDeck(0, 2.6).slice(0, 1), 1.4, toDeck(0, 2.6)[1]] },
     { name: 'screen', pos: at(0, 2.3, -2.4), look: at(0, 1.7, 9) },
     { name: 'back', pos: at(0, 1.6, 7.6), look: at(0, 1.1, -7) },
-    { name: 'shield', pos: at(2.6 * Math.sin(AS - 0.2), 1.9, 2.6 * Math.cos(AS - 0.2)), look: at(SHIELD_AT[0], 1.0, SHIELD_AT[1]) },
+    { name: 'shield', pos: at(-0.9, 1.9, -3.4), look: at(SHIELD_AT[0], 1.0, SHIELD_AT[1]) }, // from the side: the beacon stands on the spot
     { name: 'bay', pos: at(3.0, 1.6, -3.0), look: at(14, 1.4, 0.5) },
     { name: 'ring', pos: at(6.0, 2.3, -5.6), look: at(-3, 1.0, 3) },
   ];
