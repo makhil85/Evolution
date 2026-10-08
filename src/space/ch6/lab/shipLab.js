@@ -78,8 +78,10 @@ let camPin = null; // { pos, look } for orbit views
 
 // --- the views ------------------------------------------------------------------------
 async function setupInterior() {
-  const { createInteriorScene } = await import('../interior/ship.js');
+  const { createInteriorScene, preloadInterior } = await import('../interior/ship.js');
+  const models = await preloadInterior({ style: params.get('style') || 'toon' });
   const sc = createInteriorScene(fakeGame, {
+    models,
     async onStation(id) { fakeGame.hud.toast(`station ${id} (lab: done)`); },
     startDeck: params.get('deck') || undefined,
   });
