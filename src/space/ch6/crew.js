@@ -151,7 +151,9 @@ function buildKid(id) {
       mixer.update(d);
       if (waveT >= 0) {
         waveT += d;
-        if (!ending && waveT > waveLen - 0.4) { ending = true; wave.fadeOut(0.4); idle.fadeIn(0.4); }
+        // Back to the idle: the idle was disabled once its fade-out finished, so it is
+        // re-enabled here (weight set after the fade starts, as for the wave above).
+        if (!ending && waveT > waveLen - 0.4) { ending = true; wave.fadeOut(0.4); idle.reset().setEffectiveWeight(0).fadeIn(0.4).play(); idle.weight = 1; }
         if (waveT >= waveLen) { waveT = -1; wave.stop(); }
       }
       nextVar -= d;
@@ -162,8 +164,12 @@ function buildKid(id) {
       }
       look += (lookT - look) * ease(1.6, d);
       shift += (shiftT - shift) * ease(1.6, d);
-      head.quaternion.multiply(q.setFromEuler(e.set(0, look, 0)));
-      hips.quaternion.multiply(q.setFromEuler(e.set(0, 0, shift)));
+      // Only while the idle has the bones at full weight: the mixer then rewrites them every
+      // frame, so the offsets never pile up (a wave or a fade can leave a bone unwritten).
+      if (idle.isRunning() && idle.getEffectiveWeight() > 0.999) {
+        head.quaternion.multiply(q.setFromEuler(e.set(0, look, 0)));
+        hips.quaternion.multiply(q.setFromEuler(e.set(0, 0, shift)));
+      }
     },
     wave() {
       if (!wave) return;
