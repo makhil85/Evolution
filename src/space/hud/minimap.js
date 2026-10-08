@@ -44,6 +44,7 @@ export function createMinimap(root, { onOpenMap } = {}) {
   let lastDraw = -Infinity;
   let shown = true;
   let size = 0;
+  let smoothR = 0; let smoothFor = null; // the eased frame size while leaving a system
 
   function resize() {
     const css = wrap.clientWidth || 230;
@@ -97,6 +98,21 @@ export function createMinimap(root, { onOpenMap } = {}) {
     for (const p of path) { const d = Math.hypot(p.x, p.z); if (d > R && d < cap) R = d; }
     if (targetPos) R = Math.max(R, Math.hypot(targetPos.x, targetPos.z) + (BODIES[target].soi || 0) * 0.3);
     R *= 1.12;
+    // Leaving a planet's system (lead, 2026-10-08): the map starts on her
+    // round orbit and widens smoothly as the path stretches into a longer
+    // and longer oval and breaks away. (No arrow to the next planet: she
+    // leaves along the planet's own path, and an arrow elsewhere would pull
+    // her off it.)
+    const leaving = !!st.escape && centre !== 'sun';
+    if (leaving) {
+      if (smoothFor !== centre) { smoothFor = centre; smoothR = R; }
+      smoothR += (R - smoothR) * (R > smoothR ? 0.18 : 0.06);
+      R = smoothR;
+    } else smoothFor = null;
+    // Jupiter's and Saturn's moons crowd the map on the way out and make it
+    // look like the whole Solar System: only the planet, her path and the
+    // way to go.
+    const hideMoons = leaving && (centre === 'jupiter' || centre === 'saturn');
     const scale = (W / 2 - 14) / R;
     const X = (p) => cx + p.x * scale;
     const Y = (p) => cy + p.z * scale;
@@ -121,7 +137,7 @@ export function createMinimap(root, { onOpenMap } = {}) {
     // Orbits and bodies that circle the centre (moons, or planets).
     for (const id of Object.keys(BODIES)) {
       const b = BODIES[id];
-      if (b.parent !== centre || !st.bodies[id]) continue;
+      if (b.parent !== centre || !st.bodies[id] || hideMoons) continue;
       const orbitPx = b.orbit * scale;
       if (orbitPx > W * 1.5) continue;
       ctx.beginPath();
@@ -211,7 +227,7 @@ export function createMinimap(root, { onOpenMap } = {}) {
     ctx.font = '800 10.5px system-ui, -apple-system, "Segoe UI", sans-serif';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#cdbfa9';
-    ctx.fillText(titleFor(centre).toUpperCase(), cx, 12);
+    ctx.fillText((leaving ? `Leaving ${centre === 'moon' ? 'the Moon' : BODIES[centre]?.name || centre} · top view` : titleFor(centre)).toUpperCase(), cx, 12);
   }
 
   return {
@@ -220,7 +236,8 @@ export function createMinimap(root, { onOpenMap } = {}) {
     toggle() { shown = !shown; wrap.classList.toggle('is-hidden', !shown); },
     /**
      * @param {{time:number, bodies:object, ship:{x,z,angle}, soi:string,
-     *   path?:Float64Array, times?:Float64Array, target?:string, hidden?:boolean}} st
+     *   path?:Float64Array, times?:Float64Array, target?:string, hidden?:boolean,
+     *   escape?:boolean}} st   escape: a leave-the-system step (eased zoom, no gas-giant moons)
      */
     update(st) {
       wrap.classList.toggle('is-off', !!st.hidden);
