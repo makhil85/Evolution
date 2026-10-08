@@ -22,7 +22,7 @@ import { PALETTE } from './kit.js';
 import { toonRamp } from '../../../game/toonPipeline.js';
 
 // The kit pieces this deck uses (models.js names; loaded before the deck is built).
-// Inlays and decals lie 2-9 mm above the floor: this offset makes them win the depth test there (no flicker).
+// Inlays, decals and plates lie a few mm to 15 cm above the floor: this offset makes them win the depth test there (no flicker).
 const FLUSH = { polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 };
 export const MODELS = [
   'walls/WallAstra_Straight', 'walls/WallBand_Straight', 'walls/TopPlastic_Straight', 'walls/BottomMetal_Straight',

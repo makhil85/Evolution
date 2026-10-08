@@ -44,7 +44,9 @@ SIZE = 1024
 def main(mega, texdir, out):
     os.makedirs(os.path.join(out, 'textures'), exist_ok=True)
     used = set()
-    files = set()  # every kept .gltf and .bin, by file name
+    files = set()  # every written .gltf and .bin, by file name
+    written = {s: [] for s in SETS}  # the manifest lists these, and only these
+    skipped = []
     for name in KEEP:
         s, piece = name.split('/')
         src = os.path.join(mega, s.capitalize())
@@ -81,10 +83,11 @@ def main(mega, texdir, out):
                 for k, v in holder.items():
                     if isinstance(v, dict) and 'index' in v and k.endswith('Texture'):
                         v['index'] = tex_map[v['index']]
+        piece_tex = set()
         for im in images:
             tname = os.path.splitext(im['uri'])[0]
             ext = texture(texdir, tname, out)
-            used.add(tname)
+            piece_tex.add(tname)
             im['uri'] = f'../../textures/{tname}.{ext}'
             im['mimeType'] = 'image/png' if ext == 'png' else 'image/jpeg'
         if textures:
@@ -96,16 +99,22 @@ def main(mega, texdir, out):
         bins = [b['uri'] for b in g.get('buffers', [])]
         if not all(os.path.exists(os.path.join(src, b)) for b in bins):
             print('skip (its .bin is missing from the pack):', name)
+            skipped.append(name)
             continue
         json.dump(g, open(os.path.join(dst, f), 'w'), separators=(',', ':'))
         for b in bins:
             shutil.copy(os.path.join(src, b), os.path.join(dst, b))
         files.update({f, *bins})
+        used |= piece_tex
+        written[s].append(piece)
     prune(out, files, used)
-    # A list of the kept pieces, by set (the lab's contact sheet reads it).
-    man = {s: sorted(n.split('/')[1] for n in KEEP if n.startswith(s + '/')) for s in SETS}
+    # A list of the pieces written, by set (the lab's contact sheet reads it).
+    man = {s: sorted(written[s]) for s in SETS}
     json.dump(man, open(os.path.join(out, 'manifest.json'), 'w'), indent=1)
-    print('pieces:', len(KEEP), 'textures used:', len(used), sorted(used))
+    print('pieces:', sum(len(v) for v in man.values()), 'of', len(KEEP), 'textures used:', len(used), sorted(used))
+    if skipped:
+        print('missing from the pack, so not imported:', ', '.join(skipped))
+        sys.exit(1)
 
 
 def prune(out, files, used):
@@ -148,5 +157,7 @@ def texture(texdir, name, out):
 
 
 if __name__ == '__main__':
+    if len(sys.argv) != 3:
+        sys.exit(__doc__)
     root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'public', 'assets', 'models', 'scifi')
     main(sys.argv[1], sys.argv[2], root)

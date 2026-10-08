@@ -1,10 +1,7 @@
-// Chapter 6 interior: the sci-fi model kits (lead 2026-10-08: real models for
-// the decks, like the villages' Kenney / Quaternius pieces, mixed with our own
-// code-built parts). Both kits are CC0, imported by scripts/import-scifi.py
-// into public/assets/models/scifi/:
-//   megakit/<set>/<Name>.gltf   Quaternius Modular SciFi MegaKit: walls, platforms
-//                               (floors, doors, stairs, rails, windows), columns, props, decals
-//   kenney/<name>.glb           Kenney Space Kit (none kept now: the decks build their own desks and chairs)
+// Chapter 6 interior: the sci-fi model kit (lead 2026-10-08: real models for
+// the decks, mixed with our own code-built parts). The kit is CC0, imported by
+// scripts/import-scifi.py into public/assets/models/scifi/megakit/<set>/<Name>.gltf:
+// Quaternius Modular SciFi MegaKit (walls, platforms, columns, props, decals).
 //
 //   const lib = await loadModels(['walls/WallAstra_Straight', 'props/Prop_Computer', ...]);
 //   lib.size('walls/WallAstra_Straight')        -> THREE.Vector3 (metres, as modelled)
@@ -23,7 +20,7 @@ import { asset } from '../../../game/contracts.js';
 import { toonRamp } from '../../../game/toonPipeline.js';
 
 const ROOT = 'assets/models/scifi/';
-const pathOf = (name) => (name.startsWith('kenney/') ? `${ROOT}${name}.glb` : `${ROOT}megakit/${name}.gltf`);
+const pathOf = (name) => `${ROOT}megakit/${name}.gltf`;
 
 /**
  * Load the named pieces (each once; repeat calls share the cache).
