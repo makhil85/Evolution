@@ -44,7 +44,7 @@ export function buildDeck(kit) {
   }
   // Lower walls. ZARA's door is a gap (she walks through it); the others are solid behind their doors.
   // A mid-tone (not the bright wall colour) so the start view is not over-lit.
-  const lowerMat = kit.own(new THREE.MeshToonMaterial({ color: 0x9d978f, gradientMap: toonRamp }));
+  const lowerMat = kit.own(new THREE.MeshToonMaterial({ color: 0xb9b3aa, gradientMap: toonRamp }));
   const lowerB = { box: (w, h, d, m, ...r) => b.box(w, h, d, m === mats.wall ? lowerMat : m, ...r) };
   solids.push(
     kit.wall(lowerB, -WX, 0, -WX, 6.1, { h: LOW }), kit.wall(lowerB, -WX, 7.9, -WX, CL, { h: LOW }), kit.wall(lowerB, WX, 0, WX, CL, { h: LOW }),
@@ -184,7 +184,7 @@ export function buildDeck(kit) {
   b.flush(group);
 
   // Warm light in the lounge (one soft point light; the coves and screens do the rest).
-  const warm = new THREE.PointLight(0xffd9a8, 7, 24, 1.4);
+  const warm = new THREE.PointLight(0xffd9a8, 8, 24, 1.4);
   warm.position.set(0, 2.9, CL + 5.4);
   group.add(warm);
 

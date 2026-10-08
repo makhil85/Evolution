@@ -70,7 +70,7 @@ export function buildDeck(kit) {
   // Ceilings are seen from below, where the cool sky light never reaches; this lighter stuff reads better.
   const ceilMat = toon(0xd9d2c6, { emissive: 0x3a3630 });
   // The dome: cooler and brighter than the warm ceilings, so it reads as a dome.
-  const domeMat = toon(0xe4ebf5, { emissive: 0x2a3140 });
+  const domeMat = toon(0xd3dded, { emissive: 0x1c2430 });
 
   /** A flat band of arc (faces up), centred on (x, z) at height y. */
   const band = (b, r0, r1, a0, a1, mat, { x = 0, y = 0, z = 0, down = false } = {}) => {
@@ -181,7 +181,7 @@ export function buildDeck(kit) {
 
   // The shield console, built into the rail (its panel faces the centre).
   const shGroup = desk(SHIELD_AT[0], SHIELD_AT[1], AS + Math.PI, 1.8, { title: 'SHIELD', accent: PALETTE.lilac, seed: 21 });
-  const lamp = kit.lamp(PALETTE.gold); lamp.position.set(0.8, 0.8, 0.14); shGroup.add(lamp);
+  const lamp = kit.lamp(PALETTE.gold); lamp.position.set(-0.92, 0.7, 0.2); shGroup.add(lamp);
 
   // The science bays: a console each, facing the centre.
   for (const k of [1, -1]) {
@@ -229,7 +229,7 @@ export function buildDeck(kit) {
 
   bb.flush(bridge);
   // The two lights the deck may use: over the captain (the dome's light) and in the corridor.
-  const hubLight = new THREE.PointLight(0xfff1e0, 2.5, 0, 1); hubLight.position.set(0, 3.0, 0); bridge.add(hubLight);
+  const hubLight = new THREE.PointLight(0xfff1e0, 1.8, 0, 1); hubLight.position.set(0, 3.0, 0); bridge.add(hubLight);
   const corrLight = new THREE.PointLight(0xfff1e0, 1, 0, 1); corrLight.position.set(...corrPoint(A_LIFT + 0.14), 2.8); group.add(corrLight);
 
   // --- where she stands, and who stands beside her ---------------------------------------
