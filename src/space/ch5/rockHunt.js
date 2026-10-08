@@ -2,8 +2,9 @@
 // Kuiper belt. She scans each one and checks it against the design's list;
 // only one passes every check. Picking a wrong one says which check it fails.
 //
-// Sizes fit the design sum: the rock she picks is about 140 m wide, about
-// 3 million tonnes solid, about 600,000 tonnes once hollowed out.
+// Lead 2026-10-08: the rock is drilled for ice (water, fuel) and metal (parts),
+// and a thick cap of it stays at the front. The rock she picks is about 140 m
+// wide: big enough for a cap of that size and a ring behind it.
 //
 // Opens in the play-mode modal layer; pauses the space game through the
 // bus's 'ui-modal'. Test hook: window.__hunt = { open, state(), scanAll(), choose(id), solve() }.
@@ -17,7 +18,7 @@ const TAU = Math.PI * 2;
 
 /** The checklist, from the design: each check reads one fact of a rock. */
 export const CHECKS = [
-  { id: 'size', text: ['Big enough: at least 100 m wide', 'Big enough'], pass: (r) => r.width >= 100, no: ['it is too small to live inside', 'too small'] },
+  { id: 'size', text: ['Big enough: at least 100 m wide', 'Big enough'], pass: (r) => r.width >= 100, no: ['it is too small for a front cap and a ring', 'too small'] },
   { id: 'ice', text: ['Has ice (water and fuel)', 'Has ice'], pass: (r) => r.ice >= 20, no: ['it has almost no ice, so no water or fuel', 'no ice'] },
   { id: 'metal', text: ['Has metal (for parts)', 'Has metal'], pass: (r) => r.metal >= 5, no: ['it has almost no metal to make parts', 'no metal'] },
   { id: 'solid', text: ['Solid: no big cracks', 'No cracks'], pass: (r) => !r.cracked, no: ['it is cracked right through, so the engine could break it apart', 'it is cracked'] },
@@ -60,7 +61,7 @@ export function playRockHunt({ bus = null } = {}) {
   const card = el('div', 'pl-card ls-card is-asking');
   card.dataset.game = 'rock-hunt';
   const eyebrow = el('div', 'pl-eyebrow', t('Rock hunt', 'Rock hunt'));
-  const title = el('h2', 'pl-title', t('Which rock becomes the ship?', 'Find the right rock'));
+  const title = el('h2', 'pl-title', t('Which rock becomes the starship?', 'Find the right rock'));
   const stage = el('div', 'ls-stage');
   const view = el('div', 'ls-view');
   const canvas = el('canvas', 'ls-canvas');
@@ -129,7 +130,7 @@ export function playRockHunt({ bus = null } = {}) {
     }
     picked = id;
     fb.className = 'ls-feedback is-good';
-    fb.textContent = t(`${r.name} passes every check! 140 m of icy, metal-rich rock: about 3 million tonnes solid, 600,000 tonnes hollowed out.`, `${r.name} has all the ticks! This is our ship!`);
+    fb.textContent = t(`${r.name} passes every check! 140 m of icy, metal-rich rock: ice for water and fuel, metal for parts, and a cap to shield us at the front.`, `${r.name} has all the ticks! This is our ship!`);
     fb.hidden = false;
     chooseBtn.textContent = t('Start building!', 'Build it!'); chooseBtn.disabled = false;
     chooseBtn.onclick = finish;

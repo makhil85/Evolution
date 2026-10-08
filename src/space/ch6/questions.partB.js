@@ -15,7 +15,7 @@ export const CH6B_QUESTIONS = {
     prompt: `Each metre of rock stops half of the rays that reach it. If 160 rays hit the outside of the wall, how many get through 4 metres of rock? (Type a number.)`,
     answers: ['10'],
     hint: 'Halve it four times: 160 → 80 → ...',
-    parentHint: '160 / 2 / 2 / 2 / 2 = 10. (Taking 4 x 40 off, as if each metre stopped a quarter, gives 0: the tempting wrong idea.)',
+    parentHint: '160 / 2 / 2 / 2 / 2 = 10. (The tempting wrong idea: stopping a quarter of what is left each metre gives about 51, not 10.)',
     success: `Yes! 160 → 80 → 40 → 20 → 10. Each metre halves it again, so ${6} metres lets in only ${raysThrough(6).toFixed(1)} of every 100.`,
     doneMessage: 'The shield is whole. Theo is happy!',
     reward: { science: 10 },
@@ -77,7 +77,7 @@ export const CH6B_QUESTIONS = {
     hint: `${PACK_LIMIT.toFixed(1)} − ${packNeededMass()}: line the decimal points up.`,
     parentHint: `${PACK_LIMIT.toFixed(1)} − ${packNeededMass()} = ${(PACK_LIMIT - packNeededMass()).toFixed(1)} t. (The piano would fit, but every tonne costs fuel for years.)`,
     success: `Yes! ${(PACK_LIMIT - packNeededMass()).toFixed(1)} tonnes spare, and we keep it spare: less to push.`,
-    doneMessage: 'All packed. The living half is built!',
+    doneMessage: 'All packed. The crew ring is ready!',
     reward: { science: 10 },
   },
 };
@@ -117,7 +117,7 @@ export const CH6B_LEVEL1 = {
   },
   c6_grid_fraction: {
     difficulty: 'Level 1 • sharing',
-    prompt: 'We share 12 power blocks equally between 3 things. How many blocks does each get?',
+    prompt: 'We share 12 power blocks, the same amount for each of 3 things. How many blocks does each get?',
     choices: [{ text: '4', correct: true }, { text: '3' }, { text: '6' }, { text: '12' }],
     hint: 'Share 12 into 3 equal piles.',
     parentHint: '12 ÷ 3 = 4: each gets a third.',

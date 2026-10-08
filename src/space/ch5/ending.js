@@ -134,13 +134,13 @@ export function playCh5Ending(game, { eyebrow = lvl('Engine half', 'Engine half'
   const { scene, shipView } = game;
   const overlay = buildOverlay({
     eyebrow,
-    title: 'Drilling Rock B',
-    sub: lvl('The rock is mined down to a thin front shield', 'Only a thin shield is left'),
+    title: lvl('Drilling Rock B', 'Drilling Rock B'),
+    sub: lvl('The rock is drilled down to a thick front shield', 'Only a thick shield is left at the front'),
     startBlack: false,
   });
   const title2 = buildOverlay({
     eyebrow: lvl('Test fire', 'Test fire'),
-    title: 'The ship for the stars',
+    title: lvl('The ship for the stars', 'Our ship for the stars'),
     sub: lvl('The engine fires!', 'Fire!'),
     startBlack: false,
   });

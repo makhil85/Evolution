@@ -176,7 +176,7 @@ try {
   ok('Level 1 numbers (small, counting on and by tens)', () => {
     const L1 = banks[1];
     assert.ok(checkSpaceAnswer(L1.c6_fuel_left, String(derived.c6_fuel_left)));
-    assert.ok(checkSpaceAnswer(L1.c6_percent_light, String(10 * 1)));
+    assert.ok(checkSpaceAnswer(L1.c6_percent_light, String(100 / 20)), 'light 20 blocks, ours 1: out of 100 that is 5');
     assert.ok(checkSpaceAnswer(L1.c6_star_years, String(4 * 10)));
   });
 
@@ -231,6 +231,21 @@ try {
     const grad = { addColorStop() {} };
     return new Proxy({}, { get(_, k) { if (k === 'createLinearGradient' || k === 'createRadialGradient') return () => grad; if (k === 'measureText') return () => ({ width: 10 }); return () => {}; }, set() { return true; } });
   };
+  ok('lesson numbers match the planner: 39 and 135 km/s at 100 t, about 50 after the slingshots, 21 in and 30 out', () => {
+    assert.equal(best('straight', 100), 39);
+    assert.equal(best('sun', 100), 135);
+    assert.equal(best('jsun', 100), 52); // the slingshot-only plan: "about 50" in 6C
+    const b6 = JSON.stringify(LESSON_6B.films[3].beats.map((b) => b.cap));
+    assert.ok(b6.includes('135 km/s against 39'), 'film 4 numbers');
+    assert.ok(JSON.stringify(LESSON_6C).includes('About 50 km/s'), '6C after the slingshots');
+    // film 2: in from the side (13 across 17 = 21.4), out along Jupiter (13 + 17 = 30, the most)
+    assert.equal(Math.round(Math.hypot(13, 17)), 21);
+    assert.ok(JSON.stringify(LESSON_6B.films[1].beats.map((b) => b.cap)).includes('21 km/s'));
+    // Uranus and Neptune each add less than Jupiter and Saturn (10 t plan: gains 7, 17, 5, 3)
+    const legs = R.planTotals(R.bestPlan('jsun', 10)).legs;
+    const gain = (id) => legs.find((l) => l.id === id).gain;
+    assert.ok(Math.max(gain('uranus'), gain('neptune')) < Math.min(gain('jupiter'), gain('saturn')));
+  });
   for (const L of [LESSON_6B, LESSON_6C]) {
     ok(`${L.id}: ${L.films.length} films, both Levels, one right answer of three, a short Level 1 clue, under 45 s each`, () => {
       pair(L.eyebrow, 'eyebrow');

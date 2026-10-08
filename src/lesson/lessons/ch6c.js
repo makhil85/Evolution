@@ -6,7 +6,7 @@
 //   1. Light laps Earth about 7 times in one second (300,000 km/s against
 //      Earth's 40,000 km round; the clock runs in slow motion).
 //   2. The ship's speed bar beside light's: after the slingshots it is a
-//      sliver (about 60 km/s); the drive pushes for years and it grows to
+//      sliver (about 50 km/s); the drive pushes for years and it grows to
 //      30,000 km/s, one tenth of light. The dial switches to "10% of light".
 //   3. The nearest star, about 4 light years away: light takes 4 years, the
 //      ship at 10% takes 10 times as long, 40 years. One teaser line: at
@@ -17,6 +17,10 @@
 import { span, lerp, label, circle, rect, line, nightSky } from '../draw.js';
 
 const TAU = Math.PI * 2;
+// Her speed after the slingshots (km/s): the best slingshot-only plan with
+// 100 t of fuel, past all four big planets (routes.js bestPlan('jsun', 100)
+// gives 52). The Sun dive is a burn, not a slingshot, so it is not used here.
+const START_KMS = 52;
 
 function earth(ctx, x, y, r) {
   circle(ctx, x, y, r, '#3f8fe0', '#bfe3ff', 1.5);
@@ -72,7 +76,7 @@ function dial(ctx, x, y, T) {
   // A round speed dial whose text switches from km/s to % of light.
   circle(ctx, x, y, 70, '#141e36', '#7fd3ff', 4);
   const sw = span(T, 18.5, 20);
-  const kms = Math.round(lerp(62, 30000, span(T, 8, 14)));
+  const kms = Math.round(lerp(START_KMS, 30000, span(T, 8, 14)));
   ctx.save(); ctx.globalAlpha = 1 - sw;
   label(ctx, kms.toLocaleString('en-US'), x, y - 6, { size: 24, color: '#fff', halo: null });
   label(ctx, 'km/s', x, y + 20, { size: 15, color: '#cfe8ff', halo: null });
@@ -89,13 +93,13 @@ function drawSpeedBars(ctx, T) {
   label(ctx, 'Light', x0, 90, { size: 18, color: '#ffe27a', halo: 'rgba(0,0,0,0.6)', align: 'left' });
   rect(ctx, x0, 102, w, 26, '#ffe27a', 6);
   label(ctx, '300,000 km/s', x0 + w - 4, 90, { size: 15, color: '#ffe27a', halo: 'rgba(0,0,0,0.6)', align: 'right' });
-  const kms = lerp(62, 30000, span(T, 8, 14));
+  const kms = lerp(START_KMS, 30000, span(T, 8, 14));
   label(ctx, 'Our ship', x0, 180, { size: 18, color: '#7fd3ff', halo: 'rgba(0,0,0,0.6)', align: 'left' });
   rect(ctx, x0, 192, w, 26, 'rgba(255,255,255,0.1)', 6);
   rect(ctx, x0, 192, Math.max(2, (w * kms) / 300000), 26, '#7fd3ff', 6);
   if (T > 2 && T < 8.5) {
     line(ctx, x0 + 2, 230, x0 + 30, 262, '#ffffff', 2);
-    label(ctx, 'after the slingshots: about 60 km/s. Can you even see it?', x0 + 34, 272, { size: 15, color: '#fff', halo: 'rgba(0,0,0,0.6)', align: 'left' });
+    label(ctx, 'after the slingshots: about 50 km/s. Can you even see it?', x0 + 34, 272, { size: 15, color: '#fff', halo: 'rgba(0,0,0,0.6)', align: 'left' });
   }
   // years of the drive pushing
   if (T > 7.5) {
@@ -167,21 +171,21 @@ export const LESSON_6C = {
       title: ['Our speed, next to light', 'Our speed next to light'],
       beats: [
         { dur: 2.5, cap: ['Here is light’s speed as a bar. Now our ship’s, after all those slingshots.', 'This bar is light. This one is our ship.'] },
-        { dur: 5, cap: ['About 60 km/s: so fast on Earth, but next to light it is a tiny sliver.', 'Our ship is fast, but next to light it is tiny!'] },
+        { dur: 5, cap: ['About 50 km/s: so fast on Earth, but next to light it is a tiny sliver.', 'Our ship is fast, but next to light it is tiny!'] },
         { dur: 6.5, cap: ['The fusion drive pushes day and night, for years. The bar grows...', 'The engine pushes for years. The bar grows...'] },
         { dur: 4, cap: ['...to 30,000 km/s: one tenth of light’s bar.', '...to one tenth of light!'] },
         { dur: 4, cap: ['Numbers this big are hard to read, so the dial switches: 10% of light speed.', 'Now the dial says: 10% of light speed.'] },
       ],
       draw: drawSpeedBars,
       question: {
-        prompt: ['Light goes 300,000 km/s. Our ship goes 30,000 km/s. What percent of light speed is that?', 'Our bar is 1 tenth of light’s bar. What percent is that?'],
+        prompt: ['Light goes 300,000 km/s. Our ship goes 30,000 km/s. What percent of light speed is that?', 'Our bar is 1 tenth of light’s bar. How many out of 100 is that?'],
         choices: [
-          { text: ['1%', '1%'] },
-          { text: ['10%', '10%'], correct: true },
-          { text: ['30%', '30%'] },
+          { text: ['1%', '1 out of 100'] },
+          { text: ['10%', '10 out of 100'], correct: true },
+          { text: ['30%', '30 out of 100'] },
         ],
-        hint: ['How many 30,000s make 300,000?', '1 tenth is the same as what percent?'],
-        why: ['300,000 ÷ 30,000 = 10, so our speed is one tenth of light’s: 10 out of 100, or 10%.', '1 tenth is 10%!'],
+        hint: ['How many 30,000s make 300,000?', '1 tenth is the same as how many out of 100?'],
+        why: ['300,000 ÷ 30,000 = 10, so our speed is one tenth of light’s: 10 out of 100, or 10%.', '1 tenth is 10 out of 100!'],
       },
       clue: [null, 'One tenth is 10%.'],
     },
