@@ -22,7 +22,7 @@ import { PALETTE } from './kit.js';
 export const MODELS = [
   'walls/WallAstra_Straight', 'walls/TopPlastic_Straight', 'walls/BottomMetal_Straight',
   'columns/Column_Round', 'platforms/Platform_Metal', 'platforms/Door_Frame_Square',
-  'props/Prop_Light_Small', 'props/Prop_Rail_4', 'decals/Decal_1',
+  'props/Prop_Light_Small', 'props/Prop_Rail_4', 'decals/Decal_Logo',
 ];
 
 const CH = 3.6;                 // ceiling
@@ -89,16 +89,23 @@ export function buildDeck(kit) {
     for (const { g } of list) { g.computeBoundingBox(); box.union(g.boundingBox); }
     return box;
   };
+  /** A kit material in a tint (a copy, shared by its parts): the kit's decals and trims are bright; a deck wants them quieter. */
+  const tints = new Map();
+  const tinted = (mat, c) => {
+    const key = `${mat.uuid}|${c}`;
+    if (!tints.has(key)) { const m = mat.clone(); m.color.multiply(new THREE.Color(c)); tints.set(key, own(m)); }
+    return tints.get(key);
+  };
   /** A kit piece standing on the floor: its middle at (x, z), its foot at y, turned ry. */
-  const piece = (name, x, y, z, ry = 0, { pre = null } = {}) => {
+  const piece = (name, x, y, z, ry = 0, { pre = null, tint = null } = {}) => {
     const list = partsOf(name, pre); const box = boundsOf(list);
-    for (const { g, mat } of list) { g.translate(-(box.min.x + box.max.x) / 2, -box.min.y, -(box.min.z + box.max.z) / 2); b.add(g, mat, x, y, z, ry); }
+    for (const { g, mat } of list) { g.translate(-(box.min.x + box.max.x) / 2, -box.min.y, -(box.min.z + box.max.z) / 2); b.add(g, tint ? tinted(mat, tint) : mat, x, y, z, ry); }
   };
   /**
    * A straight run of kit wall from P0 to P1 (points [x, z]): its room face on the line, the room on the side nrm.
-   * The panels are 4 m, so the run is cut into equal panels, each stretched along its length to fit; every
-   * panel has its cornice (TopPlastic, squashed to the ceiling) and floor trim (BottomMetal), which share the
-   * wall's origin so they line up.
+   * Whole 4 m panels, never stretched (a stretched panel's ends stand proud of the room face): the last one is slid
+   * back to end flush with the run, so it overlaps its neighbour, and stands 1 cm proud of it. Every panel has its
+   * cornice (TopPlastic, squashed to the ceiling, tinted warm) and floor trim (BottomMetal), all on one origin.
    */
   const wallRun = (P0, P1, nrm) => {
     const L = Math.hypot(P1[0] - P0[0], P1[1] - P0[1]);
@@ -107,23 +114,26 @@ export function buildDeck(kit) {
       b.box(L, CH, WD, mats.wall, (P0[0] + P1[0]) / 2 - (nrm[0] * WD) / 2, CH / 2, (P0[1] + P1[1]) / 2 - (nrm[1] * WD) / 2, Math.atan2(-dz, dx));
       return;
     }
-    const n = Math.max(1, Math.ceil(L / UNIT - 1e-6)); const u = L / n;
-    const sz = new THREE.Matrix4().makeScale(1, 1, u / UNIT);
-    const sh = boundsOf(partsOf('walls/WallAstra_Straight', sz)); // the wall's room face (largest x) and its middle
-    const off = new THREE.Vector3(-sh.max.x, -sh.min.y, -(sh.min.z + sh.max.z) / 2);
+    const n = Math.max(1, Math.ceil(L / UNIT - 1e-6));
     const th = Math.atan2(-nrm[1], nrm[0]); // the piece's x (room side) turned onto nrm
-    const capSz = CAP.clone().multiply(sz);
+    const sh = boundsOf(partsOf('walls/WallAstra_Straight')); // the wall's room face (largest x) and its middle
+    const off = new THREE.Vector3(-sh.max.x, -sh.min.y, -(sh.min.z + sh.max.z) / 2);
     for (let i = 0; i < n; i++) {
-      const t = (i + 0.5) * u; const x = P0[0] + dx * t; const z = P0[1] + dz * t;
-      for (const [name, pre] of [['walls/WallAstra_Straight', sz], ['walls/BottomMetal_Straight', sz], ['walls/TopPlastic_Straight', capSz]]) {
-        for (const { g, mat } of partsOf(name, pre)) { g.translate(off.x, off.y, off.z); b.add(g, mat, x, 0, z, th); }
+      const t = n === 1 ? L / 2 : Math.min(i * UNIT + UNIT / 2, L - UNIT / 2);
+      const proud = i === n - 1 && n > 1 ? 0.01 : 0; // the flush panel stands in front of the one it overlaps
+      const x = P0[0] + dx * t + nrm[0] * proud; const z = P0[1] + dz * t + nrm[1] * proud;
+      for (const [name, pre] of [['walls/WallAstra_Straight', null], ['walls/BottomMetal_Straight', null], ['walls/TopPlastic_Straight', CAP]]) {
+        for (const { g, mat } of partsOf(name, pre)) {
+          g.translate(off.x, off.y, off.z);
+          b.add(g, name.includes('TopPlastic') ? tinted(mat, 0xe6cdb0) : mat, x, 0, z, th);
+        }
       }
     }
-    // The kit's panels are open at their ends (they join end to end, and a corner shows their hollow inside):
-    // a thin plate across the wall at each end and joint closes them, in the darker grey of a seam.
-    for (let i = 0; i <= n; i++) {
-      const t = i * u; const x = P0[0] + dx * t; const z = P0[1] + dz * t;
-      b.box(0.03, CH, WD, mats.wallDark, x - (nrm[0] * WD) / 2, CH / 2, z - (nrm[1] * WD) / 2, Math.atan2(-dz, dx));
+    // Corner posts: a dark post at each run end, set back behind the panels' face. The kit's panels are open at their
+    // ends (a corner shows their hollow inside); the post fills it as shadow, and hides where the panels lean back.
+    for (const t of [0, L]) {
+      const x = P0[0] + dx * t; const z = P0[1] + dz * t; const back = 0.15 + WD / 2;
+      b.box(0.3, CH, WD, mats.wallDark, x - nrm[0] * back, CH / 2, z - nrm[1] * back, Math.atan2(-dz, dx));
     }
   };
   /** A wall light: a flat kit light on a wall, its middle at height y, a little into the room. */
@@ -198,9 +208,6 @@ export function buildDeck(kit) {
     scr.rotation.y = s < 0 ? Math.PI / 2 : -Math.PI / 2;
     group.add(scr);
   }
-  // The deck's number on the floor by the lift (a kit decal, muted: it is loud orange as it comes).
-  if (M) piece('decals/Decal_1', 0, 0.003, 4.6, Math.PI / 2, { pre: null });
-
   // The five cabins: the wall side (-1 left, 1 right), the door's z, and whether it stands open.
   const CABINS = [
     { name: 'ZARA', side: -1, z: ZARA, color: PALETTE.orange, force: 1 },
@@ -219,7 +226,7 @@ export function buildDeck(kit) {
   }
 
   // --- ZARA's cabin: 4.7 x 5 m off the corridor's left side ------------------------------------
-  const cabinRect = { rect: [(CAB_X - CW) / 2, (CAB_Z0 + CAB_Z1) / 2, CW - CAB_X, CAB_Z1 - CAB_Z0] }; // reaches the corridor: the door's gap
+  const cabinRect = { rect: [(CAB_X - CW) / 2, (CAB_Z0 + CAB_Z1) / 2, -CW - CAB_X, CAB_Z1 - CAB_Z0] }; // x from the back wall to the corridor's wall face
   kit.floor(b, cabinRect); floors.push(cabinRect);
   kit.ceiling(b, cabinRect, CH);
   const OUTC = -OUT;               // the cabin's walls reach the corridor's outer wall face
@@ -239,6 +246,7 @@ export function buildDeck(kit) {
   b.add(new RoundedBoxGeometry(1.4, 0.1, 1.2, 2, 0.04), cushion, -5.8, 0.54, BED);         // blanket
   b.add(new RoundedBoxGeometry(0.42, 0.14, 0.8, 2, 0.06), cream, -7.1, 0.56, BED);         // pillow
   solids.push({ rect: [-6.5, BED, 2.2, 1.3] });
+  wallLight(CAB_X, BED, [1, 0], 2.9); // a reading light over the bed
   // A rug by the bed (flat, lilac).
   b.add(new RoundedBoxGeometry(1.8, 0.02, 1.5, 2, 0.008), mats.accentLilac, -4.2, 0.01, BED);
   // A shelf on the near wall with a small rocket on it.
@@ -324,8 +332,13 @@ export function buildDeck(kit) {
   const lounge = { rect: [0, (CL + LZE) / 2, 2 * LX, LZE - CL] };
   const bow = { ring: [0, ZC, RIN - 1.2, RIN], from: -ZW, to: ZW }; // inner edge at the rectangle's far side, outer at the sill
   kit.floor(b, lounge); kit.floor(b, bow); floors.push(lounge, bow);
-  kit.ceiling(b, lounge, CH); kit.ceiling(b, bow, CH, { light: false });
-  for (const z of [42, 46]) b.box(2 * LX, 0.03, 0.05, mats.trim, 0, CH - 0.015, z);
+  kit.ceiling(b, lounge, CH, { light: false }); kit.ceiling(b, bow, CH, { light: false });
+  // The lounge ceiling is a darker slab (the kit's is a glare), with a seam every 2 m and a cool band over the window.
+  const lowCeil = toon(0x8f8880);
+  b.add(new THREE.PlaneGeometry(2 * LX, LZE - CL).rotateX(Math.PI / 2), lowCeil, 0, CH - 0.02, (CL + LZE) / 2);
+  for (let z = CL + 2; z < LZE - 0.5; z += 2) b.box(2 * LX, 0.03, 0.05, mats.trim, 0, CH - 0.035, z);
+  b.box(14, 0.05, 0.25, mats.coveCool, 0, 3.42, 48.2);
+  piece('decals/Decal_Logo', 0, CH - 0.03, 45.9, 0, { pre: new THREE.Matrix4().makeRotationZ(Math.PI), tint: 0x9c8552 }); // a muted gold logo on the ceiling, the right way up
   // The lounge's side walls, the kit's panels (their room faces at x ±8).
   wallRun([-LX, CL], [-LX, LZE], [1, 0]);
   wallRun([LX, CL], [LX, LZE], [-1, 0]);
@@ -344,7 +357,7 @@ export function buildDeck(kit) {
   solids.push(kit.wallArc(b, 0, ZC, RIN + 0.25, -ZW, ZW, { h: 0.9, cove: false }));
   for (const a of [-0.2, -0.1, 0, 0.1, 0.2]) {
     const x = (RIN - 0.04) * Math.sin(a); const z = ZC + (RIN - 0.04) * Math.cos(a);
-    if (M) piece('columns/Column_Round', x, 0, z, 0, { pre: new THREE.Matrix4().makeScale(0.22, 0.72, 0.22) });
+    if (M) piece('columns/Column_Round', x, 0, z, 0, { pre: new THREE.Matrix4().makeScale(0.22, 0.74, 0.22) }); // up to the ceiling, past the glass top (3.6 m)
     else b.box(0.12, 2.7, 0.12, mats.trim, x, 2.25, z, a);
   }
   const glass = kit.starWindow(2 * RIN * ZW, 2.7, { speed: 0.01, seed: 5 });
@@ -354,14 +367,31 @@ export function buildDeck(kit) {
   group.add(glass.mesh);
 
   // Round tables with three chairs each (the table and each seat are solid). The pedestal is a turned lathe.
+  // The chairs are the bridge's (a curved back, a gold ring, arms) at 0.85 scale, cushions in the deck's plum.
+  const frameDark = toon(0x3e434e); const gold = toon(PALETTE.gold); const glowBlue = kit.glow(PALETTE.blue, 1.3);
+  /** A curved slab for a chair's back: a plan annulus (radii r0..r1) round the seat, from -z to +-half, h high. */
+  const sector = (r0, r1, half, h) => {
+    const sh = new THREE.Shape(); const N = 14;
+    for (let i = 0; i <= N; i++) { const p = -half + (2 * half * i) / N; const v = [r1 * Math.sin(p), r1 * Math.cos(p)]; if (i) sh.lineTo(...v); else sh.moveTo(...v); }
+    for (let i = N; i >= 0; i--) { const p = -half + (2 * half * i) / N; sh.lineTo(r0 * Math.sin(p), r0 * Math.cos(p)); }
+    return new THREE.ExtrudeGeometry(sh, { depth: h, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 2, curveSegments: 1 }).rotateX(-Math.PI / 2);
+  };
+  /** A chair at (x, z), its seat facing `facing` (about y; the seat's front is +z, its back behind). */
   const chair = (x, z, facing) => {
-    // The seat faces `facing` (radians about y, the seat's front is +z); its back is behind it.
-    const bx = x - 0.22 * Math.sin(facing); const bz = z - 0.22 * Math.cos(facing);
-    b.add(new RoundedBoxGeometry(0.46, 0.08, 0.46, 2, 0.03), cushion, x, 0.45, z, facing);
-    b.add(new RoundedBoxGeometry(0.46, 0.5, 0.07, 2, 0.03), cushion, bx, 0.72, bz, facing);
-    b.cyl(0.03, 0.03, 0.42, mats.metal, x, 0.21, z, { seg: 6 });
-    b.cyl(0.2, 0.2, 0.03, mats.metal, x, 0.015, z, { seg: 14 });
-    solids.push({ disc: [x, z, 0.3] });
+    const K = 0.85;
+    const at = (geo, mat, dx, dy, dz) => { b.add(geo.translate(dx, dy, dz).scale(K, K, K).rotateY(facing), mat, x, 0, z); };
+    at(new THREE.LatheGeometry([[0, 0], [0.3, 0], [0.33, 0.03], [0.3, 0.05], [0.07, 0.11], [0.06, 0.4], [0.12, 0.46], [0, 0.49]].map(([r, y]) => new THREE.Vector2(r, y)), 18), frameDark, 0, 0, 0);
+    at(new THREE.TorusGeometry(0.31, 0.012, 6, 36).rotateX(Math.PI / 2), gold, 0, 0.05, 0);
+    at(new RoundedBoxGeometry(0.66, 0.12, 0.62, 2, 0.05), cushion, 0, 0.55, 0);
+    at(new THREE.BoxGeometry(0.66, 0.025, 0.025), gold, 0, 0.5, 0.32);
+    at(sector(0.36, 0.46, 0.8, 0.9), cushion, 0, 0.6, 0);
+    at(sector(0.355, 0.465, 0.82, 0.04), gold, 0, 1.49, 0);
+    for (const sd of [-1, 1]) {
+      at(new RoundedBoxGeometry(0.09, 0.1, 0.44, 2, 0.03), frameDark, sd * 0.38, 0.68, 0.02);
+      at(new RoundedBoxGeometry(0.08, 0.14, 0.3, 2, 0.03), frameDark, sd * 0.36, 0.56, 0);
+      at(new THREE.BoxGeometry(0.05, 0.012, 0.3), glowBlue, sd * 0.38, 0.733, 0.02);
+    }
+    solids.push({ disc: [x, z, 0.36] });
   };
   function table(x, z, turn = 0) {
     b.cyl(0.6, 0.6, 0.05, mats.metal, x, 0.75, z, { seg: 20 });
@@ -411,18 +441,18 @@ export function buildDeck(kit) {
   }
 
   // Wall lights in the lounge (flat kit lights on the side walls), and the warm coves.
-  for (const z of [CL + 2.0, CL + 8.0]) { wallLight(-LX, z, [1, 0], 2.7); wallLight(LX, z, [-1, 0], 2.7); }
+  for (const z of [CL + 5.0]) { wallLight(-LX, z, [1, 0], 2.7); wallLight(LX, z, [-1, 0], 2.7); }
 
   // Static parts go in now (a few draw calls).
   b.flush(group);
 
   // Warm light in the lounge (one soft point light; the coves and screens do the rest).
-  const warm = new THREE.PointLight(0xffd9a8, 7, 24, 1.4);
-  warm.position.set(0, 2.9, CL + 5.4);
+  const warm = new THREE.PointLight(0xffd9a8, 4, 24, 1.4);
+  warm.position.set(0, 2.3, CL + 5.4);
   group.add(warm);
   // A second, softer one over the window end, so the far corners are not dim.
-  const warm2 = new THREE.PointLight(0xffe6c8, 4, 20, 1.4);
-  warm2.position.set(2.5, 2.8, CL + 8.5);
+  const warm2 = new THREE.PointLight(0xffe6c8, 2.5, 20, 1.4);
+  warm2.position.set(2.5, 2.3, CL + 8.5);
   group.add(warm2);
 
   // Quest: medbay (Theo stands by the biobed; he is placed at the crew spot)
