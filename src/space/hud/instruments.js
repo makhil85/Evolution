@@ -388,8 +388,8 @@ export function createInstruments(root, { onWarp, onAutoWarp } = {}) {
       warpLabel.nodeValue = flying ? t('Autopilot speed', 'Speed') : 'Time Warp';
     }
     if (changed('apMax', state.autopilotWarpMax)) {
-      autoSlow.classList.toggle('is-active', state.autopilotWarpMax === AP_SLOW);
-      autoFast.classList.toggle('is-active', state.autopilotWarpMax !== AP_SLOW);
+      autoSlow.classList.toggle('is-active', state.autopilotWarpMax === AP_WARP_SLOW);
+      autoFast.classList.toggle('is-active', state.autopilotWarpMax !== AP_WARP_SLOW);
     }
     if (changed('warp', state.warp) || changed('warpAllowed', state.warpAllowed) || changed('warpReason', state.warpReason)) {
       // Above the top button (Chapter 5's cruise): the top pip says how fast.
