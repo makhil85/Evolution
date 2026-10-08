@@ -5,7 +5,7 @@
 // tool around them: controls, a turntable, a mixer, and the save.
 import * as THREE from 'three';
 import { OPTIONS, BOY_LOOK, defaultChoices, buildGirlRig } from './girl.js';
-import { saveProfile } from '../launcher/profile.js';
+import { saveProfile, keepUnlock } from '../launcher/profile.js';
 import { CLIPS } from './clips.js';
 import { exportGlb, saveBlob } from './glb.js';
 
@@ -352,7 +352,7 @@ if (new URLSearchParams(location.search).get('from') === 'launcher') {
   back.hidden = false;
   // Her choices are already written to localStorage on every change by
   // rebuild(), so there is nothing to save on the way out.
-  back.addEventListener('click', () => { location.href = 'index.html'; });
+  back.addEventListener('click', () => { location.href = keepUnlock('index.html'); });
 }
 
 const spinBtn = document.getElementById('spin');
