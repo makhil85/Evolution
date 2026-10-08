@@ -34,6 +34,7 @@ import { createTransferPanel } from './transferPanel.js';
 import { createModalHost } from './modalHost.js';
 import { createQuestionModal } from './questionModal.js';
 import { createOverlays } from './overlays.js';
+import { inModalTurn } from './modalQueue.js';
 import { createTally, flyIcons } from './tally.js';
 
 const MISSION_OPEN_KEY = 'space_ch4_mission_open';
@@ -394,39 +395,41 @@ export class Hud {
   // --- contract: blocking overlays --------------------------------------
 
   /** @returns {Promise<{correct:boolean, attempts:number}>} */
+  // Every blocking card below takes its turn in modalQueue.js (one FIFO): the
+  // host has one slot, and a card opened over another would leave the first
+  // one's promise pending for ever (lead review, 2026-10-08).
   askQuestion(question) {
     // Two wrong tries (lead rule): main.js's onOutOfTries sends her back to
     // the start of the act. The promise then never resolves - the page reloads.
-    return this._question.askQuestion(question).then((res) => {
+    return inModalTurn(() => this._question.askQuestion(question).then((res) => {
       if (res?.failed && this.onOutOfTries) { this.onOutOfTries(); return new Promise(() => {}); }
       return res;
-    });
+    }));
   }
 
   /** @returns {Promise<void>} */
   showFact(fact) {
-    return this._overlays.showFact(fact);
+    return inModalTurn(() => this._overlays.showFact(fact));
   }
 
   /** @returns {Promise<void>} */
   showDialogue(lines) {
-    return this._overlays.showDialogue(lines);
+    return inModalTurn(() => this._overlays.showDialogue(lines));
   }
 
   /** @returns {Promise<string|null>} */
   openUpgrades(opts) {
-    return this._overlays.openUpgrades(opts);
+    return inModalTurn(() => this._overlays.openUpgrades(opts));
   }
 
-  /** @returns {Promise<void>} */
   /** Easy / Medium / Hard picker. Resolves the chosen mode id, or null. */
   chooseFlightMode(opts) {
-    return this._overlays.chooseFlightMode(opts);
+    return inModalTurn(() => this._overlays.chooseFlightMode(opts));
   }
 
   /** A picker of a few options. Resolves the chosen id, or null. */
   choose(opts) {
-    return this._overlays.choose(opts);
+    return inModalTurn(() => this._overlays.choose(opts));
   }
 
   showControls() {
