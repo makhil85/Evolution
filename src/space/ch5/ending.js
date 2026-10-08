@@ -1,16 +1,32 @@
-// The rock ship's test fire (~22 s, skippable; was Chapter 5's ending, now
-// played in Chapter 6 after the build in the asteroid belt): the rock ship
-// hangs beside her ship; she flies in through the hangar door; the engine's
-// magnet rings light one by one and the engine fires; the rock moves off.
+// The engine's first test fire, Chapter 6's big cutscene (~24 s, skippable).
+// It plays after the workshop, when the engine half is built.
 //
-// Flight is paused; the rock ship is built for the scene and removed after.
+// 1. DRILLING (0-9 s). Rock B (buildRockShip's rock) is sized to the starship's
+//    cap. Three mining drones cut it: laser lines, sparks, dust and chunks fly
+//    off. The rock flattens along the ship's axis into a thin cap. Meanwhile the
+//    starship grows out of that cap, backwards, so its hull stands behind it.
+//    The rock fades: the starship's own cap is where it was.
+// 2. TEST FIRE (9-22 s). The ring spins up, the magnet rings light one by one,
+//    the plume grows, the field glows, and the camera shakes at ignition.
+// 3. One camera path the whole way, from close on the drilling to a wide 3/4
+//    view of the ship firing, with her small ship in the frame for scale.
+//
+// The starship is built here at FLIGHT_LENGTH (ch6/starship.js) and removed
+// after: Chapter 6's next step shows its own copy. Flight is paused; her ship
+// stays at the origin and turns to watch.
 import * as THREE from 'three';
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { buildOverlay, blendCamera, waitForSkip, ease } from '../cinematics.js';
+import { createStarship, FLIGHT_LENGTH } from '../ch6/starship.js';
 import { t as lvl } from '../level.js';
 
-const R = 36; // the rock's radius in scene units (about 140 m across)
-const DURATION = 22;
+const R = 36; // the rock's radius in its own units (the scene shrinks it to the cap)
+const DURATION = 24;
+const FIRE_AT = 9; // the rock is gone; the test fire starts
+const IGNITION = 14; // the engine is at full drive
+const CAP_Z = -135; // the starship's cap centre, in its own metres (ch6/starship.js)
+const UP = new THREE.Vector3(0, 1, 0);
+const LASER = new THREE.Color(0x7ff3ff).multiplyScalar(3);
 
 /** The rock ship: a lumpy icy rock, a hangar door in front, the drive behind. */
 export function buildRockShip() {
@@ -80,61 +96,259 @@ export function buildRockShip() {
   };
 }
 
-/** @returns {Promise<void>} */
+/** A rim point of the rock (its own space): the vertex nearest an angle, on the equator. */
+function rimPoint(geo, angle) {
+  const p = geo.attributes.position;
+  const v = new THREE.Vector3();
+  const best = new THREE.Vector3();
+  let bestScore = Infinity;
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i);
+    const d = Math.abs(Math.atan2(Math.sin(Math.atan2(v.y, v.x) - angle), Math.cos(Math.atan2(v.y, v.x) - angle)));
+    const score = d + (1.5 * Math.abs(v.z)) / (1.25 * R);
+    if (score < bestScore) { bestScore = score; best.copy(v); }
+  }
+  return best;
+}
+
+/** A soft round dot for the dust puffs. */
+function dustTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grd.addColorStop(0, 'rgba(255,255,255,0.9)');
+  grd.addColorStop(0.45, 'rgba(255,255,255,0.45)');
+  grd.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grd;
+  g.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(c);
+}
+
 /**
- * The engine's first test fire. Chapter 6 plays it after the build (lead
- * 2026-10-07: the ship is built in the asteroid belt, at the start of
- * Chapter 6), with `{ next: false }`: no "Coming next" card at the end.
+ * The engine's first test fire (Chapter 6, after the workshop). Flight is paused
+ * while it plays. Skippable (Space, Enter, Esc or a click after 1.5 s).
+ * @returns {Promise<void>} resolves when she has control again
  */
-export function playCh5Ending(game, { eyebrow = lvl('The rock ship', 'The rock ship'), next: showNext = false } = {}) {
+export function playCh5Ending(game, { eyebrow = lvl('Engine half', 'Engine half') } = {}) {
   const { scene, shipView } = game;
-  const overlay = buildOverlay({ eyebrow, title: lvl('The rock ship', 'The rock ship'), sub: lvl('Engine half: built and tested', 'The engine works!'), startBlack: false });
-  let next = null; // the "Coming next: Chapter 6" card, over black
+  const overlay = buildOverlay({
+    eyebrow,
+    title: 'Drilling Rock B',
+    sub: lvl('The rock is mined down to a thin front shield', 'Only a thin shield is left'),
+    startBlack: false,
+  });
+  const title2 = buildOverlay({
+    eyebrow: lvl('Test fire', 'Test fire'),
+    title: 'The ship for the stars',
+    sub: lvl('The engine fires!', 'Fire!'),
+    startBlack: false,
+  });
   document.body.classList.add('in-cinematic');
   game.controls.setEnabled(false);
   game.paused = true;
+  game.warpIndex = 0; // calm sky: no warp streaks while the camera floats about
 
-  // Calm the sky: no warp streaks while the camera floats about.
-  game.warpIndex = 0;
-  const ship = buildRockShip();
-  // Light: the Sun is at the scene's (-x, 0, -z) of her position. The rock
-  // hangs off to her side and a little away from the Sun, so looking at it
-  // from her ship the sunlight comes from behind the camera.
-  const S = new THREE.Vector3(-game.ship.x, 0, -game.ship.z).normalize();
+  // Her frame. S points at the Sun; the starship sits out along P, away from her.
+  // Zp is the drive's way (out and away from her); its nose is -Zp.
+  // The Sun's real direction: the Sun's light sits at the Sun (planets.js sunLight).
+  const S0 = new THREE.Vector3(-game.ship.x, 0, -game.ship.z);
+  const sunW = game.bodies?.sunLight ? game.bodies.sunLight.getWorldPosition(new THREE.Vector3()) : null;
+  const S = sunW ? new THREE.Vector3(sunW.x, 0, sunW.z) : S0.clone();
+  if (S.lengthSq() < 1e-6) S.set(-1, 0, 0);
+  S.normalize();
   const P = new THREE.Vector3(-S.z, 0, S.x);
-  const up = new THREE.Vector3(0, 1, 0);
-  const rockAt = P.clone().multiplyScalar(170).addScaledVector(S, -70).add(new THREE.Vector3(0, 8, 0));
-  ship.group.position.copy(rockAt);
-  // Hangar door (local -Z) towards her: +Z points away from her.
-  ship.group.lookAt(rockAt.clone().multiplyScalar(2));
-  scene.add(ship.group);
-  // Out here the Sun is faint: a soft fill and a key light from the Sun's side
-  // so the rock reads, only for this scene.
-  const fill = new THREE.HemisphereLight(0xcfe0ff, 0x2a2420, 0.55);
-  const key = new THREE.DirectionalLight(0xfff1dc, 1.8);
-  key.position.copy(rockAt).addScaledVector(S, 400).add(new THREE.Vector3(0, 150, 0));
+  const Zp = new THREE.Vector3().addScaledVector(P, 0.85).addScaledVector(S, -0.5).normalize();
+  const Xs = new THREE.Vector3().crossVectors(UP, Zp).normalize();
+  const qShip = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(Xs, UP, Zp));
+
+  // The starship at its flight size, and the rock at the size of its cap.
+  const ship = createStarship({ detail: 'near' });
+  const kS = FLIGHT_LENGTH / ship.dims.length;
+  const capR = ship.dims.capR * kS; // the cap's radius in scene units (~2.9)
+  ship.setRingSpin(0);
+  ship.setDrive(0);
+  ship.setField(0);
+  ship.group.quaternion.copy(qShip);
+  ship.group.visible = false;
+  const rockShip = buildRockShip();
+  const rock = rockShip.group;
+  const rockMesh = rock.children[0]; // the rock; the door, windows, bell and rings are not used here
+  rock.children.forEach((o, i) => { if (i > 0) o.visible = false; });
+  const rockMat = rockMesh.material;
+  rockMat.transparent = true;
+  rock.quaternion.copy(qShip);
+  const SXY0 = (capR * 1.13) / R; // the rock's width at the start
+  const SXY1 = (capR * 1.05) / R; // and at the end: about the cap's width
+  const SZ1 = 0.2 / (1.25 * R); // the rock's z scale at the end: a thin cap, ~0.4 u thick
+
+  // Key points (world space). H is the hub, 30 u out from her; C the cap's centre
+  // (the rock's place); M the middle between her ship and the starship.
+  const H = P.clone().multiplyScalar(24).addScaledVector(S, -2).add(new THREE.Vector3(0, 2, 0));
+  const C = H.clone().addScaledVector(Zp, CAP_Z * kS);
+  const M = H.clone().multiplyScalar(0.5);
+  // The wide 3/4 view: mostly from the side, a little from the drive's side so the plume trails away.
+  const wide = new THREE.Vector3().addScaledVector(Xs, 0.9).addScaledVector(Zp, 0.25).addScaledVector(UP, 0.35).normalize();
+
+  // One camera path: close on the drilling, pulling back past the hull, to the wide 3/4 view.
+  const camPath = new THREE.CatmullRomCurve3([
+    C.clone().addScaledVector(Xs, 8.5).addScaledVector(UP, 2.6).addScaledVector(Zp, -2.5),
+    C.clone().addScaledVector(Xs, 15).addScaledVector(UP, 6).addScaledVector(Zp, 5),
+    H.clone().addScaledVector(Xs, 22).addScaledVector(UP, 8).addScaledVector(Zp, -10),
+    // Close enough at the end that her small ship still reads beside it.
+    M.clone().addScaledVector(wide, 30),
+    M.clone().addScaledVector(wide, 34),
+  ], false, 'centripetal');
+  const lookPath = new THREE.CatmullRomCurve3([
+    C.clone(),
+    C.clone().lerp(H, 0.5),
+    H.clone(),
+    M.clone().lerp(H, 0.6),
+    M.clone().lerp(H, 0.6),
+  ], false, 'centripetal');
+
+  // Her ship turns to face the starship, and turns back at the end.
+  const shipQuat = shipView.group.quaternion.clone();
+  const facer = new THREE.Object3D();
+  facer.lookAt(H.clone().negate()); // her nose (-Z) towards the starship
+  const faceQuat = facer.quaternion.clone();
+
+  // Light: the Sun's side, and a soft fill, for this scene only.
+  // Kept under the bloom threshold (1.25): a lit white toon face sits near 1.
+  const fill = new THREE.HemisphereLight(0xcfe0ff, 0x2a2420, 0.4);
+  const key = new THREE.DirectionalLight(0xfff1dc, 0.9);
+  key.position.copy(H).addScaledVector(S, 300).addScaledVector(UP, 120);
   key.target = ship.group;
-  scene.add(fill, key);
-  const hangarWorld = () => ship.door.getWorldPosition(new THREE.Vector3());
+
+  const stage = new THREE.Group();
+  const fx = new THREE.Group(); // the drilling effects
+  stage.add(ship.group, rock, fx, fill, key);
+  scene.add(stage);
+
+  // --- the drilling -------------------------------------------------------------------
+  const cuts = [0.4, 2.3, 4.2].map((a) => rimPoint(rockMesh.geometry, a));
+  const at = (i, out) => out.copy(cuts[i]).applyMatrix4(rock.matrixWorld);
+  // Outward from the rock's middle, mostly across the cap (not along the ship).
+  const outward = (p) => {
+    const d = p.clone().sub(C);
+    d.addScaledVector(Zp, -0.6 * d.dot(Zp));
+    return d.normalize();
+  };
+  const laserGeo = new THREE.CylinderGeometry(0.035, 0.035, 1, 6, 1, true).translate(0, 0.5, 0);
+  const laserMat = new THREE.MeshBasicMaterial({ color: LASER, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending });
+  const bodyGeo = new THREE.BoxGeometry(0.24, 0.1, 0.24);
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0xd9e1ea, metalness: 0.6, roughness: 0.35 });
+  const glowGeo = new THREE.SphereGeometry(0.06, 10, 8);
+  const glowMat = new THREE.MeshBasicMaterial({ color: LASER });
+  const drones = cuts.map(() => {
+    const g = new THREE.Group();
+    const glow = new THREE.Mesh(glowGeo, glowMat);
+    glow.position.y = -0.09;
+    g.add(new THREE.Mesh(bodyGeo, bodyMat), glow);
+    const laser = new THREE.Mesh(laserGeo, laserMat);
+    laser.visible = false;
+    fx.add(g, laser);
+    return { g, laser };
+  });
+
+  // Sparks: additive points. A spark fades by dimming its colour.
+  const SPARKS = 60;
+  const spPos = new Float32Array(SPARKS * 3);
+  const spCol = new Float32Array(SPARKS * 3);
+  const spVel = Array.from({ length: SPARKS }, () => new THREE.Vector3());
+  const spLife = new Float32Array(SPARKS);
+  let spNext = 0;
+  const spGeo = new THREE.BufferGeometry();
+  spGeo.setAttribute('position', new THREE.BufferAttribute(spPos, 3));
+  spGeo.setAttribute('color', new THREE.BufferAttribute(spCol, 3));
+  const sparks = new THREE.Points(spGeo, new THREE.PointsMaterial({ size: 0.09, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  sparks.frustumCulled = false;
+  fx.add(sparks);
+  const spark = (at0, dir) => {
+    const i = spNext; spNext = (spNext + 1) % SPARKS;
+    spPos.set([at0.x, at0.y, at0.z], i * 3);
+    spVel[i].copy(dir).multiplyScalar(1.2 + Math.random()).addScaledVector(new THREE.Vector3().randomDirection(), 0.6);
+    spLife[i] = 0.35 + Math.random() * 0.3;
+  };
+  const updateSparks = (dt) => {
+    for (let i = 0; i < SPARKS; i++) {
+      if (spLife[i] > 0) {
+        spLife[i] = Math.max(0, spLife[i] - dt);
+        spVel[i].multiplyScalar(Math.exp(-3 * dt));
+        spPos[i * 3] += spVel[i].x * dt; spPos[i * 3 + 1] += spVel[i].y * dt; spPos[i * 3 + 2] += spVel[i].z * dt;
+        const k = Math.min(1, spLife[i] / 0.4);
+        spCol.set([3 * k, 1.5 * k, 0.45 * k], i * 3);
+      } else {
+        spCol.set([0, 0, 0], i * 3);
+      }
+    }
+    spGeo.attributes.position.needsUpdate = true;
+    spGeo.attributes.color.needsUpdate = true;
+  };
+
+  // Dust puffs: soft sprites that spread and fade.
+  const dustTex = dustTexture();
+  const dust = Array.from({ length: 8 }, () => {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dustTex, color: 0xb0a292, transparent: true, opacity: 0, depthWrite: false }));
+    s.visible = false;
+    fx.add(s);
+    return { s, age: 0, life: 0 };
+  });
+  let dustNext = 0;
+  const puff = (at0) => {
+    const d = dust[dustNext]; dustNext = (dustNext + 1) % dust.length;
+    d.s.position.copy(at0);
+    d.s.visible = true; d.age = 0; d.life = 1.1;
+  };
+
+  // Chunks: little rocks that fly off the cut and fade.
+  const chunkGeo = new THREE.IcosahedronGeometry(0.16, 0);
+  const chunks = Array.from({ length: 10 }, () => {
+    const m = new THREE.Mesh(chunkGeo, new THREE.MeshStandardMaterial({ color: 0x8a8478, roughness: 1, transparent: true }));
+    m.visible = false;
+    fx.add(m);
+    return { m, vel: new THREE.Vector3(), spin: new THREE.Vector3(), life: 0 };
+  });
+  let chunkNext = 0;
+  const chunk = (at0, dir) => {
+    const c = chunks[chunkNext]; chunkNext = (chunkNext + 1) % chunks.length;
+    c.m.position.copy(at0);
+    c.m.scale.setScalar(0.7 + Math.random() * 0.8);
+    c.m.material.color.set(Math.random() < 0.4 ? 0xdfeaf0 : 0x8a8478);
+    c.m.material.opacity = 1;
+    c.m.visible = true;
+    c.vel.copy(dir).multiplyScalar(1.6 + Math.random()).addScaledVector(UP, 0.6);
+    c.spin.set(Math.random() * 4, Math.random() * 4, Math.random() * 4);
+    c.life = 1.8;
+  };
+  const updateChunks = (dt) => {
+    for (const c of chunks) {
+      if (c.life <= 0) continue;
+      c.life -= dt;
+      c.vel.multiplyScalar(Math.exp(-0.7 * dt));
+      c.m.position.addScaledVector(c.vel, dt);
+      c.m.rotation.x += c.spin.x * dt; c.m.rotation.y += c.spin.y * dt;
+      c.m.material.opacity = Math.min(1, c.life / 0.6);
+      if (c.life <= 0) c.m.visible = false;
+    }
+  };
+
+  // Shots of the camera and the look, on one path (see camPath above).
+  const camPos = new THREE.Vector3();
+  const look = new THREE.Vector3();
+  const cut = new THREE.Vector3();
+  const emitter = new THREE.Vector3();
+  const station = new THREE.Vector3();
 
   let t = 0;
   let finish;
   const done = new Promise((r) => { finish = r; });
   const skip = waitForSkip(1500, () => overlay.showSkip(true));
-  skip.promise.then(() => { t = Math.max(t, DURATION - 3); });
+  skip.promise.then(() => { t = Math.max(t, DURATION - 2.5); });
   setTimeout(() => overlay.bars(true), 100);
+  const once = new Set();
+  const beat = (k, when, fn) => { if (t > when && !once.has(k)) { once.add(k); fn(); } };
 
-  const camPos = new THREE.Vector3(); const look = new THREE.Vector3();
-  const shipStart = new THREE.Vector3();
-  const shipQuat = shipView.group.quaternion.clone();
-  const fwd = new THREE.Vector3().set(0, 0, -1).applyQuaternion(ship.group.quaternion);
-  const back = fwd.clone().negate();
-  const toRock = rockAt.clone().normalize();
-  const side = new THREE.Vector3().crossVectors(fwd, up).normalize();
-  if (side.dot(S) < 0) side.negate(); // the sunny side
-  // From t = 10 the camera holds still beside the rock and watches it go.
-  const sideCam = rockAt.clone().addScaledVector(side, 260).addScaledVector(up, 50).addScaledVector(fwd, 60);
-  let speed = 0; let travelled = 0;
   game.cinematic = {
     calm: true, // no speed dust or warp streaks (main.js)
     hideMarkers: true,
@@ -142,63 +356,101 @@ export function playCh5Ending(game, { eyebrow = lvl('The rock ship', 'The rock s
     apply(dt, camera) {
       dt = Math.max(0, Math.min(dt, 0.1));
       t += dt;
-      const time = t;
-      ship.group.updateMatrixWorld(true);
-      const door = hangarWorld();
-      // 5-10: she flies in through the hangar door.
-      const fly = ease((t - 5) / 5);
-      shipView.group.position.lerpVectors(shipStart, door, fly);
-      shipView.group.visible = fly < 0.97;
-      shipView.group.lookAt(door.clone().multiplyScalar(2)); // nose to the door
-      shipView.setThrottle(t > 5 && t < 9.5 ? 0.6 : 0);
-      ship.door.material.opacity = 0.2 + 0.6 * Math.max(0, Math.sin(Math.min(1, (t - 4) / 7) * Math.PI));
-      // 10-13: the rings light; 13+: the engine fires and the rock moves off.
-      ship.setRings(Math.max(0, Math.min(1, (t - 10) / 3)));
-      ship.setFlame(ease((t - 13) / 1.2), time);
-      if (t > 14) { speed += dt * 7; travelled += speed * dt; }
-      ship.group.position.copy(rockAt).addScaledVector(fwd, travelled);
-      const center = ship.group.position;
-      if (t < 5) {
-        // The reveal: from just behind her ship, swinging out to show the rock.
-        const k = ease(t / 5);
-        camPos.copy(toRock).multiplyScalar(-14 - 10 * k).addScaledVector(S, 5 + 20 * k).addScaledVector(up, 4 + 6 * k);
-        look.copy(center).lerp(shipView.group.position, 0.25 * (1 - k));
-      } else if (t < 10) {
-        // Chase her in.
-        const sp = shipView.group.position;
-        const toDoor = door.clone().sub(sp).normalize();
-        camPos.copy(sp).addScaledVector(toDoor, -22).addScaledVector(up, 7).addScaledVector(S, 6);
-        look.copy(door);
-      } else {
-        camPos.copy(sideCam);
-        // Only half-follow it, so the rock is seen to move off.
-        look.copy(rockAt).addScaledVector(back, 30).lerp(center, 0.4);
+      const working = t > 1.3 && t < 8.6;
+
+      // The starship grows out of its cap: pivot on the cap, stretched backwards.
+      const grow = Math.max(0.001, ease((t - 1.2) / 7.8));
+      ship.group.visible = t > 1.2;
+      ship.group.scale.set(kS, kS, kS * grow);
+      ship.group.position.copy(C).addScaledVector(Zp, -CAP_Z * kS * grow);
+      ship.setRingSpin(0.3 * ease((t - FIRE_AT) / 4));
+      ship.setDrive(ease((t - 10) / 4));
+      ship.setField(0.6 * ease((t - 13.5) / 1.5) * (1 - 0.4 * ease((t - 19) / 2)));
+      ship.update(dt, t);
+
+      // The rock: it shrinks, flattens into a thin cap, then fades out.
+      rock.visible = t < FIRE_AT;
+      rock.position.copy(C);
+      const sxy = THREE.MathUtils.lerp(SXY0, SXY1, ease(t / FIRE_AT));
+      rock.scale.set(sxy, sxy, THREE.MathUtils.lerp(SXY0, SZ1, ease(t / 8.4)));
+      rockMat.opacity = 1 - ease((t - 7.8) / 1.0);
+      rock.updateMatrixWorld(true);
+
+      // The drones: they arrive, cut, and lift off.
+      drones.forEach((d, i) => {
+        at(i, cut);
+        const out = outward(cut);
+        station.copy(cut).addScaledVector(out, 1.0).addScaledVector(UP, 0.8);
+        const start = station.clone().addScaledVector(out, 6).addScaledVector(UP, 4);
+        const arrive = ease((t - 0.2 - i * 0.2) / 2.2);
+        d.g.position.lerpVectors(start, station, arrive).addScaledVector(UP, 0.12 * Math.sin(t * 3.1 + i * 2));
+        d.g.position.addScaledVector(UP, 4 * ease((t - 8.2) / 1.2));
+        d.g.visible = t < 9.4;
+        emitter.copy(d.g.position).addScaledVector(UP, -0.09);
+        const dir = cut.clone().sub(emitter);
+        const len = dir.length();
+        d.laser.visible = working && arrive > 0.5 && len > 0.01;
+        d.laser.position.copy(emitter);
+        d.laser.quaternion.setFromUnitVectors(UP, dir.normalize());
+        const flick = 1 + 0.22 * Math.sin(t * 61 + i * 7) + 0.1 * Math.sin(t * 23 + i);
+        d.laser.scale.set(flick, len, flick);
+        if (working && arrive > 0.5) {
+          if (Math.random() < dt * 22) spark(cut, out);
+          if (Math.random() < dt * 2.5) puff(cut);
+        }
+      });
+      if (working && Math.random() < dt * 1.7) {
+        at(Math.floor(Math.random() * cuts.length), cut);
+        chunk(cut, outward(cut));
       }
-      // Ease in from the flight camera, then plain cuts between the three shots.
-      blendCamera(camera, camPos, look, t < 5 ? ease(t / 1.5) : 1);
-      if (t > 1 && !overlay._a) { overlay._a = true; overlay.showTitle(); }
-      if (t > 4.5 && !overlay._b) { overlay._b = true; overlay.hideTitle(); }
-      if (showNext && t > 18 && !overlay._c) { overlay._c = true; overlay.darken(); }
-      if (showNext && t > 19 && !next) {
-        next = buildOverlay({ eyebrow: lvl('Coming next', 'Coming next'), title: lvl('Chapter 6: The Crew', 'Chapter 6: The Crew'), sub: lvl('The other half of the ship, and the friends who fly it', 'New friends join the trip!'), startBlack: true });
-        next.showTitle();
+      updateSparks(dt);
+      updateChunks(dt);
+      for (const d of dust) {
+        if (!d.s.visible) continue;
+        d.age += dt;
+        if (d.age >= d.life) { d.s.visible = false; continue; }
+        const k = d.age / d.life;
+        d.s.scale.setScalar(0.5 + 1.8 * k);
+        d.s.material.opacity = 0.5 * (1 - k);
       }
+
+      // Her ship turns to face the starship; it turns back at the end.
+      shipView.group.quaternion.slerpQuaternions(shipQuat, faceQuat, ease(t / 2) * (1 - ease((t - 21.5) / 2)));
+
+      // The camera: one path, eased at both ends. A short shake at ignition.
+      const u = 0.5 * (t / DURATION) + 0.5 * ease(t / DURATION);
+      camPos.copy(camPath.getPoint(u));
+      look.copy(lookPath.getPoint(u));
+      const shake = t > IGNITION ? 0.35 * Math.max(0, 1 - (t - IGNITION) / 2.4) : 0;
+      camPos.x += Math.sin(t * 67) * shake; camPos.y += Math.cos(t * 53) * shake; camPos.z += Math.sin(t * 41) * shake * 0.5;
+      // Ease in from the flight camera, and out to it at the end.
+      const w = Math.min(ease(t / 1.5), 1 - ease((t - (DURATION - 1.5)) / 1.5));
+      blendCamera(camera, camPos, look, w);
+
+      beat('t1', 0.8, () => overlay.showTitle());
+      beat('t2', 4.2, () => overlay.hideTitle());
+      beat('t3', 10.4, () => title2.showTitle());
+      beat('t4', 15.6, () => title2.hideTitle());
       if (t >= DURATION) { game.cinematic = null; finish(); }
     },
   };
 
   return done.finally(() => {
-    scene.remove(ship.group, fill, key);
-    ship.dispose();
-    shipView.group.position.set(0, 0, 0);
-    shipView.group.quaternion.copy(shipQuat);
-    shipView.group.visible = true;
-    shipView.setThrottle(0);
     skip.dispose();
     overlay.showSkip(false);
     overlay.bars(false);
+    overlay.hideTitle();
+    title2.hideTitle();
     document.body.classList.remove('in-cinematic');
-    setTimeout(() => { overlay.remove(); next?.remove(); }, 1500);
+    setTimeout(() => { overlay.remove(); title2.remove(); }, 1500);
+    scene.remove(stage);
+    ship.dispose();
+    rockShip.dispose();
+    stage.traverse((o) => { o.geometry?.dispose?.(); o.material?.dispose?.(); });
+    dustTex.dispose();
+    shipView.group.quaternion.copy(shipQuat);
+    shipView.group.position.set(0, 0, 0);
+    shipView.setThrottle(0);
     game.controls.setEnabled(true);
     game.paused = false;
   });
