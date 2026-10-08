@@ -1,19 +1,53 @@
-// Chapter 6's opening (~18 s, skippable) and Rock B beside her in flight.
+// Chapter 6's opening (~18 s, skippable), Rock B in the engine step, and the
+// ship for the stars beside her in flight.
 //
-// The half-built rock ship hangs beside her own ship in the Kuiper belt.
-// A supply ship from Earth comes in out of the dark, slows, and docks at the
-// rock's hangar door; the title "Chapter 6: The Long Trip" comes up.
+// The starship (starship.js) hangs beside her own ship in the Kuiper belt,
+// pointing the way she flies, with its docking port (+X) facing her. In the
+// opening a supply ship from Earth comes in along the port's side, slows with
+// small braking puffs and docks softly at the hub. The camera starts wide,
+// drifts round as the supply ship comes in, and ends close on the docking; the
+// title "Chapter 6: The Long Trip" comes up.
 //
 // The flight scene is ship-centred (her ship at the origin) and she does not
-// fly in Chapter 6 until the route is planned, so the rock simply hangs at a
-// fixed offset beside her (showRockB). Same cutscene contract as Chapter 5's
-// ending: flight paused, own objects and lights, game.cinematic with calm.
+// fly in Chapter 6 until the route is planned, so the starship simply hangs at a
+// fixed offset beside her. The cutscene works in the starship's own frame, in
+// metres, so the supply ship and the camera keep the starship's proportions.
+// Same cutscene contract as Chapter 5's ending: flight paused, own objects and
+// lights, game.cinematic with calm.
 import * as THREE from 'three';
 import { buildOverlay, blendCamera, waitForSkip, ease } from '../cinematics.js';
 import { buildRockShip } from '../ch5/ending.js';
+import { createStarship, FLIGHT_LENGTH } from './starship.js';
+import { toonRamp, outlineMaterial } from '../../game/toonPipeline.js';
 import { t as lvl } from '../level.js';
 
 const DURATION = 18;
+// Scene units: the starship hangs this far to the side of her ... and this far
+// ahead, so her chase camera sees it about 18 degrees off her heading, clear of the HUD.
+const STAR_SIDE = 18;
+const STAR_AHEAD = 55;
+const PORT_R = 20.4; // the docking collar's lit ring, in metres from the hub (starship.js)
+const SUPPLY_NOSE = -17.5; // the supply ship's docking probe, in its own metres (nose -Z)
+const SUPPLY_TAIL = 16.5; // its bell
+// Docked, its probe tip is 0.5 m past the port's ring. It is 34 m long, about
+// 1/11 of the starship: any longer and its tail would reach the habitat ring
+// (58 m from the hub) on the way in.
+const DOCK_X = PORT_R + 0.5 - SUPPLY_NOSE;
+// The supply ship's path, in the starship's metres: it comes in along the port's
+// side, out of the dark, nose on the hub. It runs at z = 38, past the ring's open
+// end (its wings, 21.6 m out, clear the ring's 11 m half-depth), and is inside the
+// ring's radius before it slides onto the port.
+const APPROACH = [[200, 30, 38], [60, 3, 38], [41, 0, 38], [DOCK_X, 0, 0]];
+// The camera, in the starship's metres: [position, look] at 0, 6, 12 and 18 s.
+// Wide at first (her ship and the starship in frame), round by the port as the
+// supply ship comes in, then close enough on the docking to read it (the ring
+// stays at the edge of the frame), with a little drift to the end.
+const CAM = [
+  [[447, 0, 1631], [330, 0, 500]], // her ship and the starship both in frame (about 360 m from her)
+  [[380, 140, 260], [140, 10, 40]],
+  [[100, 60, 150], [30, 0, 5]],
+  [[90, 45, 130], [28, 0, 5]],
+];
 
 /** Where Rock B hangs, relative to her ship: off to the side, a little away from the Sun. */
 function rockOffset(game) {
@@ -48,67 +82,233 @@ export function showRockB(game) {
   return game._rockB;
 }
 
-/** The supply ship: a white capsule with a cargo ring, an orange band and lights. */
+/**
+ * The starship beside her in the flight scene (idempotent; stored on game._starship).
+ * It hangs STAR_SIDE to one side of her and STAR_AHEAD ahead, pointing the way she
+ * flies (its cap at the front), with its port facing her. Lit from the Sun's side
+ * with a soft fill; its ring turns slowly, its lights are on and its field faint.
+ * Its update runs every frame from a requestAnimationFrame loop until remove().
+ * Returns { ship, remove() }, where ship is the createStarship handle.
+ */
+export function showStarship(game) {
+  if (game._starship) return game._starship;
+  const { scene } = game;
+  const ship = createStarship({ detail: 'near' });
+  const { group } = ship;
+  group.scale.setScalar(FLIGHT_LENGTH / ship.dims.length);
+  const { S } = rockOffset(game); // towards the Sun
+  const a = game.ship?.angle ?? 0;
+  const H = new THREE.Vector3(Math.cos(a), 0, Math.sin(a)); // her heading, as the flight scene draws it
+  // The port faces her, on the side nearer the Sun, so the docking is lit.
+  const port = new THREE.Vector3(-H.z, 0, H.x);
+  if (port.dot(S) < 0) port.negate();
+  const Z = H.clone().negate(); // the cap points where she flies
+  const Y = new THREE.Vector3().crossVectors(Z, port);
+  group.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(port, Y, Z));
+  group.position.copy(port).multiplyScalar(-STAR_SIDE).addScaledVector(H, STAR_AHEAD);
+  group.updateMatrixWorld(true);
+
+  // The Sun is already a strong point light (3.2, no falloff), and the pale hull
+  // bloomed when we added a bigger key on top: so our key and fill are soft.
+  const fill = new THREE.HemisphereLight(0xcfe0ff, 0x2a2420, 0.2);
+  const key = new THREE.DirectionalLight(0xfff1dc, 0.4);
+  key.position.copy(group.position).addScaledVector(S, 400).add(new THREE.Vector3(0, 150, 0));
+  key.target = group;
+  scene.add(group, fill, key);
+  // The lit window panels are at 1.6 (over the 1.25 bloom threshold), so the ring
+  // glows like a lamp in a close-up: bring them just under it.
+  group.getObjectByName('habitat-ring')?.traverse((o) => {
+    if (o.material?.type === 'MeshBasicMaterial' && o.material !== outlineMaterial && o.material.color.r > 1.2) o.material.color.multiplyScalar(0.7);
+  });
+  ship.setRingSpin(0.12);
+  ship.setField(0.25);
+  ship.setLights(true);
+  ship.setDrive(0);
+
+  // Its own clock, every frame, with real deltas (clamped, so a hidden tab can't jump it).
+  let last = performance.now();
+  let time = 0;
+  let raf = 0;
+  const frame = (now) => {
+    const dt = Math.max(0, Math.min(0.1, (now - last) / 1000));
+    last = now;
+    time += dt;
+    ship.update(dt, time);
+    raf = requestAnimationFrame(frame);
+  };
+  raf = requestAnimationFrame(frame);
+
+  game._starship = {
+    ship,
+    remove() {
+      cancelAnimationFrame(raf);
+      game._dockedSupply?.remove();
+      scene.remove(group, fill, key);
+      ship.dispose();
+      game._starship = null;
+    },
+  };
+  return game._starship;
+}
+
+// An inverted hull: every vertex pushed out along its normal by d metres.
+function shellOf(geo, d) {
+  const g = geo.clone();
+  const p = g.attributes.position; const n = g.attributes.normal;
+  for (let i = 0; i < p.count; i++) p.setXYZ(i, p.getX(i) + n.getX(i) * d, p.getY(i) + n.getY(i) * d, p.getZ(i) + n.getZ(i) * d);
+  p.needsUpdate = true;
+  return g;
+}
+
+/**
+ * The supply ship from Earth, built in its own metres (nose -Z, 34 m long), so it
+ * can join the starship's group and take its scale: a white body with an outline,
+ * two solar wings, a cargo ring, four thruster pods, and red and green wing lamps.
+ * blink(time) runs the lamps.
+ */
 function buildSupplyShip() {
   const g = new THREE.Group();
-  const white = new THREE.MeshStandardMaterial({ color: 0xe8ecf2, roughness: 0.5, metalness: 0.3 });
-  const orange = new THREE.MeshStandardMaterial({ color: 0xff8a3d, roughness: 0.6 });
-  const dark = new THREE.MeshStandardMaterial({ color: 0x2b2f38, roughness: 0.7 });
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 18, 32), white); body.rotation.x = Math.PI / 2; g.add(body);
-  const nose = new THREE.Mesh(new THREE.SphereGeometry(4, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2), white); nose.rotation.x = -Math.PI / 2; nose.position.z = -9; g.add(nose);
-  const band = new THREE.Mesh(new THREE.CylinderGeometry(4.05, 4.05, 2, 32), orange); band.rotation.x = Math.PI / 2; band.position.z = -3; g.add(band);
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(6, 0.8, 10, 40), dark); ring.position.z = 3; g.add(ring);
+  g.name = 'supply-ship';
+  const toon = (color, emissive = 0x000000) => new THREE.MeshToonMaterial({ color, emissive, gradientMap: toonRamp });
+  const white = toon(0xf4f7fa, 0x7a8694);
+  const orange = toon(0xff8a3d, 0x3a1a08);
+  const dark = toon(0x5a6478, 0x2c3440);
+  const navy = toon(0x2d4a7a, 0x10203a);
+  const mesh = (geo, mat, pos = [0, 0, 0], rot = null) => {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(...pos);
+    if (rot) m.rotation.set(...rot);
+    g.add(m);
+    return m;
+  };
+  // The body: a lathe about Z (profile as (radius, z)), the probe tip at SUPPLY_NOSE.
+  const BODY = [[0.8, -15.2], [2.2, -14], [3.2, -12], [3.6, -10], [3.6, 8.5], [3.3, 10.5], [2.4, 12.6], [2.0, 14.6], [2.0, SUPPLY_TAIL], [0, SUPPLY_TAIL]];
+  const hullGeo = new THREE.LatheGeometry(BODY.map(([r, z]) => new THREE.Vector2(r, z)), 32).rotateX(Math.PI / 2);
+  mesh(hullGeo, white);
+  mesh(shellOf(hullGeo, 0.22), outlineMaterial);
+  mesh(new THREE.CylinderGeometry(3.66, 3.66, 2.2, 32), orange, [0, 0, -9], [Math.PI / 2, 0, 0]);
+  mesh(new THREE.CylinderGeometry(0.8, 0.8, 2.6, 16), dark, [0, 0, -16.2], [Math.PI / 2, 0, 0]); // docking probe
+  mesh(new THREE.CylinderGeometry(1.9, 2.3, 1.4, 24, 1, true), dark, [0, 0, 16], [Math.PI / 2, 0, 0]); // nozzle
+  mesh(new THREE.TorusGeometry(5.2, 0.7, 10, 36), dark, [0, 0, 4]); // cargo ring
+  for (const x of [-1, 1]) mesh(new THREE.BoxGeometry(18, 0.25, 7), navy, [x * 12.6, 0, 1.5]); // solar wings
   for (let i = 0; i < 4; i++) {
-    const pod = new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.2, 4), orange);
-    const a = (i / 4) * Math.PI * 2; pod.position.set(Math.cos(a) * 6, Math.sin(a) * 6, 3); g.add(pod);
+    const a = Math.PI / 4 + (i * Math.PI) / 2;
+    mesh(new THREE.BoxGeometry(1.4, 1.4, 3), orange, [Math.cos(a) * 4.3, Math.sin(a) * 4.3, 10]);
   }
-  const bell = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 3, 4, 20, 1, true), dark); bell.rotation.x = Math.PI / 2; bell.position.z = 11; g.add(bell);
-  const flameMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffb347).multiplyScalar(3), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
-  const flame = new THREE.Mesh(new THREE.ConeGeometry(2.6, 14, 20, 1, true), flameMat); flame.rotation.x = -Math.PI / 2; flame.position.z = 20; g.add(flame);
-  const lights = [];
-  for (const [x, y, c] of [[4.1, 0, 0x7fff9f], [-4.1, 0, 0xff6b6b]]) {
-    const l = new THREE.Mesh(new THREE.SphereGeometry(0.4, 10, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(2) }));
-    l.position.set(x, y, -2); g.add(l); lights.push(l);
-  }
-  g.scale.setScalar(0.55);
+  const lamps = [[-21.6, [1, 0.12, 0.1], 0], [21.6, [0.2, 1, 0.35], 0.5]].map(([x, rgb, off]) => {
+    const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(...rgb) });
+    mesh(new THREE.SphereGeometry(0.7, 8, 6), mat, [x, 0, 1.5]);
+    return { mat, rgb, off };
+  });
   return {
     group: g,
-    setFlame(k, time) { flameMat.opacity = Math.min(1, k) * 0.8; flame.scale.set(1, Math.max(0.01, k) * (0.9 + 0.1 * Math.sin(time * 30)), 1); },
-    blink(time) { for (const l of lights) l.visible = Math.sin(time * 5) > 0; },
-    dispose() { g.traverse((o) => { o.geometry?.dispose?.(); o.material?.dispose?.(); }); },
+    blink(time) {
+      for (const l of lamps) {
+        const k = ((time * 0.9 + l.off) % 1) < 0.22 ? 2.4 : 0.15;
+        l.mat.color.setRGB(l.rgb[0] * k, l.rgb[1] * k, l.rgb[2] * k);
+      }
+    },
+    dispose() {
+      g.traverse((o) => {
+        if (!o.isMesh) return;
+        o.geometry.dispose();
+        if (o.material !== outlineMaterial) o.material.dispose();
+      });
+    },
+  };
+}
+
+/**
+ * Braking puffs: a small pool of soft spheres that puff out of the probe tip and
+ * drift back (the nose thrusters brake a ship that flies nose-first). They live in
+ * the starship's frame, in metres.
+ */
+function makePuffs(parent) {
+  const geo = new THREE.SphereGeometry(1, 10, 8);
+  const pool = [];
+  for (let i = 0; i < 16; i++) {
+    const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xdde8ff).multiplyScalar(0.9), transparent: true, opacity: 0, depthWrite: false });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.visible = false;
+    parent.add(mesh);
+    pool.push({ mesh, mat, life: 0, max: 1, vel: new THREE.Vector3() });
+  }
+  let next = 0;
+  return {
+    emit(at, dir) {
+      const p = pool[next];
+      next = (next + 1) % pool.length;
+      p.max = p.life = 0.9;
+      p.mesh.position.copy(at);
+      p.vel.copy(dir).multiplyScalar(3 + Math.random() * 2).add(new THREE.Vector3().randomDirection().multiplyScalar(0.6));
+      p.mesh.visible = true;
+    },
+    update(dt) {
+      for (const p of pool) {
+        if (!p.mesh.visible) continue;
+        p.life -= dt;
+        if (p.life <= 0) { p.mesh.visible = false; continue; }
+        const k = 1 - p.life / p.max;
+        p.mesh.position.addScaledVector(p.vel, dt);
+        p.vel.multiplyScalar(Math.max(0, 1 - 2 * dt));
+        p.mesh.scale.setScalar(2 + 3 * k);
+        p.mat.opacity = 0.55 * (1 - k);
+      }
+    },
+    dispose() {
+      for (const p of pool) { parent.remove(p.mesh); p.mat.dispose(); }
+      geo.dispose();
+    },
+  };
+}
+
+/** A polyline with its length parameterised: at(u), u in 0..1, is the point that share of the way along. */
+function makePath(points) {
+  const segs = [];
+  let total = 0;
+  for (let i = 1; i < points.length; i++) {
+    const a = new THREE.Vector3(...points[i - 1]); const b = new THREE.Vector3(...points[i]);
+    const len = a.distanceTo(b);
+    segs.push({ a, b, len, from: total });
+    total += len;
+  }
+  return {
+    at(u) {
+      const d = Math.min(1, Math.max(0, u)) * total;
+      const s = segs.find((g) => d <= g.from + g.len) ?? segs[segs.length - 1];
+      return s.a.clone().lerp(s.b, s.len > 0 ? (d - s.from) / s.len : 1);
+    },
   };
 }
 
 /** @returns {Promise<void>} */
 export function playCh6Opening(game) {
-  const { scene, shipView } = game;
+  const { shipView } = game;
   const overlay = buildOverlay({ eyebrow: lvl('Chapter 6 · Part A', 'Chapter 6'), title: lvl('The crew arrives', 'The crew arrives'), sub: lvl('A crew for the stars', 'New friends for the trip!'), startBlack: true });
   document.body.classList.add('in-cinematic');
   game.controls.setEnabled(false);
   game.paused = true;
   game.warpIndex = 0;
-  const { rock } = showRockB(game);
+  game._rockB?.remove(); // the engine is built: Rock B gives way to the starship
+  game._dockedSupply?.remove();
+  const star = showStarship(game).ship;
   const supply = buildSupplyShip();
-  scene.add(supply.group);
-  const shipLight = new THREE.PointLight(0xffffff, 2, 300, 1.2);
-  scene.add(shipLight);
-  const door = () => rock.door.getWorldPosition(new THREE.Vector3());
-  rock.group.updateMatrixWorld(true);
-  const dock = door();
-  const rockC = rock.group.position.clone();
-  const out = dock.clone().sub(rockC).normalize(); // out of the hangar door
-  const up = new THREE.Vector3(0, 1, 0);
-  const side = new THREE.Vector3().crossVectors(out, up).normalize();
-  const start = dock.clone().addScaledVector(out, 900).addScaledVector(side, 300).addScaledVector(up, 80);
-  const hold = dock.clone().addScaledVector(out, 30);
-
+  supply.group.rotation.y = Math.PI / 2; // nose -Z to the starship's -X: nose-first at the hub
+  star.group.add(supply.group);
+  const puffs = makePuffs(star.group);
+  const nose = new THREE.Vector3(0, 0, SUPPLY_NOSE).applyEuler(supply.group.rotation); // the probe tip, from the supply's centre
+  const path = makePath(APPROACH);
+  const camPos = new THREE.CatmullRomCurve3(CAM.map(([p]) => new THREE.Vector3(...p)), false, 'centripetal');
+  const camLook = new THREE.CatmullRomCurve3(CAM.map(([, l]) => new THREE.Vector3(...l)), false, 'centripetal');
+  const local = (v) => star.group.localToWorld(v);
   let t = 0;
+  let puffAcc = 0;
   let finish;
   const done = new Promise((r) => { finish = r; });
   const skip = waitForSkip(1500, () => overlay.showSkip(true));
   skip.promise.then(() => { t = Math.max(t, DURATION - 2.5); });
   setTimeout(() => { overlay.light(); overlay.bars(true); }, 300);
-  const camPos = new THREE.Vector3(); const look = new THREE.Vector3(); const pos = new THREE.Vector3();
+  const pos = new THREE.Vector3();
   game.cinematic = {
     calm: true,
     hideMarkers: true,
@@ -117,35 +317,44 @@ export function playCh6Opening(game) {
     apply(dt, camera) {
       dt = Math.max(0, Math.min(dt, 0.1));
       t += dt;
-      // 0-11: in from the dark, slowing; 11-15: the last few metres into the door.
-      const k1 = ease(t / 11);
-      pos.lerpVectors(start, hold, k1);
-      if (t > 11) pos.lerpVectors(hold, dock, ease((t - 11) / 4));
+      // The supply ship comes in from 0.5 s along the path, its speed eased (so the
+      // braking is in the second half), and it is docked from about 13 s on.
+      const u = ease((t - 0.5) / 12.5);
+      pos.copy(path.at(u));
       supply.group.position.copy(pos);
-      supply.group.lookAt(pos.clone().add(dock.clone().sub(t < 11 ? start : hold).normalize().multiplyScalar(-10)));
-      supply.setFlame(t < 9 ? 0.8 * (1 - k1 * 0.6) : 0, t);
       supply.blink(t);
-      supply.group.visible = t < 15.2;
-      shipLight.position.copy(pos).add(new THREE.Vector3(0, 30, 0));
-      // Camera: from behind her ship, watching it come in past the rock.
-      camPos.copy(rockC).addScaledVector(out, 260).addScaledVector(side, -160).addScaledVector(up, 60);
-      look.copy(rockC).lerp(pos, 0.55);
-      blendCamera(camera, camPos, look, ease(t / 2));
+      // Braking puffs from the nose while it slows.
+      if (u > 0.5 && u < 1) {
+        puffAcc += dt * 9;
+        while (puffAcc >= 1) {
+          puffAcc -= 1;
+          puffs.emit(pos.clone().add(nose), nose.clone().normalize());
+        }
+      }
+      puffs.update(dt);
+      // Camera: wide, with her ship and the starship in frame; drifts round to the
+      // port as the supply ship comes in; ends close on the docking. Eased in from
+      // her chase view at the start and back out to it at the end, so no cut.
+      const k = Math.min(1, t / DURATION);
+      const wIn = ease(t / 2);
+      const wOut = 1 - ease((t - (DURATION - 2)) / 2);
+      blendCamera(camera, local(camPos.getPoint(k)), local(camLook.getPoint(k)), Math.min(wIn, wOut));
       if (t > 1.5 && !overlay._a) { overlay._a = true; overlay.showTitle(); }
       if (t > 6 && !overlay._b) { overlay._b = true; overlay.hideTitle(); }
       if (t >= DURATION) { game.cinematic = null; finish(); }
     },
   };
   return done.finally(() => {
-    scene.remove(supply.group, shipLight);
-    supply.dispose();
-    shipView.group.visible = true;
+    puffs.dispose();
     skip.dispose();
     overlay.showSkip(false);
     overlay.bars(false);
     document.body.classList.remove('in-cinematic');
     setTimeout(() => overlay.remove(), 1500);
+    shipView.group.visible = true;
     game.controls.setEnabled(true);
     game.paused = false;
+    // The supply ship stays docked at the port; the starship's remove() takes it too.
+    game._dockedSupply = { remove() { supply.group.removeFromParent(); supply.dispose(); game._dockedSupply = null; } };
   });
 }
