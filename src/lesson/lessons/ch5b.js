@@ -227,17 +227,7 @@ export const LESSON_5B = {
         { dur: 4, cap: ['Stop them completely and you reach −273 °C, the coldest anything can ever be.', 'Atoms that stop moving are the coldest.'] },
       ],
       draw: drawColdAtoms,
-      question: {
-        prompt: ['What does “cold” mean for the tiny atoms inside something?', 'What do atoms do when it is cold?'],
-        choices: [
-          { text: ['The atoms move slowly', 'They move slowly'], correct: true },
-          { text: ['The atoms shrink', 'They get small'] },
-          { text: ['The atoms turn blue', 'They turn blue'] },
-        ],
-        hint: ['Compare the atoms in the two boxes.', 'Look at the two boxes.'],
-        why: ['Temperature is how fast atoms jiggle. In cold Neptune they crawl; in warm Earth they buzz about.', 'Cold atoms move slowly!'],
-      },
-      clue: [null, 'Cold atoms move slowly.'],
+      watchOnly: true, // the third film in a row with a question: a breather (the answer is the caption above)
     },
   ],
 };

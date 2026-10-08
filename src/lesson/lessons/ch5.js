@@ -279,20 +279,10 @@ export const LESSON_5A = {
         { dur: 3, cap: ['Long ago a small icy moon may have drifted too close to Saturn.', 'Long ago an icy moon came too close to Saturn.'] },
         { dur: 3, cap: ['Saturn pulls the near side of the moon harder than the far side.', 'Saturn pulls the near side harder.'] },
         { dur: 3, cap: ['The moon is stretched like an egg... until it cracks.', 'The moon stretches... and cracks!'] },
-        { dur: 4, cap: ['The pieces spread all the way round Saturn: a ring is born!', 'The pieces go all the way round. A ring!'] },
+        { dur: 4, cap: ['So a moon this close is torn apart, and its pieces spread all the way round: a ring!', 'Too close, so it is torn apart: a ring!'] },
       ],
       draw: drawTornMoon,
-      question: {
-        prompt: ['Why is there a ring there, and not one big moon?', 'Why is there a ring and not a moon?'],
-        choices: [
-          { text: ['Saturn pulls the near side harder, so a moon that close is torn apart', 'Saturn pulls a close moon apart'], correct: true },
-          { text: ['The ice there is too cold to stick together into a ball', 'It is too cold'] },
-          { text: ['The Sun’s heat melted the moon and it froze in a circle', 'The Sun melted it'] },
-        ],
-        hint: ['Look at the two orange arrows on the moon. Which was bigger?', 'Look at the arrows. Which one is bigger?'],
-        why: ['So close to Saturn its pull is much stronger on the near side than the far side. That stretch tears a moon apart, and the pieces spread into a ring.', 'Saturn pulls the close side harder. The moon breaks into a ring.'],
-      },
-      clue: [null, 'Saturn pulls a moon that comes too close apart.'],
+      watchOnly: true, // a breather after two questions in a row
     },
   ],
 };
@@ -557,17 +547,7 @@ export const LESSON_5AA = {
         { dur: 6.4, cap: ['Big only slows down, and small shoots off fast! 6 before, 3 + 3 = 6 after.', 'Big slows down. Small shoots off fast!'] },
       ],
       draw: drawBigSmall,
-      question: {
-        prompt: ['A big chunk crashes into a small still chunk. What happens to the small one?', 'Big hits small. What does small do?'],
-        choices: [
-          { text: ['It stays where it is', 'It stays still'] },
-          { text: ['It moves off slower than the big one was going', 'It goes slowly'] },
-          { text: ['It shoots off faster than the big one was going', 'It shoots off fast'], correct: true },
-        ],
-        hint: ['Look at the small chunk’s speed after the second crash.', 'How fast did small go?'],
-        why: ['Big hands on some of its momentum. Small has little mass, so to carry that momentum it must go fast: speed 3, faster than big’s 2.', 'Small shoots off fast!'],
-      },
-      clue: [null, 'The small one shoots off fast.'],
+      watchOnly: true, // breaks the run of three questions (films 1-3); the small-one lesson stays in the captions
     },
     {
       title: ['Catching up', 'Catch up'],
@@ -579,16 +559,16 @@ export const LESSON_5AA = {
       ],
       draw: drawCatchUp,
       question: {
-        prompt: ['A fast chunk catches a slow one and they stick together. How fast do they go?', 'Fast catches slow and they stick. How fast?'],
+        prompt: ['Fast orange (speed 3) catches slow blue (speed 1) and they stick. What speed do they go at now?', 'Fast catches slow and they stick. What speed now?'],
         choices: [
-          { text: ['As fast as the fast one was', 'Fast'] },
-          { text: ['Somewhere in between the two speeds', 'In between'], correct: true },
-          { text: ['They stop', 'They stop'] },
+          { text: ['4', '4'] },
+          { text: ['2', '2'], correct: true },
+          { text: ['1', '1'] },
         ],
-        hint: ['Their speeds were 3 and 1. What speed did the pair have?', 'Look at the speed after they stick.'],
-        why: ['The total momentum (4) is now shared by twice the mass, so the pair goes at 2: in between 3 and 1.', 'In between! Not as fast, not stopped.'],
+        hint: ['Add the two speeds: the total is 4. Now share that total between the two chunks that stuck.', 'The total is 4. Share it between two.'],
+        why: ['The total momentum (3 + 1 = 4) stays the same, and now it is shared by twice the mass: 4 ÷ 2 = 2. Not 4, and not 1.', 'The total is 4, shared by two: speed 2!'],
       },
-      clue: [null, 'Their speed is in between.'],
+      clue: [null, 'They go at speed 2.'],
     },
     {
       title: ['Lots of pieces', 'Lots of pieces'],
