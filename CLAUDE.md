@@ -17,6 +17,8 @@
 - On the lead's PC, keep `Rocket Village.bat` on the Desktop (it runs
   `RUN_GAME.bat`, which is local-only and not in the repo).
 - Sound is parked: don't work on it unless asked.
+- **New agent? Read `AGENT_HANDOFF.md` first** (vision, features, architecture,
+  style, plan, known bugs, lessons learned).
 - How everything works, how to test it, open issues: `HANDOFF.md`. Work list:
   `PLAN.md`; teaching lessons: `LESSONS_PLAN.md`.
 
