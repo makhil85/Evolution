@@ -14,6 +14,7 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'vite';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
 
@@ -82,6 +83,23 @@ try {
     for (const n of DECK_MODELS) {
       const [set, name] = n.split('/');
       assert.ok((man[set] || []).includes(name), `missing model ${n}`);
+    }
+    // And the kit holds nothing a deck does not use (the import keeps only those).
+    const listed = Object.entries(man).flatMap(([set, names]) => names.map((name) => `${set}/${name}`));
+    assert.deepEqual(listed.sort(), [...DECK_MODELS].sort());
+  });
+  ok('every deck model is on disk, with its buffers and textures', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const dir = fileURLToPath(new URL('../public/assets/models/scifi/megakit/', import.meta.url));
+    for (const n of DECK_MODELS) {
+      const file = path.join(dir, `${n}.gltf`);
+      assert.ok(fs.existsSync(file), `missing gltf ${n}`);
+      const g = JSON.parse(fs.readFileSync(file, 'utf8'));
+      for (const uri of [...(g.buffers || []), ...(g.images || [])].map((x) => x.uri)) {
+        assert.ok(uri && !uri.startsWith('data:'), `${n}: external file expected`);
+        assert.ok(fs.existsSync(path.join(path.dirname(file), uri)), `missing ${uri} for ${n}`);
+      }
     }
   });
   ok('every station is on exactly one deck', () => {

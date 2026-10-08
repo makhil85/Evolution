@@ -23,6 +23,8 @@ import { PALETTE } from './kit.js';
 import { roofAt } from './walkmap.js';
 
 // The kit pieces this deck uses (models.js names; loaded before the deck is built).
+// Inlays, decals and plates lie a few mm to 15 cm above the floor: this offset makes them win the depth test there (no flicker).
+const FLUSH = { polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 };
 export const MODELS = [
   'walls/WallAstra_Straight', 'walls/BottomMetal_Straight', 'walls/TopPlastic_Straight',
   'columns/Column_Pipes',
@@ -87,26 +89,26 @@ export function buildDeck(kit) {
 
   // --- the kit's pieces ------------------------------------------------------------------
   const skins = new Map();
-  /** A kit material as this deck wants it: the black parts grey, the dark skirts lifted, a tint on decals. */
-  const skinOf = (mat, tint = null) => {
+  /** A kit material as this deck wants it: the black parts grey, the dark skirts lifted, a tint on decals, and `flush` for a plate on the floor (FLUSH). */
+  const skinOf = (mat, tint = null, flush = false) => {
     if (mat.name === 'M_Black') return mats.panel;
     const lift = mat.name?.endsWith('_Dark') ? SKIRT : 1;
-    if (lift === 1 && !tint) return mat;
-    const key = `${mat.uuid}|${tint}`;
+    if (lift === 1 && !tint && !flush) return mat;
+    const key = `${mat.uuid}|${tint}|${flush}`;
     if (!skins.has(key)) {
       const m = mat.clone();
       if (lift !== 1) m.color.multiplyScalar(lift);
       if (tint) m.color.multiply(new THREE.Color(tint));
-      skins.set(key, kit.own(m));
+      skins.set(key, kit.own(flush ? Object.assign(m, FLUSH) : m));
     }
     return skins.get(key);
   };
   /** The parts of a kit piece as cloned geometry (`pre` turns or scales them first; the kit's own copies are not touched). */
-  const partsOf = (name, { s = 1, pre = null, tint = null } = {}) => M.object(name).children.map((m) => {
+  const partsOf = (name, { s = 1, pre = null, tint = null, flush = false } = {}) => M.object(name).children.map((m) => {
     const g = m.geometry.clone();
     if (pre) g.applyMatrix4(pre);
     if (s !== 1) g.scale(s, s, s);
-    return { g, mat: skinOf(m.material, tint) };
+    return { g, mat: skinOf(m.material, tint, flush) };
   });
   const boundsOf = (list) => {
     const box = new THREE.Box3();
@@ -114,9 +116,9 @@ export function buildDeck(kit) {
     return box;
   };
   /** A free piece: its middle (x, z) on the floor at (x, z), its foot at y, turned ry. */
-  const putPiece = (batch, name, x, y, z, ry = 0, { s = 1, pre = null, centre = true, tint = null } = {}) => {
+  const putPiece = (batch, name, x, y, z, ry = 0, { s = 1, pre = null, centre = true, tint = null, flush = false } = {}) => {
     if (!M) return;
-    const list = partsOf(name, { s, pre, tint });
+    const list = partsOf(name, { s, pre, tint, flush });
     if (centre) {
       const box = boundsOf(list);
       for (const { g } of list) g.translate(-(box.min.x + box.max.x) / 2, -box.min.y, -(box.min.z + box.max.z) / 2);
@@ -227,10 +229,11 @@ export function buildDeck(kit) {
   const { x: cx, z: cz } = CORE;
   // A kit dais (6 m, its top at 0.14 m) under the core, with a floor plate on the hall's floor by the cargo door.
   putPiece(b, 'platforms/Platform_Round1', cx, 0, cz);
-  putPiece(b, 'platforms/Platform_Squares', 0, 0.004, 20.5);
-  b.add(new THREE.RingGeometry(6.4, 6.5, 64).rotateX(-Math.PI / 2), mats.accentBlue, cx, 0.006, cz); // a thin inlay round the dais
+  putPiece(b, 'platforms/Platform_Squares', 0, 0.004, 20.5, 0, { flush: true });
+  const inlayBlue = own(Object.assign(mats.accentBlue.clone(), FLUSH));
+  b.add(new THREE.RingGeometry(6.4, 6.5, 64).rotateX(-Math.PI / 2), inlayBlue, cx, 0.006, cz); // a thin inlay round the dais
   b.cyl(2.1, 2.2, 0.35, mats.metal, cx, 0.175, cz); // plinth
-  b.add(new THREE.RingGeometry(2.6, 2.8, 64).rotateX(-Math.PI / 2), mats.accentBlue, cx, M ? 0.15 : 0.01, cz); // floor ring
+  b.add(new THREE.RingGeometry(2.6, 2.8, 64).rotateX(-Math.PI / 2), inlayBlue, cx, M ? 0.15 : 0.01, cz); // floor ring
   b.cyl(0.9, 0.9, 6.55, mats.glass, cx, 3.625, cz, { seg: 32 }); // the glass column, 0.35 to 6.9
   for (const y of [0.35, 6.9]) b.add(new THREE.TorusGeometry(0.9, 0.05, 8, 40).rotateX(Math.PI / 2), mats.metal, cx, y, cz);
   // The railing round the core (its footprint is solid, below): four kit quarter rails, 2.3 m out, 1 m high.
