@@ -11,6 +11,7 @@
 //   z 23..37  CARGO BAY, 14 wide, 5 tall: stacked crates, a loader, racks, a packing
 //             console (station 'pack') and a big sealed outer door with warning stripes.
 // Echo (signal) stands by the core console, Bolt (builder) by the crates.
+// The coolant tank in the hall's near corner is the quest 'coolant' (Bolt leads it).
 import * as THREE from 'three';
 import { toonRamp } from '../../../game/toonPipeline.js';
 import { PALETTE } from './kit.js';
@@ -139,6 +140,17 @@ export function buildDeck(kit) {
     p.position.set(x, 2.1, 16.6); p.rotation.y = ry; group.add(p); screens.push(p);
   }
 
+  // Quest: coolant (the tank, its screen and lamp; the quest's spots are below)
+  const TANK = { x: -4.2, z: 6.2 };
+  b.cyl(0.5, 0.5, 1.6, mats.metal, TANK.x, 0.8, TANK.z, { seg: 20 });
+  b.cyl(0.56, 0.56, 0.12, mats.trim, TANK.x, 1.62, TANK.z, { seg: 20 });
+  b.cyl(0.56, 0.56, 0.12, mats.trim, TANK.x, 0.06, TANK.z, { seg: 20 });
+  solids.push({ disc: [TANK.x, TANK.z, 0.56] });
+  const tankScreen = kit.screen(0.8, 0.5, { title: 'COOLANT', seed: 33, accent: PALETTE.teal });
+  tankScreen.position.set(TANK.x + 0.51, 1.1, TANK.z); tankScreen.rotation.y = Math.PI / 2; group.add(tankScreen); screens.push(tankScreen);
+  const coolLamp = kit.lamp(PALETTE.gold); coolLamp.position.set(TANK.x, 1.9, TANK.z); group.add(coolLamp);
+  // End of quest: coolant
+
   // --- cargo bay -------------------------------------------------------------------------
   // Crates; each footprint is solid, and the stacked one sits on the one below.
   const crates = [
@@ -217,10 +229,13 @@ export function buildDeck(kit) {
   const stations = {
     energy: { x: cx, z: 9.4, face: 0, lamp: energyLamp },
     pack: { x: -1.2, z: 33.2, face: Math.PI / 2, lamp: packLamp },
+    // Quest: coolant (she stands here; Bolt stands by the tank, see crewSpots)
+    coolant: { x: -2.2, z: 6.6, face: faceTo(-2.2, 6.6, TANK.x, TANK.z), lamp: coolLamp, y: 2.2 },
   };
   const crewSpots = {
     signal: { x: 2.0, z: 9.6, face: faceTo(2.0, 9.6, cx, 10.6) },
     builder: { x: 1.9, z: 29.6, face: faceTo(1.9, 29.6, 4.0, 32.5) },
+    coolant: { x: -3.0, z: 7.7, face: faceTo(-3.0, 7.7, -2.2, 6.6) }, // Bolt, in the quest
   };
   const views = [
     { name: 'engineering', pos: [-3.4, 3.0, 6.4], look: [0.6, 2.6, 16.5] },
@@ -228,6 +243,7 @@ export function buildDeck(kit) {
     { name: 'corridor', pos: [0, 1.7, 0.6], look: [0, 1.9, 6.0] },
     { name: 'cargo', pos: [-5.2, 2.4, 24.6], look: [1.5, 1.6, 35.5] },
     { name: 'outer', pos: [-1.0, 1.7, 30.0], look: [0, 2.0, 37.0] },
+    { name: 'coolant', pos: [1.2, 1.7, 6.6], look: [TANK.x, 1.0, TANK.z] }, // Quest: coolant, in the hall by the tank
   ];
 
   const floors = [corridor, ...hall, cargo];
