@@ -129,6 +129,9 @@ export function buildDeck(kit) {
   group.add(glass.mesh);
   // The lounge door (opens as she comes).
   const lDoor = kit.door(0, CL, 0, { w: 3.2, h: 2.4 });
+  // The leaves are dark in the kit; a lighter leaf reads as a door, not a slab.
+  const leafMat = kit.own(new THREE.MeshToonMaterial({ color: 0xb4ada4, gradientMap: toonRamp }));
+  lDoor.group.traverse((o) => { if (o.isMesh && o.material === mats.wallDark) o.material = leafMat; });
   group.add(lDoor.group); doors.push({ door: lDoor, force: null });
   const loungeSign = kit.sign('Lounge', { w: 1.6, h: 0.32, color: PALETTE.peach });
   loungeSign.position.set(0, 3.0, CL - 0.14); loungeSign.rotation.y = Math.PI;
@@ -204,6 +207,6 @@ export function buildDeck(kit) {
       for (const d of doors) d.door.update(dt, ctx.herX, ctx.herZ, d.force);
     },
     // Everything here was made by the kit, which frees it in kit.dispose().
-    dispose() {},
+    dispose() { lowerMat.dispose(); },
   };
 }
