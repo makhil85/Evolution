@@ -25,7 +25,11 @@ const { LESSON_5C } = await import('../src/lesson/lessons/ch5c.js');
 const { LESSON_6A } = await import('../src/lesson/lessons/ch6a.js');
 const { LESSON_6B } = await import('../src/lesson/lessons/ch6b.js');
 const { LESSON_6C } = await import('../src/lesson/lessons/ch6c.js');
-const LESSONS = [LESSON_1A, LESSON_1B, LESSON_2A, LESSON_2B, LESSON_3A, LESSON_3B, LESSON_3C, LESSON_4F, LESSON_4G, LESSON_5A, LESSON_5AA, LESSON_5B, LESSON_5C, LESSON_6A, LESSON_6B, LESSON_6C];
+const { LESSON_7A } = await import('../src/lesson/lessons/ch7a.js');
+const { LESSON_7B } = await import('../src/lesson/lessons/ch7b.js');
+const { LESSON_7C } = await import('../src/lesson/lessons/ch7c.js');
+const { LESSON_7D } = await import('../src/lesson/lessons/ch7d.js');
+const LESSONS = [LESSON_1A, LESSON_1B, LESSON_2A, LESSON_2B, LESSON_3A, LESSON_3B, LESSON_3C, LESSON_4F, LESSON_4G, LESSON_5A, LESSON_5AA, LESSON_5B, LESSON_5C, LESSON_6A, LESSON_6B, LESSON_6C, LESSON_7A, LESSON_7B, LESSON_7C, LESSON_7D];
 // Films per lesson: three, unless the plan says otherwise.
 const FILMS = { ch4_flight_school: 4, ch5_momentum: 5, ch5_fusion: 5, ch6_slingshot: 4 };
 

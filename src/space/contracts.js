@@ -17,7 +17,7 @@
 // ship's heliocentric position, so the ship sits near (0,0,0) and float32 on the
 // GPU never sees a number like 20 000. Use toScene() for that, always.
 
-import { IS_CH5, IS_CH6, OUTER } from './chapter.js';
+import { IS_CH5, IS_CH6, IS_CH7, OUTER } from './chapter.js';
 
 export const TEXTURE_BASE = `${import.meta.env?.BASE_URL ?? './'}space/textures/`;
 
@@ -276,7 +276,8 @@ export const STORE_KEYS_CH4 = Object.freeze({ 1: 'level4_voyage_europa_v1_L1', 4
 export const STORE_KEYS_CH5 = Object.freeze({ 1: 'level5_rings_to_a_star_v1_L1', 4: 'level5_rings_to_a_star_v1' });
 export const STORE_KEYS_CH6 = Object.freeze({ 1: 'level6_long_trip_v1_L1', 4: 'level6_long_trip_v1' });
 /** This page's save keys: Chapters 5 and 6 run on the same engine (chapter.js). */
-export const STORE_KEYS = IS_CH6 ? STORE_KEYS_CH6 : IS_CH5 ? STORE_KEYS_CH5 : STORE_KEYS_CH4;
+export const STORE_KEYS_CH7 = Object.freeze({ 1: 'level7_tau_ceti_v1_L1', 4: 'level7_tau_ceti_v1' });
+export const STORE_KEYS = IS_CH7 ? STORE_KEYS_CH7 : IS_CH6 ? STORE_KEYS_CH6 : IS_CH5 ? STORE_KEYS_CH5 : STORE_KEYS_CH4;
 
 /** Events the modules emit on the shared bus (main.js creates it). */
 export const EVENTS = Object.freeze({

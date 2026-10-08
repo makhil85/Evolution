@@ -116,6 +116,14 @@ export const CHAPTERS = [
     store: { 1: 'level6_long_trip_v1_L1', 4: 'level6_long_trip_v1' },
     isDone: (s) => s?.complete === true,
   },
+  {
+    n: 7,
+    title: 'Toward Tau Ceti',
+    blurb: 'Leave the Sun behind at full power: feel the push, float in zero-g, do chemistry and biology on board, visit a quasar in the holodeck, and race on towards Tau Ceti.',
+    href: 'chapter7.html',
+    store: { 1: 'level7_tau_ceti_v1_L1', 4: 'level7_tau_ceti_v1' },
+    isDone: (s) => s?.complete === true,
+  },
 ];
 
 /** localStorage, without letting private mode take the page down with it. */
@@ -259,6 +267,8 @@ export function resetEverything() {
     // Chapter 6: the stations done and the route planned (ch6/partB.js, ch6/partE.js).
     'rocket_village_ch6_stations_L1', 'rocket_village_ch6_stations_L4',
     'rocket_village_ch6_route_L1', 'rocket_village_ch6_route_L4',
+    // Chapter 7: which room tasks are done (ch7/partC.js).
+    'rocket_village_ch7_tasks_L1', 'rocket_village_ch7_tasks_L4',
   ]);
   for (const c of CHAPTERS) {
     const stores = typeof c.store === 'string' ? [c.store] : Object.values(c.store);

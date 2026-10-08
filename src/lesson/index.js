@@ -21,4 +21,8 @@ export const LESSON_LIST = [
   { id: 'ch6_tiny_earth', chapter: 6, title: ['A ship that is a tiny Earth', 'A tiny Earth'], load: () => import('./lessons/ch6a.js').then((m) => m.LESSON_6A) },
   { id: 'ch6_slingshot', chapter: 6, title: ['Stealing energy', 'Borrow speed'], load: () => import('./lessons/ch6b.js').then((m) => m.LESSON_6B) },
   { id: 'ch6_light', chapter: 6, title: ['How fast is light?', 'How fast is light?'], load: () => import('./lessons/ch6c.js').then((m) => m.LESSON_6C) },
+  { id: 'ch7_push', chapter: 7, title: ['How do you know you are speeding up?', 'Speeding up'], load: () => import('./lessons/ch7a.js').then((m) => m.LESSON_7A) },
+  { id: 'ch7_atoms', chapter: 7, title: ['Atoms: what everything is made of', 'Tiny building blocks'], load: () => import('./lessons/ch7b.js').then((m) => m.LESSON_7B) },
+  { id: 'ch7_tiny_life', chapter: 7, title: ['Tiny life helps us', 'Tiny life'], load: () => import('./lessons/ch7c.js').then((m) => m.LESSON_7C) },
+  { id: 'ch7_black_hole', chapter: 7, title: ['Black holes and quasars', 'Black holes'], load: () => import('./lessons/ch7d.js').then((m) => m.LESSON_7D) },
 ];
