@@ -65,3 +65,4 @@ scripts/save-shot.mjs
 
 # Local tools (the GitHub CLI used to push)
 .tools/
+node_modules
