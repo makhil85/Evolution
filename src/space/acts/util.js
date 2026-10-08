@@ -7,6 +7,24 @@ import { t } from '../level.js';
 
 export const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/** Wait while she orbits: `sec` seconds of flight time, or one lap if that is shorter (lap: false, always `sec`). */
+export function orbitFor(game, sec, { lap = true } = {}) {
+  const sh = game.ship;
+  const b = BODIES[sh.soi]; const st = game.states?.[sh.soi];
+  let need = sec;
+  if (lap && b && st) {
+    // One lap of the orbit she is on (from its energy: a = -gm / 2E).
+    const dx = sh.x - st.x; const dz = sh.z - st.z;
+    const v2 = (sh.vx - st.vx) ** 2 + (sh.vz - st.vz) ** 2;
+    const E = v2 / 2 - b.gm / Math.hypot(dx, dz);
+    if (E < 0) { const a = -b.gm / (2 * E); need = Math.min(sec, 2 * Math.PI * Math.sqrt(a ** 3 / b.gm)); }
+  }
+  const t0 = sh.t;
+  return new Promise((done) => {
+    const id = setInterval(() => { if (game.ship.t - t0 >= need) { clearInterval(id); done(); } }, 250);
+  });
+}
+
 /** Angle of the ship around a body, for "fly one full lap" goals. */
 export function angleAround(game, bodyId, states) {
   const s = states[bodyId];

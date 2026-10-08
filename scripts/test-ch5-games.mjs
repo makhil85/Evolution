@@ -3,14 +3,15 @@
 //   node scripts/test-ch5-games.mjs
 //
 // The ring run (src/space/ch5/ringRunLogic.js): a steady player clears every
-// level with few bumps and plenty of water, sitting still gets hit, boulders
-// can't be blasted, shots kick her back, and a level plays the same each go.
+// level with few bumps and its ice and rock goal met, sitting still gets hit,
+// big rocks take 2 / 3 / 5 shots, shots kick her back (but never out of the
+// picture), and a level plays the same each go.
 // Space pool (poolLogic.js): every level can be won with good shots, bumps
 // keep the total momentum, and a bad shot doesn't win.
 // Part D (designBoard.js, rockHunt.js, workshop.js): each design question has
 // one right answer, the fuel sum works, and exactly one rock passes the list.
 import assert from 'node:assert/strict';
-import { createRun, stepRun, botInput, result, LEVELS, waterFor, BIG_R, SHIP_R } from '../src/space/ch5/ringRunLogic.js';
+import { createRun, stepRun, botInput, result, LEVELS, waterFor, BIG_R, BIG_ROCK, MAX_KICK, SHIP_R } from '../src/space/ch5/ringRunLogic.js';
 import { DESIGN_STEPS } from '../src/space/ch5/designBoard.js';
 import { CHECKS, ROCKS, failures } from '../src/space/ch5/rockHunt.js';
 import { STATIONS } from '../src/space/ch5/workshop.js';
@@ -43,6 +44,9 @@ for (const level of ['easy', 'medium', 'hard']) {
       assert.equal(bot.seconds, LEVELS[level].time);
       assert.ok(bot.water >= 300, `water ${bot.water}`);
       assert.ok(bot.bumps <= 3, `bumps ${bot.bumps}`);
+      // The goal is well inside what a steady player gets (a child gets less).
+      assert.ok(bot.met && bot.ice >= bot.goal.ice * 1.5 && bot.rock >= bot.goal.rock * 1.3, `got ${bot.ice}/${bot.rock} of ${bot.goal.ice}/${bot.goal.rock}`);
+      assert.ok(!still.met);
       assert.ok(still.bumps >= 15, `idle bumps ${still.bumps}`);
       assert.equal(still.water, 0);
     });
@@ -60,19 +64,37 @@ ok('a shot kicks her back, and she eases forward again', () => {
   for (let i = 0; i < 240; i++) stepRun(run, 1 / 60, idle());
   assert.ok(Math.abs(run.ship.z) < 0.02, `settled ${run.ship.z}`);
 });
-ok('boulders bounce shots; small chunks blast into water', () => {
-  for (const big of [true, false]) {
-    const run = createRun('hard', 1);
-    run.spawnClock = 1e9; run.ice.length = 0; // no other ice
-    const r = big ? BIG_R + 0.5 : 1.2;
-    run.ice.push({ id: 99, x: 0, y: 0, z: -60, r, big, spin: 0, spinRate: 0, shape: 1 });
-    const ev = [];
-    for (let i = 0; i < 40 && !ev.some((e) => e.type === 'blast' || e.type === 'bounce'); i++) {
-      ev.push(...stepRun(run, 1 / 60, { turn: 0, thrust: 0, fire: i === 0 }));
+ok('big rocks take 2 / 3 / 5 shots; small rocks and ice break with one', () => {
+  for (const level of ['easy', 'medium', 'hard']) {
+    for (const kind of ['big', 'rock', 'ice']) {
+      const run = createRun(level, 1);
+      run.spawnClock = 1e9; run.ice.length = 0; // no other ice
+      const big = kind === 'big';
+      run.ice.push({ id: 99, x: 0, y: 0, z: -200, r: big ? BIG_R + 0.5 : 1.2, big, rock: kind !== 'ice', hp: big ? LEVELS[level].bigHits : 1, spin: 0, spinRate: 0, shape: 1 });
+      let shots = 0;
+      for (let i = 0; i < 400 && run.ice.length; i++) {
+        const fire = run.ship.cool === 0 && run.bolts.length === 0;
+        if (fire) shots++;
+        stepRun(run, 1 / 60, { turn: 0, thrust: 0, fire });
+      }
+      assert.equal(run.ice.length, 0, `${level} ${kind} not broken`);
+      assert.equal(shots, big ? LEVELS[level].bigHits : 1, `${level} ${kind} shots`);
+      if (kind === 'ice') { assert.equal(run.got.ice, 1); assert.equal(run.got.rock, 0); }
+      else assert.equal(run.got.rock, big ? BIG_ROCK : 1);
     }
-    if (big) { assert.ok(ev.some((e) => e.type === 'bounce')); assert.equal(run.water, 0); assert.equal(run.ice.length, 1); }
-    else { assert.ok(ev.some((e) => e.type === 'blast')); assert.equal(run.water, waterFor(r)); assert.equal(run.ice.length, 0); }
   }
+  assert.deepEqual(['easy', 'medium', 'hard'].map((k) => LEVELS[k].bigHits), [2, 3, 5]);
+});
+ok('holding fire never pushes her out of the picture', () => {
+  const run = createRun('hard', 1);
+  run.spawnClock = 1e9; run.ice.length = 0;
+  let most = 0;
+  for (let i = 0; i < 600; i++) { stepRun(run, 1 / 60, { turn: 0, thrust: 0, fire: true }); most = Math.max(most, run.ship.z); }
+  assert.ok(most <= MAX_KICK + 1e-9, `drifted back ${most}`);
+});
+ok('each level asks for more ice and rock than the one before', () => {
+  const [e, m, h] = ['easy', 'medium', 'hard'].map((k) => LEVELS[k].goal);
+  assert.ok(e.ice < m.ice && m.ice < h.ice && e.rock < m.rock && m.rock < h.rock);
 });
 ok('a fast shot never skips through a chunk between steps', () => {
   // Coarse steps (a slow frame): the swept test still catches it.
