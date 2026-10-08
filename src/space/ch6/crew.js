@@ -167,7 +167,10 @@ function buildKid(id) {
     },
     wave() {
       if (!wave) return;
+      // The wave ramps from 0 to full over 0.35 s while the idle ramps out (the weight
+      // is set after the fade starts, because setEffectiveWeight(0) also zeroes it).
       wave.reset().setEffectiveWeight(0).fadeIn(0.35).play();
+      wave.weight = 1;
       idle.fadeOut(0.35);
       waveT = 0; ending = false;
     },
@@ -295,7 +298,7 @@ function buildSignalBot() {
   const { toonM, glowM, put, solid } = k;
   const root = new THREE.Group(); root.name = 'crew-signal';
   const R = 0.3; // body radius
-  const lilac = toonM(0xb58cff); const white = toonM(0xeef2ff); const screen = toonM(0x221e38);
+  const white = toonM(0xeef2ff);
   const halo = glowM(0xe6d7ff, 1.35); const eyeGlow = glowM(0xff8fd8, 1.7); const shine = glowM(0xffffff, 1.4);
   const pupil = k.keep(new THREE.MeshBasicMaterial({ color: 0x1d1233 }));
   const lampBase = new THREE.Color(0xff7fbf); const lamp = k.keep(new THREE.MeshBasicMaterial({ color: lampBase.clone() }));
@@ -307,17 +310,28 @@ function buildSignalBot() {
 
   // Everything hovers together: a bob and a slight tilt.
   const float = new THREE.Group(); float.position.y = 1.02; root.add(float);
-  solid(float, new THREE.SphereGeometry(R, 40, 26), lilac, 0, 0, 0, true);
-  // The face: a dark screen cap over the front, with the big eye on it.
+  // The body: a lilac sphere whose front is painted dark, a round screen for the face
+  // (painted, not a second shell, so nothing flickers where the two meet).
   const capA = 0.7;
-  put(float, new THREE.SphereGeometry(R + 0.006, 40, 20, Math.PI / 2 - capA, 2 * capA, Math.PI / 2 - capA, 2 * capA), screen);
+  const bodyGeo = new THREE.SphereGeometry(R, 96, 56);
+  const bodyPos = bodyGeo.attributes.position;
+  const cols = new Float32Array(bodyPos.count * 3);
+  const cLilac = new THREE.Color(0xb58cff); const cScreen = new THREE.Color(0x221e38); const tint = new THREE.Color();
+  for (let i = 0; i < bodyPos.count; i++) {
+    const a = Math.acos(Math.min(1, Math.max(-1, bodyPos.getZ(i) / R))); // angle from the front
+    tint.copy(cScreen).lerp(cLilac, smooth((a - capA + 0.02) / 0.12));
+    cols.set([tint.r, tint.g, tint.b], i * 3);
+  }
+  bodyGeo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+  const bodyM = k.keep(new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: toonRamp }));
+  solid(float, bodyGeo, bodyM, 0, 0, 0, true);
   // The eye sits on a pivot at the body's centre, so turning the pivot moves it over the screen.
   const look = new THREE.Group(); float.add(look);
-  const iris = put(look, conform(new THREE.CircleGeometry(0.1, 32), R + 0.012), eyeGlow);
-  put(look, conform(new THREE.CircleGeometry(0.045, 24), R + 0.014), pupil);
-  const shineGeo = conform(new THREE.CircleGeometry(0.018, 12), R + 0.016); shineGeo.translate(0.03, 0.035, 0);
+  const iris = put(look, conform(new THREE.CircleGeometry(0.1, 32), R + 0.024), eyeGlow);
+  put(look, conform(new THREE.CircleGeometry(0.045, 24), R + 0.026), pupil);
+  const shineGeo = conform(new THREE.CircleGeometry(0.018, 12), R + 0.028); shineGeo.translate(0.03, 0.035, 0);
   put(look, shineGeo, shine);
-  const smile = put(look, new THREE.TorusGeometry(0.06, 0.016, 8, 20, Math.PI), eyeGlow, 0, -0.02, R + 0.012);
+  const smile = put(look, new THREE.TorusGeometry(0.06, 0.016, 8, 20, Math.PI), eyeGlow, 0, -0.02, R + 0.022);
   smile.scale.y = 0;
 
   // The halo: a tilted ring round the body that turns on its own pivot.
@@ -330,7 +344,7 @@ function buildSignalBot() {
   const dishPivot = new THREE.Group(); dishPivot.position.y = 0.46; float.add(dishPivot);
   const dishTilt = new THREE.Group(); dishTilt.rotation.x = 0.55; dishPivot.add(dishTilt);
   const bowl = []; for (let i = 0; i <= 8; i++) { const s = 1 - i / 8; bowl.push([0.17 * s, 0.06 * s * s]); } // rim to centre
-  put(dishTilt, lathe(k, bowl), white);
+  put(dishTilt, lathe(k, bowl), white).material.side = THREE.DoubleSide;
   put(dishTilt, new THREE.SphereGeometry(0.02, 10, 8), white, 0, 0.1, 0);
 
   // An antenna at the back, with a light that breathes.

@@ -33,7 +33,9 @@ export function buildDeck(kit) {
 
   // --- the corridor: lift to lounge ------------------------------------------------
   const corridor = { rect: [0, CL / 2, 2 * CW, CL] };
-  kit.floor(b, corridor); floors.push(corridor);
+  // A lighter plum than the kit's carpet, so the start view is not dark.
+  const corridorCarpet = kit.own(new THREE.MeshToonMaterial({ color: 0x7d7196, gradientMap: toonRamp }));
+  kit.floor(b, corridor, { mat: corridorCarpet }); floors.push(corridor);
   kit.ceiling(b, { rect: [0, CL / 2, 2.4, CL] }, CH); // narrower at the top, where the slopes meet it
   for (const s of [-1, 1]) {
     b.box(0.12, 0.02, CL, mats.cove, s * (CW - 0.15), 0.01, CL / 2); // lit carpet edge
@@ -44,7 +46,7 @@ export function buildDeck(kit) {
   }
   // Lower walls. ZARA's door is a gap (she walks through it); the others are solid behind their doors.
   // A mid-tone (not the bright wall colour) so the start view is not over-lit.
-  const lowerMat = kit.own(new THREE.MeshToonMaterial({ color: 0xb9b3aa, gradientMap: toonRamp }));
+  const lowerMat = kit.own(new THREE.MeshToonMaterial({ color: 0xc4bdb3, gradientMap: toonRamp }));
   const lowerB = { box: (w, h, d, m, ...r) => b.box(w, h, d, m === mats.wall ? lowerMat : m, ...r) };
   solids.push(
     kit.wall(lowerB, -WX, 0, -WX, 6.1, { h: LOW }), kit.wall(lowerB, -WX, 7.9, -WX, CL, { h: LOW }), kit.wall(lowerB, WX, 0, WX, CL, { h: LOW }),
@@ -184,9 +186,13 @@ export function buildDeck(kit) {
   b.flush(group);
 
   // Warm light in the lounge (one soft point light; the coves and screens do the rest).
-  const warm = new THREE.PointLight(0xffd9a8, 8, 24, 1.4);
+  const warm = new THREE.PointLight(0xffd9a8, 7, 24, 1.4);
   warm.position.set(0, 2.9, CL + 5.4);
   group.add(warm);
+  // A second, softer one over the window end, so the far corners are not dim.
+  const warm2 = new THREE.PointLight(0xffe6c8, 4, 20, 1.4);
+  warm2.position.set(2.5, 2.8, CL + 8.5);
+  group.add(warm2);
 
   const views = [
     { name: 'corridor', pos: [0, 1.6, 2.5], look: [0, 1.6, 30] },
@@ -207,6 +213,6 @@ export function buildDeck(kit) {
       for (const d of doors) d.door.update(dt, ctx.herX, ctx.herZ, d.force);
     },
     // Everything here was made by the kit, which frees it in kit.dispose().
-    dispose() { lowerMat.dispose(); },
+    dispose() { lowerMat.dispose(); corridorCarpet.dispose(); },
   };
 }
