@@ -152,7 +152,8 @@ export function buildDeck(kit) {
   const hydDoor = kit.door(hx, hz, HYD.a, { w: 1.8, h: 3.0 });
   group.add(hydDoor.group); doors.push(hydDoor);
   place(kit.sign('LAB', { w: 1.2, h: 0.3, color: PALETTE.peach }), lab, 0, 2.85, 0.24);
-  place(kit.sign('HYDROPONICS', { w: 2.8, h: 0.4, color: PALETTE.teal }), hyd, 0, 3.55, 0.24);
+  // Under the corridor ceiling (3.2 m), in front of the door's top beam.
+  place(kit.sign('HYDROPONICS', { w: 2.4, h: 0.34, color: PALETTE.teal }), hyd, 0, 2.82, 0.24);
 
   // ---- LAB: the air. Three algae tanks with bubbles, the ice splitter, the water loop, a work table.
   const tankZ = -9.4;
