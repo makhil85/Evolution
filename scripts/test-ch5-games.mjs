@@ -170,11 +170,13 @@ ok('design: every choice question has exactly one right answer', () => {
     for (const c of q.choices) assert.ok(Array.isArray(c.text) && c.text.length === 2);
   }
 });
-ok('design: the fuel sum (600,000 t at 1 t per 1,000 t) is 600, and solid needs 3,000', () => {
+ok('design: the fuel sum is the planner\'s (1,000 t of ship at 1 t per 100 t = 10 t, as routes.js: 10 t gives 3 km/s)', () => {
   const q = DESIGN_STEPS.find((x) => x.type === 'text');
-  assert.equal(String(600000 / 1000), q.answers[0]);
-  assert.equal(3000000 / 1000, 3000);
-  assert.ok(q.why[0].includes('600') && q.why[0].includes('3,000'));
+  assert.equal(String(1000 / 100), q.answers[0]);
+  assert.ok(q.why[0].includes('10') && q.why[0].includes('1,000'));
+  // The planner's ship: 1,000 t dry, 10 t of fuel gives about 3 km/s (300 km/s exhaust).
+  const dv = 300 * Math.log((1000 + 10) / 1000);
+  assert.equal(Math.round(dv), 3);
 });
 ok('rock hunt: only Rock B passes; every wrong rock fails at least one check', () => {
   for (const c of CHECKS) assert.ok(c.no?.length === 2 && c.text.length === 2, c.id);

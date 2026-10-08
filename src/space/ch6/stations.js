@@ -125,7 +125,7 @@ function shieldBody(changed) {
     solve() { sh.cells.forEach((m, i) => { while (sh.cells[i] < SHIELD.safe && patchCell(sh, i)); }); changed(); },
     state: () => ({ cells: [...sh.cells], blocks: sh.blocks }),
     refresh,
-    tip: t('Thin rock lets space radiation in. Each metre of rock stops half of it, so tap the red spots to pile on more rock.', 'Thin rock lets bad rays in. Tap the red spots to add rock.'),
+    tip: t('Thin spots let space radiation in. Each metre of rock stops half of it, so tap the red spots to pile on more rock.', 'Thin spots let bad rays in. Tap the red spots to add rock.'),
   };
 }
 

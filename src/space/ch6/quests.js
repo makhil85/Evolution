@@ -130,7 +130,7 @@ function medbayBody(changed) {
     el: wrap, ok: () => medbayTotals(s).ok,
     solve() { Object.assign(s, medbayAnswer()); changed(); },
     state: () => ({ scanned: [...s.scanned], bike: s.bike }), refresh,
-    tip: t('In this game, each metre of rock halves the rays, so the ship keeps us behind the rock. Scan every badge, then set the bike. In spin gravity our bones need exercise every day.', 'Scan each badge. Exercise keeps our bones strong.'),
+    tip: t('Each metre of rock halves the rays. The front shield keeps the ring behind it safe, so scan every badge, then set the bike. In spin gravity our bones need exercise every day.', 'Scan each badge. Exercise keeps our bones strong.'),
   };
 }
 
@@ -258,7 +258,7 @@ function pollenBody(changed) {
     }
     count.textContent = `${t('Strawberries', 'Strawberries')}: ${st.fruit.length} / ${PAIRS}`;
     note.className = `qz-note${problem ? ' qz-warn' : ''}`;
-    note.textContent = problem === 'order' ? t('In this game the pollen goes first: tap a flower with yellow dust, then the bud it works with.', 'Yellow dust first, then its bud.')
+    note.textContent = problem === 'order' ? t('The pollen goes first: tap a flower with yellow dust, then the bud it works with.', 'Yellow dust first, then its bud.')
       : problem === 'partner' ? t('Not that one: each yellow-dust flower only works with its own bud. Try the other bud.', 'Not that bud. Try the other one.')
         : pollinated(st) ? t(`Every bud has a strawberry now. Count them: ${PAIRS}!`, `All ${PAIRS} have a strawberry!`)
           : st.holding ? t('Now tap the bud that goes with it.', 'Now tap its bud.')
@@ -268,7 +268,7 @@ function pollenBody(changed) {
     el: wrap, ok: () => pollinated(st),
     solve() { st = runPollen(pollenAnswer()).state; problem = null; changed(); },
     state: () => ({ holding: st.holding, fruit: [...st.fruit] }), refresh,
-    tip: t('In this game each bud takes pollen from its partner flower. Real strawberries need lots of pollen grains, carried by bees on Earth. Out here we do the bees’ job with a soft brush.', 'Each bud takes pollen from its partner flower. We do the bees’ job with a brush.'),
+    tip: t('Each bud takes pollen from its partner flower. Real strawberries need lots of pollen grains, carried by bees on Earth. Out here we do the bees’ job with a soft brush.', 'Each bud takes pollen from its partner flower. We do the bees’ job with a brush.'),
   };
 }
 
