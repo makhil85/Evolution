@@ -9,6 +9,8 @@
 // centre lets her through (its lit step edge stands 12 cm above the floor; she
 // still walks at floor level). The shield console sits on the rail. Two science
 // bays open off the sides; the floor is inlaid with rings, the panels are coloured.
+// The quest 'message' has a dish console on the rail at the back right (a
+// mirror of the shield console), where Echo stands and she turns the dish.
 //
 // The bridge is built in its own frame (metres from its centre, +z to the
 // viewscreen, turned by the corridor's bend) and converted to deck metres for the
@@ -36,6 +38,8 @@ const DOOR = [CORR + CORR * Math.sin(A_END), CORR * Math.cos(A_END)];
 const HUB = [DOOR[0] + R * SN, DOOR[1] + R * CS]; // the bridge's centre, in deck metres
 const AS = Math.PI + 0.85;                        // the shield console, on the rail (back, left)
 const SHIELD_AT = [4.0 * Math.sin(AS), 4.0 * Math.cos(AS)];
+const AD = Math.PI - 0.85;                        // the dish console (quest 'message'), on the rail, back right
+const DISH_AT = [4.0 * Math.sin(AD), 4.0 * Math.cos(AD)];
 /** A point on the corridor's bend (a = angle on the circle of radius CORR). */
 const corrPoint = (a) => [CORR + CORR * Math.sin(a), CORR * Math.cos(a)];
 
@@ -183,6 +187,14 @@ export function buildDeck(kit) {
   const shGroup = desk(SHIELD_AT[0], SHIELD_AT[1], AS + Math.PI, 1.8, { title: 'SHIELD', accent: PALETTE.lilac, seed: 21 });
   const lamp = kit.lamp(PALETTE.gold); lamp.position.set(-0.92, 0.7, 0.2); shGroup.add(lamp);
 
+  // Quest: message (the dish on its console; the quest's spots are below)
+  const dishConsole = desk(DISH_AT[0], DISH_AT[1], AD + Math.PI, 1.8, { title: 'DISH', accent: PALETTE.teal, seed: 23 });
+  const dishPost = new THREE.Mesh(kit.own(new THREE.CylinderGeometry(0.03, 0.03, 0.5, 8)), mats.metal); dishPost.position.set(0.62, 1.05, -0.05);
+  const dishBowl = new THREE.Mesh(kit.own(new THREE.SphereGeometry(0.22, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2)), mats.wall);
+  dishBowl.position.set(0.62, 1.32, -0.05); dishBowl.rotation.x = -Math.PI * 0.35; // tilted up, open towards her
+  const dishLamp = kit.lamp(PALETTE.teal); dishLamp.position.set(-0.62, 0.85, -0.05);
+  dishConsole.add(dishPost, dishBowl, dishLamp);
+
   // The science bays: a console each, facing the centre.
   for (const k of [1, -1]) {
     const x0 = k * (R - 0.4); const xf = k * BAY_X;
@@ -237,6 +249,10 @@ export function buildDeck(kit) {
   const shieldSpot = toDeck(3.0 * Math.sin(AS), 3.0 * Math.cos(AS));
   const shieldProp = toDeck(SHIELD_AT[0], SHIELD_AT[1]);
   const doctorSpot = toDeck(3.0 * Math.sin(AS - 0.45), 3.0 * Math.cos(AS - 0.45));
+  // Quest: message. She stands at the rail's inside; Echo stands beside her, facing the dish.
+  const dishSpot = toDeck(3.0 * Math.sin(AD), 3.0 * Math.cos(AD));
+  const dishProp = toDeck(DISH_AT[0], DISH_AT[1]);
+  const echoSpot = toDeck(3.7, -0.5);
 
   // --- the views for screenshots (deck metres) ---------------------------------------------
   const e = corrPoint(A_END - 0.14);
@@ -250,6 +266,7 @@ export function buildDeck(kit) {
     { name: 'bay', pos: at(3.0, 1.6, -3.0), look: at(14, 1.4, 0.5) },
     { name: 'ring', pos: at(6.0, 2.3, -5.6), look: at(-3, 1.0, 3) },
     { name: 'walk', pos: at(-1.0, 1.6, -5.8), look: at(0.5, 1.4, 9) }, // her eye level, on the way in
+    { name: 'dish', pos: at(1.2, 1.6, -1.0), look: at(DISH_AT[0], 1.1, DISH_AT[1]) },
   ];
 
   return {
@@ -257,8 +274,15 @@ export function buildDeck(kit) {
     floors,
     solids,
     ceiling: APEX,
-    stations: { shield: { x: shieldSpot[0], z: shieldSpot[1], face: faceAt(shieldSpot, shieldProp), lamp, y: 2.2 } },
-    crewSpots: { doctor: { x: doctorSpot[0], z: doctorSpot[1], face: faceAt(doctorSpot, shieldProp) } },
+    stations: {
+      shield: { x: shieldSpot[0], z: shieldSpot[1], face: faceAt(shieldSpot, shieldProp), lamp, y: 2.2 },
+      // Quest: message
+      message: { x: dishSpot[0], z: dishSpot[1], face: faceAt(dishSpot, dishProp), lamp: dishLamp, y: 2.2 },
+    },
+    crewSpots: {
+      doctor: { x: doctorSpot[0], z: doctorSpot[1], face: faceAt(doctorSpot, shieldProp) },
+      message: { x: echoSpot[0], z: echoSpot[1], face: faceAt(echoSpot, dishProp) }, // Echo, in the quest
+    },
     views,
     update(dt, t, ctx) {
       door.update(dt, ctx.herX, ctx.herZ);

@@ -6,7 +6,8 @@
 // stars, a shelf with a rocket) and four shut ones (MIRA, THEO, BOLT, ECHO).
 // At the end the lounge (16 x 11 m, like Ten Forward) has a window that bows out
 // across its far wall, round tables, a bar with a glowing food replicator and
-// warm light. No stations here: the crew are on the other decks.
+// warm light. Off the corridor's right side, through a door at z 29, is the
+// sick bay (6 x 6 m): the quest 'medbay' (quests.js) is played there.
 import * as THREE from 'three';
 import { toonRamp } from '../../../game/toonPipeline.js';
 import { PALETTE } from './kit.js';
@@ -49,7 +50,8 @@ export function buildDeck(kit) {
   const lowerMat = kit.own(new THREE.MeshToonMaterial({ color: 0xc4bdb3, gradientMap: toonRamp }));
   const lowerB = { box: (w, h, d, m, ...r) => b.box(w, h, d, m === mats.wall ? lowerMat : m, ...r) };
   solids.push(
-    kit.wall(lowerB, -WX, 0, -WX, 6.1, { h: LOW }), kit.wall(lowerB, -WX, 7.9, -WX, CL, { h: LOW }), kit.wall(lowerB, WX, 0, WX, CL, { h: LOW }),
+    kit.wall(lowerB, -WX, 0, -WX, 6.1, { h: LOW }), kit.wall(lowerB, -WX, 7.9, -WX, CL, { h: LOW }),
+    kit.wall(lowerB, WX, 0, WX, 28.1, { h: LOW }), kit.wall(lowerB, WX, 29.9, WX, CL, { h: LOW }), // the sick bay's door: z 28.1 to 29.9
     kit.wall(lowerB, -WX, 0, -1.2, 0, { h: LOW }), kit.wall(lowerB, 1.2, 0, WX, 0, { h: LOW }), // beside the lift door
   );
   // Lintels over the lift and the lounge doorways.
@@ -111,6 +113,39 @@ export function buildDeck(kit) {
   // The desk with a screen, against the far side wall.
   const desk = kit.console(-3.5, 9.0, Math.PI, { w: 1.4, screen: { title: 'ZARA', accent: PALETTE.orange, seed: 4 } });
   group.add(desk.group); solids.push(desk.solid);
+
+  // --- the sick bay: 6 x 6 m off the corridor's right side, through a door at z 29 ---------
+  // Inside it runs x 1.7..7.7, z 26..32. The door is the gap in the corridor's lower wall.
+  const MED = { x0: CW, x1: 7.7, z0: 26, z1: 32 };
+  const MX = 7.825; // the back wall's centre (its inside face is at x 7.7)
+  const medRect = { rect: [(MED.x0 + MED.x1) / 2, (MED.z0 + MED.z1) / 2, MED.x1 - MED.x0, MED.z1 - MED.z0] };
+  kit.floor(b, medRect); floors.push(medRect);
+  kit.ceiling(b, medRect, CH);
+  solids.push(kit.wall(b, WX, MED.z0, MX, MED.z0, { h: CH }), kit.wall(b, WX, MED.z1, MX, MED.z1, { h: CH }), kit.wall(b, MX, MED.z0, MX, MED.z1, { h: CH }));
+  const medDoor = kit.door(CW, 29, -Math.PI / 2, { w: 1.8, h: 2.4 });
+  group.add(medDoor.group); doors.push({ door: medDoor, force: null });
+  const medPlate = kit.sign('Sick bay', { w: 1.2, h: 0.3, color: PALETTE.teal });
+  medPlate.position.set(CW - 0.01, 1.6, 31.2); medPlate.rotation.y = -Math.PI / 2; group.add(medPlate);
+
+  // Quest: medbay (the props and the lamp; the quest's spot is in 'stations' below)
+  // The biobed with a lit panel over it.
+  b.box(2.2, 0.7, 0.9, mats.wall, 5.4, 0.35, 29);
+  b.box(2.1, 0.06, 0.8, mats.accentBlue, 5.4, 0.73, 29);
+  b.box(1.6, 0.04, 0.9, mats.coveCool, 5.4, 2.9, 29);
+  solids.push({ rect: [5.4, 29, 2.2, 0.9] });
+  // The scanner arch by the door: two posts and a beam, with a light under it.
+  for (const z of [27.9, 30.1]) { b.cyl(0.09, 0.09, 2.5, mats.metal, 3.6, 1.25, z, { seg: 10 }); solids.push({ disc: [3.6, z, 0.15] }); }
+  b.box(0.25, 0.22, 2.5, mats.metal, 3.6, 2.6, 29);
+  b.box(0.1, 0.04, 2.2, mats.coveCool, 3.6, 2.47, 29);
+  // The cabinet on the back wall, with a lit door.
+  b.box(0.5, 1.2, 1.4, mats.panel, 7.45, 0.6, 27.3);
+  b.box(0.02, 0.8, 1.1, mats.coveCool, 7.19, 0.7, 27.3);
+  solids.push({ rect: [7.45, 27.3, 0.5, 1.4] });
+  const medLamp = kit.lamp(PALETTE.teal); medLamp.position.set(7.45, 1.3, 27.3); group.add(medLamp);
+  // The screen on the room's near wall.
+  const medScreen = kit.screen(1.4, 0.8, { title: 'SICK BAY', accent: PALETTE.teal, seed: 77 });
+  medScreen.position.set(4.9, 1.7, 26.14); group.add(medScreen);
+  // End of quest: medbay
 
   // --- the lounge (like Ten Forward): its far wall is a window that bows out ------
   const lounge = { rect: [0, (CL + LZE) / 2, 16, LZE - CL] };
@@ -203,10 +238,16 @@ export function buildDeck(kit) {
     { name: 'lounge', pos: [0, 1.6, CL - 2.4], look: [0, 1.7, LAPEX] },
     { name: 'lounge-bar', pos: [1.6, 1.6, CL + 2.5], look: [7.5, 1.3, CL + 6.0] },
     { name: 'window', pos: [-1.5, 1.5, CL + 2.0], look: [1.0, 1.9, LAPEX] },
+    { name: 'sickbay', pos: [1.9, 1.6, 29.0], look: [6.4, 1.0, 29.3] }, // from the door, through the arch
+    { name: 'biobed', pos: [6.9, 1.5, 31.2], look: [4.2, 0.9, 28.8] },
   ];
 
   return {
-    group, floors, solids, ceiling: CH, stations: {}, crewSpots: {}, views,
+    group, floors, solids, ceiling: CH,
+    // Quest: medbay (Theo stands by the biobed; he is placed at the crew spot)
+    stations: { medbay: { x: 4.6, z: 30.7, face: Math.PI, lamp: medLamp, y: 2.2 } },
+    crewSpots: { medbay: { x: 5.6, z: 31.2, face: Math.PI } },
+    views,
     update(dt, t, ctx) {
       glass.update(t); round.update(t);
       hatch.material.color.copy(TEAL).multiplyScalar(1.05 + 0.1 * Math.sin(t * 2.2)); // the replicator breathes (kept under white)

@@ -8,7 +8,8 @@
 //     stations: { [id]: { x, z, face, lamp, y? } }   where she stands, the yaw she
 //                                  faces to use it, a status lamp mesh (the shell
 //                                  recolours lamp.material), the prompt's height
-//     crewSpots: { [crewId]: { x, z, face } },
+//     crewSpots: { [crewId | spotId]: { x, z, face } },   where a crewmate stands
+//                                  (a spot id wins over the crewmate's id)
 //     views: [{ name, pos: [x, y, z], look: [x, y, z] }],   set points for screenshots
 //     update(dt, t, ctx)           ctx = { herX, herZ }
 //     dispose()
@@ -25,14 +26,14 @@ import { buildDeck as engineering } from './engineering.js';
 import { buildDeck as crewDeck } from './crewDeck.js';
 
 export const DECKS = Object.freeze([
-  { id: 'bridge', n: 1, name: ['Bridge', 'Bridge'], build: bridge, stations: ['shield'] },
-  { id: 'life', n: 2, name: ['Life support: lab and farm', 'Air, water and farm'], build: lifeDeck, stations: ['oxygen', 'water', 'food'] },
-  { id: 'engineering', n: 3, name: ['Engineering and cargo', 'Engine room'], build: engineering, stations: ['energy', 'pack'] },
-  { id: 'crew', n: 4, name: ['Crew deck: cabins and lounge', 'Crew rooms'], build: crewDeck, stations: [] },
+  { id: 'bridge', n: 1, name: ['Bridge', 'Bridge'], build: bridge, stations: ['shield'], quests: ['message'] },
+  { id: 'life', n: 2, name: ['Life support: lab and farm', 'Air, water and farm'], build: lifeDeck, stations: ['oxygen', 'water', 'food'], quests: ['pollen'] },
+  { id: 'engineering', n: 3, name: ['Engineering and cargo', 'Engine room'], build: engineering, stations: ['energy', 'pack'], quests: ['coolant'] },
+  { id: 'crew', n: 4, name: ['Crew deck: cabins and lounge', 'Crew rooms'], build: crewDeck, stations: [], quests: ['medbay'] },
 ]);
 
-/** The deck a station is on. */
-export const deckOf = (stationId) => DECKS.find((d) => d.stations.includes(stationId))?.id || null;
+/** The deck a station or a quest is on. */
+export const deckOf = (spotId) => DECKS.find((d) => d.stations.includes(spotId) || d.quests.includes(spotId))?.id || null;
 
 /** Where she starts: the crew deck, by the lift. */
 export const START_DECK = 'crew';

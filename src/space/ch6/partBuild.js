@@ -13,6 +13,7 @@ import { playWorkshop } from '../ch5/workshop.js';
 import { playCh5Ending } from '../ch5/ending.js';
 import { showRockB } from './opening.js';
 import { clearPartB } from './partB.js';
+import { clearPartQuests } from './partQuests.js';
 import { clearPartE } from './partE.js';
 
 /** Act number of this part (start.js has its title). */
@@ -29,7 +30,7 @@ export function partBuildSteps(game) {
       async enter() {
         // The chapter's first step: a fresh start (or a full restart), so the
         // stations and the route from a previous go are cleared.
-        clearPartB(); clearPartE();
+        clearPartB(); clearPartQuests(); clearPartE();
         await hud.showDialogue([
           { who: 'Mission Control', text: t('Welcome home to the asteroid belt! This is where we will build your ship for the stars.', 'Welcome back to the asteroid belt! We will build a ship for the stars here.') },
           { who: 'girl', text: t('Why here, and not out at the edge where I was?', 'Why here?') },

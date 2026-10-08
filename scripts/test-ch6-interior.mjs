@@ -6,8 +6,9 @@
 // walkmap.js: floors and solids, sliding along walls, never through them.
 // Each deck: enough floor to explore (>= 300 m^2 with the lift), the lift
 // clear, and from the lift door she can walk (a 0.3 m body on a 0.25 m grid)
-// to every station spot and every crew spot; every
-// station of decks.js has a spot on its deck and a status lamp.
+// to every station spot and quest spot (the sick bay's among them) and every
+// crew spot; every station and quest of decks.js has a spot on its deck and a
+// status lamp.
 import assert from 'node:assert/strict';
 import { createServer } from 'vite';
 
@@ -89,7 +90,7 @@ try {
       assert.ok(m.area() >= 300, `walkable ${m.area().toFixed(0)} m^2`);
       assert.ok(m.fits(0, 1.4), 'the spot in front of the lift');
       assert.ok(m.fits(0, -1.0), 'inside the lift');
-      for (const id of spec.stations) {
+      for (const id of [...spec.stations, ...(spec.quests || [])]) {
         const s = d.stations[id];
         assert.ok(s, `${id} has a spot`);
         assert.ok(s.lamp?.isMesh, `${id} has a lamp`);

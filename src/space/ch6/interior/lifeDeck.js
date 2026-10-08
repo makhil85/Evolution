@@ -9,7 +9,8 @@
 //     algae, and UV in violet), a work table with screens.
 //   HYDROPONICS (-x, 18 m wide, 16 m deep, 5 m tall): four rows of grow racks
 //     under pink-violet grow strips, a walkway with a water channel, fruit
-//     trees in pots, and the planning console at the far end.
+//     trees in pots, and the planning console at the far end. In the walkway,
+//     between a rack and the water channel, the strawberry bed (quest 'pollen').
 // A room is a frame(a): local x runs along the wall and local z points out of
 // the ring, so frame.at(x, z) gives deck metres and a prop's yaw is a + ry.
 import * as THREE from 'three';
@@ -244,13 +245,30 @@ export function buildDeck(kit) {
   group.add(plan.group); solids.push(plan.solid);
   place(kit.screen(2.4, 1.2, { title: 'PLAN', seed: 13, kind: 'map', accent: PALETTE.teal }), hyd, 0, 2.3, -15.96);
 
+  // Quest: pollen (the strawberry bed by the walkway; Mira stands by it, see crewSpots)
+  const BED = { x: -1.2, z: -5.0 };
+  const bloom = toon(0xffd6e0);
+  boxIn(hyd, 1.2, 0.8, 1.8, kit.mats.trim, BED.x, 0.4, BED.z); // the planter
+  boxIn(hyd, 1.0, 0.04, 1.6, M.leafA, BED.x, 0.82, BED.z);     // soil with leaves
+  for (const [dx, dz] of [[-0.3, -0.6], [0.3, -0.6], [-0.3, 0], [0.3, 0], [-0.3, 0.6], [0.3, 0.6]]) {
+    addIn(hyd, new THREE.SphereGeometry(0.12, 8, 6), bloom, BED.x + dx, 0.98, BED.z + dz);
+  }
+  solids.push(rectIn(hyd, 1.2, 1.8, BED.x, BED.z));
+  const bedLamp = lampIn(hyd, BED.x, BED.z, 1.3);
+  // End of quest: pollen
+
   // The stations and the crewmate. Lamps sit on their props.
   const stations = {
     oxygen: { ...spotIn(lab, 0, -7.2, 0, tankZ), lamp: lampIn(lab, 0, tankZ, 3.0) },
     water: { ...spotIn(lab, -2.3, -4.6, -4.0, -4.6), lamp: lampIn(lab, -4.0, -4.6, 2.54) },
     food: { ...spotIn(hyd, 0, -13.2, 0, -15.0), lamp: lampIn(hyd, 0, -15.2, 0.92) },
+    // Quest: pollen (she stands here; Mira stands by the bed, see crewSpots)
+    pollen: { ...spotIn(hyd, 0.5, BED.z, BED.x, BED.z), lamp: bedLamp, y: 2.2 },
   };
-  const crewSpots = { biologist: spotIn(lab, 2.0, -7.2, 1.8, tankZ) };
+  const crewSpots = {
+    biologist: spotIn(lab, 2.0, -7.2, 1.8, tankZ),
+    pollen: spotIn(hyd, 1.5, BED.z, BED.x, BED.z), // Mira, in the quest
+  };
 
   // Set points for screenshots: the corridor, the lab, its tanks, the bay.
   const up = ([x, z], y) => [x, y, z]; // (x, z) plus a height, as [x, y, z]
@@ -263,6 +281,7 @@ export function buildDeck(kit) {
     // From the corridor, looking into each room through its door.
     { name: 'bayDoor', pos: up(pol(HYD.a, 39.55), 1.9), look: up(pol(HYD.a, 36.8), 2.7) },
     { name: 'labDoor', pos: up(pol(LAB.a, 39.45), 1.6), look: up(pol(LAB.a, 25), 1.4) },
+    { name: 'bed', pos: up(hyd.at(-0.2, -2.6), 1.7), look: up(hyd.at(BED.x, BED.z), 0.9) },
   ];
 
   b.flush(group); // every static part above, one mesh per material
