@@ -515,14 +515,31 @@ lines are in place but not tuned.
 - **Opening** (`ch6/opening.js`): Rock B hangs beside her ship
   (`showRockB`, for the whole chapter); the supply ship docks at its hangar
   door; title.
-- **Habitat** (`ch6/habitat.js`, a runScene walk; the walker's `gait:
-  'earth'` - no Moon lope, firm footing, the walk clip timed like the
-  villages'): round hall
-  inside the rock, power core, six stations, bunks, the crew at their
-  stations, beacon on the next. Test hook `game.activeScene.debug`
-  (`goTo(id)`, `pressE()`). Station progress is kept in
-  `rocket_village_ch6_stations_L<level>` (a reload or a two-miss restart
-  does not redo finished stations).
+- **Interior** (`ch6/interior/`, 2026-10-08, replaces the round hall in the
+  rock): four Star Trek-style decks joined by a lift. `ship.js` is the
+  runScene walk (walker `gait: 'earth'`); she starts on Deck 4 by the lift;
+  in the lift E (or 1-4) picks a deck (a short fade). `decks.js` lists the
+  decks and which stations are where (1 Bridge: shield; 2 Life support:
+  oxygen, water, food; 3 Engineering and cargo: energy, pack; 4 Crew deck:
+  cabins and the lounge) and documents the deck contract. Each deck is its
+  own module (`bridge.js`, `lifeDeck.js`, `engineering.js`, `crewDeck.js`)
+  built from `kit.js` (palette, merged batches, walls, LCARS screens, doors,
+  consoles, star windows; lighting rule: emissive coves, at most two weak
+  point lights per deck). `walkmap.js` is the grid collision (floors minus
+  solids). The beacon is a floor ring + arrow on the next station (on the
+  lift when it is on another deck). Test hook `game.activeScene.debug`
+  (`goTo(id)` changes deck if needed, `pressE()`, `showDeck(id)`,
+  `takeLift(id)`, `view(name)`). Lab: `ship-lab.html?view=interior&deck=bridge`
+  (also `?view=ship`, `?view=crew`), with `__shipLab.stats()` (mean
+  brightness, blown share) and `info()` (calls, triangles).
+  `scripts/test-ch6-interior.mjs` checks every deck's floor area and that
+  every station and crew spot can be reached from the lift. Station progress
+  is kept in `rocket_village_ch6_stations_L<level>`.
+- **Starship** (`ch6/starship.js`): the ship for the stars (front rock cap
+  on a truss, faint field, spine, spinning ring, fusion drive). API
+  `createStarship({ detail })` -> `setRingSpin`, `setDrive(k)`,
+  `setField(k)`, `setLights`, `update`, `dispose`. Not yet used by the
+  cutscenes (STARSHIP_PLAN.md WP-2).
 - **Stations** (`ch6/stationsLogic.js` rules, `ch6/stations.js` cards, hook
   `window.__station`): shield (each metre halves the rays), oxygen (6 lamps +
   2 splitter steps is the one mix), water (grit -> algae -> UV; 98%, 500
@@ -537,7 +554,7 @@ lines are in place but not tuned.
   habitat -> shield station (E, card, solve, question) -> every other card;
   Part E planner, a slingshot leg pressed by hand, the drive-on cutscene; no
   page errors.
-- **Gotchas**: the habitat's rock wall and dome are seen from inside, so
+- **Gotchas**: (old habitat, removed) the rock wall and dome were seen from inside, so
   they need `side: BackSide`; the walker's spacesuit parts (helmet, collar
   ring, pack) are hidden indoors. `pgrep -f vite` matches its own command
   line (pitfall 6): check the server with curl instead.

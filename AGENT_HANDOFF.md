@@ -85,7 +85,7 @@ chapter openings/endings (`src/game/chapterStory.js`), the question modal
 |---|---|---|
 | 4 Voyage to Europa | `chapter4.html` | Earth orbit (2 laps, zero-g), satellite rescue (two-panel solar game), a lap with it, Flight School lesson, Moon transfer, get in Moon orbit -> circle it -> land, Moon walk, lift off, leave Earth (top-down view), Mars orbit, asteroid belt (mining claw, Ceres any time, upgrades), Jupiter (radiation, moons), Europa landing and walk, end card |
 | 5 Rings to a Star | `chapter5.html` (`src/space/ch5/`) | Jupiter -> Saturn (hexagon pole pass, rings lesson, ring run shooter, momentum lesson), Uranus, Neptune, Kuiper belt, Space pool game, Pluto, the edge cutscene, fusion lesson; **ends at the edge** (10-07) |
-| 6 The Long Trip | `chapter6.html` (`src/space/ch6/`) | **Starts back in the asteroid belt** (10-07): design the ship (design board), find Rock B (rock hunt), build/test the engine (workshop + test-fire cutscene); supply ship docks, meet the crew (2 kids, 2 robots); walk the habitat inside the rock (6 stations: shield, oxygen, water, farm, power, pack list); lesson 6A tiny Earth; Part E: lesson 6B energy (4 films), route planner (10 t then 100 t of fuel, 5 routes, speed far from the Sun), fly it (timing card), fusion drive on, lesson 6C light speed, years to a star, end |
+| 6 The Long Trip | `chapter6.html` (`src/space/ch6/`) | **Starts back in the asteroid belt** (10-07): design the ship (design board), find Rock B (rock hunt), build/test the engine (workshop + test-fire cutscene); supply ship docks, meet the crew (2 kids, 2 robots); walk the ship's four Star Trek-style decks, joined by a lift (6 stations: shield, oxygen, water, farm, power, pack list); lesson 6A tiny Earth; Part E: lesson 6B energy (4 films), route planner (10 t then 100 t of fuel, 5 routes, speed far from the Sun), fly it (timing card), fusion drive on, lesson 6C light speed, years to a star, end |
 
 Space features worth knowing: Easy/Medium/Hard flight modes (+ Level 1
 tables), autopilot (P), auto-turn (T), freeze (F), time warp 1-4, Retry,
@@ -159,7 +159,7 @@ dependencies. Each chapter is its own HTML page (`vite.config.js` inputs),
 - `hud/`: `hud.js` (mission card, toasts, `announce`), `markers.js`
   (`kind: 'goal'` = pulsing box), `transferPanel.js`, `minimap.js`,
   `toggleBar.js` (Autopilot/Auto-turn/Freeze pills), `touch.js`.
-- `surface.js`, `surface/walker.js`: Moon/Europa walks; `ch6/habitat.js`
+- `surface.js`, `surface/walker.js`: Moon/Europa walks; `ch6/interior/` (the ship's decks; `ship-lab.html` to look at them)
   uses `createWalker({ gait: 'earth' })` (no Moon lope).
 - `controls.js`: flight keys via `src/game/heldKeys.js`; `input.fire` = Space.
 
@@ -243,7 +243,7 @@ Ch1-3 keys in each `contracts.js` / `quests.js`.
 From the lead and `PLAN.md`, roughly in order:
 1. **A child plays every chapter**: watch where they get stuck.
 2. **Real-screen pass** of everything built since 10-06 (none of it was seen
-   on a real screen by an agent): Ch6 habitat frame rate and cutscenes, the
+   on a real screen by an agent): Ch6 deck frame rates (ship-lab info())  and cutscenes, the
    Ch6 build steps in their new place, the route planner and flight card,
    Ch5 ring-run flicker fix, the edge/new Ch5 end, markers + "Next" box,
    escape top-down view, catch zone at Jupiter and Saturn, Hard mode (no catch
