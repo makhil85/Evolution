@@ -96,7 +96,9 @@ export function buildDeck(kit) {
 
   // The upper level: a ring walkway and railing, seen from below (decoration, not walkable).
   const GY = 4.0;
-  b.add(new THREE.RingGeometry(4.0, 5.4, 64).rotateX(Math.PI / 2), mats.metal, cx, GY - 0.12, cz); // underside, facing down
+  // The underside is light (it is lit from below only) with a cool light band round it.
+  b.add(new THREE.RingGeometry(4.0, 5.4, 64).rotateX(Math.PI / 2), mats.wall, cx, GY - 0.12, cz); // underside, facing down
+  b.add(new THREE.RingGeometry(4.45, 4.57, 64).rotateX(Math.PI / 2), mats.coveCool, cx, GY - 0.14, cz);
   for (const r of [4.0, 5.4]) {
     b.add(new THREE.TorusGeometry(r, 0.05, 6, 64).rotateX(Math.PI / 2), mats.trim, cx, GY + 1.0, cz);
     for (let i = 0; i < 24; i++) {
@@ -123,7 +125,9 @@ export function buildDeck(kit) {
   // The core console (station 'energy'): its front faces the lift side, where she stands.
   const energy = kit.console(cx, 10.6, Math.PI, { w: 2.4, screen: { title: 'POWER', seed: 21 } });
   group.add(energy.group); solids.push(energy.solid); screens.push(energy.screen);
-  const energyLamp = kit.lamp(); energyLamp.position.set(cx, 1.45, 10.6); group.add(energyLamp);
+  // The lamp rides a short post at the desk's end, beside the screen.
+  b.cyl(0.04, 0.04, 0.19, mats.trim, cx - 1.17, 0.955, 10.6);
+  const energyLamp = kit.lamp(); energyLamp.position.set(cx - 1.17, 1.12, 10.6); group.add(energyLamp);
 
   // Wall consoles and wall panels at eye level, on both sides of the hall.
   for (const [x, z, ry, title] of [[-7.4, 12.5, Math.PI / 2, 'HULL'], [-7.4, 20.6, Math.PI / 2, 'WARP'], [7.4, 12.5, -Math.PI / 2, 'LIFE'], [7.4, 20.6, -Math.PI / 2, 'COMMS']]) {
@@ -148,13 +152,14 @@ export function buildDeck(kit) {
   }
 
   // A cargo loader by the outer door: body, cab, a mast with forks, four wheels.
-  const L = { x: -3.2, z: 34.4 };
+  // Set well off the pack spot (1.4 m further than before), clear of the rack at z 26..33.
+  const L = { x: -4.6, z: 34.6 };
   b.box(2.4, 0.9, 3.0, goldMat, L.x, 0.75, L.z);
   b.box(1.8, 0.9, 1.0, goldMat, L.x, 1.65, L.z - 0.7);
   for (const dx of [-0.8, 0.8]) b.box(0.12, 2.4, 0.12, mats.metal, L.x + dx, 1.5, L.z + 1.45);
-  for (const dx of [-0.6, 0.6]) b.box(0.12, 0.1, 0.7, mats.metal, L.x + dx, 0.25, 36.25);
+  for (const dx of [-0.6, 0.6]) b.box(0.12, 0.1, 0.7, mats.metal, L.x + dx, 0.25, L.z + 1.85);
   for (const dx of [-1.1, 1.1]) for (const dz of [-1.0, 1.0]) b.cyl(0.35, 0.35, 0.28, mats.black, L.x + dx, 0.35, L.z + dz, { rz: Math.PI / 2 });
-  solids.push({ rect: [L.x, L.z, 2.4, 3.0] }, { rect: [L.x, 36.25, 1.4, 0.8] });
+  solids.push({ rect: [L.x, L.z, 2.4, 3.0] }, { rect: [L.x, L.z + 1.85, 1.4, 0.8] });
 
   // Shelving racks with supplies: along the left wall, and by the cargo door on the right.
   const rack = (x, z, len) => {
@@ -173,7 +178,9 @@ export function buildDeck(kit) {
   // The packing console (station 'pack'): its front faces the crates' side, the spot is on the other.
   const pack = kit.console(0, 33.2, -Math.PI / 2, { w: 2.2, screen: { title: 'PACK', seed: 51 } });
   group.add(pack.group); solids.push(pack.solid); screens.push(pack.screen);
-  const packLamp = kit.lamp(); packLamp.position.set(0, 1.45, 33.2); group.add(packLamp);
+  // Same as the core console: the lamp on a short post at the desk's end (the pack desk turns, so its end is at z + 1.08).
+  b.cyl(0.04, 0.04, 0.19, mats.trim, 0, 0.955, 34.28);
+  const packLamp = kit.lamp(); packLamp.position.set(0, 1.12, 34.28); group.add(packLamp);
 
   // The big outer door at the far end: a sealed hatch with warning stripes.
   const stripes = document.createElement('canvas'); stripes.width = 512; stripes.height = 512;
@@ -238,13 +245,16 @@ export function buildDeck(kit) {
       // The core breathes, and its light rings climb the column and fade at the ends.
       plasma.color.copy(plasmaBase).multiplyScalar(1.6 + 0.2 * Math.sin(t * 2.4));
       const s = 1 + 0.05 * Math.sin(t * 2.4); plasmaCore.scale.set(s, 1, s);
-      rings.forEach((m, i) => {
+      // A ring is hidden at the very top and bottom of its climb (no fade on a shared material).
+      for (let i = 0; i < rings.length; i++) {
+        const m = rings[i];
         const u = (t * 0.3 + i / rings.length) % 1;
         m.position.y = 0.6 + u * 6.0;
-        m.scale.setScalar(0.85 + 0.15 * Math.sin(Math.PI * u));
-      });
+        m.scale.setScalar(1 + 0.05 * Math.sin(Math.PI * u)); // radius 0.93..0.98: just outside the glass (0.9)
+        m.visible = u > 0.04 && u < 0.96;
+      }
       // The screens flicker gently, each out of step with the next.
-      screens.forEach((sc, i) => sc.material.color.setScalar(1.12 + 0.04 * Math.sin(t * 6 + i * 1.7)));
+      for (let i = 0; i < screens.length; i++) screens[i].material.color.setScalar(1.12 + 0.04 * Math.sin(t * 6 + i * 1.7));
     },
     dispose() { for (const x of mine) x.dispose?.(); },
   };

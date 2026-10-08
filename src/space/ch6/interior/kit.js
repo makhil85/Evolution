@@ -98,12 +98,12 @@ function starCanvas(seed = 3) {
   seedState = seed;
   const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 512;
   const c = cv.getContext('2d');
-  const g = c.createLinearGradient(0, 0, 0, 512); g.addColorStop(0, '#02030a'); g.addColorStop(1, '#070a18');
+  const g = c.createLinearGradient(0, 0, 0, 512); g.addColorStop(0, '#101a3c'); g.addColorStop(1, '#1c2a5e'); // deep navy: near-black read as a dark panel
   c.fillStyle = g; c.fillRect(0, 0, 1024, 512);
   for (let i = 0; i < 700; i++) {
     const x = rnd() * 1024; const y = rnd() * 512; const r = rnd() < 0.93 ? 0.7 + rnd() * 0.6 : 1.4 + rnd() * 1.2;
     const tint = rnd(); c.fillStyle = tint < 0.15 ? '#ffd9b0' : tint < 0.3 ? '#b8ccff' : '#ffffff';
-    c.globalAlpha = 0.5 + rnd() * 0.5; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
+    c.globalAlpha = 0.7 + rnd() * 0.3; c.beginPath(); c.arc(x, y, r * 1.3, 0, Math.PI * 2); c.fill();
   }
   c.globalAlpha = 1;
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.wrapS = THREE.RepeatWrapping;
@@ -115,7 +115,10 @@ export function createKit() {
   const own = (x) => { owned.push(x); return x; };
   const mats = {
     wall: own(toon(PALETTE.wall)), wallDark: own(toon(PALETTE.wallDark)), trim: own(toon(PALETTE.trim)), panel: own(toon(PALETTE.panel)),
-    carpet: own(toon(PALETTE.carpet)), deck: own(toon(PALETTE.deck)), ceiling: own(toon(PALETTE.ceiling)), metal: own(toon(PALETTE.metal)),
+    carpet: own(toon(PALETTE.carpet)), deck: own(toon(PALETTE.deck)), // Ceilings face down, away from every light, and went near-black
+    // (the makers' note): a little emissive stands in for the light the
+    // floor and walls bounce up.
+    ceiling: own(toon(PALETTE.ceiling, { emissive: new THREE.Color(PALETTE.ceiling).multiplyScalar(0.35) })), metal: own(toon(PALETTE.metal)),
     black: own(toon(PALETTE.black)),
     glass: own(new THREE.MeshToonMaterial({ color: PALETTE.glass, gradientMap: toonRamp, transparent: true, opacity: 0.22, depthWrite: false })),
     cove: own(glow(0xfff0d8, 1.3)), coveCool: own(glow(0xcfe6ff, 1.3)),
@@ -237,7 +240,11 @@ export function createKit() {
     c.fillStyle = '#0a0b10'; c.fillRect(0, 0, cv.width, cv.height);
     c.fillStyle = `#${new THREE.Color(color).getHexString()}`;
     c.fillRect(0, 0, cv.height * 0.5, cv.height); c.fillRect(cv.width - cv.height * 0.5, 0, cv.height * 0.5, cv.height);
-    c.font = `bold ${Math.round(cv.height * 0.58)}px system-ui, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+    // Shrink the font until the name fits between the end caps.
+    let px = Math.round(cv.height * 0.58);
+    const room = cv.width - cv.height * 1.4;
+    do { c.font = `bold ${px}px system-ui, sans-serif`; px -= 2; } while (px > 8 && c.measureText(text.toUpperCase()).width > room);
+    c.textAlign = 'center'; c.textBaseline = 'middle';
     c.fillText(text.toUpperCase(), cv.width / 2, cv.height / 2 + 2);
     const tex = own(new THREE.CanvasTexture(cv)); tex.colorSpace = THREE.SRGBColorSpace;
     return new THREE.Mesh(own(new THREE.PlaneGeometry(w, h)), own(new THREE.MeshBasicMaterial({ map: tex })));
@@ -285,8 +292,7 @@ export function createKit() {
     const s = screen(w * 0.92, 0.5, { seed: Math.round(x * 13 + z * 7), ...scr });
     s.position.set(0, 0.9, 0.12); s.rotation.x = -Math.PI / 2 + 0.55;
     group.add(s);
-    const c = Math.cos(ry); const n = Math.sin(ry);
-    return { group, screen: s, solid: { rect: [x, z, Math.abs(w * c) + Math.abs(0.75 * n) + 0.1, Math.abs(w * n) + Math.abs(0.75 * c) + 0.1] } };
+    return { group, screen: s, solid: { rect: [x, z, w + 0.1, 0.85], rot: ry } };
   }
 
   function starWindow(w, h, { speed = 0.004, seed = 3 } = {}) {

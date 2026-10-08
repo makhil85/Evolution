@@ -43,9 +43,12 @@ export function buildDeck(kit) {
     b.box(0.06, 0.06, CL, mats.cove, s * CW, LOW, CL / 2); // light cove where the slope starts
   }
   // Lower walls. ZARA's door is a gap (she walks through it); the others are solid behind their doors.
+  // A mid-tone (not the bright wall colour) so the start view is not over-lit.
+  const lowerMat = kit.own(new THREE.MeshToonMaterial({ color: 0x9d978f, gradientMap: toonRamp }));
+  const lowerB = { box: (w, h, d, m, ...r) => b.box(w, h, d, m === mats.wall ? lowerMat : m, ...r) };
   solids.push(
-    kit.wall(b, -WX, 0, -WX, 6.1, { h: LOW }), kit.wall(b, -WX, 7.9, -WX, CL, { h: LOW }), kit.wall(b, WX, 0, WX, CL, { h: LOW }),
-    kit.wall(b, -WX, 0, -1.2, 0, { h: LOW }), kit.wall(b, 1.2, 0, WX, 0, { h: LOW }), // beside the lift door
+    kit.wall(lowerB, -WX, 0, -WX, 6.1, { h: LOW }), kit.wall(lowerB, -WX, 7.9, -WX, CL, { h: LOW }), kit.wall(lowerB, WX, 0, WX, CL, { h: LOW }),
+    kit.wall(lowerB, -WX, 0, -1.2, 0, { h: LOW }), kit.wall(lowerB, 1.2, 0, WX, 0, { h: LOW }), // beside the lift door
   );
   // Lintels over the lift and the lounge doorways.
   b.box(2 * WX, CH - LOW, 0.25, mats.wall, 0, (LOW + CH) / 2, 0);
@@ -65,7 +68,7 @@ export function buildDeck(kit) {
     group.add(door.group);
     doors.push({ door, force: c.force ?? 0 });
     const plate = kit.sign(c.name, { w: 1.0, h: 0.25, color: c.color || PALETTE.peach });
-    plate.position.set(s * (CW - 0.01), 1.6, c.z + 1.7);
+    plate.position.set(s * (CW - 0.01), 1.6, c.z + 2.2); // clear of the door post, so the whole name shows
     plate.rotation.y = s < 0 ? Math.PI / 2 : -Math.PI / 2;
     group.add(plate);
   }
@@ -92,17 +95,24 @@ export function buildDeck(kit) {
   solids.push({ rect: [-5.6, 4.85, 0.9, 0.4] });
   // The round window with stars, and its rim (on the near wall, looking into the room).
   const round = kit.starWindow(1.6, 1.6, { speed: 0.01, seed: 9 });
-  round.mesh.geometry = kit.own(new THREE.CircleGeometry(0.8, 40));
-  round.mesh.position.set(-3.5, 2.0, 4.64);
+  round.mesh.geometry = kit.own(new THREE.CircleGeometry(0.7, 40));
+  round.mesh.position.set(-4.33, 2.0, 4.64); // between the wall's panel seams
   group.add(round.mesh);
-  b.add(new THREE.TorusGeometry(0.8, 0.07, 8, 40), mats.trim, -3.5, 2.0, 4.64);
+  b.add(new THREE.TorusGeometry(0.7, 0.07, 8, 40), mats.trim, -4.33, 2.0, 4.64);
+  // LCARS panels along the corridor walls, at eye level.
+  for (const [s, z, kind, title] of [[-1, 3.0, 'map', ''], [1, 25.0, 'panel', 'DECK 4'], [-1, 29.5, 'panel', 'LOUNGE']]) {
+    const scr = kit.screen(1.2, 0.72, { title, kind, accent: PALETTE.blue, seed: Math.round(z * 3) });
+    scr.position.set(s * (CW - 0.08), 1.7, z); // clear of the wall's panel seams
+    scr.rotation.y = s < 0 ? Math.PI / 2 : -Math.PI / 2;
+    group.add(scr);
+  }
   // The desk with a screen, against the far side wall.
   const desk = kit.console(-3.5, 9.0, Math.PI, { w: 1.4, screen: { title: 'ZARA', accent: PALETTE.orange, seed: 4 } });
   group.add(desk.group); solids.push(desk.solid);
 
   // --- the lounge (like Ten Forward): its far wall is a window that bows out ------
   const lounge = { rect: [0, (CL + LZE) / 2, 16, LZE - CL] };
-  const bow = { ring: [0, ZC, RIN - 1.6, RIN - 0.02], from: -ZW, to: ZW };
+  const bow = { ring: [0, ZC, RIN - 1.2, RIN], from: -ZW, to: ZW }; // inner edge at the rectangle's far side, outer at the sill
   kit.floor(b, lounge); kit.floor(b, bow); floors.push(lounge, bow);
   kit.ceiling(b, lounge, CH); kit.ceiling(b, bow, CH, { light: false });
   solids.push(kit.wall(b, -LX, CL, -LX, LZE, { h: CH }), kit.wall(b, LX, CL, LX, LZE, { h: CH }));
@@ -152,7 +162,7 @@ export function buildDeck(kit) {
     b.cyl(0.2, 0.2, 0.04, mats.trim, 5.3, 0.02, z, { seg: 14 });
     solids.push({ disc: [5.3, z, 0.25] });
   }
-  const hatch = new THREE.Mesh(kit.own(new THREE.PlaneGeometry(1.3, 0.8)), kit.glow(PALETTE.teal, 1.6));
+  const hatch = new THREE.Mesh(kit.own(new THREE.PlaneGeometry(1.3, 0.8)), kit.glow(PALETTE.teal, 1.1));
   hatch.position.set(6.06, 0.95, CL + 5.0); hatch.rotation.y = -Math.PI / 2;
   group.add(hatch);
   const menu = kit.screen(1.5, 0.9, { title: 'MENU', accent: PALETTE.lilac, seed: 21 });
@@ -171,8 +181,8 @@ export function buildDeck(kit) {
   b.flush(group);
 
   // Warm light in the lounge (one soft point light; the coves and screens do the rest).
-  const warm = new THREE.PointLight(0xffd9a8, 4, 24, 1.4);
-  warm.position.set(0, 2.9, CL + 4.0);
+  const warm = new THREE.PointLight(0xffd9a8, 7, 24, 1.4);
+  warm.position.set(0, 2.9, CL + 5.4);
   group.add(warm);
 
   const views = [
@@ -180,6 +190,7 @@ export function buildDeck(kit) {
     { name: 'cabin', pos: [-2.0, 1.5, 7.0], look: [-6.0, 1.3, 7.0] },
     { name: 'cabin-desk', pos: [-5.6, 1.4, 8.6], look: [-3.6, 1.9, 4.6] },
     { name: 'doors', pos: [-0.8, 1.6, 16.0], look: [1.8, 1.4, 14.0] },
+    { name: 'screens', pos: [-0.4, 1.6, 21.0], look: [1.7, 1.6, 25.0] },
     { name: 'lounge', pos: [0, 1.6, CL - 2.4], look: [0, 1.7, LAPEX] },
     { name: 'lounge-bar', pos: [1.6, 1.6, CL + 2.5], look: [7.5, 1.3, CL + 6.0] },
     { name: 'window', pos: [-1.5, 1.5, CL + 2.0], look: [1.0, 1.9, LAPEX] },
@@ -189,7 +200,7 @@ export function buildDeck(kit) {
     group, floors, solids, ceiling: CH, stations: {}, crewSpots: {}, views,
     update(dt, t, ctx) {
       glass.update(t); round.update(t);
-      hatch.material.color.copy(TEAL).multiplyScalar(1.5 + 0.2 * Math.sin(t * 2.2)); // the replicator breathes
+      hatch.material.color.copy(TEAL).multiplyScalar(1.05 + 0.1 * Math.sin(t * 2.2)); // the replicator breathes (kept under white)
       for (const d of doors) d.door.update(dt, ctx.herX, ctx.herZ, d.force);
     },
     // Everything here was made by the kit, which frees it in kit.dispose().

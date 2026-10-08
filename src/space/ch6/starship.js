@@ -5,10 +5,10 @@
 // createStarship({ detail: 'near' | 'far' }) -> {
 //   group                    THREE.Group, the whole ship in metres
 //   dims: { length, ringR, capR, hubZ }
-//                            length ~370 m (cap front to plume), ringR 60 (the
-//                            ring is 120 m across), capR 67.5 (the cap is ~145 m
-//                            wide, 1.2x the ring), hubZ 0 (the docking port
-//                            sits at the hub, on the +X side)
+//                            length ~370 m (cap front to plume), ringR 62 (the
+//                            ring's outer radius, so 124 m across), capR 67.5
+//                            (the cap is ~145 m wide, 1.2x the ring), hubZ 0
+//                            (the docking port sits at the hub, on the +X side)
 //   update(dt, t)            ring spin, running lights, field shimmer, plume
 //                            flicker (dt and t in seconds)
 //   setRingSpin(radPerSec)   habitat ring spin (default 0.3)
@@ -19,26 +19,33 @@
 //   dispose()                frees this ship's geometry and materials
 // }
 //
-// Layout along Z (metres): cap centre -135 (8 m thick, pale ice on the back
-// face); the truss -131..-90 (lattice, not a tube); spine nose -100, aft 158;
-// hub and ring at 0 (the ring is 14 m deep); radiator fins 55..125; drive bell
-// 158..206; magnet rings 206..227; plume from 230.
+// Layout along Z (metres): cap centre -135 (8 m thick, a machined rim, pale
+// ice on the back face); the truss -133..-90 (a lattice, not a tube); spine
+// nose -100, aft 158; hub and ring at 0 (the ring is 22 m deep); radiator fins
+// 55..125; drive bell 158..206; magnet rings 206..227; plume from 230; the
+// field dome from -139 forward.
 //
-// Materials: MeshToonMaterial with the game's toonRamp (rock uses vertex
-// colours). Glows are MeshBasicMaterial with colour multiplied above the bloom
-// threshold (1.25). Parts are merged per material, so draw calls stay low.
-// The hull, ring and cap get an inverted-hull outline in metres (OUT), so the
-// line stays the same width on a 300 m ship.
+// Materials: MeshToonMaterial with the game's toonRamp (the rock uses vertex
+// colours); a little emissive keeps the shadow side light. Glows are
+// MeshBasicMaterial with colour multiplied above the bloom threshold (1.25),
+// except the plume, which stays faint on purpose. The field is a Fresnel
+// ShaderMaterial with the game's log depth chunks. Parts are merged per
+// material, so draw calls stay low. The hull, ring and cap get an
+// inverted-hull outline in metres (OUT), so the line keeps its width on a 300 m
+// ship.
 import * as THREE from 'three';
 import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { toonRamp, outlineMaterial } from '../../game/toonPipeline.js';
 
 const CAP_Z = -135; // the cap's centre
 const CAP_R = 67.5; // its radius (lumps take the width to ~145 m)
-const CAP_T = 4; // its half thickness (8 m)
-const RING_R = 60; // the habitat ring's radius
-const RING_D = 14; // its depth along Z
+const RING_RO = 62; // the habitat ring's outer radius
+const RING_RI = 58; // its inner radius
+const RING_D = 22; // its depth along Z
 const PLUME_Z = 230; // where the plume starts (the nozzle mouth)
+const FIELD_Z = -139; // the field dome's rim, just in front of the cap
+const FIELD_R = 82; // its base radius
+const FIELD_PEAK = 0.25; // the field's alpha at its rim, at setField(1)
 const OUT = 0.6; // outline thickness, metres
 const RING_SPIN = 0.3;
 
@@ -46,6 +53,8 @@ const RING_SPIN = 0.3;
 const SPINE = [[0, -100], [4, -96], [6.6, -90], [8.6, -70], [9.6, -30], [10, 0], [10.4, 60], [11.2, 110], [11, 130], [10, 150], [9.2, 158]];
 const BELL = [[9.2, 158], [11, 170], [16, 186], [22, 200], [24.5, 206]];
 const NOZZLES = [[206, 25.5], [213, 26.5], [220, 27.5], [227, 28.8]]; // [z, radius] of the four magnet rings
+// The cap's profile, (radius, z): a flat disc, 8 m thick at the centre, with a rounded rim.
+const CAP_PROFILE = [[0, -4], [12, -4], [24, -4], [36, -4], [48, -4], [58, -3.9], [62, -3.6], [66.5, -2.4], [67.5, 0], [66.5, 2.4], [62, 3.6], [58, 3.9], [48, 4], [36, 4], [24, 4], [12, 4], [0, 4]];
 
 function rAt(z) {
   for (let i = 1; i < SPINE.length; i++) {
@@ -61,6 +70,17 @@ function rAt(z) {
 function rng(seed) {
   let s = seed >>> 0;
   return () => { s = (s + 0x6d2b79f5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+
+// The outline of a rounded rectangle in (r, z), walked so that a lathe's normals face out.
+function roundRect(r0, r1, z0, z1, rc, n) {
+  const corners = [[r1 - rc, z1 - rc, 0], [r0 + rc, z1 - rc, Math.PI / 2], [r0 + rc, z0 + rc, Math.PI], [r1 - rc, z0 + rc, (3 * Math.PI) / 2]];
+  const pts = [];
+  for (const [cr, cz, a0] of corners) {
+    for (let i = 0; i <= n; i++) { const t = a0 + (i / n) * (Math.PI / 2); pts.push([cr + rc * Math.cos(t), cz + rc * Math.sin(t)]); }
+  }
+  pts.push(pts[0]);
+  return pts;
 }
 
 // Inverted-hull shell: each vertex pushed out along its normal by d metres.
@@ -86,24 +106,57 @@ function radialMatrix(a, r, z) {
   return new THREE.Matrix4().makeBasis(new THREE.Vector3(-s, c, 0), new THREE.Vector3(0, 0, 1), new THREE.Vector3(c, s, 0)).setPosition(c * r, s * r, z);
 }
 
+// The field dome: a Fresnel alpha (the rim glows, the middle stays clear), with the game's log depth chunks.
+const FIELD_VS = `
+#include <common>
+#include <logdepthbuf_pars_vertex>
+varying vec3 vN;
+varying vec3 vV;
+varying vec3 vP;
+void main() {
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  vN = normalize(normalMatrix * normal);
+  vV = normalize(-mv.xyz);
+  vP = position;
+  gl_Position = projectionMatrix * mv;
+  #include <logdepthbuf_vertex>
+}
+`;
+const FIELD_FS = `
+#include <common>
+#include <logdepthbuf_pars_fragment>
+uniform float uPeak;
+uniform float uTime;
+uniform vec3 uColor;
+varying vec3 vN;
+varying vec3 vV;
+varying vec3 vP;
+void main() {
+  #include <logdepthbuf_fragment>
+  float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.5);
+  float shimmer = 0.85 + 0.15 * sin(uTime * 1.7 + vP.y * 0.07 + vP.x * 0.05);
+  gl_FragColor = vec4(uColor, uPeak * f * shimmer);
+}
+`;
+
 export function createStarship({ detail = 'near' } = {}) {
   const far = detail === 'far';
   const SEG = far ? 12 : 28; // around the spine and the bell
-  const RSEG = far ? 40 : 96; // around the habitat ring
+  const RSEG = far ? 40 : 96; // around the habitat ring and the cap
   const TSEG = far ? 32 : 64; // tori
   const group = new THREE.Group();
   group.name = 'starship';
   const owned = new Set(); // geometries and materials we made (dispose() frees these)
   const track = (o) => { owned.add(o); return o; };
 
-  const toon = (color) => track(new THREE.MeshToonMaterial({ color, gradientMap: toonRamp }));
+  const toon = (color, emissive = 0x000000) => track(new THREE.MeshToonMaterial({ color, emissive, gradientMap: toonRamp }));
   const glow = (hex, k) => track(new THREE.MeshBasicMaterial({ color: new THREE.Color(hex).multiplyScalar(k) }));
   const M = {
-    hull: toon(0xdfe6ee),
-    pale: toon(0xf2f8ff),
-    dark: toon(0x3b4556),
-    orange: toon(0xff8a3d),
-    rock: track(new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: toonRamp })),
+    hull: toon(0xf4f7fa, 0x7a8694),
+    pale: toon(0xf6fbff, 0x7a8694),
+    dark: toon(0x5a6478, 0x2c3440),
+    orange: toon(0xff8a3d, 0x3a1a08),
+    rock: track(new THREE.MeshToonMaterial({ vertexColors: true, emissive: 0x1a1816, gradientMap: toonRamp })),
     win: glow(0xffd58a, 1.6),
     portGlow: glow(0xcffaff, 2.2),
   };
@@ -127,16 +180,17 @@ export function createStarship({ detail = 'near' } = {}) {
     if (outline) parent.add(new THREE.Mesh(track(shellOf(geo, outline)), outlineMaterial));
     return mesh;
   };
+  // A surface of revolution about Z: the profile is (r, z) and is swept around the ship's axis.
   const lathe = (pts, seg) => new THREE.LatheGeometry(pts.map(([r, z]) => new THREE.Vector2(r, z)), seg).rotateX(Math.PI / 2);
 
-  // --- the hull: spine, hub, bell, port -----------------------------------------------
+  // --- the hull: spine, hub, bell, port ----------------------------------------------
   put('hull', lathe(SPINE, SEG));
   put('dark', lathe(BELL, SEG));
   put('dark', new THREE.CylinderGeometry(12, 12, 22, SEG, 1).rotateX(Math.PI / 2)); // the hub drum
   put('dark', new THREE.CylinderGeometry(3.6, 3.6, 8, 20).rotateZ(Math.PI / 2), at(16, 0, 0)); // docking collar, +X side
   put('port', new THREE.TorusGeometry(3.6, 0.6, 8, 20).rotateY(Math.PI / 2), at(20.4, 0, 0)); // its lit ring
 
-  // Collar bands and (near only) small vents and hatches along the spine.
+  // Collar bands and (near only) small vents along the spine.
   for (const z of [-60, 20, 95, 140]) put('dark', new THREE.TorusGeometry(rAt(z) + 0.3, 0.35, 6, SEG), at(0, 0, z));
   if (!far) {
     const rnd = rng(6);
@@ -146,8 +200,10 @@ export function createStarship({ detail = 'near' } = {}) {
     }
   }
 
-  // Orange stripes along the spine (under the hub drum at the middle).
-  for (const a of [Math.PI / 4, (5 * Math.PI) / 4]) put('orange', new THREE.BoxGeometry(1.0, 110, 0.5), radialMatrix(a, 9.9, -30));
+  // Orange stripes that follow the spine's taper (10 m segments, each at the spine's radius there).
+  for (const a of [Math.PI / 4, (5 * Math.PI) / 4]) {
+    for (let z = -85; z < 25; z += 10) { const zm = z + 5; put('orange', new THREE.BoxGeometry(1.0, 10.2, 0.5), radialMatrix(a, rAt(zm) + 0.1, zm)); }
+  }
 
   // Radiator fins (pale panels) on the four sides, with dark ribs.
   put('pale', new THREE.BoxGeometry(28, 0.6, 70), at(22, 0, 90));
@@ -168,7 +224,7 @@ export function createStarship({ detail = 'near' } = {}) {
   put('dark', new THREE.SphereGeometry(4, 16, 6, 0, Math.PI * 2, 0, 0.75).rotateX(-Math.PI / 2), at(0, 19.5, -40));
   put('dark', new THREE.CylinderGeometry(0.35, 0.35, 30, 6), at(0, -26, 90));
 
-  // --- the truss: a lattice between the cap and the nose (open beams) -------------------
+  // --- the truss: a lattice between the cap and the nose (open beams) ----------------
   const MOUNT_Z = -130.5; // on the cap's back face, at radius 42
   const COLLAR_Z = -90; // a hoop around the spine nose
   const V = (r, a, z) => [r * Math.cos(a), r * Math.sin(a), z];
@@ -182,6 +238,42 @@ export function createStarship({ detail = 'near' } = {}) {
   put('dark', new THREE.TorusGeometry(6.8, 0.8, 6, TSEG), at(0, 0, COLLAR_Z));
   put('dark', new THREE.TorusGeometry(66, 0.9, 6, TSEG), at(0, 0, -133));
 
+  // --- the shield cap: a machined disc of drilled rock, lumpy on the front, pale ice on the back ---
+  const lat = lathe(CAP_PROFILE, RSEG);
+  lat.deleteAttribute('uv'); lat.deleteAttribute('normal');
+  const capGeo = track(mergeVertices(lat));
+  lat.dispose();
+  {
+    const p = capGeo.attributes.position;
+    const col = new Float32Array(p.count * 3);
+    const v = new THREE.Vector3();
+    for (let i = 0; i < p.count; i++) {
+      v.fromBufferAttribute(p, i);
+      const rr = Math.hypot(v.x, v.y);
+      // Lumps of 1-1.5% on the front face only (they fade out at the rim).
+      const w = Math.max(0, Math.min(1, -v.z / 3));
+      const lump = 1 + 0.015 * w * (0.6 * Math.sin(v.x * 0.11 + 1.2) * Math.sin(v.y * 0.09 - 0.4) + 0.4 * Math.sin(v.x * 0.23 - v.y * 0.19));
+      p.setXYZ(i, v.x * lump, v.y * lump, v.z);
+      // Grey-brown rock at the front (-Z), pale water ice on the back (+Z), with ragged edges.
+      const n2 = 0.5 + 0.5 * Math.sin(v.x * 0.13 + 1.3) * Math.sin(v.y * 0.11 - 0.4);
+      const ice = Math.max(0, Math.min(1, (v.z - 0.5 + 0.3 * (n2 - 0.5)) * 2));
+      const grit = 0.92 + 0.08 * Math.sin(v.x * 0.9 + v.y * 1.3);
+      col.set([
+        0.5 * grit * (1 - ice) + 0.82 * ice,
+        0.46 * grit * (1 - ice) + 0.9 * ice,
+        0.42 * grit * (1 - ice) + 0.97 * ice,
+      ], i * 3);
+    }
+    capGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    capGeo.computeVertexNormals();
+  }
+  // A machined dark rim, and twelve bolt heads on the back face at radius 62.
+  put('dark', new THREE.TorusGeometry(CAP_R, 1.2, 8, TSEG), at(0, 0, CAP_Z));
+  for (let k = 0; k < 12; k++) {
+    const a = (k * Math.PI) / 6;
+    put('dark', new THREE.CylinderGeometry(1.1, 1.1, 0.8, 8).rotateX(Math.PI / 2), at(62 * Math.cos(a), 62 * Math.sin(a), CAP_Z + 3.8));
+  }
+
   // The static hull: spine with outline, and the merged dark, orange, pale and port parts.
   flush('hull', M.hull, group, OUT);
   flush('dark', M.dark, group);
@@ -189,61 +281,32 @@ export function createStarship({ detail = 'near' } = {}) {
   flush('pale', M.pale, group);
   flush('port', M.portGlow, group);
 
-  // --- the shield cap: a lumpy drilled-rock disc, pale ice on its back face -----------
-  const ico = new THREE.IcosahedronGeometry(1, far ? 8 : 15);
-  ico.deleteAttribute('uv'); ico.deleteAttribute('normal');
-  const capGeo = track(mergeVertices(ico));
-  ico.dispose();
-  {
-    const p = capGeo.attributes.position;
-    const col = new Float32Array(p.count * 3);
-    const v = new THREE.Vector3();
-    for (let i = 0; i < p.count; i++) {
-      v.fromBufferAttribute(p, i); // a point on the unit sphere, squashed into a disc
-      const lump = 1 + 0.07 * Math.sin(v.x * 5.3 + v.y * 2.1) + 0.05 * Math.sin(v.y * 7.1 - v.z * 3.3) + 0.04 * Math.sin(v.z * 12 + v.x * 4);
-      const crater = -1.2 * Math.max(0, 0.06 - Math.abs(Math.sin(v.x * 9) * Math.sin(v.z * 8)));
-      const rr = lump * (1 + crater);
-      p.setXYZ(i, v.x * CAP_R * rr, v.y * CAP_R * rr, v.z * CAP_T * (1 + 0.15 * Math.sin(v.x * 6 - v.y * 4)));
-      // Grey-brown rock at the front (-Z), pale water ice on the back (+Z), with ragged edges.
-      const n2 = 0.5 + 0.5 * Math.sin(v.x * 4.1 + 1.3) * Math.sin(v.y * 3.7 - 0.4);
-      const ice = Math.max(0, Math.min(1, (v.z - 0.4 + 0.18 * (n2 - 0.5)) * 5));
-      const grit = 0.9 + 0.1 * Math.sin(v.x * 17 + v.y * 23 + v.z * 11);
-      col.set([
-        (0.3 * grit) * (1 - ice) + 0.82 * ice,
-        (0.25 * grit) * (1 - ice) + 0.9 * ice,
-        (0.2 * grit) * (1 - ice) + 0.97 * ice,
-      ], i * 3);
-    }
-    capGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    capGeo.computeVertexNormals();
-  }
   const cap = new THREE.Mesh(capGeo, M.rock);
   const capShell = new THREE.Mesh(track(shellOf(capGeo, OUT * 1.5)), outlineMaterial);
   cap.position.z = capShell.position.z = CAP_Z;
   group.add(cap, capShell);
 
-  // --- the habitat ring: spins about Z -----------------------------------------------
+  // --- the habitat ring: a closed band with a rounded-rectangle section, spins about Z ---
   const ring = new THREE.Group();
   ring.name = 'habitat-ring';
   group.add(ring);
-  put('ringHull', new THREE.CylinderGeometry(RING_R, RING_R, RING_D, RSEG, 1, true).rotateX(Math.PI / 2));
-  for (const z of [-RING_D / 2, RING_D / 2]) put('ringHull', new THREE.TorusGeometry(RING_R, 1.0, 8, RSEG), at(0, 0, z));
-  // Rows of warm window lights on the outside of the band.
-  const rows = far ? [-3.5, 3.5] : [-4.2, 0, 4.2];
+  put('ringHull', lathe(roundRect(RING_RI, RING_RO, -RING_D / 2, RING_D / 2, 1.5, far ? 2 : 4), RSEG));
+  // Rows of warm window panels just outside the band.
+  const rows = far ? [-6, 6] : [-6, 0, 6];
   const cols = far ? 24 : 48;
   for (let c = 0; c < cols; c++) {
-    for (const z of rows) put('ringWin', new THREE.PlaneGeometry(2.4, 1.8), radialMatrix((c / cols) * Math.PI * 2, RING_R + 0.12, z));
+    for (const z of rows) put('ringWin', new THREE.PlaneGeometry(3.0, 2.4), radialMatrix((c / cols) * Math.PI * 2, RING_RO + 0.12, z));
   }
-  // Six spokes from the hub to the rim (at 30 + 60k degrees, so the +X port is clear).
+  // Six spokes from the hub to the band (at 30 + 60k degrees, so the +X port is clear).
   for (let k = 0; k < 6; k++) {
     const a = Math.PI / 6 + (k * Math.PI) / 3;
-    put('ringDark', new THREE.BoxGeometry(47, 1.6, 2.4), at(35.5 * Math.cos(a), 35.5 * Math.sin(a), 0, a));
+    put('ringDark', new THREE.BoxGeometry(46, 1.6, 2.4), at(35 * Math.cos(a), 35 * Math.sin(a), 0, a));
   }
   flush('ringHull', M.hull, ring, OUT);
   flush('ringDark', M.dark, ring);
   flush('ringWin', M.win, ring);
 
-  // --- running lights: port (red) and starboard (green) at the fin tips, a strobe on the cap rim
+  // --- running lights: port (red) and starboard (green) at the fin tips, a strobe on the cap rim ---
   const lights = [
     { pos: [-36.6, 0, 125], rgb: [1, 0.12, 0.1], rate: 0.9, off: 0, strobe: false },
     { pos: [36.6, 0, 125], rgb: [0.2, 1, 0.35], rate: 0.9, off: 0.5, strobe: false },
@@ -257,7 +320,7 @@ export function createStarship({ detail = 'near' } = {}) {
   });
 
   // Magnet rings: lit one by one by setDrive (each has its own material).
-  const LIT = new THREE.Color(0x7ff3ff).multiplyScalar(2.5);
+  const LIT = new THREE.Color(0x7ff3ff).multiplyScalar(1.4);
   const DARK = new THREE.Color(0x334455);
   const nozzleMats = NOZZLES.map(([z, r]) => {
     const mat = track(new THREE.MeshBasicMaterial({ color: DARK.clone() }));
@@ -267,42 +330,54 @@ export function createStarship({ detail = 'near' } = {}) {
     return mat;
   });
 
-  // The plume: an outer cone and a white core, both growing with the drive level.
-  const coneGeo = (seg) => new THREE.ConeGeometry(1, 1, seg, 1, true).rotateX(Math.PI / 2).translate(0, 0, 0.5);
-  const plumeMat = (rgb, k) => track(new THREE.MeshBasicMaterial({ color: new THREE.Color(...rgb).multiplyScalar(k), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
-  const plumeOuterMat = plumeMat([0.55, 0.85, 1], 1.1);
-  const plumeCoreMat = plumeMat([1, 1, 1], 1.6);
-  const plumeOuter = new THREE.Mesh(track(coneGeo(far ? 12 : 24)), plumeOuterMat);
-  const plumeCore = new THREE.Mesh(track(coneGeo(far ? 8 : 16)), plumeCoreMat);
+  // The plume: cones whose vertex colours fade to black at both ends, so the additive
+  // glow has no hard edges. (Height segments keep the fade smooth along the length.)
+  const plumeGeo = (seg, rgb) => {
+    const g = new THREE.ConeGeometry(1, 1, seg, 8, true).rotateX(Math.PI / 2).translate(0, 0, 0.5);
+    const p = g.attributes.position; const col = new Float32Array(p.count * 3);
+    for (let i = 0; i < p.count; i++) {
+      const z = p.getZ(i);
+      const f = Math.min(1, z / 0.2) * Math.max(0, 1 - (z - 0.3) / 0.7);
+      col.set([rgb[0] * f, rgb[1] * f, rgb[2] * f], i * 3);
+    }
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    return track(g);
+  };
+  const plumeMat = () => track(new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+  const plumeOuterMat = plumeMat();
+  const plumeCoreMat = plumeMat();
+  const plumeOuter = new THREE.Mesh(plumeGeo(far ? 12 : 24, [0.55, 0.85, 1]), plumeOuterMat);
+  const plumeCore = new THREE.Mesh(plumeGeo(far ? 8 : 16, [1, 1, 1]), plumeCoreMat);
   plumeOuter.position.z = plumeCore.position.z = PLUME_Z;
   plumeOuter.visible = plumeCore.visible = false;
   group.add(plumeOuter, plumeCore);
 
-  // --- the magnetic field: two faint additive shells ahead of the cap -----------------
-  const dome = (R, depth) => track(new THREE.SphereGeometry(R, far ? 24 : 40, far ? 10 : 16, 0, Math.PI * 2, 0, Math.PI / 2).rotateX(-Math.PI / 2).scale(1, 1, depth));
-  const fieldMat = (k) => track(new THREE.MeshBasicMaterial({ color: new THREE.Color(0x8fe9ff).multiplyScalar(k), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
-  const fieldOuterMat = fieldMat(1);
-  const fieldInnerMat = fieldMat(1);
-  const fieldOuter = new THREE.Mesh(dome(105, 0.75), fieldOuterMat);
-  const fieldInner = new THREE.Mesh(dome(92, 0.6), fieldInnerMat);
-  fieldOuter.position.z = fieldInner.position.z = CAP_Z;
-  fieldOuter.visible = fieldInner.visible = false;
-  fieldOuter.renderOrder = fieldInner.renderOrder = 2;
-  group.add(fieldOuter, fieldInner);
+  // --- the magnetic field: one faint dome ahead of the cap -----------------------------
+  const fieldGeo = track(new THREE.SphereGeometry(FIELD_R, far ? 24 : 48, far ? 10 : 24, 0, Math.PI * 2, 0, Math.PI / 2).rotateX(-Math.PI / 2).scale(1, 1, 0.6));
+  const fieldMat = track(new THREE.ShaderMaterial({
+    uniforms: { uPeak: { value: 0 }, uTime: { value: 0 }, uColor: { value: new THREE.Color(0x8fe9ff) } },
+    vertexShader: FIELD_VS,
+    fragmentShader: FIELD_FS,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  }));
+  const fieldShell = new THREE.Mesh(fieldGeo, fieldMat);
+  fieldShell.position.z = FIELD_Z;
+  fieldShell.visible = false;
+  group.add(fieldShell);
 
   // --- state -------------------------------------------------------------------------
   let spin = RING_SPIN;
   let drive = 0;
-  let field = 0.6;
+  let fieldK = 0.6;
   let lightsOn = true;
   let time = 0;
 
   const applyField = () => {
-    fieldOuter.visible = fieldInner.visible = field > 0.01;
-    const shimmerA = 0.03 + 0.012 * Math.sin(time * 1.3);
-    const shimmerB = 0.022 + 0.01 * Math.sin(time * 2.3 + 1.7);
-    fieldOuterMat.opacity = field * shimmerA;
-    fieldInnerMat.opacity = field * shimmerB;
+    fieldShell.visible = fieldK > 0.01;
+    fieldMat.uniforms.uPeak.value = FIELD_PEAK * fieldK;
+    fieldMat.uniforms.uTime.value = time;
   };
 
   const applyDrive = () => {
@@ -310,10 +385,12 @@ export function createStarship({ detail = 'near' } = {}) {
     const flick = 1 + 0.05 * Math.sin(time * 41) + 0.03 * Math.sin(time * 17);
     const k = drive;
     plumeOuter.visible = plumeCore.visible = k > 0.01;
-    plumeOuter.scale.set(22 * (0.85 + 0.15 * k) * flick, 22 * (0.85 + 0.15 * k) * flick, Math.max(0.001, 260 * k));
-    plumeCore.scale.set(9 * flick, 9 * flick, Math.max(0.001, 170 * k));
-    plumeOuterMat.opacity = 0.3 * k;
-    plumeCoreMat.opacity = 0.5 * k;
+    const w = 12 * (0.85 + 0.15 * k) * flick;
+    plumeOuter.scale.set(w, w, Math.max(0.001, 140 * k));
+    const c = 4.5 * flick;
+    plumeCore.scale.set(c, c, Math.max(0.001, 90 * k));
+    plumeOuterMat.opacity = 0.18 * k;
+    plumeCoreMat.opacity = 0.22 * k;
   };
 
   const blinkOn = (t, l) => {
@@ -323,7 +400,7 @@ export function createStarship({ detail = 'near' } = {}) {
 
   return {
     group,
-    dims: { length: 370, ringR: RING_R, capR: CAP_R, hubZ: 0 },
+    dims: { length: 370, ringR: RING_RO, capR: CAP_R, hubZ: 0 },
     update(dt, t) {
       time = t;
       ring.rotation.z += spin * dt;
@@ -336,7 +413,7 @@ export function createStarship({ detail = 'near' } = {}) {
     },
     setRingSpin(radPerSec) { spin = radPerSec; },
     setDrive(k) { drive = Math.max(0, Math.min(1, k)); applyDrive(); },
-    setField(k) { field = Math.max(0, Math.min(1, k)); applyField(); },
+    setField(k) { fieldK = Math.max(0, Math.min(1, k)); applyField(); },
     setLights(on) { lightsOn = !!on; },
     dispose() {
       for (const o of owned) o.dispose();

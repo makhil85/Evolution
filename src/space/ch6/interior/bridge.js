@@ -211,9 +211,10 @@ export function buildDeck(kit) {
 
   // --- the views for screenshots (deck metres) ---------------------------------------------
   const e = corrPoint(A_END - 0.14);
+  const [ex, ez] = toDeck(0, 2.6);
   const at = (x, y, z) => { const [dx, dz] = toDeck(x, z); return [dx, y, dz]; };
   const views = [
-    { name: 'entrance', pos: [e[0], 1.6, e[1]], look: [...toDeck(0, 2.6).slice(0, 1), 1.4, toDeck(0, 2.6)[1]] },
+    { name: 'entrance', pos: [e[0], 1.6, e[1]], look: [ex, 1.4, ez] },
     { name: 'screen', pos: at(0, 2.3, -2.4), look: at(0, 1.7, 9) },
     { name: 'back', pos: at(0, 1.6, 7.6), look: at(0, 1.1, -7) },
     { name: 'shield', pos: at(-0.9, 1.9, -3.4), look: at(SHIELD_AT[0], 1.0, SHIELD_AT[1]) }, // from the side: the beacon stands on the spot

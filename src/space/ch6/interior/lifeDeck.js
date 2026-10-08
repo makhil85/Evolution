@@ -127,10 +127,10 @@ export function buildDeck(kit) {
 
   // LCARS panels on the corridor's inner wall (facing the corridor).
   const onWall = (obj, a, r, y) => { const [X, Z] = pol(a, r); obj.position.set(X, y, Z); obj.rotation.y = a; group.add(obj); };
-  onWall(kit.screen(1.6, 0.9, { title: 'AIR', seed: 4, kind: 'map' }), Math.PI - 0.86, R_IN + 0.14, 1.6);
-  onWall(kit.screen(1.4, 0.8, { title: 'LIFE', seed: 9, accent: PALETTE.teal }), Math.PI - 0.21, R_IN + 0.14, 1.6);
-  onWall(kit.screen(1.4, 0.8, { title: 'FARM', seed: 12, accent: PALETTE.lilac }), Math.PI + 0.14, R_IN + 0.14, 1.6);
-  onWall(kit.screen(1.6, 0.9, { title: 'DECK 2', seed: 7 }), Math.PI + 0.87, R_IN + 0.14, 1.6);
+  onWall(kit.screen(1.6, 0.9, { title: 'AIR', seed: 4, kind: 'map' }), Math.PI - 0.86, R_IN + 0.04, 1.6);
+  onWall(kit.screen(1.4, 0.8, { title: 'LIFE', seed: 9, accent: PALETTE.teal }), Math.PI - 0.21, R_IN + 0.04, 1.6);
+  onWall(kit.screen(1.4, 0.8, { title: 'FARM', seed: 12, accent: PALETTE.lilac }), Math.PI + 0.14, R_IN + 0.04, 1.6);
+  onWall(kit.screen(1.6, 0.9, { title: 'DECK 2', seed: 7 }), Math.PI + 0.87, R_IN + 0.04, 1.6);
 
   // Star windows in the outer wall, framed in trim (they look out past the ring).
   for (const a of [Math.PI - 0.5, Math.PI + 0.5]) {
@@ -176,8 +176,12 @@ export function buildDeck(kit) {
   boxIn(lab, 1.4, 1.9, 1.0, kit.mats.panel, -3.7, 0.95, -9.0);
   boxIn(lab, 1.5, 0.12, 1.1, kit.mats.trim, -3.7, 1.96, -9.0);
   addIn(lab, new THREE.CylinderGeometry(0.5, 0.5, 0.7, 20), kit.mats.glass, -3.7, 2.3, -9.0);
-  const pipe = new THREE.CylinderGeometry(0.07, 0.07, 0.5, 8); pipe.rotateZ(Math.PI / 2);
-  addIn(lab, pipe, kit.mats.metal, -2.76, 1.2, -9.4);
+  const pipe = new THREE.CylinderGeometry(0.07, 0.07, 0.3, 8); pipe.rotateZ(Math.PI / 2);
+  addIn(lab, pipe, kit.mats.metal, -2.85, 1.2, -9.4);
+  // A riser from the hopper and a pipe run under the ceiling towards the water loop.
+  addIn(lab, new THREE.CylinderGeometry(0.07, 0.07, 0.5, 8), kit.mats.metal, -3.7, 2.85, -9.0);
+  const run = new THREE.CylinderGeometry(0.07, 0.07, 2.4, 8); run.rotateX(Math.PI / 2);
+  addIn(lab, run, kit.mats.metal, -3.7, 3.0, -7.8);
   place(kit.screen(0.9, 0.5, { title: 'ICE', seed: 15, accent: PALETTE.teal }), lab, -3.7, 1.35, -8.47);
   solids.push(rectIn(lab, 1.4, 1.0, -3.7, -9.0));
 
@@ -199,11 +203,12 @@ export function buildDeck(kit) {
   const desk = kit.console(wx, wz, LAB.a, { w: 1.5, screen: { title: 'WATER', seed: 6 } });
   group.add(desk.group); solids.push(desk.solid);
   // A map screen on the lab's inner end.
-  place(kit.screen(2.0, 1.1, { title: 'O2', seed: 8, kind: 'map' }), lab, 0, 1.9, -11.27);
+  // On the curved end wall at angle 0.15 rad (its normal turned to match), beside the tanks.
+  place(kit.screen(1.2, 0.9, { title: 'O2', seed: 8, kind: 'map' }), lab, 3.81, 1.9, -11.57, 0.15);
 
   // ---- HYDROPONICS: grow racks under pink grow strips, a walkway with a water channel, fruit trees, the console.
   const RACK_Z = -7.4; const RACK_LEN = 12; // the rows run from z -1.4 to -13.4
-  const plantGeo = new THREE.SphereGeometry(0.26, 6, 4).scale(1, 0.8, 1); // a lettuce head
+  const plantGeo = kit.own(new THREE.SphereGeometry(0.26, 6, 4).scale(1, 0.8, 1)); // a lettuce head
   for (const x of [-4.45, -2.55, 2.55, 4.45]) {
     const [rx, rz] = hyd.at(x, RACK_Z);
     solids.push({ rect: [rx, rz, 1.1, RACK_LEN], rot: hyd.a });
@@ -224,11 +229,11 @@ export function buildDeck(kit) {
   boxIn(hyd, 0.7, 0.02, 11.6, M.water, 0, 0.01, -7.4);
   for (const x of [-0.42, 0.42]) boxIn(hyd, 0.08, 0.1, 11.6, kit.mats.trim, x, 0.05, -7.4);
   // Fruit trees in pots, in the side aisles.
-  for (const [x, z] of [[-6.3, -3.2], [6.3, -3.2], [-6.3, -8.4], [6.3, -8.4]]) {
+  for (const [x, z] of [[-6.3, -3.2], [6.3, -3.2], [-6.1, -8.4], [6.1, -8.4]]) {
     addIn(hyd, new THREE.CylinderGeometry(0.5, 0.45, 0.7, 20), kit.mats.wallDark, x, 0.35, z);
     addIn(hyd, new THREE.CylinderGeometry(0.1, 0.14, 1.4, 8), M.bark, x, 1.4, z);
     addIn(hyd, new THREE.SphereGeometry(0.95, 10, 7), M.leafB, x, 2.6, z);
-    addIn(hyd, new THREE.SphereGeometry(0.6, 8, 6), M.leafC, x + 0.45, 3.1, z - 0.3);
+    addIn(hyd, new THREE.SphereGeometry(0.6, 8, 6), M.leafC, x - 0.3 * Math.sign(x), 3.1, z - 0.3); // leans in, away from the wall
     for (const [fx, fy, fz] of [[0.75, 2.35, 0.45], [-0.55, 2.0, 0.7], [0.1, 2.9, -0.9]]) addIn(hyd, new THREE.SphereGeometry(0.13, 6, 5), kit.mats.accentOrange, x + fx, fy, z + fz);
     solids.push(discIn(hyd, 0.5, x, z));
   }
@@ -241,8 +246,8 @@ export function buildDeck(kit) {
   // The stations and the crewmate. Lamps sit on their props.
   const stations = {
     oxygen: { ...spotIn(lab, 0, -7.2, 0, tankZ), lamp: lampIn(lab, 0, tankZ, 3.0) },
-    water: { ...spotIn(lab, -2.3, -4.6, -4.0, -4.6), lamp: lampIn(lab, -4.0, -4.6, 2.65) },
-    food: { ...spotIn(hyd, 0, -13.2, 0, -15.0), lamp: lampIn(hyd, 0, -15.0, 1.5) },
+    water: { ...spotIn(lab, -2.3, -4.6, -4.0, -4.6), lamp: lampIn(lab, -4.0, -4.6, 2.54) },
+    food: { ...spotIn(hyd, 0, -13.2, 0, -15.0), lamp: lampIn(hyd, 0, -15.2, 0.92) },
   };
   const crewSpots = { biologist: spotIn(lab, 2.0, -7.2, 1.8, tankZ) };
 
@@ -255,8 +260,8 @@ export function buildDeck(kit) {
     { name: 'farm', pos: up(hyd.at(0.3, -1.2), 2.2), look: up(hyd.at(0, -15), 1.3) },
     { name: 'farmback', pos: up(hyd.at(0.2, -13.2), 1.6), look: up(hyd.at(0, -1), 1.4) },
     // From the corridor, looking into each room through its door.
-    { name: 'bayDoor', pos: up(pol(HYD.a + 0.3, 38.3), 1.6), look: up(pol(HYD.a - 0.15, 30), 1.5) },
-    { name: 'labDoor', pos: up(pol(LAB.a - 0.3, 38.3), 1.6), look: up(pol(LAB.a + 0.02, 30), 1.4) },
+    { name: 'bayDoor', pos: up(pol(HYD.a, 39.55), 1.9), look: up(pol(HYD.a, 36.8), 2.7) },
+    { name: 'labDoor', pos: up(pol(LAB.a, 39.45), 1.6), look: up(pol(LAB.a, 25), 1.4) },
   ];
 
   b.flush(group); // every static part above, one mesh per material
@@ -271,14 +276,15 @@ export function buildDeck(kit) {
       M.grow.color.copy(growBase).multiplyScalar(0.88 + 0.12 * Math.sin(t * 1.3));
       M.algae.color.copy(algaeBase).multiplyScalar(0.92 + 0.08 * Math.sin(t * 2.1));
       // Bubbles rise in the tanks, shrinking at the top, and start again at the bottom.
-      bubbles.forEach((u, i) => {
+      for (let i = 0; i < bubbles.length; i++) {
+        const u = bubbles[i];
         const k = (t * u.speed + u.phase) % 1;
         _p.set(u.x + Math.sin(t * 1.7 + u.phase * 9) * 0.12, 0.25 + k * 2.2, u.z);
         _s.setScalar(0.6 + 0.4 * Math.sin(k * Math.PI));
         bubMesh.setMatrixAt(i, _m.compose(_p, _q, _s));
-      });
+      }
       bubMesh.instanceMatrix.needsUpdate = true;
     },
-    dispose() {},
+    dispose() { bubMesh.dispose(); }, // the bubble geometry and materials are kit-owned
   };
 }
