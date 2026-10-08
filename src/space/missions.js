@@ -40,6 +40,8 @@ import { ch5Steps } from './ch5/steps.js';
 import { CH6_ACT_TITLES } from './ch6/start.js';
 import { ch6Steps } from './ch6/steps.js';
 import { phasesNow, restorePhases } from './ch5/lineup.js';
+import { inQuestionTurn } from './acts/util.js';
+import { orbitElements } from './physics.js';
 
 const ACT_TITLES_CH4 = {
   1: 'Act 1: Earth orbit',
@@ -149,9 +151,12 @@ export function createMissions(game) {
   let entered = false;   // enter() has settled for the current step
   let busy = false;      // completing (question / after) - don't re-check
   let stepTime = 0;
-  let calm = null; // { left, resolve } while a calm pause runs
+  // Several waits can run at once (a Ceres visit's pause while the step's own
+  // pause runs), so each is a list entry, not one slot a second call would
+  // overwrite (the first promise would then never settle).
+  let calms = []; // [{ left, resolve }] calm pauses, counted down in game seconds
   let quiet = 0; // seconds since she last steered by hand (main.js sets game.kidSteering)
-  let quietWait = null; // { resolve } while a question waits for hands-off flying
+  let quietWaits = []; // [resolve] questions waiting for hands-off flying
   const deferred = new Set(save.deferred || []);
   const answered = new Set(save.answered || []);
 
@@ -190,13 +195,13 @@ export function createMissions(game) {
 
   /** The mission card; `doneNow` ticks the current step off already (it is
    *  finished, a calm moment before its question). */
-  function showStep(doneNow = false) {
+  function showStep(doneNow = false, objective = null) {
     const step = steps[index];
     const actSteps = steps.filter((s) => s.act === step.act);
     hud.setMission({
       act: ACT_TITLES[step.act] || '',
       title: step.title,
-      objective: doneNow ? `Done: ${step.title}!` : step.objective,
+      objective: objective || (doneNow ? `Done: ${step.title}!` : step.objective),
       steps: actSteps.map((s) => ({ text: s.title, done: steps.indexOf(s) < index || (doneNow && s === step) || !!s.doneEarly?.() })),
     });
   }
@@ -205,13 +210,33 @@ export function createMissions(game) {
   /** Wait `sec` of unpaused game time (missions.update counts it down). */
   function calmFor(sec) {
     if (!(sec > 0)) return Promise.resolve();
-    return new Promise((resolve) => { calm = { left: sec, resolve }; });
+    return new Promise((resolve) => { calms.push({ left: sec, resolve }); });
   }
 
   /** Hands-off flying before a question (QUIET_S): none needed on foot or in a mini-scene. */
   function untilQuiet() {
     if (game.activeScene || quiet >= QUIET_S) return Promise.resolve();
-    return new Promise((resolve) => { quietWait = { resolve }; });
+    return new Promise((resolve) => { quietWaits.push(resolve); });
+  }
+
+  /** Does this step send her out of the system she is in? An escape does, and so does a
+   *  transfer to another body (Earth's orbit to the Moon, Jupiter's to Europa counts too).
+   *  The belt is a custom target (act3's customTargets, parent the Sun): it counts; a
+   *  rendezvous with a custom target in her own system (Act 1's satellite) does not. */
+  function departs(step) {
+    if (!step) return false;
+    if (step.escape) return true;
+    if (!step.transfer) return false;
+    if (BODIES[step.transfer]) return step.transfer !== game.ship.soi;
+    const custom = game.customTargets?.[step.transfer];
+    return !!custom && custom.parent !== game.ship.soi;
+  }
+
+  /** A closed loop that clears the surface: a stable orbit to leave from. */
+  function inClosedOrbit() {
+    const oe = orbitElements(game.ship);
+    const body = BODIES[game.ship.soi];
+    return !!body && oe.bound && oe.periapsis > body.radius * 1.08;
   }
 
   /**
@@ -249,22 +274,27 @@ export function createMissions(game) {
     });
   }
 
-  async function ask(beat) {
+  /** Ask a beat's question once she has let go of the controls. One at a
+   *  time (inQuestionTurn): the card is shared, and a second question would
+   *  replace the first, whose answer would then never come back. */
+  function ask(beat) {
     const q = questionForBeat(beat);
-    if (!q) return;
-    await untilQuiet();
-    const res = await hud.askQuestion(personalise(q));
-    if (res.correct) {
-      answered.add(q.id);
-      deferred.delete(q.id);
-      if (q.reward?.resources) {
-        for (const [k, v] of Object.entries(q.reward.resources)) game.resources[k] = (game.resources[k] || 0) + v;
+    if (!q) return Promise.resolve();
+    return inQuestionTurn(async () => {
+      await untilQuiet();
+      const res = await hud.askQuestion(personalise(q));
+      if (res.correct) {
+        answered.add(q.id);
+        deferred.delete(q.id);
+        if (q.reward?.resources) {
+          for (const [k, v] of Object.entries(q.reward.resources)) game.resources[k] = (game.resources[k] || 0) + v;
+        }
+        if (q.doneMessage) hud.toast(personalise(q).doneMessage, { kind: 'good', ms: 4500 });
+      } else {
+        deferred.add(q.id);
+        hud.toast('No problem. Mission Control will ask you again later.', { kind: 'info', ms: 3000 });
       }
-      if (q.doneMessage) hud.toast(personalise(q).doneMessage, { kind: 'good', ms: 4500 });
-    } else {
-      deferred.add(q.id);
-      hud.toast('No problem. Mission Control will ask you again later.', { kind: 'info', ms: 3000 });
-    }
+    });
   }
 
   async function askDeferred() {
@@ -291,9 +321,9 @@ export function createMissions(game) {
     entered = false;
     stepTime = 0;
     const step = steps[index];
-    // Leaving an orbit (round a planet or moon; not from the ground, nor
-    // straight on from a liftoff that is still climbing): her call.
-    if (step.escape && !steps[index - 1]?.escape && game.ship.soi !== 'sun' && !game.ship.landedOn) {
+    // Leaving a stable orbit (round a planet or moon; not from the ground, nor
+    // straight on from a departure that is still under way): her call.
+    if (departs(step) && !departs(steps[index - 1]) && game.ship.soi !== 'sun' && !game.ship.landedOn && inClosedOrbit()) {
       game.escapeStep = false; game.aimHint = null; game.transferTarget = null; game.captureTarget = null;
       await readyToLeave();
     }
@@ -357,6 +387,12 @@ export function createMissions(game) {
     saved: save,
     /** Redraw the mission card (a step ticked off early, act3's Ceres visit). */
     refresh() { showStep(); },
+    /** Show a calm line on the card for the current step (a wait with nothing to do:
+     *  an orbit lap). `done` ticks the step off too (its goal is met). */
+    showObjective(text, { done = false } = {}) { showStep(done, text); },
+    /** Hands-off flying first (QUIET_S): for questions asked outside the step engine
+     *  (acts/util.js askBeat, the belt's beats). Resolves at once on foot. */
+    untilQuiet,
     /** Save now (main.js calls this every few seconds while flying). */
     save() { persist(); },
     /** Ask a beat's question the way a step's own beat is asked: counted as
@@ -393,10 +429,15 @@ export function createMissions(game) {
     /** Count down a calm pause (also called while a walk scene runs). */
     tickCalm(dt, paused) {
       if (!paused) quiet = game.kidSteering ? 0 : quiet + dt;
-      if (quietWait && (game.activeScene || quiet >= QUIET_S)) { const r = quietWait.resolve; quietWait = null; r(); }
-      if (!calm || paused) return;
-      calm.left -= dt;
-      if (calm.left <= 0) { const r = calm.resolve; calm = null; r(); }
+      if (quietWaits.length && (game.activeScene || quiet >= QUIET_S)) {
+        const rs = quietWaits; quietWaits = [];
+        for (const r of rs) r();
+      }
+      if (!calms.length || paused) return;
+      for (const c of calms) c.left -= dt;
+      const due = calms.filter((c) => c.left <= 0);
+      calms = calms.filter((c) => c.left > 0);
+      for (const c of due) c.resolve();
     },
     update(dt, states, paused) {
       this.tickCalm(dt, paused);

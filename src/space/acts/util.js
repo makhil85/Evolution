@@ -84,6 +84,19 @@ export function personalise(q) {
 }
 
 /**
+ * One question on screen at a time (lead 2026-10-08). The question card is
+ * shared: opening a second one replaces the first, and the first one's answer
+ * would never come back, so the game would stop there. Every question (the
+ * step engine's and these beats') queues here, in the order they were asked.
+ */
+let questionChain = Promise.resolve();
+export function inQuestionTurn(fn) {
+  const run = questionChain.then(fn);
+  questionChain = run.catch(() => {}); // a failed question never blocks the next one
+  return run;
+}
+
+/**
  * Ask the bank question tied to `beat` right now (mid-scene, not at a step
  * boundary - missions.js's own engine already handles step.beat questions;
  * this is for beats a surface scene or an in-flight system fires directly,
@@ -91,19 +104,26 @@ export function personalise(q) {
  * cargoHeavy/sampleCrates/beltFact). Applies the reward and doneMessage
  * toast exactly like missions.js's own `ask()`, minus the deferred/answered
  * save bookkeeping (these beats are not progression gates).
+ *
+ * In flight it waits until she has let go of the controls for a while
+ * (missions.untilQuiet, the same gate as the step questions): a question
+ * must never pop up while her hands are on the keys. On foot it asks at once.
  */
-export async function askBeat(game, beat) {
+export function askBeat(game, beat) {
   const q = questionForBeat(beat);
-  if (!q) return { correct: true };
-  const personal = personalise(q);
-  const res = await game.hud.askQuestion(personal);
-  if (res.correct) {
-    if (q.reward?.resources) {
-      for (const [k, v] of Object.entries(q.reward.resources)) game.resources[k] = (game.resources[k] || 0) + v;
+  if (!q) return Promise.resolve({ correct: true });
+  return inQuestionTurn(async () => {
+    await game.missions?.untilQuiet?.();
+    const personal = personalise(q);
+    const res = await game.hud.askQuestion(personal);
+    if (res.correct) {
+      if (q.reward?.resources) {
+        for (const [k, v] of Object.entries(q.reward.resources)) game.resources[k] = (game.resources[k] || 0) + v;
+      }
+      if (personal.doneMessage) game.hud.toast(personal.doneMessage, { kind: 'good', ms: 4500 });
     }
-    if (personal.doneMessage) game.hud.toast(personal.doneMessage, { kind: 'good', ms: 4500 });
-  }
-  return res;
+    return res;
+  });
 }
 
 // --- upgrades ----------------------------------------------------------------

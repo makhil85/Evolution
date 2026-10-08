@@ -141,6 +141,9 @@ export function partASteps(game) {
       },
       async after() {
         hud.toast(t('Saturn has you! Enjoy a lap: look at those rings.', 'You’re going around Saturn! Look at the rings!'), { kind: 'good', ms: 4200 });
+        // The capture is done (ticked off), so the card stops saying "brake"
+        // during the lap (game-experience review: a stale objective).
+        game.missions?.showObjective?.(t('Captured! Look round Saturn while you orbit.', 'You did it! Look at Saturn.'), { done: true });
         // A calm lap before the pole (lead 2026-10-08): 20 s of orbit, or
         // one whole lap if that is quicker.
         await orbitFor(game, 20);

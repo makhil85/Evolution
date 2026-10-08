@@ -292,11 +292,17 @@ let modalOpen = false;
 bus.on('ui-modal', (open) => { modalOpen = !!open; });
 // One past the top level is the autopilot's cruise warp (AUTOPILOT_WARP,
 // physics.js decides where it applies); keys and buttons stop at the top.
-bus.on('warp-request', (i) => { game.warpIndex = Math.max(0, Math.min(WARP_LEVELS.length - 1, i)); game.warpBoost = i >= WARP_LEVELS.length; });
+// On foot (a walk scene) the number keys are not flight: picking Deck 3 in the
+// lift must not leave her at x16 when she gets back aboard (lead review, 2026-10-08).
+bus.on('warp-request', (i) => {
+  if (game.activeScene) return;
+  game.warpIndex = Math.max(0, Math.min(WARP_LEVELS.length - 1, i)); game.warpBoost = i >= WARP_LEVELS.length;
+});
 // The Slow / Fast buttons while the autopilot flies: the most warp it may ask
 // for (autopilot.js holds its warp to this).
 bus.on('autopilot-warp-limit', (i) => { game.autopilotWarpMax = Math.max(0, Math.min(WARP_LEVELS.length, i)); });
 bus.on('camera-cycle', () => {
+  if (game.activeScene) return; // C is for the flight camera only
   const m = flightCam.cycle();
   hud.toast(m === 'chase' ? 'Camera: behind the ship' : m === 'orbit' ? 'Camera: free look (drag to spin)' : 'Camera: top view: best for reading your path', { ms: 2200 });
 });
@@ -1799,6 +1805,8 @@ game.runScene = async (sceneObj) => {
   } finally {
     activeScene = null;
     game.activeScene = null;
+    // Back aboard at real time: a walk never leaves the ship at a fast warp.
+    game.warpIndex = 0; game.warpBoost = false;
     renderPass.scene = scene;
     renderPass.camera = camera;
     document.body.classList.remove('in-scene');
