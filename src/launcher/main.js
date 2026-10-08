@@ -3,7 +3,7 @@
 // This is what RUN_GAME.bat opens. It owns the ORDER and nothing else - the
 // three chapters are untouched games that each save their own progress, and
 // profile.js reads those saves rather than asking them to report in.
-import { DIFFICULTIES, difficulty, chapterStatus, nextChapter, loadProfile, saveProfile, loadLook, profileReady, resetEverything, UNLOCK_KEY } from './profile.js';
+import { DIFFICULTIES, difficulty, chapterStatus, nextChapter, loadProfile, saveProfile, loadLook, profileReady, resetEverything, unlockAll, keepUnlock } from './profile.js';
 import { LESSON_LIST } from '../lesson/index.js';
 import { hasSeen, playLesson } from '../lesson/card.js';
 import { t } from '../space/level.js';
@@ -51,7 +51,7 @@ $('naming-form').addEventListener('submit', (e) => {
   if (naming.dataset.afterwards === 'builder') {
     // Straight into the builder on a first run, because a name with no face
     // is not a character yet.
-    location.href = 'character.html?from=launcher';
+    location.href = keepUnlock('character.html?from=launcher');
     return;
   }
   naming.hidden = true;
@@ -74,9 +74,9 @@ function render() {
     : `Chapter ${next.n} is next. Finish a chapter to open the one after it.`;
   // Grown-up unlock (?unlock=all) is on: say so, and how to turn it off.
   let unlockOn = false;
-  try { unlockOn = localStorage.getItem(UNLOCK_KEY) === '1'; } catch { /* private mode */ }
+  unlockOn = unlockAll();
   if (unlockOn) {
-    $('lede').textContent = 'All chapters unlocked (grown-up mode). Open this page with ?unlock=off to lock them again.';
+    $('lede').textContent = 'Check mode: all chapters unlocked, with Skip and Jump. Remove ?unlock=all from the address for normal play.';
   }
 
   const host = $('chapters');
@@ -86,7 +86,7 @@ function render() {
     const card = document.createElement(c.locked ? 'div' : 'a');
     card.className = 'chapter' + (c.locked ? ' is-locked' : '') + (c.done ? ' is-done' : '');
     if (!c.locked) {
-      card.href = c.href;
+      card.href = keepUnlock(c.href);
       // The chapters are separate documents, not routes. A plain link is the
       // whole navigation layer, which is why three unrelated games can sit
       // behind one menu without a framework between them.
@@ -215,7 +215,7 @@ function renderLevels(current) {
 
 // --- footer ------------------------------------------------------------------
 
-$('edit-look').addEventListener('click', () => { location.href = 'character.html?from=launcher'; });
+$('edit-look').addEventListener('click', () => { location.href = keepUnlock('character.html?from=launcher'); });
 $('rename').addEventListener('click', () => askForName({ afterwards: 'menu' }));
 
 // Start over. Confirmed first, and the confirmation SAYS what will be lost -
@@ -229,7 +229,7 @@ $('hard-reset').addEventListener('click', () => {
     : `This erases ${words().their} name, ${words().their} look and all progress at both Level 1 and Level 4.\n\nStart completely over?`;
   if (!confirm(warning)) return;
   resetEverything();
-  location.href = 'index.html';
+  location.href = keepUnlock('index.html');
 });
 
 // --- go ----------------------------------------------------------------------

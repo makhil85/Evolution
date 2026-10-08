@@ -112,7 +112,7 @@ export function partASteps(game) {
         return game.ship.soi === 'saturn' || (!!c && c.body === 'saturn' && !c.retro && c.dist < BODIES.saturn.soi * 0.6);
       },
       // On course: a long coast to think about the planet ahead.
-      beat: 'c5SaturnDensity',
+      beat: 'c5SaturnSize',
     },
     {
       id: 'c5_saturn_approach', act: 1,
