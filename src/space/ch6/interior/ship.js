@@ -31,45 +31,59 @@ const REACH = 1.6;     // how close to a station's spot to press E
 const LIFT = { x0: -1.2, x1: 1.2, z0: -2.4, z1: 0 };
 const LIFT_TIME = 1.4; // doors shut, fade, travel, fade in
 export const LIFT_OUT = { x: 0, z: 0.6, face: 0 }; // where she steps out: just past the door, facing away from it
-const CAM_LET = 4;       // how fast the chase camera lets out again after a wall (1/s)
-const CAM_LET_MAX = 0.8; // and never by more than this share of its distance a second (1/s)
+const CAM_PULL = 12;     // how fast the chase camera pulls in towards a wall or a roof (1/s)
+const CAM_LET = 4;       // how fast it lets out again (1/s)
+const CAM_LET_MAX = 0.8; // and by no more than this share of its distance a second (1/s)
+const CAM_PULL_MAX = 1;  // ... and pulls in by no more than this share a second (1/s)
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const angDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
 const inLift = (x, z) => x > LIFT.x0 && x < LIFT.x1 && z > LIFT.z0 && z < LIFT.z1 - 0.2;
 
-/**
- * How far the chase camera sits from her this frame (m), along its sight line.
- * `p` = { x, z, ty (her eye height), yaw, pitch, ceil (the ceiling), want (the
- * distance she asked for) }; `prev` is last frame's distance. The camera backs
- * off to the nearest wall or the ceiling on that line, found to a few mm (so the
- * distance moves smoothly as she walks along a wall, not in steps). It comes in
- * at once and eases back out, so it never ends up past the wall it backs off from.
- */
-export function chaseDistance(map, p, prev, dt) {
-  const fx = Math.sin(p.yaw); const fz = Math.cos(p.yaw);
-  const cp = Math.cos(p.pitch); const sp = Math.sin(p.pitch);
-  const fits = (d) => {
-    const cx = p.x - fx * d * cp; const cz = p.z - fz * d * cp;
-    return map.fits(cx, cz, 0.15) && p.ty + 0.3 + d * sp < p.ceil;
-  };
-  // Out from her in 0.1 m steps until the sight line is blocked (or the wanted distance), then
-  // bisected to a few mm. A wall right behind her takes the camera down to her (fit 0).
-  const want = Math.max(0, p.want);
-  let fit = 0;
-  if (fits(0)) {
-    let ok = 0; let bad = null;
-    for (let d = 0.1; ; d += 0.1) {
-      const x = Math.min(d, want);
-      if (fits(x)) { ok = x; if (x >= want) break; } else { bad = x; break; }
-    }
-    if (bad != null) for (let i = 0; i < 6; i++) { const m = (ok + bad) / 2; if (fits(m)) ok = m; else bad = m; }
-    fit = ok;
+// The chase camera's sight line (chaseDistance). These scratch values are set per call, so a frame allocates nothing.
+const SIGHT = { map: null, roof: null, x: 0, z: 0, ty: 0, fx: 0, fz: 0, cp: 1, sp: 0 };
+const BODY_R = 0.15; // the camera keeps this far from a wall: the hard limit
+const SOFT_R = 0.6;  // and eases to this margin, so a door frame or corner it is about to pass pulls it in early
+/** Is the camera clear at distance d on her sight line, with margin r (no wall, and under the roof)? */
+function sightClear(d, r) {
+  const s = SIGHT;
+  const cx = s.x - s.fx * d * s.cp; const cz = s.z - s.fz * d * s.cp;
+  return s.map.fits(cx, cz, r) && s.ty + 0.3 + d * s.sp < s.roof(cx, cz) - 0.35;
+}
+/** How far along the sight line (at most `want`) the camera stays clear with margin r, found to a few mm. */
+function clearDist(want, r) {
+  if (!sightClear(0, r)) return 0;
+  // Out from her in 0.1 m steps until the sight line is blocked (or the wanted distance), then bisected.
+  let ok = 0; let bad = null;
+  for (let d = 0.1; ; d += 0.1) {
+    const x = Math.min(d, want);
+    if (sightClear(x, r)) { ok = x; if (x >= want) return want; } else { bad = x; break; }
   }
-  // Pulling in is at once: an eased pull would leave the camera past the wall for a few frames.
-  if (fit < prev) return fit;
-  // Letting out eases (CAM_LET), and no faster than a share of the distance a second (CAM_LET_MAX),
-  // so a wall that drops away or the yaw settling never moves it by more than a few % a frame.
-  return Math.min(fit, prev + (fit - prev) * (1 - Math.exp(-dt * CAM_LET)), prev * Math.exp(dt * CAM_LET_MAX));
+  for (let i = 0; i < 6; i++) { const m = (ok + bad) / 2; if (sightClear(m, r)) ok = m; else bad = m; }
+  return ok;
+}
+/** How often the hard limit had to hold the camera back (the tests read it). */
+export const chaseStats = { held: 0 };
+
+/**
+ * The chase camera's distance this frame (m), along her sight line. `p` = { x, z, ty (her eye
+ * height), yaw, pitch, want (the distance she asked for) }; `map` her walk map; `roof(x, z)` the roof
+ * above a point (deck.roof); `prev` last frame's distance.
+ * The hard limit is the first wall or roof on the line, at the body's margin: the camera is never past
+ * it. Its target is the same line at the bigger margin SOFT_R, and the camera eases to that: in fast
+ * (CAM_PULL), out slowly (CAM_LET, and by no more than CAM_LET_MAX of its distance a second).
+ */
+export function chaseDistance(map, roof, p, prev, dt) {
+  const s = SIGHT;
+  s.map = map; s.roof = roof; s.x = p.x; s.z = p.z; s.ty = p.ty;
+  s.fx = Math.sin(p.yaw); s.fz = Math.cos(p.yaw); s.cp = Math.cos(p.pitch); s.sp = Math.sin(p.pitch);
+  const want = Math.max(0, p.want);
+  const hard = clearDist(want, BODY_R);
+  const target = sightClear(0, SOFT_R) ? Math.min(hard, clearDist(want, SOFT_R)) : hard;
+  let next = prev + (target - prev) * (1 - Math.exp(-dt * (target < prev ? CAM_PULL : CAM_LET)));
+  // Each way is also held to a share of the distance a second: a corner swept into the line glides in.
+  next = next < prev ? Math.max(next, prev * (1 - CAM_PULL_MAX * dt)) : Math.min(next, prev * (1 + CAM_LET_MAX * dt));
+  if (next > hard) { chaseStats.held += 1; return hard; }
+  return next;
 }
 
 /** The lift car every deck shares (built once per deck, at the origin). */
@@ -126,7 +140,9 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
     d.group.add(lift.group);
     d.lift = lift;
     d.spec = spec;
-    d.map = createWalkMap({ floors: [...d.floors, lift.floor], solids: d.solids });
+    // The roof above each point: the deck's own (its rooms are not all one height), else its ceiling.
+    d.roof = d.ceilingAt ?? (() => d.ceiling ?? 3.2);
+    d.map =createWalkMap({ floors: [...d.floors, lift.floor], solids: d.solids });
     decks[spec.id] = d;
   }
 
@@ -187,6 +203,7 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
   const overlay = createOverlay();
   const cam = { yaw: 0, pitch: 0.3, dist: 4.6 };
   let camDist = cam.dist; // how far the camera is now (eased, see chaseDistance)
+  const chaseP = { x: 0, z: 0, ty: 0, yaw: 0, pitch: 0, want: 0 }; // reused each frame
   const _move = new THREE.Vector2();
   const _v = new THREE.Vector3();
   let clock = 0; let busy = false; let disposed = false; let prevE = false; let prevJump = false;
@@ -291,11 +308,11 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
     }
     const fx = Math.sin(cam.yaw); const fz = Math.cos(cam.yaw);
     const tx = walker.pos.x; const tz = walker.pos.z; const ty = walker.pos.y + 1.0;
-    const ceil = (deck.ceiling ?? 3.2) - 0.35;
-    // Back off from walls and the ceiling, eased (chaseDistance): no popping as she walks along them.
-    camDist = chaseDistance(deck.map, { x: tx, z: tz, ty, yaw: cam.yaw, pitch: cam.pitch, ceil, want: cam.dist }, camDist, dt);
+    // Back off from walls and the roof, eased (chaseDistance): no popping as she walks along them.
+    chaseP.x = tx; chaseP.z = tz; chaseP.ty = ty; chaseP.yaw = cam.yaw; chaseP.pitch = cam.pitch; chaseP.want = cam.dist;
+    camDist = chaseDistance(deck.map, deck.roof, chaseP, camDist, dt);
     const dist = camDist;
-    camera.position.set(tx - fx * dist * Math.cos(cam.pitch), Math.min(ceil, ty + 0.3 + dist * Math.sin(cam.pitch)), tz - fz * dist * Math.cos(cam.pitch));
+    camera.position.set(tx - fx * dist * Math.cos(cam.pitch), ty + 0.3 + dist * Math.sin(cam.pitch), tz - fz * dist * Math.cos(cam.pitch));
     camera.lookAt(tx, ty, tz);
   }
 

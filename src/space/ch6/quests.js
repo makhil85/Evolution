@@ -30,7 +30,7 @@ const CSS = `
 .qz-badge { min-width: 10em; min-height: 46px; padding: 8px 12px; border-radius: 12px; border: 2px solid rgba(255,255,255,.18); background: #1a2540; color: inherit; font: inherit; font-weight: 800; cursor: pointer; text-align: left; }
 .qz-badge.is-scanned { border-color: #7fd3ff; background: rgba(127,211,255,.14); }
 .qz-badge:disabled { cursor: default; }
-.qz-step { min-width: 40px; min-height: 40px; padding: 0 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,.25); background: transparent; color: inherit; font: inherit; font-weight: 900; cursor: pointer; }
+.qz-step { min-width: 40px; min-height: 40px; padding: 0 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,.25); background: transparent; color: inherit; font: inherit; font-weight: 900; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .qz-step:disabled { opacity: .35; cursor: default; }
 .qz-big { min-width: 4.5em; text-align: center; font-size: 18px; font-weight: 900; }
 .qz-bar { position: relative; height: 18px; border-radius: 9px; background: rgba(255,255,255,.12); overflow: hidden; flex: 1 1 220px; }
@@ -81,8 +81,9 @@ function stepper(btn, step) {
   const stop = () => { clearTimeout(wait); clearInterval(again); };
   btn.addEventListener('pointerdown', (e) => {
     if (e.button !== 0 || btn.disabled) return;
+    stop(); // a second finger on the same button must not leave a timer behind
     step();
-    wait = setTimeout(() => { again = setInterval(() => { if (!btn.isConnected || btn.disabled) stop(); else step(); }, 110); }, 400);
+    wait = setTimeout(() => { again = setInterval(() => { if (!btn.isConnected || btn.disabled) stop(); else step(); }, 110); }, 200);
   });
   for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) btn.addEventListener(ev, stop);
   // A mouse or touch click was stepped on pointerdown (detail > 0); a keyboard click has detail 0.

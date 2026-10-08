@@ -20,6 +20,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { PALETTE } from './kit.js';
 import { toonRamp } from '../../../game/toonPipeline.js';
+import { roofAt } from './walkmap.js';
 
 // The kit pieces this deck uses (models.js names; loaded before the deck is built).
 export const MODELS = [
@@ -41,6 +42,9 @@ const BAY_W = 2.6;            // science bays: half-width, and their far wall at
 const BAY_X = 15;
 const GAP_BAY = Math.asin(BAY_W / R);
 const GAP_DOOR = Math.asin(1.7 / R);
+// The dome: a shallow sphere cap from the rim (RIM) up to the apex; its radius, and the roof at r from the hub.
+const DOME_RS = (R * R + (APEX - RIM) ** 2) / (2 * (APEX - RIM));
+const domeAt = (r) => APEX - DOME_RS + Math.sqrt(Math.max(0, DOME_RS * DOME_RS - r * r));
 const FACET = 2 * Math.atan(2 / A); // the angle one 4 m panel spans on the wall
 const CORR = 40;              // the corridor bends on a circle of this radius
 const A_LIFT = -Math.PI / 2;  // the lift's line (z = 0) ...
@@ -101,7 +105,7 @@ export function buildDeck(kit) {
   const { mats } = kit;
   const M = kit.models; // null when the kit did not load: the same layout in code
   const group = new THREE.Group();
-  const floors = []; const solids = [];
+  const floors = []; const solids = []; const roofs = [];
   const toon = (color, extra = {}) => kit.own(new THREE.MeshToonMaterial({ color, gradientMap: toonRamp, ...extra }));
   const wood = toon(0xb07a4a);
   const glowBlue = kit.glow(PALETTE.blue, 1.3);
@@ -179,6 +183,7 @@ export function buildDeck(kit) {
   const cb = kit.batch();
   const corr = { ring: [CORR, 0, 38.3, 41.95], from: A_LIFT, to: A_END };
   floors.push(kit.floor(cb, corr));
+  roofs.push({ shape: corr, h: 3.6 }, { shape: shapeToDeck({ disc: [0, 0, R] }), h: (x, z) => domeAt(Math.hypot(x - HUB[0], z - HUB[1])) });
   band(cb, 38.3, 41.95, A_LIFT, A_END, ceilMat, { x: CORR, y: 3.6, down: true });
   if (M) {
     // Two 4 m panels a side (the arc is 7.4 m), each with a cornice on top (the kit's cap, squashed to fit
@@ -398,6 +403,7 @@ export function buildDeck(kit) {
     solids.push(shapeToDeck({ rect: [xf, 0, 0.35, 2 * BAY_W + 0.25], rot: 0 }));
     const bay = { rect: [(x0 + xf) / 2, 0, len, 2 * BAY_W] };
     floors.push(shapeToDeck(kit.floor(bb, bay)));
+    roofs.push({ shape: shapeToDeck(bay), h: RIM });
     bb.add(new THREE.PlaneGeometry(len, 2 * BAY_W).rotateX(Math.PI / 2), ceilMat, (x0 + xf) / 2, RIM, 0);
     for (const zz of [-1.2, 1.2]) bb.box(len * 0.8, 0.03, 0.16, mats.coveCool, (x0 + xf) / 2, RIM - 0.02, zz);
     // Stores on the floor by the entrance.
@@ -433,7 +439,7 @@ export function buildDeck(kit) {
   dishConsole.add(dishPost, dishHead, dishLamp, dishSign);
 
   // The dome: a shallow sphere cap from the rim up to the apex, with two light rings.
-  const RS = (R * R + (APEX - RIM) ** 2) / (2 * (APEX - RIM));
+  const RS = DOME_RS;
   const dome = new THREE.SphereGeometry(RS, 48, 6, 0, Math.PI * 2, 0, Math.asin(R / RS));
   bb.add(inward(dome), domeMat, 0, APEX - RS, 0);
   const domeY = (r) => APEX - RS + Math.sqrt(RS * RS - r * r);
@@ -475,7 +481,7 @@ export function buildDeck(kit) {
     group,
     floors,
     solids,
-    ceiling: APEX,
+    ceiling: APEX, ceilingAt: (x, z) => roofAt(roofs, x, z, APEX),
     stations: {
       shield: { x: shieldSpot[0], z: shieldSpot[1], face: faceAt(shieldSpot, shieldProp), lamp, y: 2.2 },
       // Quest: message
