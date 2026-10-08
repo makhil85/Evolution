@@ -72,6 +72,23 @@ function injectCss() {
   const s = document.createElement('style'); s.id = CSS_ID; s.textContent = CSS; document.head.appendChild(s);
 }
 
+/**
+ * A +/- button that steps once per press and keeps stepping while it is held
+ * (after a short wait, then steadily). A keyboard click steps once.
+ */
+function stepper(btn, step) {
+  let wait = 0; let again = 0;
+  const stop = () => { clearTimeout(wait); clearInterval(again); };
+  btn.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || btn.disabled) return;
+    step();
+    wait = setTimeout(() => { again = setInterval(() => { if (!btn.isConnected || btn.disabled) stop(); else step(); }, 110); }, 400);
+  });
+  for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) btn.addEventListener(ev, stop);
+  // A mouse or touch click was stepped on pointerdown (detail > 0); a keyboard click has detail 0.
+  btn.addEventListener('click', (e) => { if (e.detail === 0) step(); });
+}
+
 /** A bar of `v` out of `max`, with a mark at `markAt`. */
 function bar() {
   const b = el('div', 'qz-bar'); const fill = el('i'); const mark = el('s');
@@ -102,8 +119,8 @@ function medbayBody(changed) {
   const less = el('button', 'qz-step', '−'); less.type = 'button';
   const more = el('button', 'qz-step', '+'); more.type = 'button';
   const bikeN = el('div', 'qz-big');
-  less.addEventListener('click', () => { s.bike = Math.max(0, s.bike - BONES.bikeStep); changed(); });
-  more.addEventListener('click', () => { s.bike = Math.min(BONES.bikeMax, s.bike + BONES.bikeStep); changed(); });
+  stepper(less, () => { s.bike = Math.max(0, s.bike - BONES.bikeStep); changed(); });
+  stepper(more, () => { s.bike = Math.min(BONES.bikeMax, s.bike + BONES.bikeStep); changed(); });
   const bikeRow = el('div', 'qz-row');
   bikeRow.append(el('span', 'qz-num', t('Exercise bike, minutes', 'Bike minutes')), less, bikeN, more);
   const totalN = el('div', 'qz-num'); const totalBar = bar();
@@ -216,8 +233,8 @@ function messageBody(changed) {
   const readout = el('div', 'qz-num');
   const row = el('div', 'qz-row'); row.append(left, readout, right);
   const note = el('div', 'qz-note');
-  left.addEventListener('click', () => { deg = dishTurn(deg, -1); changed(); });
-  right.addEventListener('click', () => { deg = dishTurn(deg, 1); changed(); });
+  stepper(left, () => { deg = dishTurn(deg, -1); changed(); });
+  stepper(right, () => { deg = dishTurn(deg, 1); changed(); });
   wrap.append(cv, row, note);
   function refresh() {
     drawSky(ctx, deg);

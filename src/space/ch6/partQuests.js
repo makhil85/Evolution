@@ -8,9 +8,9 @@ import { createInteriorScene, preloadInterior } from './interior/ship.js';
 import { playQuest } from './quests.js';
 import { QUESTS } from './questsLogic.js';
 import { QUEST_BEAT } from './questions.partQuests.js';
-import { CALM_S } from '../contracts.js';
 import { who } from './crewInfo.js';
 
+const WALK_CALM_S = 1.5; // the pause before a question asked on foot (flights keep CALM_S)
 const KEY = `rocket_village_ch6_quests_L${LEVEL}`;
 const loadDone = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; } };
 const saveDone = (ids) => { try { localStorage.setItem(KEY, JSON.stringify(ids)); } catch { /* private mode */ } };
@@ -42,8 +42,10 @@ export function partQuestsSteps(game) {
           async onStation(id) {
             await playQuest(id, { bus: game.bus });
             // The question first, then the quest counts as done: two missed
-            // tries restart the act, and then she redoes this quest too.
-            await game.missions.ask(QUEST_BEAT[id], { calm: CALM_S });
+            // tries restart the act, and then she redoes this quest too. On
+            // foot a short pause with a toast, so she knows it is coming.
+            hud.toast(t('Mission Control has a question...', 'A question is coming!'), { kind: 'info', ms: 1800 });
+            await game.missions.ask(QUEST_BEAT[id], { calm: WALK_CALM_S });
             done.add(id); saveDone([...done]);
           },
         }));

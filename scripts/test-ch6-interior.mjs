@@ -8,7 +8,9 @@
 // clear, and from the lift door she can walk (a 0.3 m body on a 0.25 m grid)
 // to every station spot and quest spot (the sick bay's among them) and every
 // crew spot; every station and quest of decks.js has a spot on its deck and a
-// status lamp.
+// status lamp. She steps out of the lift in the open (LIFT_OUT, not inside the
+// car). The chase camera (ship.js chaseDistance): along a wall it moves at most
+// 4% a frame at 60 and 30 fps, and never sits in the wall.
 import assert from 'node:assert/strict';
 import { createServer } from 'vite';
 import { createRequire } from 'node:module';
@@ -68,6 +70,8 @@ try {
   // A deck's walk map comes from its own layout, never from the meshes.
   const THREE = await vite.ssrLoadModule('three');
   const { DECK_MODELS } = await vite.ssrLoadModule('/src/space/ch6/interior/decks.js');
+  const { chaseDistance, LIFT_OUT } = await vite.ssrLoadModule('/src/space/ch6/interior/ship.js');
+  const inLiftCar = (x, z) => x > -1.2 && x < 1.2 && z > -2.4 && z < -0.2; // ship.js's lift test
   const models = {
     style: 'toon', names: () => [...DECK_MODELS], add() {}, object: () => new THREE.Group(),
     size: () => new THREE.Vector3(4, 3, 4), min: () => new THREE.Vector3(-2, 0, -2), dispose() {},
@@ -123,8 +127,60 @@ try {
       for (const [id, s] of Object.entries(d.crewSpots || {})) assert.ok(reach(s.x, s.z) || m.walkable(s.x, s.z), `crew ${id}`);
       assert.ok((d.views || []).length >= 2, 'set points');
     });
+    ok(`${spec.id}: she steps out of the lift in the open, past the door`, () => {
+      assert.ok(m.fits(LIFT_OUT.x, LIFT_OUT.z), 'the lift-out spot');
+      assert.ok(!inLiftCar(LIFT_OUT.x, LIFT_OUT.z), 'outside the lift car');
+      assert.ok(m.fits(0, 1.4), 'the spot in front of the lift');
+    });
     d.dispose?.(); kit.dispose();
   }
+
+  // The chase camera (ship.js chaseDistance), the real function on a walk map with one wall.
+  // Her walk at 1.55 m/s (walker.js WALK_SPEED) along a wall, with the camera easing round to her heading as in ship.js.
+  const WALL_Z = 3.2;
+  const wallMap = map.createWalkMap({ floors: [{ rect: [0, 0, 80, 40] }], solids: [{ rect: [0, WALL_Z, 80, 0.4] }] });
+  // Walks the camera along a wall, returns the largest frame-to-frame change (% of the distance) after
+  // the first second, and whether the camera ever sat in the wall.
+  function walkCam({ fps, dir, z0, lag, secs = 9, speed = 1.55 }) {
+    const dt = 1 / fps; const heading = Math.atan2(dir[0], dir[1]);
+    let x = -20; let z = z0; let yaw = heading + lag; let dist = 4.6; let prev = null; let worst = 0; let inWall = false;
+    const angDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
+    for (let f = 0; f < fps * secs; f++) {
+      x += dir[0] * speed * dt; z += dir[1] * speed * dt;
+      yaw += angDiff(heading, yaw) * Math.min(1, dt * 0.9);
+      const next = chaseDistance(wallMap, { x, z, ty: 1.0, yaw, pitch: 0.3, ceil: 2.85, want: 4.6 }, dist, dt);
+      if (prev != null && f >= fps) worst = Math.max(worst, Math.abs(next - prev) / prev);
+      prev = next; dist = next;
+      const cx = x - Math.sin(yaw) * dist * Math.cos(0.3); const cz = z - Math.cos(yaw) * dist * Math.cos(0.3);
+      if (!wallMap.fits(cx, cz, 0.15)) inWall = true;
+    }
+    return { worst, inWall };
+  }
+  ok('the chase camera: walking along a wall it moves at most 4% a frame at 60 and 30 fps, and never sits in the wall', () => {
+    for (const fps of [60, 30]) {
+      for (const lag of [0.2, 0.5, 0.9]) for (const z0 of [2.2, 2.6]) {
+        const r = walkCam({ fps, dir: [1, 0], z0, lag });
+        assert.ok(r.worst <= 0.04, `${fps} fps lag ${lag} z ${z0}: ${(100 * r.worst).toFixed(2)}%`);
+        assert.ok(!r.inWall, `${fps} fps lag ${lag} z ${z0}: in the wall`);
+      }
+      const away = walkCam({ fps, dir: [0, -1], z0: 2.0, lag: 0.4 });
+      assert.ok(away.worst <= 0.04 && !away.inWall, `${fps} fps walking away from the wall: ${(100 * away.worst).toFixed(2)}%`);
+    }
+  });
+  ok('the chase camera: a wall ahead on the sight line pulls it in to just short of the wall; open floor lets it out to the wanted distance', () => {
+    const open = chaseDistance(wallMap, { x: 0, z: 0, ty: 1.0, yaw: 0, pitch: 0.3, ceil: 2.85, want: 4.6 }, 4.6, 1);
+    assert.equal(open, 4.6);
+    // Facing -z (yaw pi), the camera sits on the +z side of her, between her and the wall. Its body
+    // margin (0.15) keeps it off the wall's walkable edge at z 2.85 (the wall starts at z 3.0).
+    const behind = chaseDistance(wallMap, { x: 0, z: 2.5, ty: 1.0, yaw: Math.PI, pitch: 0.3, ceil: 2.85, want: 4.6 }, 4.6, 10);
+    const cam = 2.5 + behind * Math.cos(0.3);
+    assert.ok(cam <= 2.85 + 1e-6, `camera at z ${cam.toFixed(3)}, past the wall margin`);
+    assert.ok(cam > 2.83, `camera not needlessly close: z ${cam.toFixed(3)}`);
+  });
+  ok('the chase camera: a low ceiling takes the camera down to her, never up through it', () => {
+    const d = chaseDistance(wallMap, { x: 0, z: 0, ty: 2.4, yaw: 0, pitch: 0.9, ceil: 2.85, want: 4.6 }, 4.6, 10);
+    assert.ok(2.4 + 0.3 + d * Math.sin(0.9) <= 2.85 + 1e-6, `height ${(2.4 + 0.3 + d * Math.sin(0.9)).toFixed(3)}`);
+  });
 } finally {
   await vite.close();
 }

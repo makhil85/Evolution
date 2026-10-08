@@ -9,9 +9,9 @@ import { t, LEVEL } from '../level.js';
 import { createInteriorScene, preloadInterior } from './interior/ship.js';
 import { playStation } from './stations.js';
 import { STATION_BEAT } from './questions.partB.js';
-import { CALM_S } from '../contracts.js';
 import { who } from './crewInfo.js';
 
+const WALK_CALM_S = 1.5; // the pause before a question asked on foot (flights keep CALM_S)
 const KEY = `rocket_village_ch6_stations_L${LEVEL}`;
 const loadDone = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; } };
 const saveDone = (ids) => { try { localStorage.setItem(KEY, JSON.stringify(ids)); } catch { /* private mode */ } };
@@ -40,8 +40,10 @@ export function partBSteps(game) {
           async onStation(id) {
             await playStation(id, { bus: game.bus });
             // The question first, then the station counts as done: two missed
-            // tries restart the act, and then she redoes this station too.
-            await game.missions.ask(STATION_BEAT[id], { calm: CALM_S });
+            // tries restart the act, and then she redoes this station too. On
+            // foot a short pause with a toast, so she knows it is coming.
+            hud.toast(t('Mission Control has a question...', 'A question is coming!'), { kind: 'info', ms: 1800 });
+            await game.missions.ask(STATION_BEAT[id], { calm: WALK_CALM_S });
             done.add(id); saveDone([...done]);
           },
         }));
