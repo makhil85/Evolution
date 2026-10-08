@@ -135,7 +135,7 @@ export function playCh5Ending(game, { eyebrow = lvl('Engine half', 'Engine half'
   const overlay = buildOverlay({
     eyebrow,
     title: lvl('Drilling Rock B', 'Drilling Rock B'),
-    sub: lvl('The rock is drilled down to a thick front shield', 'Only a thick shield is left at the front'),
+    sub: lvl('The rock is drilled down to a shield of rock and ice at the front', 'Only a shield is left at the front'),
     startBlack: false,
   });
   const title2 = buildOverlay({

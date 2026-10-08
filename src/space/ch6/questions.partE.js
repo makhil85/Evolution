@@ -6,7 +6,7 @@
 // Every numeric answer is re-derived in scripts/test-ch6-route.mjs, from the
 // same model the planner uses (routes.js), so a retune can't leave a
 // question wrong.
-import { LIGHT_KMS, CRUISE_PERCENT, FUELS, bestPlan, planTotals } from './routes.js';
+import { LIGHT_KMS, CRUISE_PERCENT, FUELS, NEAREST_STAR_LY, bestPlan, planTotals, yearsAt } from './routes.js';
 
 const ACT_E = 6;
 
@@ -16,6 +16,8 @@ const JS = planTotals(bestPlan('js', FUEL)).speed;
 const JSUN = planTotals(bestPlan('jsun', FUEL)).speed;
 const ICE = JSUN - JS;
 const fmt = (n) => n.toLocaleString('en-US');
+// The trip to the nearest star (Proxima Centauri, 4.2 light years) at the cruise speed.
+const SHIP_YEARS = Math.round(yearsAt(NEAREST_STAR_LY, CRUISE_PERCENT));
 
 /** @type {Object<string, import('../questions.space.js').SpaceQuestion>} */
 export const CH6E_QUESTIONS = {
@@ -71,7 +73,7 @@ export const CH6E_QUESTIONS = {
     prompt: 'Of all the planets, a flyby of Jupiter steals the most energy. Why Jupiter?',
     choices: [
       { text: 'It is the heaviest planet, so its pull bends the path most', correct: true },
-      { text: 'It is the closest planet to the Sun, so it is the hottest of all' },
+      { text: 'It has the most rings, and their dust pulls the ship in hard' },
       { text: 'It has the most moons, and each moon gives the ship a little push' },
       { text: 'It is the coldest planet, so its cold air grips the ship tight' },
     ],
@@ -113,10 +115,10 @@ export const CH6E_QUESTIONS = {
     subject: 'Percent',
     difficulty: 'Level 4',
     prompt:
-      `Light goes ${fmt(LIGHT_KMS)} km every second. After a year of pushing, the drive has the ship going ${fmt(LIGHT_KMS / 20)} km/s. ` +
-      'What percent of light speed is that? (Type a number.)',
+      `The drive has the ship going ${fmt(LIGHT_KMS / 20)} km/s. Light is 20 times faster than that. ` +
+      'What percent of light speed is the ship? (Type a number.)',
     answers: ['5', '5%', '5 %', '5 percent'],
-    hint: `How many ${fmt(LIGHT_KMS / 20)}s make ${fmt(LIGHT_KMS)}? Then what is 100 divided by that?`,
+    hint: 'What is 100 divided by 20?',
     parentHint: `${fmt(LIGHT_KMS)} ÷ ${fmt(LIGHT_KMS / 20)} = 20, so the ship is 1/20 of light speed, and 100 ÷ 20 = 5%.`,
     success: `Yes! 5%. Halfway to the cruise speed of ${CRUISE_PERCENT}%.`,
     doneMessage: 'The drive keeps pushing...',
@@ -132,12 +134,12 @@ export const CH6E_QUESTIONS = {
     subject: 'Distance, speed and time',
     difficulty: 'Level 4',
     prompt:
-      `The nearest star, Alpha Centauri, is about 4.4 light years away: light takes 4.4 years to get there. ` +
-      `At ${CRUISE_PERCENT}% of light speed, how many years will the trip take? (Type a number.)`,
-    answers: ['44', '44 years'],
-    hint: `At ${CRUISE_PERCENT}% of light speed you are 10 times slower than light. So the trip takes 10 times as long.`,
-    parentHint: 'time = distance ÷ speed = 4.4 light years ÷ 0.1 of light speed = 44 years. (A tempting slip is 4.4 × 0.1 = 0.44.)',
-    success: 'Yes! 44 years. A long trip: that is why the ship has to be a home, a farm and a shield all at once.',
+      `Light takes ${NEAREST_STAR_LY} years to reach the nearest star, Proxima Centauri. ` +
+      `Our ship takes ${SHIP_YEARS} years. How many times slower than light is the ship? (Type a number.)`,
+    answers: ['10', '10 times'],
+    hint: `Divide the ship's years by light's years: ${SHIP_YEARS} ÷ ${NEAREST_STAR_LY}.`,
+    parentHint: `${SHIP_YEARS} ÷ ${NEAREST_STAR_LY} = 10. At ${CRUISE_PERCENT}% of light speed the ship is 10 times slower, so the trip takes 10 times as long: ${SHIP_YEARS} years, not ${NEAREST_STAR_LY}.`,
+    success: `Yes! 10 times slower: ${SHIP_YEARS} years, not ${NEAREST_STAR_LY}. A long trip: that is why the ship has to be a home, a farm and a shield all at once.`,
     doneMessage: 'To be continued...',
     reward: { science: 10 },
   },
@@ -159,11 +161,11 @@ export const CH6E_LEVEL1 = {
   },
   c6_fuel_left: {
     difficulty: 'Level 1 • taking away',
-    prompt: `Jupiter and Saturn get us going ${JS} steps. With Uranus and Neptune too, we go ${JSUN} steps. How many more steps is that? (Type a number.)`,
-    answers: [String(ICE), `${ICE} steps`],
+    prompt: `Jupiter and Saturn get us going ${JS} km/s. With Uranus and Neptune too, we go ${JSUN} km/s. How many more km/s is that? (Type a number.)`,
+    answers: [String(ICE), `${ICE} km/s`],
     hint: `Count up from ${JS} to ${JSUN}.`,
     parentHint: `${JSUN} − ${JS} = ${ICE}.`,
-    success: `Right! ${ICE} more steps.`,
+    success: `Right! ${ICE} more km/s.`,
   },
   c6_jupiter_boost: {
     difficulty: 'Level 1 • gravity',
@@ -199,11 +201,11 @@ export const CH6E_LEVEL1 = {
   },
   c6_star_years: {
     difficulty: 'Level 1 • skip counting',
-    prompt: 'Light takes 4 years to get to the nearest star. Our ship is 10 times slower. Count by 10s, 4 times. How many years? (Type a number.)',
-    answers: ['40', '40 years'],
-    hint: '10, 20, 30...',
-    parentHint: '4 tens make 40. (Light: 4 years; ship at a tenth of light speed: 40 years.)',
-    success: 'Yes! 40 years. That is a long trip!',
+    prompt: 'Light takes 4 years to reach the star. Our ship takes 40 years. How many 4s make 40? (Type a number.)',
+    answers: ['10', 'ten'],
+    hint: '4, 8, 12, 16...',
+    parentHint: '10 fours make 40. (Light: 4 years; the ship at a tenth of light speed: 40 years, ten times as long.)',
+    success: 'Yes! 10 fours make 40. The ship is 10 times slower than light!',
   },
 };
 

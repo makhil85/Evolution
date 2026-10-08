@@ -8,8 +8,9 @@
 //   2. The ship's speed bar beside light's: after the slingshots it is a
 //      sliver (about 50 km/s); the drive pushes for years and it grows to
 //      30,000 km/s, one tenth of light. The dial switches to "10% of light".
-//   3. The nearest star, about 4 light years away: light takes 4 years, the
-//      ship at 10% takes 10 times as long, 40 years. One teaser line: at
+//   3. The nearest star, 4.2 light years away (Proxima Centauri; Level 1
+//      rounds to 4): light takes 4.2 years, the ship at 10% takes 10 times
+//      as long, 42 years (40 at Level 1). One teaser line: at
 //      speeds like this clocks tick a little slower (a later chapter).
 //
 // Pitfalls carried: the last frame still shows the answer; labels beside the
@@ -116,7 +117,10 @@ function drawSpeedBars(ctx, T) {
 
 // --- film 3: to the nearest star ------------------------------------------------------------------
 
-function drawNearestStar(ctx, T) {
+function drawNearestStar(ctx, T, opts) {
+  // Level 1 rounds the 4.2 light years to 4 (and 42 years to 40).
+  const L1 = opts?.level === 1;
+  const LY = L1 ? 4 : 4.2; const YEARS = L1 ? 40 : 42;
   nightSky(ctx, 107);
   const sx = 70; const tx = 730; const y = 150;
   glow(ctx, sx, y, 40, '#ffc34d');
@@ -124,19 +128,20 @@ function drawNearestStar(ctx, T) {
   glow(ctx, tx, y, 30, '#ffe0b0');
   label(ctx, 'nearest star', tx, y + 40, { size: 15, color: '#ffe0b0', halo: 'rgba(0,0,0,0.6)' });
   line(ctx, sx + 30, y + 70, tx - 30, y + 70, 'rgba(255,255,255,0.4)', 2, [4, 6]);
-  label(ctx, 'about 4 light years', (sx + tx) / 2, y + 88, { size: 15, color: '#fff', halo: 'rgba(0,0,0,0.6)' });
-  // light: 4 years
+  label(ctx, `about ${LY} light years`, (sx + tx) / 2, y + 88, { size: 15, color: '#fff', halo: 'rgba(0,0,0,0.6)' });
+  // light: 4.2 years (a whole number at Level 1)
   const kl = span(T, 2, 6);
   glow(ctx, lerp(sx + 30, tx - 30, kl), y, 12, '#ffe27a');
-  label(ctx, `light: ${Math.round(kl * 4)} years`, 160, 300, { size: 20, color: '#ffe27a', halo: 'rgba(0,0,0,0.6)', align: 'left' });
+  const lightYears = L1 ? String(Math.round(kl * LY)) : (kl * LY).toFixed(1);
+  label(ctx, `light: ${lightYears} years`, 160, 300, { size: 20, color: '#ffe27a', halo: 'rgba(0,0,0,0.6)', align: 'left' });
   // the ship at 10%: ten times as long
   if (T > 10) {
     const ks = span(T, 10.5, 16.5);
     const x = lerp(sx + 30, tx - 30, ks);
     ctx.save(); ctx.fillStyle = '#a9a39a'; ctx.beginPath(); ctx.ellipse(x, y + 26, 10, 7, 0, 0, TAU); ctx.fill(); ctx.restore();
-    label(ctx, `our ship at 10%: ${Math.round(ks * 40)} years`, 160, 340, { size: 20, color: '#7fd3ff', halo: 'rgba(0,0,0,0.6)', align: 'left' });
+    label(ctx, `our ship at 10%: ${Math.round(ks * YEARS)} years`, 160, 340, { size: 20, color: '#7fd3ff', halo: 'rgba(0,0,0,0.6)', align: 'left' });
   }
-  if (T > 16) label(ctx, '10 times slower than light = 10 × 4 = 40 years', 400, 385, { size: 18, color: '#9fe8a8', halo: 'rgba(0,0,0,0.6)' });
+  if (T > 16) label(ctx, `10 times slower than light = 10 × ${LY} = ${YEARS} years`, 400, 385, { size: 18, color: '#9fe8a8', halo: 'rgba(0,0,0,0.6)' });
   if (T > 17) label(ctx, 'Teaser: this fast, clocks on the ship tick a tiny bit slower. More in a later chapter!', 400, 420, { size: 14, color: '#cfe8ff', halo: 'rgba(0,0,0,0.6)' });
 }
 
@@ -192,22 +197,22 @@ export const LESSON_6C = {
     {
       title: ['To the nearest star', 'To the nearest star'],
       beats: [
-        { dur: 2.5, cap: ['The nearest star is so far that even light takes about 4 years to get there.', 'Even light takes 4 years to get to the nearest star.'] },
-        { dur: 4, cap: ['We say it is 4 light years away.', 'It is 4 light years away.'] },
+        { dur: 2.5, cap: ['The nearest star is so far that even light takes about 4.2 years to get there.', 'Even light takes 4 years to get to the nearest star.'] },
+        { dur: 4, cap: ['We say it is 4.2 light years away.', 'It is 4 light years away.'] },
         { dur: 4, cap: ['Our ship goes at one tenth of light’s speed...', 'Our ship goes 10 times slower than light...'], predict: true },
-        { dur: 6, cap: ['...so the trip takes 10 times as long: 10 × 4 = 40 years.', '...so it takes 10 × 4 = 40 years.'] },
+        { dur: 6, cap: ['...so the trip takes 10 times as long: 10 × 4.2 = 42 years.', '...so it takes 10 × 4 = 40 years.'] },
         { dur: 4, cap: ['And this fast, something strange starts: clocks on the ship tick a tiny bit slower. That is for a later chapter!', 'This fast, clocks tick a bit slower. More later!'] },
       ],
       draw: drawNearestStar,
       question: {
-        prompt: ['At 10% of light speed, about how long is the trip to the nearest star, 4 light years away?', 'At 10% of light speed, how long to the nearest star?'],
+        prompt: ['At 10% of light speed, about how long is the trip to the nearest star, 4.2 light years away?', 'At 10% of light speed, how long to the nearest star?'],
         choices: [
-          { text: ['4 years', '4 years'] },
-          { text: ['40 years', '40 years'], correct: true },
-          { text: ['400 years', '400 years'] },
+          { text: ['4.2 years', '4 years'] },
+          { text: ['42 years', '40 years'], correct: true },
+          { text: ['420 years', '400 years'] },
         ],
-        hint: ['Light takes 4 years. We are 10 times slower than light.', 'Light takes 4 years. We are 10 times slower.'],
-        why: ['Light takes 4 years; at a tenth of light’s speed it takes 10 times as long: 4 × 10 = 40 years.', '4 × 10 = 40 years!'],
+        hint: ['Light takes 4.2 years. We are 10 times slower than light.', 'Light takes 4 years. We are 10 times slower.'],
+        why: ['Light takes 4.2 years; at a tenth of light’s speed it takes 10 times as long: 4.2 × 10 = 42 years.', '4 × 10 = 40 years!'],
       },
       clue: [null, 'It takes 40 years.'],
     },

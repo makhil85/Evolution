@@ -117,7 +117,7 @@ export const CH6B_LEVEL1 = {
   },
   c6_grid_fraction: {
     difficulty: 'Level 1 • sharing',
-    prompt: 'We share 12 power blocks, the same amount for each of 3 things. How many blocks does each get?',
+    prompt: 'We have 12 power blocks. Make 3 piles, the same size. How many in each pile?',
     choices: [{ text: '4', correct: true }, { text: '3' }, { text: '6' }, { text: '12' }],
     hint: 'Share 12 into 3 equal piles.',
     parentHint: '12 ÷ 3 = 4: each gets a third.',

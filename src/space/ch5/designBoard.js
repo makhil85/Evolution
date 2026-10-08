@@ -131,18 +131,18 @@ export const DESIGN_STEPS = [
   {
     prompt: ['Between the stars, radiation (tiny fast particles) hits the ship all the time, for years. What protects the crew best?', 'Space has bad rays. What keeps the crew safe?'],
     choices: [
-      { text: ['A thick cap of rock and ice at the front', 'A thick cap of rock and ice in front'], correct: true },
-      { text: ['A thin sheet of shiny metal foil', 'Thin shiny foil'] },
-      { text: ['Nothing: space is empty, so there is nothing to stop', 'Nothing'] },
+      { text: ['A thick cap of rock and ice at the front', 'Thick rock and ice in front'], correct: true },
+      { text: ['A thin sheet of shiny metal foil', 'A thin shiny foil, like a sweet wrapper'] },
+      { text: ['Nothing: space is empty, so there is nothing to stop', 'Nothing, space is empty'] },
     ],
     why: ['Metres of rock soak up radiation, like the ground over a cave. The starship carries its shield at the front.', 'Thick rock in front stops the bad rays!'],
   },
   {
     prompt: ['A solid rock that big would be far too heavy to push. What should we do with it?', 'A big rock is very heavy. What can we do?'],
     choices: [
-      { text: ['Make it smaller: use a pebble-sized rock with little ice', 'Use a tiny rock'] },
+      { text: ['Make it smaller: use a pebble-sized rock with little ice', 'Use a tiny rock, just a little one'] },
       { text: ['Drill it out: keep a cap at the front and build a ring behind', 'Drill it out and build behind the cap'], correct: true },
-      { text: ['Push harder: heavy does not matter once we are in space', 'Push harder'] },
+      { text: ['Push harder: heavy does not matter once we are in space', 'Push harder, heavy does not matter out here'] },
     ],
     why: ['Drill it! The ice and metal become fuel, water and parts. The cap still shields us, and the ring behind it is home: far lighter to push.', 'Drill it out, and live behind the cap!'],
   },

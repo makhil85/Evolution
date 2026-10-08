@@ -165,19 +165,21 @@ try {
   const derived = {
     c6_fuel_left: best('jsun', FUELS[0]) - best('js', FUELS[0]),
     c6_percent_light: R.percentOfLight(R.LIGHT_KMS / 20),
-    c6_star_years: Math.round(R.yearsAt(4.4, R.CRUISE_PERCENT)),
+    c6_star_years: Math.round(100 / R.CRUISE_PERCENT), // "how many times slower": 10
   };
   ok('Level 4 numbers re-derived from the game model', () => {
     for (const [id, v] of Object.entries(derived)) assert.ok(checkSpaceAnswer(L4[id], String(v)), `${id}: ${v}`);
     assert.ok(!checkSpaceAnswer(L4.c6_fuel_left, String(best('jsun', FUELS[0]))), 'the total, not the difference');
-    assert.ok(!checkSpaceAnswer(L4.c6_star_years, '0.44'));
-    assert.ok(!checkSpaceAnswer(L4.c6_star_years, '4.4'));
+    // the trip: 4.2 light years (the planner's nearest star) at 10% is 42 years
+    assert.equal(Math.round(R.yearsAt(R.NEAREST_STAR_LY, R.CRUISE_PERCENT)), 42);
+    assert.ok(!checkSpaceAnswer(L4.c6_star_years, '42'), 'the years, not how many times slower');
+    assert.ok(!checkSpaceAnswer(L4.c6_star_years, '0.1'));
   });
   ok('Level 1 numbers (small, counting on and by tens)', () => {
     const L1 = banks[1];
     assert.ok(checkSpaceAnswer(L1.c6_fuel_left, String(derived.c6_fuel_left)));
     assert.ok(checkSpaceAnswer(L1.c6_percent_light, String(100 / 20)), 'light 20 blocks, ours 1: out of 100 that is 5');
-    assert.ok(checkSpaceAnswer(L1.c6_star_years, String(4 * 10)));
+    assert.ok(checkSpaceAnswer(L1.c6_star_years, String(40 / 4)), '40 years at 4 years of light: 10 fours');
   });
 
   console.log('steps');
@@ -238,6 +240,7 @@ try {
     const b6 = JSON.stringify(LESSON_6B.films[3].beats.map((b) => b.cap));
     assert.ok(b6.includes('135 km/s against 39'), 'film 4 numbers');
     assert.ok(JSON.stringify(LESSON_6C).includes('About 50 km/s'), '6C after the slingshots');
+    assert.ok(JSON.stringify(LESSON_6C).includes('42 years'), '6C star trip at Level 4 (4.2 light years)');
     // film 2: in from the side (13 across 17 = 21.4), out along Jupiter (13 + 17 = 30, the most)
     assert.equal(Math.round(Math.hypot(13, 17)), 21);
     assert.ok(JSON.stringify(LESSON_6B.films[1].beats.map((b) => b.cap)).includes('21 km/s'));

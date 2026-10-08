@@ -23,12 +23,12 @@ export function partBSteps(game) {
   return [
     {
       id: 'c6_habitat', act: 2,
-      title: t('Build the living half', 'Make the ship a home'),
+      title: t('Fit out the ring', 'Make the ship a home'),
       objective: t('Walk the ship’s decks (the lift joins them) and visit all six stations with the crew: shield, air, water, farm, power and the store.', 'Walk round the ship. Visit all 6 stations with the crew.'),
       markers: [],
       async enter() {
         await hud.showDialogue([
-          { who: who('builder'), text: t('The engine half is done. Now the living half: everything that keeps five people alive between the stars.', 'The engine works. Now we make the ship a home!') },
+          { who: who('builder'), text: t('The engine works. Now we fit out the ring: everything that keeps five people alive between the stars.', 'The engine works. Now we make the ship a home!') },
           { who: who('biologist'), text: t('Air, water, food. Out there nothing comes from outside, so the ship has to make it all, like a tiny Earth.', 'We need air, water and food. The ship must make them all.') },
           { who: 'girl', text: t('Then let’s build it. Show me round!', 'Let’s build it! Show me!') },
         ]);
@@ -45,7 +45,7 @@ export function partBSteps(game) {
             done.add(id); saveDone([...done]);
           },
         }));
-        hud.toast(t('The living half is built! Our ship is a home now.', 'The ship is a home now!'), { kind: 'good', ms: 4200 });
+        hud.toast(t('The crew ring is built! Our ship is a home now.', 'The ship is a home now!'), { kind: 'good', ms: 4200 });
       },
     },
   ];

@@ -493,7 +493,7 @@ const LEVEL4_SPACE_QUESTIONS = {
     parentHint:
       'The belt holds millions of rocks, but spread through an enormous volume. NASA probes have crossed it many times without special dodging. (We squeezed ours closer so you have something to mine!)',
     success:
-      'Correct. The real belt is mostly empty space. We squeezed the rocks in this game much closer together so you have something to mine.',
+      'Correct. The real belt is mostly empty space. We squeezed the rocks much closer together so you have something to mine.',
     doneMessage: 'Use your claw (E) to mine. Stony rocks give silicon, metal rocks give metal, and icy rocks give ice.',
     reward: { science: 15 },
   },
@@ -1130,7 +1130,7 @@ export const LEVEL1_SPACE_QUESTIONS = {
     ],
     hint: 'The rocks are very far apart. So how many would be next to her window?',
     parentHint: 'The real belt is mostly empty; probes fly through without dodging. We packed the game’s rocks closer so there is something to mine.',
-    success: 'Correct! The real belt is mostly empty. We squeezed the rocks in this game closer together so you can mine them.',
+    success: 'Correct! The real belt is mostly empty. We squeezed the rocks closer together so you can mine them.',
     doneMessage: 'Fly close to rocks and press E to grab them.',
   },
 
