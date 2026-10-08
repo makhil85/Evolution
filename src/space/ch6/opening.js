@@ -115,11 +115,6 @@ export function showStarship(game) {
   key.position.copy(group.position).addScaledVector(S, 400).add(new THREE.Vector3(0, 150, 0));
   key.target = group;
   scene.add(group, fill, key);
-  // The lit window panels are at 1.6 (over the 1.25 bloom threshold), so the ring
-  // glows like a lamp in a close-up: bring them just under it.
-  group.getObjectByName('habitat-ring')?.traverse((o) => {
-    if (o.material?.type === 'MeshBasicMaterial' && o.material !== outlineMaterial && o.material.color.r > 1.2) o.material.color.multiplyScalar(0.7);
-  });
   ship.setRingSpin(0.12);
   ship.setField(0.25);
   ship.setLights(true);
