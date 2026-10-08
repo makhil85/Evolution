@@ -21,7 +21,8 @@ import { CREW_INFO } from '../crewInfo.js';
 import { buildCrew } from '../crew.js';
 import { createKit } from './kit.js';
 import { createWalkMap } from './walkmap.js';
-import { DECKS, deckOf, START_DECK } from './decks.js';
+import { DECKS, DECK_MODELS, deckOf, START_DECK } from './decks.js';
+import { loadModels } from './models.js';
 
 const REACH = 1.6;     // how close to a station's spot to press E
 const LIFT = { x0: -1.2, x1: 1.2, z0: -2.4, z1: 0 };
@@ -51,11 +52,19 @@ function buildLift(kit) {
   return { group: g, door, floor: { rect: [0, -1.2, 2.4, 2.4] } };
 }
 
+let modelsReady = null;
+/** Load the decks' model pieces (once). Await it before createInteriorScene. */
+export function preloadInterior({ style } = {}) {
+  modelsReady ??= loadModels(DECK_MODELS, { style }).catch((err) => { console.error('[interior] models failed to load', err); modelsReady = null; return null; });
+  return modelsReady;
+}
+
 /**
  * @param {object} game
- * @param {{ order?: string[], done?: string[], onStation: (id:string) => Promise<any>, startDeck?: string }} opts
+ * @param {{ order?: string[], done?: string[], onStation: (id:string) => Promise<any>, startDeck?: string, models?: object }} opts
+ *   models: the result of preloadInterior() (a deck without models falls back to its own code-built parts)
  */
-export function createInteriorScene(game, { order = STATIONS.map((s) => s.id), done: doneAlready = [], onStation, startDeck = START_DECK }) {
+export function createInteriorScene(game, { order = STATIONS.map((s) => s.id), done: doneAlready = [], onStation, startDeck = START_DECK, models = null }) {
   const renderer = game.renderer;
   const hud = game.hud || null;
   const scene = new THREE.Scene();
@@ -66,7 +75,7 @@ export function createInteriorScene(game, { order = STATIONS.map((s) => s.id), d
   scene.add(new THREE.HemisphereLight(0xe6ecff, 0x4a4454, 1.1));
   const key = new THREE.DirectionalLight(0xfff1e0, 0.6); key.position.set(3, 10, 4); scene.add(key);
 
-  const kit = createKit();
+  const kit = createKit({ models });
   const crew = buildCrew();
   const decks = {};
   for (const spec of DECKS) {
@@ -102,7 +111,15 @@ export function createInteriorScene(game, { order = STATIONS.map((s) => s.id), d
     d.map = createWalkMap({ floors: [...d.floors, d.lift.floor], solids: d.solids });
   }
 
-  const beacon = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 3.2, 24, 1, true), new THREE.MeshBasicMaterial({ color: 0x7ff3ff, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide }));
+  // The beacon: a glowing ring on the floor where she stands, and a small
+  // arrow bobbing over it (a tall see-through column hid the console and
+  // tinted the whole view once the camera was inside it).
+  const beaconMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0x7ff3ff).multiplyScalar(1.4), transparent: true, opacity: 0.8, depthWrite: false });
+  const beacon = new THREE.Group();
+  const beaconRing = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.04, 8, 40).rotateX(Math.PI / 2), beaconMat);
+  beaconRing.position.y = 0.03;
+  const beaconArrow = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.32, 4).rotateX(Math.PI), beaconMat);
+  beacon.add(beaconRing, beaconArrow);
 
   // Her.
   const walker = createWalker({ gravity: 9.8 * 0.6, gait: 'earth' });
@@ -144,8 +161,8 @@ export function createInteriorScene(game, { order = STATIONS.map((s) => s.id), d
     const n = nextStation();
     beacon.visible = !!n && !!deck;
     if (n && deck) {
-      if (n.deck === deck.spec.id) beacon.position.set(n.x, 1.6, n.z);
-      else beacon.position.set(0, 1.6, -1.2);
+      if (n.deck === deck.spec.id) beacon.position.set(n.x, 0, n.z);
+      else beacon.position.set(0, 0, -1.2);
     }
   }
 
@@ -272,8 +289,11 @@ export function createInteriorScene(game, { order = STATIONS.map((s) => s.id), d
     const hx = walker.pos.x; const hz = walker.pos.z;
     deck.update?.(dt, clock, { herX: hx, herZ: hz });
     deck.lift.door.update(dt, hx, hz, lift ? 0 : null);
-    beacon.material.opacity = 0.1 + 0.07 * Math.sin(clock * 3);
-    // The beacon on the lift: hidden while she is in it (the camera would be inside it).
+    beaconMat.opacity = 0.55 + 0.3 * Math.sin(clock * 3);
+    beaconRing.scale.setScalar(1 + 0.08 * Math.sin(clock * 3));
+    beaconArrow.position.y = 2.5 + 0.12 * Math.sin(clock * 2.2);
+    beaconArrow.rotation.y = clock * 1.5;
+    // The beacon on the lift: hidden while she is in it.
     const nx = nextStation();
     beacon.visible = !!nx && !(nx.deck !== deck.spec.id && hz < 0.6 && Math.abs(hx) < 1.6);
     if (lift) runLift(dt);
@@ -346,7 +366,7 @@ export function createInteriorScene(game, { order = STATIONS.map((s) => s.id), d
       crew.dispose();
       walker.dispose?.();
       for (const d of Object.values(decks)) d.dispose?.();
-      beacon.geometry.dispose(); beacon.material.dispose();
+      beaconRing.geometry.dispose(); beaconArrow.geometry.dispose(); beaconMat.dispose();
       kit.dispose();
     },
   };
