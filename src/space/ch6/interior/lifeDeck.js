@@ -48,7 +48,8 @@ const WALL_T = 2.4;     // the inner wall, from the corridor's face to the room'
 const LAB = { a: Math.PI - 0.57, th: 0.36, r0: 25.5, door: 0.8 };        // door: half the opening (m)
 const HYD = { a: Math.PI + 0.55, th: 0.5, r0: 20.8, h: 5, door: 0.8 };   // the bay is 5 m tall
 const STAR = [Math.PI - 0.5, Math.PI + 0.5];                             // the star windows' angles
-const PLATE = 0x868c96; // the kit's floor plates carry loud red and yellow edge stripes: a cool grey keeps them quiet
+const PLATE = 0xc4cad4; // the kit's floor plates carry loud red and yellow edge stripes: a light cool grey keeps them quiet
+const VENT = 0x8a93a3;  // the kit's vent grilles are black: a grey tint (a black takes the tint as its colour)
 
 /** Deck metres on the ring at angle a (atan2(x, z - 40)) and radius r. */
 const pol = (a, r) => [r * Math.sin(a), CZ + r * Math.cos(a)];
@@ -89,6 +90,7 @@ export function buildDeck(kit) {
     uv: kit.glow(0xa878ff, 1.8),
     grow: kit.glow(0xff7ad9, 1.5), water: kit.glow(0x6fe0d0, 0.9),
     lab: toon(0xd8dde4), labDark: toon(0x6d7585), teal: toon(PALETTE.teal),
+    floor: toon(0x8c919c), // the lab's and the bay's floors (lighter than the kit's deck grey)
   };
   const algaeBase = M.algae.color.clone(); const growBase = M.grow.color.clone();
 
@@ -119,8 +121,19 @@ export function buildDeck(kit) {
   const tinted = (mat, c) => {
     if (!c) return mat;
     const key = `${mat.uuid}|${c}`;
-    if (!tints.has(key)) { const m = mat.clone(); m.color.multiply(new THREE.Color(c)); tints.set(key, kit.own(m)); }
+    if (!tints.has(key)) {
+      const m = mat.clone();
+      if (mat.name === 'M_Black') m.color.set(c); else m.color.multiply(new THREE.Color(c)); // a multiply cannot lighten a black
+      tints.set(key, kit.own(m));
+    }
     return tints.get(key);
+  };
+  /** The kit's dark trim (a material named *_Dark) reads as black on a deck: a copy, lifted (cloned once). */
+  const lifts = new Map();
+  const lifted = (mat) => {
+    if (!mat.name?.endsWith('_Dark')) return mat;
+    if (!lifts.has(mat.uuid)) { const m = mat.clone(); m.color.multiplyScalar(2.4); lifts.set(mat.uuid, kit.own(m)); }
+    return lifts.get(mat.uuid);
   };
   const boundsOf = (list) => {
     const box = new THREE.Box3();
@@ -143,7 +156,7 @@ export function buildDeck(kit) {
    * cornice or a trim lines up with the panel it belongs to, and a recessed window sits behind the face.
    * `sz` stretches the 4 m panel along the wall, `sy` its height; `squashed` lowers the cornices to 3.6 m.
    */
-  const kitWall = (names, P, n, { sz = 1, sy = 1, y = 0, squashed = false, tint = null } = {}) => {
+  const kitWall = (names, P, n, { sz = 1, sy = 1, y = 0, squashed = false, tint = null, skipDark = false } = {}) => {
     if (!KM) return;
     const th = Math.atan2(-n[1], n[0]);
     const base = scaleM(1, sy, sz);
@@ -152,8 +165,9 @@ export function buildDeck(kit) {
     for (const name of names) {
       const pre = squashed && name === CAP ? SQUASH.clone().multiply(base) : base;
       for (const { g, mat } of partsOf(name, pre)) {
+        if (skipDark && mat.name?.endsWith('_Dark')) continue; // a lintel's dark skirt: a black band over the door
         g.translate(sh[0], sh[1], sh[2]);
-        b.add(g, tinted(mat, tint), P[0], y, P[1], th);
+        b.add(g, tinted(lifted(mat), tint), P[0], y, P[1], th);
       }
     }
   };
@@ -234,7 +248,7 @@ export function buildDeck(kit) {
   const lintel = (a, r, out, hw, y0, y1) => {
     if (!KM) return;
     const N = [Math.sin(a), Math.cos(a)]; const sg = out ? 1 : -1;
-    kitWall([PANEL], [r * N[0], CZ + r * N[1]], [sg * N[0], sg * N[1]], { sz: (2 * hw) / 4, sy: (y1 - y0) / 3.02, y: y0 });
+    kitWall([PANEL], [r * N[0], CZ + r * N[1]], [sg * N[0], sg * N[1]], { sz: (2 * hw) / 4, sy: (y1 - y0) / 3.02, y: y0, skipDark: true });
   };
 
   // ---- the ring ----------------------------------------------------------------------------------
@@ -279,8 +293,14 @@ export function buildDeck(kit) {
   ringSolid(HYD.r0 - 1.2, HYD.r0 + 0.05, hydA0, hydA1);
 
   floors.push(corr, labShape, hydShape);
-  kit.floor(b, corr); kit.floor(b, labShape, { mat: kit.mats.deck }); kit.floor(b, hydShape, { mat: kit.mats.deck });
+  kit.floor(b, corr); kit.floor(b, labShape, { mat: M.floor }); kit.floor(b, hydShape, { mat: M.floor });
   kit.ceiling(b, corr, CEIL); kit.ceiling(b, labShape, CEIL); kit.ceiling(b, hydShape, HYD.h);
+  // Code seams across the ceilings, about every 2 m (thin trims between the light bands).
+  const seams = (r0, r1, a0, a1, y) => {
+    const rm = (r0 + r1) / 2; const n = Math.max(1, Math.round(((a1 - a0) * rm) / 2));
+    for (let k = 1; k < n; k++) { const a = a0 + ((a1 - a0) * k) / n; band(r0, r1, a - 0.025 / rm, a + 0.025 / rm, y, kit.mats.trim, true); }
+  };
+  seams(R_IN, R_OUT, CA0, CA1, CEIL - 0.012); seams(LAB.r0, R_IN, labA0, labA1, CEIL - 0.012); seams(HYD.r0, R_IN, hydA0, hydA1, HYD.h - 0.012);
 
   // Light bands in the ceilings, and a lilac inlay down the corridor floor.
   band(37.2, 37.45, CA0 + 0.06, CA1 - 0.06, CEIL - 0.03, kit.mats.coveCool, true);
@@ -293,18 +313,14 @@ export function buildDeck(kit) {
   band(34.4, 34.7, hydA0 + 0.04, hydA1 - 0.04, HYD.h - 0.02, M.grow, true);
 
   // Wall lights on the corridor's walls (one a facet, above the LCARS panels) and the lab's back wall.
+  // Every other facet: a light on the even ones, a vent (low, on the wall) on the odd ones.
   const lightOn = (f) => kitFace(['props/Prop_Light_Small'], f.P, f.n, { y: 2.5, off: 0.1, pre: FLAT_TO_WALL });
-  for (const f of innerFacets) lightOn(f);
-  for (const f of outerFacets) if (!f.pick) kitFace(['props/Prop_Vent_Small'], f.P, f.n, { y: 0.3, off: 0.02, pre: FLAT_TO_WALL });
-  for (const f of outerFacets) if (!f.pick) lightOn(f);
-  labBack.forEach((f, i) => {
-    lightOn(f);
-    if (i % 2) kitFace(['props/Prop_Vent_Small'], f.P, f.n, { y: 0.3, off: 0.02, pre: FLAT_TO_WALL });
-  });
-  labSides.forEach((f, i) => {
-    lightOn(f);
-    if (i % 2) kitFace(['props/Prop_Vent_Small'], f.P, f.n, { y: 0.3, off: 0.02, pre: FLAT_TO_WALL });
-  });
+  const ventOn = (f) => kitFace(['props/Prop_Vent_Small'], f.P, f.n, { y: 0.3, off: 0.02, pre: FLAT_TO_WALL, tint: VENT });
+  const alt = (list) => list.forEach((f, i) => (i % 2 === 0 ? lightOn(f) : ventOn(f)));
+  innerFacets.forEach((f, i) => { if (i % 2 === 0) lightOn(f); });
+  alt(outerFacets.filter((f) => !f.pick));
+  alt(labBack); alt(labSides);
+
 
   // LCARS panels on the corridor's inner wall (facing the corridor).
   const onWall = (obj, a, r, y) => { const [X, Z] = pol(a, r); obj.position.set(X, y, Z); obj.rotation.y = a; group.add(obj); };
@@ -358,8 +374,8 @@ export function buildDeck(kit) {
   const tanks = [-1.8, 0, 1.8].map((x) => { const [X, Z] = lab.at(x, tankZ); return { x: X, z: Z }; });
   for (const t of tanks) {
     // Each tank stands on a kit plate (2 m square, a quarter of the kit's 4 m tile).
-    kitAt('platforms/Platform_Metal2', t.x, 0.004, t.z, lab.a, { sc: [0.5, 1, 0.5], tint: PLATE });
-    b.add(new THREE.CylinderGeometry(0.85, 0.85, 0.25, 24), kit.mats.panel, t.x, 0.125 + 0.004, t.z);
+    kitAt('platforms/Platform_Metal2', t.x, 0.01, t.z, lab.a, { sc: [0.5, 1, 0.5], tint: PLATE });
+    b.add(new THREE.CylinderGeometry(0.85, 0.85, 0.25, 24), kit.mats.panel, t.x, 0.125 + 0.01, t.z);
     b.add(new THREE.CylinderGeometry(0.72, 0.72, 2.5, 24), kit.mats.glass, t.x, 1.5, t.z);
     b.add(new THREE.CylinderGeometry(0.6, 0.6, 2.2, 20), M.algae, t.x, 1.3, t.z);
     b.add(new THREE.CylinderGeometry(0.8, 0.8, 0.12, 24), kit.mats.trim, t.x, 2.76, t.z);
@@ -391,7 +407,7 @@ export function buildDeck(kit) {
 
   // The water loop: three filter columns in a row (grit, algae, UV), labelled, with a pipe along their feet.
   const cols = [{ z: -2.6, name: 'GRIT' }, { z: -4.6, name: 'ALGAE' }, { z: -6.6, name: 'UV', uv: true }];
-  kitIn(lab, 'platforms/Platform_Metal', -4, 0.004, -4.6, 0, { tint: PLATE }); // the loop's plate (4 m)
+  kitIn(lab, 'platforms/Platform_Metal', -4, 0.01, -4.6, 0, { tint: PLATE }); // the loop's plate (4 m)
   for (const c of cols) {
     if (c.uv) {
       addIn(lab, new THREE.CylinderGeometry(0.42, 0.42, 2.3, 20), kit.mats.glass, -4, 1.15, c.z);
@@ -411,13 +427,14 @@ export function buildDeck(kit) {
   kitIn(lab, 'props/Prop_Computer', -5.0, 0, -1.6, Math.PI / 2);
   kitIn(lab, 'props/Prop_Crate4', 3.9, 0, -9.7, 0.2);
   kitIn(lab, 'props/Prop_Crate4', 4.0, 0, -8.2, -0.3);
-  kitIn(lab, 'props/Prop_Crate4', 3.9, 1.12, -9.7, 0.2); // a stack on the crate
   kitIn(lab, 'props/Prop_Barrel_Large', -5.0, 0, -6.6, 0);
   kitIn(lab, 'props/Prop_ItemHolder', 2.2, 0, -1.8, 0.3);
-  kitIn(lab, 'props/Prop_Cable_1', 1.2, 0, -2.4, 0.6);
+  // Two cables on the floor, as code tubes (the kit's cable is 2.6k triangles).
+  addIn(lab, new THREE.CylinderGeometry(0.03, 0.03, 1.6, 6).rotateZ(Math.PI / 2), M.labDark, 1.2, 0.03, -2.4, 0.6);
+  addIn(lab, new THREE.CylinderGeometry(0.03, 0.03, 1.1, 6).rotateZ(Math.PI / 2), M.labDark, 1.25, 0.03, -2.2, 0.6);
   kitFace(['props/Prop_AccessPoint'], pol(LAB.a - 0.12, LAB.r0), [Math.sin(LAB.a - 0.12), Math.cos(LAB.a - 0.12)], { y: 1.1, mode: 'min' });
   // A work table with screens, facing the door: our code-built console, on a plate.
-  kitIn(lab, 'platforms/Platform_Metal2', 3.0, 0.004, -3.4, 0, { sc: [0.5, 1, 0.5], tint: PLATE });
+  kitIn(lab, 'platforms/Platform_Metal2', 3.0, 0.01, -3.4, 0, { sc: [0.5, 1, 0.5], tint: PLATE });
   deskAt(lab, 3.0, -3.4, { screen: { title: 'WATER', seed: 6 } });
   // A map screen on the lab's back wall, beside the tanks (its face on the wall's inner face).
   onWall(kit.screen(1.2, 0.9, { title: 'O2', seed: 8, kind: 'map' }), LAB.a + 0.15, LAB.r0 + 0.04, 1.9);
@@ -425,25 +442,28 @@ export function buildDeck(kit) {
   // ---- HYDROPONICS: grow racks under pink grow strips, a walkway with a water channel, fruit trees, the console.
   const RACK_Z = -7.4; const RACK_LEN = 12; // the rows run from z -1.4 to -13.4
   const plantGeo = kit.own(new THREE.SphereGeometry(0.26, 6, 4).scale(1, 0.8, 1)); // a lettuce head
+  const cabbageGeo = kit.own(new THREE.SphereGeometry(0.24, 6, 4).scale(1, 0.5, 1)); // a flat cabbage (the second shape)
+  const postGeo = kit.own(new THREE.CylinderGeometry(0.06, 0.06, 3, 6)); // a rack's post: 6 sides, 0.12 m thick, 3 m up
   // The walkway's plates (4 m tiles, 4 m wide, the racks' aisle) under the water channel.
-  for (const z of [-3.4, -7.4, -11.4]) kitIn(hyd, 'platforms/Platform_Metal2', 0, 0.004, z, 0, { tint: PLATE });
+  for (const z of [-3.4, -7.4, -11.4]) kitIn(hyd, 'platforms/Platform_Metal2', 0, 0.01, z, 0, { tint: PLATE });
   // Teal guide lines along the walkway's edges (the kit's line decal, tinted).
-  for (const x of [-1.6, 1.6]) for (const z of [-3.4, -7.4, -11.4]) kitIn(hyd, 'decals/Decal_Line_Straight', x, 0.006, z, 0, { tint: PALETTE.teal });
+  for (const x of [-1.6, 1.6]) for (const z of [-3.4, -7.4, -11.4]) kitIn(hyd, 'decals/Decal_Line_Straight', x, 0.016, z, 0, { tint: PALETTE.teal });
   const RACKS = [-4.45, -2.55, 2.55, 4.45];
   for (const x of RACKS) {
     const [rx, rz] = hyd.at(x, RACK_Z);
     solids.push({ rect: [rx, rz, 1.1, RACK_LEN], rot: hyd.a });
-    // The frame: a round column at each corner (0.12 m thick, 3 m up), and the shelves (the kit's plates, 1.1 m wide).
-    for (const dx of [-0.5, 0.5]) for (const z of [-1.4, -13.4]) kitIn(hyd, 'columns/Column_Round', x + dx, 0, z, 0, { sc: [0.12, 0.6, 0.12] });
+    // The frame: a post at each corner (3 m up), and the shelves (the kit's plates, 1.1 m wide).
+    for (const dx of [-0.5, 0.5]) for (const z of [-1.4, -13.4]) addIn(hyd, postGeo, kit.mats.metal, x + dx, 1.5, z);
     for (const y of [0.55, 1.55, 2.55]) {
       for (const z of [-3.4, -7.4, -11.4]) kitIn(hyd, 'platforms/Platform_Metal', x, y, z, 0, { sc: [0.275, 1, 1] });
       boxIn(hyd, 0.5, 0.03, RACK_LEN, M.grow, x, y - 0.07, RACK_Z);    // grow strip under it
       for (const z of [-3.4, -7.4, -11.4]) kitIn(hyd, 'props/Prop_Light_Wide', x, y - 0.25, z, Math.PI / 2); // the kit's fixtures
-      for (let k = 0; k < 20; k++) {
+      // Plants every 0.9 m, in two shapes (a lettuce head, a flat cabbage), so the rows read at walk level.
+      for (let k = 0; k < 13; k++) {
         for (const dx of [-0.28, 0.28]) {
-          const [px, pz] = hyd.at(x + dx, -1.8 - k * 0.6);
+          const [px, pz] = hyd.at(x + dx, -1.8 - k * 0.9);
           const leaf = [M.leafA, M.leafB, M.leafC][(k + (dx > 0 ? 1 : 0) + Math.round(y * 10)) % 3];
-          b.add(plantGeo, leaf, px, y + 0.14, pz);
+          b.add((k + (dx > 0 ? 1 : 0)) % 2 ? cabbageGeo : plantGeo, leaf, px, y + 0.14, pz);
         }
       }
     }
@@ -461,8 +481,8 @@ export function buildDeck(kit) {
     solids.push(discIn(hyd, 0.5, x, z));
   }
   // Air: a fan on the floor at the far aisle, a vent in the ceiling over the walkway.
-  kitIn(hyd, 'props/Prop_Vent_Wide', 0, HYD.h - 0.06, -4.0, 0);
-  kitIn(hyd, 'props/Prop_Vent_Wide', 0, HYD.h - 0.06, -10.8, 0);
+  kitIn(hyd, 'props/Prop_Vent_Small', 0, HYD.h - 0.25, -4.0, 0, { tint: VENT });
+  kitIn(hyd, 'props/Prop_Vent_Small', 0, HYD.h - 0.25, -10.8, 0, { tint: VENT });
   // The planning console at the far end, with a map screen on the wall behind it.
   deskAt(hyd, 0, -15.0, { screen: { title: 'FARM', seed: 12, accent: PALETTE.teal } });
   place(kit.screen(2.4, 1.2, { title: 'PLAN', seed: 13, kind: 'map', accent: PALETTE.teal }), hyd, 0, 2.3, -15.96);
@@ -479,14 +499,19 @@ export function buildDeck(kit) {
   const up = ([x, z], y) => [x, y, z]; // (x, z) plus a height, as [x, y, z]
   const views = [
     { name: 'corridor', pos: up(pol(Math.PI - 0.12, 38.2), 1.6), look: up(pol(Math.PI - 0.7, 38.2), 1.4) },
-    { name: 'lab', pos: up(lab.at(0.4, -0.6), 1.7), look: up(lab.at(0, -9.5), 1.3) },
+    { name: 'lab', pos: up(lab.at(0, -2.2), 1.7), look: up(lab.at(0, -9.5), 1.3) },
     { name: 'tanks', pos: up(lab.at(0.5, -5.6), 1.5), look: up(lab.at(0, -9.4), 1.3) },
     { name: 'farm', pos: up(hyd.at(0.3, -1.2), 2.2), look: up(hyd.at(0, -15), 1.3) },
     { name: 'farmback', pos: up(hyd.at(0.2, -13.2), 1.6), look: up(hyd.at(0, -1), 1.4) },
     // From the corridor, looking into each room through its door.
-    { name: 'bayDoor', pos: up(pol(HYD.a, 39.55), 1.9), look: up(pol(HYD.a, 36.8), 2.7) },
+    { name: 'bayDoor', pos: up(pol(HYD.a, 38.4), 1.9), look: up(pol(HYD.a, 36.8), 2.7) },
     { name: 'labDoor', pos: up(pol(LAB.a, 39.45), 1.6), look: up(pol(LAB.a, 25), 1.4) },
   ];
+
+  // Two warm point lights, the deck's allowance (the rest is the emissive strips): the farm walkway, and the tanks.
+  for (const [f, x, y, z] of [[hyd, 0, 4.2, -7.4], [lab, 0, 3.2, -7]]) {
+    const [X, Z] = f.at(x, z); const pl = new THREE.PointLight(0xfff1e0, 2.5, 0, 1); pl.position.set(X, y, Z); group.add(pl);
+  }
 
   b.flush(group); // every static part above, one mesh per material
 
