@@ -254,6 +254,9 @@ export function buildDeck(kit) {
     { name: 'tanks', pos: up(lab.at(0.5, -5.6), 1.5), look: up(lab.at(0, -9.4), 1.3) },
     { name: 'farm', pos: up(hyd.at(0.3, -1.2), 2.2), look: up(hyd.at(0, -15), 1.3) },
     { name: 'farmback', pos: up(hyd.at(0.2, -13.2), 1.6), look: up(hyd.at(0, -1), 1.4) },
+    // From the corridor, looking into each room through its door.
+    { name: 'bayDoor', pos: up(pol(HYD.a + 0.3, 38.3), 1.6), look: up(pol(HYD.a - 0.15, 30), 1.5) },
+    { name: 'labDoor', pos: up(pol(LAB.a - 0.3, 38.3), 1.6), look: up(pol(LAB.a + 0.02, 30), 1.4) },
   ];
 
   b.flush(group); // every static part above, one mesh per material
