@@ -1,7 +1,7 @@
 // Chapter 5, Part A: leave Jupiter and fly to Saturn.
 // See missions.js for the step format.
 import { BODIES } from '../contracts.js';
-import { fuelSafetyNet, isCaptured } from '../acts/util.js';
+import { fuelSafetyNet, isCaptured, orbitFor } from '../acts/util.js';
 import { playPolePass } from './saturnPole.js';
 import { t } from '../level.js';
 import { lineUpOnce } from './lineup.js';
@@ -10,7 +10,11 @@ import { LESSON_5A, LESSON_5AA } from '../../lesson/lessons/ch5.js';
 import { buildRingRun } from './ringRun.js';
 import { LEVELS } from './ringRunLogic.js';
 
-/** The ring run, as many goes as she likes; its water is kept in the stats. */
+/**
+ * The ring run: each level has an ice and rock goal (lead 2026-10-08).
+ * Short of it she plays again (she may pick an easier level); once it is
+ * met she can fly on or play again. Its water is kept in the stats.
+ */
 async function playRingRun(game) {
   const { hud } = game;
   let level = game.mode?.id === 'hard' ? 'medium' : 'easy';
@@ -18,8 +22,11 @@ async function playRingRun(game) {
     const pick = await hud.choose({
       eyebrow: t('Ring run', 'Ring run'),
       title: t('How thick is the ice?', 'How much ice?'),
-      body: t('Arrows or WASD steer, Space fires. Blast the white chunks for water; dodge the grey boulders.', 'Arrows to steer. Space to shoot. Shoot white ice. Dodge grey rocks.'),
-      options: Object.values(LEVELS).map((L) => ({ id: L.id, label: L.label, blurb: L.blurb, tag: L.id === level ? t('Suggested', 'Try this') : '' })),
+      body: t('Arrows or WASD steer, Space fires. Blast white ice for water and grey rock for metal and stone. Big rocks take a few hits.', 'Arrows to steer. Space to shoot. Shoot white ice and grey rock.'),
+      options: Object.values(LEVELS).map((L) => ({
+        id: L.id, label: L.label, tag: L.id === level ? t('Suggested', 'Try this') : '',
+        blurb: `${L.blurb} ${t(`Goal: ${L.goal.ice} ice, ${L.goal.rock} rock.`, `Get ${L.goal.ice} ice, ${L.goal.rock} rock.`)}`,
+      })),
       current: level,
     });
     level = pick || level;
@@ -28,10 +35,18 @@ async function playRingRun(game) {
     st.water = (st.water || 0) + res.water;
     st.ringRun = { ...(st.ringRun || {}), [level]: Math.max(res.water, st.ringRun?.[level] || 0) };
     game.missions?.save();
+    if (!res.met) {
+      await hud.showFact({
+        title: t('Not enough yet!', 'Not enough yet!'),
+        body: t(`You got ${res.ice} of ${res.goal.ice} ice and ${res.rock} of ${res.goal.rock} rock. Fly the ring again: line up on a chunk before you fire. You can pick an easier level too.`,
+          `You got ${res.ice} of ${res.goal.ice} ice and ${res.rock} of ${res.goal.rock} rock. Try again!`),
+      });
+      continue;
+    }
     await hud.showFact({
-      title: t(`Out of the ice! 💧 ${res.water} water`, `You made it! 💧 ${res.water} water`),
-      body: t(`You blasted ${res.blasted} chunks of ice into ${res.water} water points for the trip, and bumped into ${res.bumps}. In real rings the ice is much more spread out: chunks are usually metres apart. We packed them close to make the game.`,
-        `You got ${res.water} water from ${res.blasted} chunks of ice! Real rings have more space between the ice. We put it close for the game.`),
+      title: t(`Goal reached! 🧊 ${res.ice} ice, 🪨 ${res.rock} rock`, `You did it! 🧊 ${res.ice} ice, 🪨 ${res.rock} rock`),
+      body: t(`Your ice makes ${res.water} water points for the trip, and the rock is metal and stone for repairs. You bumped into ${res.bumps}. In real rings the chunks are much more spread out, usually metres apart: we packed them close to make the game.`,
+        `Your ice makes ${res.water} water! The rock is for fixing the ship. Real rings have more space between the chunks.`),
     });
     const again = await hud.choose({
       title: t('Another go?', 'Play again?'),
@@ -97,7 +112,7 @@ export function partASteps(game) {
         return game.ship.soi === 'saturn' || (!!c && c.body === 'saturn' && !c.retro && c.dist < BODIES.saturn.soi * 0.6);
       },
       // On course: a long coast to think about the planet ahead.
-      beat: 'c5SaturnDensity',
+      beat: 'c5SaturnSize',
     },
     {
       id: 'c5_saturn_approach', act: 1,
@@ -124,7 +139,12 @@ export function partASteps(game) {
         fuelSafetyNet(game);
         return game.ship.soi === 'saturn' && isCaptured(game);
       },
-      after() { hud.toast(t('Saturn has you! Look at those rings.', 'You’re going around Saturn! Look at the rings!'), { kind: 'good', ms: 3600 }); },
+      async after() {
+        hud.toast(t('Saturn has you! Enjoy a lap: look at those rings.', 'You’re going around Saturn! Look at the rings!'), { kind: 'good', ms: 4200 });
+        // A calm lap before the pole (lead 2026-10-08): 20 s of orbit, or
+        // one whole lap if that is quicker.
+        await orbitFor(game, 20);
+      },
     },
     {
       id: 'c5_hexagon', act: 1,
@@ -156,7 +176,7 @@ export function partASteps(game) {
     {
       id: 'c5_ring_run', act: 1,
       title: t('Ring run', 'Ring run'),
-      objective: t('Fly through the rings: dodge the boulders and blast ice for water.', 'Fly through the rings! Shoot the ice for water.'),
+      objective: t('Fly through the rings: blast ice and rock until you have the goal, and dodge what you can’t break in time.', 'Fly through the rings! Shoot ice and rock.'),
       markers: ['saturn'],
       async enter() {
         await hud.showDialogue([

@@ -20,6 +20,8 @@
 //   kit.console(x, z, ry, { w, screen })    a console desk with a screen: { group, screen, solid }
 //   kit.starWindow(w, h, { speed })         stars outside, drifting as the ring turns: { mesh, update(t) }
 //   kit.lamp(color)                         a small status lamp (the shell recolours it)
+//   kit.models                              the loaded model kits (models.js); a deck lists the
+//                                           pieces it uses in `export const MODELS = [...]`
 //   kit.dispose()
 //
 // Lighting rule (issue d, "too strong"): the decks get their look from
@@ -110,7 +112,7 @@ function starCanvas(seed = 3) {
   return tex;
 }
 
-export function createKit() {
+export function createKit({ models = null } = {}) {
   const owned = []; // every geometry, material and texture made here, for dispose()
   const own = (x) => { owned.push(x); return x; };
   const mats = {
@@ -308,6 +310,8 @@ export function createKit() {
 
   return {
     mats, batch, wall, wallArc, floor, ceiling, screen, sign, door, console: consoleDesk, starWindow, lamp, glow: (c, k) => own(glow(c, k)), own,
+    /** The sci-fi model kits (models.js), loaded before the decks are built: kit.models.add(batch, name, x, y, z, ry, s). */
+    models,
     dispose() { for (const x of owned) x.dispose?.(); for (const m of Object.values(mats)) m.dispose?.(); },
   };
 }

@@ -4,29 +4,29 @@
 
 /** @type {Object<string, import('../questions.space.js').SpaceQuestion>} */
 export const CH5_QUESTIONS = {
-  c5_saturn_density: {
-    id: 'c5_saturn_density',
+  c5_saturn_size: {
+    id: 'c5_saturn_size',
     type: 'choice',
     act: 1,
-    beat: 'c5SaturnDensity',
-    title: 'A planet in the bathtub',
-    subject: 'Density',
+    beat: 'c5SaturnSize',
+    title: 'Earths in a row',
+    subject: 'Dividing big numbers',
     difficulty: 'Level 4',
     prompt:
-      'Saturn is 95 times as heavy as Earth, but it is so big that about 760 Earths would fit inside it. ' +
-      'If you had a bathtub big enough to hold Saturn, what would Saturn do in the water?',
+      'Saturn is about 117,000 km wide. Earth is about 13,000 km wide. ' +
+      'If you lined Earths up side by side across Saturn, how many would fit?',
     choices: [
-      { text: 'Float: it is lighter than the same amount of water', correct: true },
-      { text: 'Sink: it is 95 times heavier than Earth' },
-      { text: 'Sink slowly, like a stone in honey' },
-      { text: 'Dissolve, like sugar' },
+      { text: 'About 9', correct: true },
+      { text: 'About 90' },
+      { text: 'About 900' },
+      { text: 'About 2' },
     ],
     hint:
-      'Heavy is not the same as dense. Spread 95 Earths of stuff through room for 760 Earths: is each spoonful heavy or light?',
+      'Take away the three zeros from both: 117 and 13. How many 13s make 117? Try 13 x 9.',
     parentHint:
-      'Density = mass / volume. 95 / 760 is about 1/8 of Earth’s density, and Earth is about 5.5 times as dense as water, so Saturn comes out at about 0.7 of water. It would float.',
+      '117,000 / 13,000 = 117 / 13 = 9, because 13 x 9 = 117. (Saturn is really about 116,000-120,000 km wide, Earth 12,742 km: a bit over 9.)',
     success:
-      'Right! Saturn is mostly hydrogen and helium, the two lightest gases, so each bucketful of Saturn is lighter than a bucketful of water. It would float!',
+      'Right! About 9 Earths in a row reach across Saturn. And it is round, so filling it up would take over 700 Earths!',
     doneMessage: 'Saturn ahead! Keep coasting toward the rings.',
     reward: { science: 10 },
   },

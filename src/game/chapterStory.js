@@ -20,6 +20,7 @@
 //   await story.outro({ title, line, focus, next });
 import * as THREE from 'three';
 import { loadProfile, SEEN_PREFIX } from '../launcher/profile.js';
+import { keepUnlock } from '../launcher/profile.js';
 
 const smooth = (x) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c); };
 const easeInOut = (x) => { const c = Math.min(1, Math.max(0, x)); return c < 0.5 ? 4 * c * c * c : 1 - (-2 * c + 2) ** 3 / 2; };
@@ -292,7 +293,7 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
         const done = (how) => {
           removeEventListener('keydown', onKey, true);
           end();
-          if (how === 'next' && next) location.href = next.href;
+          if (how === 'next' && next) location.href = keepUnlock(next.href);
           resolve(how);
         };
         const onKey = (e) => {

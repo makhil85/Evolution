@@ -5,7 +5,7 @@
 // orbits that leave the Sun for good, so she brakes into orbit at each one,
 // takes a look, and leaves again with the next planet lined up (lineup.js).
 import { BODIES } from '../contracts.js';
-import { fuelSafetyNet, isCaptured } from '../acts/util.js';
+import { fuelSafetyNet, isCaptured, orbitFor } from '../acts/util.js';
 import { t } from '../level.js';
 import { lineUpOnce } from './lineup.js';
 import { lessonOnce } from '../../lesson/card.js';
@@ -104,6 +104,8 @@ export function partBSteps(game) {
       markers: ['uranus'],
       async enter() {
         hud.toast(t('Uranus has you! Look how it is tipped right over.', 'You’re going around Uranus! It is lying on its side!'), { kind: 'good', ms: 3600 });
+        // Time to look before the fact and the question (lead 2026-10-08).
+        await orbitFor(game, 25, { lap: false });
         await hud.showFact({
           title: t('A planet lying on its side', 'A planet on its side'),
           body: t('Most planets spin standing up, like a top. Uranus spins lying on its side, so it rolls round the Sun like a ball. For part of its long year one pole points straight at the Sun, and the other pole is in the dark the whole time.',

@@ -4,7 +4,7 @@
 // followed by its question (questions.partQuests.js). Which quests are done has
 // its own save key, like Part B's, so a reload doesn't make her redo them.
 import { t, LEVEL } from '../level.js';
-import { createInteriorScene } from './interior/ship.js';
+import { createInteriorScene, preloadInterior } from './interior/ship.js';
 import { playQuest } from './quests.js';
 import { QUESTS } from './questsLogic.js';
 import { QUEST_BEAT } from './questions.partQuests.js';
@@ -34,7 +34,9 @@ export function partQuestsSteps(game) {
           { who: who('biologist'), text: t('And the farm. No bees out here, so we pollinate the flowers by hand.', 'The farm last. No bees out here: we do the flowers by hand!') },
         ]);
         const done = new Set(loadDone());
+        const models = await preloadInterior();
         await game.runScene(createInteriorScene(game, {
+          models,
           spots: QUESTS,
           done: [...done],
           async onStation(id) {

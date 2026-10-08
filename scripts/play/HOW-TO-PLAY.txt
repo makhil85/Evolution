@@ -14,5 +14,6 @@ It needs Node.js (free, from https://nodejs.org), or Python. If neither
 is installed, the window says so.
 
 Saves are kept in the browser on this computer.
-Grown-ups: open the game with ?unlock=all at the end of the address to
-unlock every chapter and get Skip / Jump buttons (?unlock=off to undo).
+Grown-ups: add ?unlock=all to the end of the address (for example
+http://localhost:8173/?unlock=all) for check mode: every chapter
+unlocked, with Skip and Jump buttons. Without it the game plays normally.

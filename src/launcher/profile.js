@@ -168,30 +168,44 @@ export function loadLook() {
  * chapter 1 must not shut chapter 3 behind you.
  */
 /**
- * Grown-up unlock: every chapter open, for checking a later chapter without
- * playing the earlier ones. A child using the menu never sees it; it's
- * switched on by opening the launcher with ?unlock=all (and off again with
- * ?unlock=off), and remembered in localStorage so it survives a reload.
- * "Start everything over" clears it too.
+ * Grown-up unlock (check mode): every chapter open, Skip and Jump buttons.
+ * Lead 2026-10-08: normal play is the default; check mode is ON ONLY while
+ * the address has ?unlock=all. Nothing is remembered: the old remembered
+ * setting (UNLOCK_KEY) is cleared on every page load. While it is on, links
+ * between the game's pages carry ?unlock=all along (installUnlockLinks).
  */
 export const UNLOCK_KEY = 'rocket_village_unlock_all';
+
+/** Is check mode on for this page (?unlock=all in the address)? */
+export function unlockAll() {
+  try { localStorage.removeItem(UNLOCK_KEY); } catch { /* private mode */ }
+  try { return new URLSearchParams(location.search).get('unlock') === 'all'; } catch { return false; }
+}
+
+/** `href` with ?unlock=all added while check mode is on (a game page link). */
+export function keepUnlock(href) {
+  if (!unlockAll() || !/\.html(\?|#|$)/.test(href) || /[?&]unlock=/.test(href)) return href;
+  const [path, hash = ''] = href.split('#');
+  return `${path}${path.includes('?') ? '&' : '?'}unlock=all${hash ? `#${hash}` : ''}`;
+}
+
+/** Once per page: clicks on links to the game's pages keep ?unlock=all. */
+function installUnlockLinks() {
+  if (typeof document === 'undefined' || !unlockAll()) return;
+  document.addEventListener('click', (e) => {
+    const a = e.target?.closest?.('a[href]');
+    if (!a || a.origin !== location.origin) return;
+    const kept = keepUnlock(a.getAttribute('href'));
+    if (kept !== a.getAttribute('href')) a.setAttribute('href', kept);
+  }, true);
+}
+installUnlockLinks();
 
 /** Prefix of the per-chapter "seen the opening" flags (chapterStory.js). */
 export const SEEN_PREFIX = 'rocket_village_seen_';
 
 /** Prefix of the launcher's "this chapter was finished once" flags. */
 export const DONE_PREFIX = 'rocket_village_done_';
-
-function unlockAll() {
-  try {
-    const q = new URLSearchParams(location.search).get('unlock');
-    if (q === 'all') localStorage.setItem(UNLOCK_KEY, '1');
-    if (q === 'off') localStorage.removeItem(UNLOCK_KEY);
-    return localStorage.getItem(UNLOCK_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
 
 export function chapterStatus() {
   // Each difficulty keeps its OWN saves and its OWN copies of chapters 1 and 2,

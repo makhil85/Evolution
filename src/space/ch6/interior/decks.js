@@ -14,16 +14,22 @@
 //     update(dt, t, ctx)           ctx = { herX, herZ }
 //     dispose()
 //   }
+//   export const MODELS = [...]     the model pieces the deck uses (models.js names),
+//                                  loaded before it is built: kit.models.add(batch, name, ...)
 //
 // The lift: every deck's lift door is at the deck's origin, the lift car
 // behind it (z from -2.4 to 0, x from -1.2 to 1.2; the shell builds it), and
 // she steps out towards +Z. A deck must give a floor in front of the door
 // (at least x -1.5..1.5, z 0..3) and its own walls along z = 0 beside the
 // door (|x| >= 1.3), and keep the car's box clear.
-import { buildDeck as bridge } from './bridge.js';
-import { buildDeck as lifeDeck } from './lifeDeck.js';
-import { buildDeck as engineering } from './engineering.js';
-import { buildDeck as crewDeck } from './crewDeck.js';
+import * as bridgeMod from './bridge.js';
+import * as lifeMod from './lifeDeck.js';
+import * as engMod from './engineering.js';
+import * as crewMod from './crewDeck.js';
+const bridge = bridgeMod.buildDeck; const lifeDeck = lifeMod.buildDeck; const engineering = engMod.buildDeck; const crewDeck = crewMod.buildDeck;
+
+/** Every model piece the decks use (each deck module may export MODELS = ['walls/WallAstra_Straight', ...]). */
+export const DECK_MODELS = Object.freeze([...new Set([bridgeMod, lifeMod, engMod, crewMod].flatMap((m) => m.MODELS || []))]);
 
 export const DECKS = Object.freeze([
   { id: 'bridge', n: 1, name: ['Bridge', 'Bridge'], build: bridge, stations: ['shield'], quests: ['message'] },
