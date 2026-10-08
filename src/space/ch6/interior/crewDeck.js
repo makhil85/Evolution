@@ -246,7 +246,7 @@ export function buildDeck(kit) {
   b.add(new RoundedBoxGeometry(1.4, 0.1, 1.2, 2, 0.04), cushion, -5.8, 0.54, BED);         // blanket
   b.add(new RoundedBoxGeometry(0.42, 0.14, 0.8, 2, 0.06), cream, -7.1, 0.56, BED);         // pillow
   solids.push({ rect: [-6.5, BED, 2.2, 1.3] });
-  wallLight(CAB_X, BED, [1, 0], 2.9); // a reading light over the bed
+  wallLight(CAB_X, BED, [1, 0], 2.3); // a reading light over the bed (at 2.9 it read as a block hanging from the ceiling)
   // A rug by the bed (flat, lilac).
   b.add(new RoundedBoxGeometry(1.8, 0.02, 1.5, 2, 0.008), mats.accentLilac, -4.2, 0.01, BED);
   // A shelf on the near wall with a small rocket on it.

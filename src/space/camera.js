@@ -54,6 +54,7 @@ export function createFlightCamera({ camera, baseFov }) {
 
   let smoothedYaw = null;
   let shake = 0;
+  let shakeT = 0;         // the shake's clock (seconds while it runs)
   let fovKick = 0;
   const look = new THREE.Vector3();
 
@@ -137,8 +138,10 @@ export function createFlightCamera({ camera, baseFov }) {
       look.lerp(tmpLook, 1 - Math.exp(-dt * 10));
       camera.position.copy(tmpPos);
       if (shake > 0.0005) {
-        camera.position.x += (Math.random() - 0.5) * shake * distance * 0.05;
-        camera.position.y += (Math.random() - 0.5) * shake * distance * 0.05;
+        // A smooth sway by time, not per-frame noise: it looks the same at any frame rate.
+        shakeT += dt;
+        camera.position.x += Math.sin(shakeT * 67) * shake * distance * 0.025;
+        camera.position.y += Math.cos(shakeT * 53) * shake * distance * 0.025;
         shake *= Math.exp(-dt * 5);
       }
       camera.up.copy(UP);

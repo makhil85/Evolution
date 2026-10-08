@@ -29,6 +29,8 @@ import { toonRamp } from '../../../game/toonPipeline.js';
 import { PALETTE } from './kit.js';
 
 // The kit pieces this deck uses (models.js names; loaded before the deck is built).
+// Inlays and plates lie 2-9 mm above the floor: this offset makes them win the depth test there (no flicker).
+const FLUSH = { polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 };
 export const MODELS = [
   'walls/WallAstra_Straight', 'walls/WallAstra_Straight_Window', 'walls/WallWindow_Straight',
   'walls/TopPlastic_Straight', 'walls/BottomMetal_Straight',
@@ -125,7 +127,7 @@ export function buildDeck(kit) {
     if (!tints.has(key)) {
       const m = mat.clone();
       if (mat.name === 'M_Black') m.color.set(c); else m.color.multiply(new THREE.Color(c)); // a multiply cannot lighten a black
-      tints.set(key, kit.own(m));
+      tints.set(key, kit.own(Object.assign(m, FLUSH)));
     }
     return tints.get(key);
   };
@@ -519,7 +521,7 @@ export function buildDeck(kit) {
     { name: 'corridor', pos: up(pol(Math.PI - 0.12, 38.2), 1.6), look: up(pol(Math.PI - 0.7, 38.2), 1.4) },
     { name: 'lab', pos: up(lab.at(0, -2.2), 1.7), look: up(lab.at(0, -9.5), 1.3) },
     { name: 'tanks', pos: up(lab.at(0.5, -5.6), 1.5), look: up(lab.at(0, -9.4), 1.3) },
-    { name: 'farm', pos: up(hyd.at(0.3, -1.2), 2.2), look: up(hyd.at(0, -15), 1.3) },
+    { name: 'farm', pos: up(hyd.at(0.3, -2.6), 2.2), look: up(hyd.at(0, -15), 1.3) }, // 1.4 m in from the door (the lab view had a dark slab top left, by the door)
     { name: 'farmback', pos: up(hyd.at(0.2, -13.2), 1.6), look: up(hyd.at(0, -1), 1.4) },
     // From the corridor, looking into each room through its door.
     { name: 'bayDoor', pos: up(pol(HYD.a, 38.4), 1.9), look: up(pol(HYD.a, 36.8), 2.7) },

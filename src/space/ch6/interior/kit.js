@@ -27,8 +27,10 @@
 // Lighting rule (issue d, "too strong"): the decks get their look from
 // emissive strips and screens, not from strong lights. The shell adds one
 // soft hemisphere light; a deck may add at most two point lights of
-// intensity <= 8. Anything meant to glow uses kit.glow(color, k) with k
-// 1.3-2 (the game's bloom starts at 1.25 linear); plain walls never bloom.
+// intensity <= 8. Anything meant to glow uses kit.glow(color, k). Bloom starts
+// at a linear luminance of 1.25, and a pale colour needs more than k 1.3 to
+// reach it: the coves (glow(0xfff0d8, 1.3) = 1.15, glow(0xcfe6ff, 1.3) = 1.0)
+// sit under it, so they read as lit and never bloom. Plain walls never bloom.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { toonRamp } from '../../../game/toonPipeline.js';

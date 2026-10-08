@@ -79,6 +79,9 @@ try {
       const [set, name] = n.split('/');
       assert.ok((man[set] || []).includes(name), `missing model ${n}`);
     }
+    // And the kit holds nothing a deck does not use (the import keeps only those).
+    const listed = Object.entries(man).flatMap(([set, names]) => names.map((name) => `${set}/${name}`));
+    assert.deepEqual(listed.sort(), [...DECK_MODELS].sort());
   });
   ok('every station is on exactly one deck', () => {
     for (const s of STATIONS) assert.equal(DECKS.filter((d) => d.stations.includes(s.id)).length, 1, s.id);

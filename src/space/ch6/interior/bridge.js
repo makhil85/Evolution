@@ -22,6 +22,8 @@ import { PALETTE } from './kit.js';
 import { toonRamp } from '../../../game/toonPipeline.js';
 
 // The kit pieces this deck uses (models.js names; loaded before the deck is built).
+// Inlays and decals lie 2-9 mm above the floor: this offset makes them win the depth test there (no flicker).
+const FLUSH = { polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 };
 export const MODELS = [
   'walls/WallAstra_Straight', 'walls/WallBand_Straight', 'walls/TopPlastic_Straight', 'walls/BottomMetal_Straight',
   'columns/Column_Round',
@@ -107,7 +109,7 @@ export function buildDeck(kit) {
   const glowBlue = kit.glow(PALETTE.blue, 1.3);
   const glowCool = kit.glow(0xcfe6ff, 1.8);
   const teal = toon(PALETTE.teal);
-  const inlay = toon(0x6f5f8c);
+  const inlay = toon(0x6f5f8c, FLUSH);
   // Ceilings are seen from below, where the cool sky light never reaches; this lighter stuff reads better.
   const ceilMat = toon(0xd9d2c6, { emissive: 0x3a3630 });
   // The dome: cooler and brighter than the warm ceilings, so it reads as a dome.
@@ -138,7 +140,7 @@ export function buildDeck(kit) {
   const tinted = (mat, c) => {
     if (!c) return mat;
     const key = `${mat.uuid}|${c}`;
-    if (!tints.has(key)) { const m = mat.clone(); m.color.multiply(new THREE.Color(c)); tints.set(key, kit.own(m)); }
+    if (!tints.has(key)) { const m = mat.clone(); m.color.multiply(new THREE.Color(c)); tints.set(key, kit.own(Object.assign(m, FLUSH))); }
     return tints.get(key);
   };
   /** A free piece, its middle (x, z) on the floor at (x, z) with its foot at y, turned ry. Without the kit, a proxy box [w, h, d, mat]. */
@@ -235,7 +237,7 @@ export function buildDeck(kit) {
     for (let q = 0; q < 4; q++) {
       const ry = (q * Math.PI) / 2;
       const c = [2 * (Math.cos(ry) + Math.sin(ry)), 2 * (Math.cos(ry) - Math.sin(ry))];
-      for (const { g, mat } of partsOf('platforms/Platform_Metal_Curve')) bb.add(g, mat, -c[0], 0.004, -c[1], ry);
+      for (const { g, mat } of partsOf('platforms/Platform_Metal_Curve')) bb.add(g, tinted(mat, 0xffffff), -c[0], 0.004, -c[1], ry); // white: a copy with FLUSH
     }
   }
 
@@ -465,7 +467,7 @@ export function buildDeck(kit) {
     { name: 'screen', pos: at(0, 2.3, -2.4), look: at(0, 1.7, 9) },
     { name: 'back', pos: at(0, 1.6, 7.6), look: at(0, 1.1, -7) },
     { name: 'shield', pos: at(-0.9, 1.9, -3.4), look: at(SHIELD_AT[0], 1.0, SHIELD_AT[1]) }, // from the side: the beacon stands on the spot
-    { name: 'bay', pos: at(3.0, 1.6, -3.0), look: at(14, 1.4, 0.5) },
+    { name: 'bay', pos: at(3.1, 1.6, -4.7), look: at(14, 1.4, 0.5) }, // off the dish (it stands 1.2 m from the old spot)
     { name: 'ring', pos: at(6.0, 2.3, -5.6), look: at(-3, 1.0, 3) },
     { name: 'walk', pos: at(-1.0, 1.6, -5.8), look: at(0.5, 1.4, 9) }, // her eye level, on the way in
     { name: 'dish', pos: at(1.2, 1.6, -1.0), look: at(DISH_AT[0], 1.1, DISH_AT[1]) },

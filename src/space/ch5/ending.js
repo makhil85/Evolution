@@ -57,7 +57,7 @@ export function buildRockShip() {
   const rock = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 }));
   g.add(rock);
   // Hangar door (front, -Z) and a few lit windows.
-  const door = new THREE.Mesh(new THREE.PlaneGeometry(9, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffd27a).multiplyScalar(1.5), transparent: true, opacity: 0.2, side: THREE.DoubleSide }));
+  const door = new THREE.Mesh(new THREE.PlaneGeometry(9, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffd27a).multiplyScalar(1.5), transparent: true, opacity: 0.2, depthWrite: false, side: THREE.DoubleSide }));
   door.position.set(0, 2, -R * 1.25 - 0.5);
   door.rotation.y = Math.PI;
   g.add(door);
@@ -258,6 +258,7 @@ export function playCh5Ending(game, { eyebrow = lvl('Engine half', 'Engine half'
   const spVel = Array.from({ length: SPARKS }, () => new THREE.Vector3());
   const spLife = new Float32Array(SPARKS);
   let spNext = 0;
+  const spRand = new THREE.Vector3();  // reused for each spark's random kick (no per-spark allocation)
   const spGeo = new THREE.BufferGeometry();
   spGeo.setAttribute('position', new THREE.BufferAttribute(spPos, 3));
   spGeo.setAttribute('color', new THREE.BufferAttribute(spCol, 3));
@@ -267,7 +268,7 @@ export function playCh5Ending(game, { eyebrow = lvl('Engine half', 'Engine half'
   const spark = (at0, dir) => {
     const i = spNext; spNext = (spNext + 1) % SPARKS;
     spPos.set([at0.x, at0.y, at0.z], i * 3);
-    spVel[i].copy(dir).multiplyScalar(1.2 + Math.random()).addScaledVector(new THREE.Vector3().randomDirection(), 0.6);
+    spVel[i].copy(dir).multiplyScalar(1.2 + Math.random()).addScaledVector(spRand.randomDirection(), 0.6);
     spLife[i] = 0.35 + Math.random() * 0.3;
   };
   const updateSparks = (dt) => {
