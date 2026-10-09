@@ -9,7 +9,7 @@
     "preview": "vite preview --host 0.0.0.0",
     "answer-key": "node scripts/answer-key.mjs",
     "reading": "node scripts/check-reading.mjs",
-    "test": "node scripts/test-space-physics.mjs && node scripts/test-space-questions.mjs && node scripts/test-play.mjs && node scripts/test-science.mjs && node scripts/test-city.mjs && node scripts/test-ch3-hunt.mjs && node scripts/test-lessons.mjs && node scripts/test-ch5-flight.mjs && node scripts/test-ch5-games.mjs && node scripts/test-ch6-route.mjs && node scripts/test-ch6-interior.mjs && node scripts/test-ch6-quests.mjs && node scripts/test-minimap.mjs && node scripts/test-flight-asks.mjs && node scripts/test-ch7.mjs && node scripts/test-ch7-lens.mjs",
+    "test": "node scripts/test-space-physics.mjs && node scripts/test-space-questions.mjs && node scripts/test-play.mjs && node scripts/test-science.mjs && node scripts/test-city.mjs && node scripts/test-ch3-hunt.mjs && node scripts/test-lessons.mjs && node scripts/test-ch5-flight.mjs && node scripts/test-ch5-games.mjs && node scripts/test-ch6-route.mjs && node scripts/test-ch6-interior.mjs && node scripts/test-ch6-quests.mjs && node scripts/test-minimap.mjs && node scripts/test-flight-asks.mjs && node scripts/test-ch7.mjs && node scripts/test-ch7-voyage.mjs && node scripts/test-ch7-jump.mjs && node scripts/test-ch7-lens.mjs",
     "package": "vite build && node scripts/package.mjs"
   },
   "dependencies": {
