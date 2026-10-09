@@ -74,8 +74,8 @@ const LEVEL_1 = {
     {
       id: 'mill',
       at: { x: 16, z: 14.6 }, radius: 4.6,
-      clue: 'Clue 3: Turn so the river is in front of you. Now walk far to your RIGHT along the river. Find a mill with a big wheel in the water.',
-      found: 'The water wheel is turning. You found the mill!',
+      clue: 'Clue 3: Turn so the river is in front of you. Now walk far to your RIGHT along the river. Find the little power station with a big wheel in the water.',
+      found: 'The water wheel is turning. You found the power station!',
     },
     {
       id: 'home',

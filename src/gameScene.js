@@ -880,7 +880,7 @@ function tick(dt, now = performance.now()) {
     const walkBack = () => {
       launch.reset();
       window.__freezeCamera = false;
-      hud?.toast(`${heroName()} walks back to the village.`, 'info');
+      hud?.toast(`${heroName()} walks back into town.`, 'info');
     };
     // The chapter's ending, over the rocket up in the sky: confetti and the
     // "Chapter 3 complete" card pointing at Chapter 4.
