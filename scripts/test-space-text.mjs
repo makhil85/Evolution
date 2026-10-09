@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 // The Chapter 4-7 HUD's words for the child (src/space/hud/hud.js), run headless
 // through Vite's loader with a stub DOM and a fake clock:
 //   - a toast stays up for readMs(text) (5-10 s, src/play/readTime.js) even when
@@ -53,6 +54,7 @@ class FakeNode {
   get innerHTML() { return ''; }
   appendChild(c) { this.children.push(c); c.parentNode = this; return c; }
   append(...nodes) { for (const n of nodes) this.appendChild(typeof n === 'string' ? new TextNode(n) : n); }
+  replaceChildren(...nodes) { this.children = []; this._text = ''; this.append(...nodes); }
   insertBefore(c) { return this.appendChild(c); }
   remove() { if (this.parentNode) this.parentNode.children = this.parentNode.children.filter((c) => c !== this); }
   setAttribute(k, v) { this.attrs[k] = String(v); }
@@ -100,8 +102,9 @@ globalThis.localStorage = {
 
 const { createServer } = await import('vite');
 const vite = await createServer({ root: process.cwd(), server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
-const { readMs, needsClick } = await vite.ssrLoadModule('/src/play/readTime.js');
+const { readMs, needsClick, READ_MIN_MS } = await vite.ssrLoadModule('/src/play/readTime.js');
 const { createHud } = await vite.ssrLoadModule('/src/space/hud/hud.js');
+const { paintToggle } = await vite.ssrLoadModule('/src/space/hud/toggleBar.js');
 
 // --- a fake clock: timers run only when the test advances it ----------------
 // (Vite needs the real timers to start, so they are swapped in after it loads.)
@@ -188,6 +191,7 @@ const LONG = 'Bees carry pollen from flower to flower, and that is how seeds and
   check('the card carries the whole text', hud._modalHost.card.textContent.includes(LONG.slice(0, 40)) && hud._modalHost.card.textContent.includes(LONG.slice(-30)));
   advance(60000);
   check('the card stays up until she clicks (a minute later it is still there)', cardOpen());
+  advance(READ_MIN_MS);
   okButton().click();
   await flush();
   check('OK closes the card and un-pauses (ui-modal false)', !cardOpen() && emittedModal().at(-1) === false);
@@ -197,6 +201,7 @@ advance(11000);
   hud.toast(LONG, { kind: 'info' });
   await flush();
   check('a second long toast opens its own card', cardOpen());
+  advance(READ_MIN_MS);
   hud._modalHost.backdrop.dispatch('keydown', { key: 'Enter' });
   await flush();
   check('Enter closes the card', !cardOpen() && emittedModal().at(-1) === false);
@@ -205,6 +210,7 @@ advance(11000);
 {
   hud.toast(LONG, { kind: 'info' });
   await flush();
+  advance(READ_MIN_MS);
   hud._modalHost.backdrop.dispatch('keydown', { key: ' ' });
   await flush();
   check('Space closes the card', !cardOpen());
@@ -213,6 +219,7 @@ advance(11000);
 {
   hud.toast(LONG, { kind: 'info' });
   await flush();
+  advance(READ_MIN_MS);
   hud._modalHost.backdrop.dispatch('keydown', { key: 'Escape' });
   await flush();
   check('Escape closes the card', !cardOpen());
@@ -225,6 +232,7 @@ advance(11000);
   hud.toast('Coast there: the Moon is next.', { kind: 'info' });
   advance(3000);
   check('a message while a card is up waits for the card', hud._toasts.length === 0);
+  advance(READ_MIN_MS);
   okButton().click();
   await flush();
   advance(10);
@@ -245,6 +253,7 @@ advance(11000);
   hud.announce('Next goal: Jupiter', LONG);
   await flush();
   check('a long goal banner becomes a card with a click', cardOpen() && hud._modalHost.card.textContent.includes('Next goal: Jupiter'));
+  advance(READ_MIN_MS);
   okButton().click();
   await flush();
   check('...and closes on OK', !cardOpen());
@@ -298,12 +307,102 @@ advance(11000);
 {
   hud.setMission({ act: 'Act 1', title: 'Mission', objective: 'Reach Mars.', steps: [] });
   const text = hud.root.textContent;
-  const forbidden = ['Press J', 'M: big map', 'N: hide', 'show or hide this card', 'Drag to pan', 'Esc to close'];
+  const forbidden = ['Press J', 'M: big map', 'N: hide', 'show or hide this card', 'Esc to close', '(U)'];
   const found = forbidden.filter((f) => text.includes(f));
-  check('no key help in the HUD ("Press J", "M: big map", "N: hide", map controls)', found.length === 0, found.join(', ') || 'none');
+  check('no key help in the HUD ("Press J", "M: big map", "N: hide", "Esc to close")', found.length === 0, found.join(', ') || 'none');
+  check('the big map keeps its how-to line (drag and scroll, not a key)', hud.map.root.textContent.includes('Drag to pan'));
   check('the mission card still shows its objective', hud._missionObjective.textContent === 'Reach Mars.');
 }
 
+// --- 8. a message is not lost while she is held (a card, focus) -----------
+advance(20000);
+{
+  hud.toast(LONG, { kind: 'info' });
+  await flush();
+  hud.toast('Samples complete! On to Ceres.', { kind: 'good' });
+  hud.toast('A plain message, queued behind the card.', { kind: 'info' });
+  advance(15000);
+  check('a card holds the queue for 15 s', cardOpen() && hud._toasts.length === 0);
+  okButton().click();
+  await flush();
+  advance(3500);
+  const shown = hud._toasts.map((e) => e.message);
+  check('a good message queued behind a 15 s card is not dropped', shown.includes('Samples complete! On to Ceres.'), shown.join(' | ') || 'none');
+  check('a plain message queued behind a 15 s card is not dropped either', shown.includes('A plain message, queued behind the card.'));
+  advance(20000);
+}
+{
+  hud.setFocus(true);
+  hud.toast('A plain message held by focus.', { kind: 'info' });
+  advance(20000);
+  hud.setFocus(false);
+  advance(10);
+  check('a plain message held by focus for 20 s is not aged out', hud._toasts.some((e) => e.message === 'A plain message held by focus.'));
+  advance(20000);
+}
+
+// --- 9. a card shut over the big map keeps the game paused -----------------
+{
+  hud.map.open();
+  check('the big map is open', hud.map.isOpen());
+  hud.toast(LONG, { kind: 'info' });
+  await flush();
+  check('a card opens over the big map', cardOpen());
+  advance(READ_MIN_MS);
+  okButton().click();
+  await flush();
+  check('OK on a card while the big map is open leaves the game paused (ui-modal stays true)', emittedModal().at(-1) === true);
+  hud.map.close();
+  check('closing the big map un-pauses the game', emittedModal().at(-1) === false);
+}
+advance(20000);
+
+// --- 10. kid text is not cleared on a fixed short timer (source checks) ----
+{
+  const src = (rel) => readFileSync(new URL('../' + rel, import.meta.url), 'utf8');
+  const ring = src('src/space/ch5/ringRun.js');
+  const util = src('src/space/acts/util.js');
+  check('the ring run tip stays for its reading time, not a fixed 4 s', !/panel\.tip\(''\), 4000\)/.test(ring) && ring.includes('readMs(tip)'));
+  check('the Landed card stays for its reading time, not 1.8 s', !/setTimeout\(card\.close, 1800\)/.test(util) && util.includes('readMs([title, sub])'));
+  const tally = src('src/space/hud/tally.js');
+  check('the upgrade bay labels have no key letter (a string ending in (U))', !/\(U\)['`]/.test(tally));
+}
+
+// --- 11. the switches show no key letter (the key is in the tooltip) --------
+{
+  const btn = new FakeNode('button');
+  paintToggle(btn, 'T', 'Auto-turn', 'on', 'Auto-turn is on. Click to steer yourself');
+  check('a switch shows its name, not a key letter', btn.textContent === 'Auto-turn', btn.textContent);
+  check('the key stays in the tooltip', btn.title.includes('key T'));
+}
+
+// --- 12. the OK card answers only after READ_MIN_MS (5 s) ------------------
+// A key held down (auto-repeat) or pressed too soon never closes it, and the
+// keys never reach the flight from the card.
+advance(20000);
+{
+  hud.toast(LONG, { kind: 'info' });
+  await flush();
+  const stopped = [];
+  const press = (key, repeat = false) => hud._modalHost.backdrop.dispatch('keydown', { key, repeat, preventDefault() { stopped.push(key); } });
+  check('the OK button is dimmed while it waits', okButton().classList.contains('sp-btn--wait'));
+  okButton().click();
+  press('Enter');
+  press(' ');
+  press('Escape');
+  check('OK, Enter, Space and Escape do nothing in the first 5 s', cardOpen());
+  check('Enter and Space are stopped before the flight sees them', stopped.length === 2, `stopped ${stopped.length}`);
+  advance(READ_MIN_MS - 200);
+  press(' ', true);
+  check('a held Space (a repeat) does not close it', cardOpen());
+  advance(300);
+  check('the OK button is no longer dimmed once it answers', !okButton().classList.contains('sp-btn--wait'));
+  press(' ', true);
+  check('a repeated Space after 5 s still does not close it', cardOpen());
+  press(' ');
+  check('a first Space after 5 s closes it', !cardOpen());
+}
+advance(20000);
 globalThis.setTimeout = realSetTimeout;
 globalThis.clearTimeout = realClearTimeout;
 await vite.close();

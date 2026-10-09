@@ -45,7 +45,7 @@ body.sp-is-frozen .sp-frozen-edge { display: block; }`;
     game.frozen = next;
     paint();
     game.hud?.toast?.(next
-      ? 'Frozen. Everything waits for you - press F (or the button) when you want to carry on.'
+      ? 'Frozen. Everything waits for you - press F when you want to carry on.'
       : 'Off we go again!', { kind: 'info', ms: next ? 4000 : 2000 });
   }
   function toggle() { set(!game.frozen); }

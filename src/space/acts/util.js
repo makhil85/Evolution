@@ -2,6 +2,7 @@
 import { BODIES, STORE_KEYS, UPGRADES, SOLAR, WARP_LEVELS } from '../contracts.js';
 import { questionForBeat } from '../questions.space.js';
 import { heroName } from '../hud/hud.js';
+import { readMs } from '../../play/readTime.js';
 import { refuel, emergencyTopUp, orbitElements } from '../physics.js';
 import { t } from '../level.js';
 
@@ -252,14 +253,15 @@ export async function loadSurfaceScene(game, opts) {
   // while the walk was built, and a child thought she had crashed. A big
   // "Landed!" card covers that, and stays a moment once the walk starts.
   const name = BODIES[opts?.body]?.name || 'the surface';
-  const card = landedCard(t(`Landed on ${name}!`, `You landed on ${name}!`),
-    t('A soft, safe touchdown. Climbing down the ladder...', 'Safe and soft! Climbing down...'));
+  const title = t(`Landed on ${name}!`, `You landed on ${name}!`);
+  const sub = t('A soft, safe touchdown. Climbing down the ladder...', 'Safe and soft! Climbing down...');
+  const card = landedCard(title, sub);
   try {
     const mod = await import('../surface.js');
     if (mod?.createSurfaceScene) {
       const scene = mod.createSurfaceScene(game, opts);
       scene.onFoot = true; // a walk (main.js resets warp after it)
-      setTimeout(card.close, 1800);
+      setTimeout(card.close, readMs([title, sub]));  // stays up for its reading time
       return scene;
     }
   } catch { /* surface.js not built yet */ }

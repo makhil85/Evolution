@@ -168,9 +168,12 @@ const hud = createHud({ mount: document.getElementById('hud-root'), bus });
 const controls = createControls({ bus, element: renderer.domElement });
 // On-screen buttons on touch screens (hud/touch.js): they press the same keys.
 const touch = createTouchPad(hud.root, { controls, bus, warpIndex: () => game.warpIndex, warpLevels: WARP_LEVELS });
+// Touch screens have no M key: the small map says how to get the big one.
 if (touch.enabled) {
-  const hint = hud.minimap.el.querySelector('.sp-minimap__hint');
-  if (hint) hint.textContent = t('Tap for the big map', 'Tap for the big map');
+  const hint = document.createElement('div');
+  hint.className = 'sp-minimap__hint';
+  hint.textContent = t('Tap for the big map', 'Tap the small map to see it big.');
+  hud.minimap.el.appendChild(hint);
 }
 const flightCam = createFlightCamera({ camera, baseFov: RENDER.fov });
 
@@ -791,7 +794,7 @@ function updateCaptureCue(thrust) {
     aimHelp = {
       phase: 'ready', inS,
       line: aimLine(inS > 10
-        ? t(`Get ready: at your lowest point (in about ${inS} s) you’ll turn to face backwards, opposite to your motion, and burn.${inS > 100 ? ' Time warp (1-4) is fine until then.' : ''}`, `Get ready! Soon you face the way you came, then hold Space.${inS > 100 ? ' Keys 1 to 4 make time go fast.' : ''}`)
+        ? t(`Get ready: at your lowest point (in about ${inS} s) you’ll turn to face backwards, opposite to your motion, and burn.${inS > 100 ? ' The time-warp buttons are fine until then.' : ''}`, `Get ready! Soon you face the way you came, then hold Space.${inS > 100 ? ' The time-warp buttons make time go fast.' : ''}`)
         : t(`Turn now: at your lowest point (in ${inS} s) you burn facing backwards, opposite to your motion.`, 'Face the way you came now. Soon you hold Space.')),
     };
   }
@@ -1353,7 +1356,7 @@ function updateBurnCue(states, thrust) {
   const wait = Math.ceil(tau);
   help(tau < 20 ? 'point' : 'wait', { tau, dvNeed: Math.abs(p.dv), dvDone: 0, along });
   cue('wait', tau > 100
-    ? t(`Burn window in ${wait} s. Use time warp (keys 1 to 4) to get there faster`, `Coast and wait ${wait} s for the green sign. Keys 1 to 4 make time go fast.`)
+    ? t(`Burn window in ${wait} s. Use the time-warp buttons to get there faster`, `Coast and wait ${wait} s for the green sign. The time-warp buttons make time go fast.`)
     : t(`Burn window in ${wait} s. Get ready to point ${along ? 'along your path' : 'backwards (against your motion)'}`, `Burn window in ${wait} s. Get ready to ${along ? 'point forward' : 'face the way you came'}`));
 }
 

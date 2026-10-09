@@ -145,7 +145,8 @@ export function createMap(root, { bus } = {}) {
   legend.innerHTML = ''
     + '<div>Orange arrow = your ship, pointing the way it is heading</div>'
     + '<div>Dotted line = predicted path (fades further into the future)</div>'
-    + '<div>Dashed circle = where the target will be when you arrive</div>';
+    + '<div>Dashed circle = where the target will be when you arrive</div>'
+    + '<div>Drag to pan &middot; scroll to zoom</div>';
   wrap.appendChild(legend);
 
   const tooltip = el('div', 'sp-map__tooltip');

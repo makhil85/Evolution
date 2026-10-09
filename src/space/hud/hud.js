@@ -36,7 +36,7 @@ import { createQuestionModal } from './questionModal.js';
 import { createOverlays } from './overlays.js';
 import { inModalTurn } from './modalQueue.js';
 import { createTally, flyIcons } from './tally.js';
-import { readMs, needsClick, READ_MAX_MS } from '../../play/readTime.js';
+import { readMs, needsClick, READ_MAX_MS, READ_MIN_MS } from '../../play/readTime.js';
 
 const MISSION_OPEN_KEY = 'space_ch4_mission_open';
 const MISSION_FLASH_MS = 6000;
@@ -392,31 +392,50 @@ export class Hud {
     inModalTurn(() => this._waitForHost().then(() => new Promise((resolve) => {
       const host = this._modalHost;
       let closed = false;
+      let armed = false; // OK answers only after READ_MIN_MS, so a held Space cannot close it
+      let armTimer = 0;
       const finish = () => {
         if (closed) return;
         closed = true;
+        clearTimeout(armTimer);
         host.backdrop.removeEventListener('keydown', onKey);
         host.close();
+        // host.close() un-pauses the game: stay paused under the big map or another card.
+        if (this._stillPaused()) this.bus.emit('ui-modal', true);
         this._readPending -= 1;
-        this._releaseToasts();
+        this._holdEnded();
         resolve();
       };
+      // Keys never reach the flight from this card; a repeat (a held Space) never answers it.
       const onKey = (e) => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); finish(); }
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        if (e.repeat || !armed) return;
+        finish();
       };
       host.open((root) => {
         if (title) root.appendChild(el('h3', 'sp-modal__title', title));
         root.appendChild(el('p', 'sp-modal__body', text));
         const actions = el('div', 'sp-modal__actions');
-        const ok = el('button', 'sp-btn', 'OK');
+        const ok = el('button', 'sp-btn sp-btn--wait', 'OK');
         ok.type = 'button';
-        ok.addEventListener('click', finish);
+        // Dimmed with a fill for the first READ_MIN_MS: time to read before it answers.
+        const fill = el('span', 'sp-btn__fill');
+        fill.style.animationDuration = `${READ_MIN_MS}ms`;
+        ok.appendChild(fill);
+        ok.addEventListener('click', () => { if (armed) finish(); });
         actions.appendChild(ok);
         root.appendChild(actions);
         host.backdrop.addEventListener('keydown', onKey);
+        armTimer = setTimeout(() => { armed = true; ok.classList.remove('sp-btn--wait'); fill.remove(); }, READ_MIN_MS);
         setTimeout(() => { try { ok.focus(); } catch { /* detached */ } }, 0);
-      }, { onEscape: finish });
+      }, { onEscape: () => { if (armed) finish(); } });
     })));
+  }
+
+  /** Some card or the big map is still up, so the game stays paused under it. */
+  _stillPaused() {
+    return this.map.isOpen() || !!document.querySelector('.sp-modal:not([hidden]), .sp-retry-card, .pl-back');
   }
 
   /** Resolves once the shared card host is free (the pause menu can hold it). */
@@ -432,6 +451,16 @@ export class Hud {
     if (this._readPending === 0 && this._toastQueue.length && !this._toastQueueTimer) this._drainToasts();
   }
 
+  /**
+   * A hold on the queue ended (a card shut, focus off): the queued messages
+   * start their age again, so time spent held never counts against them.
+   */
+  _holdEnded() {
+    const now = performance.now();
+    for (const q of this._toastQueue) q.at = now;
+    this._releaseToasts();
+  }
+
   /** Show queued messages one at a time, TOAST_GAP_MS apart, as slots free up. */
   _drainToasts() {
     const wait = Math.max(0, this._toastNextAt - performance.now());
@@ -439,10 +468,13 @@ export class Hud {
       this._toastQueueTimer = 0;
       // A card or a dismissed toast calls this again when it can go on.
       if (this._readPending || this._toasts.length >= MAX_VISIBLE_TOASTS) return;
-      // Drop what's out of date: a message this old belongs to a moment that
-      // has passed ("Coast there..." arriving in Moon orbit).
+      // Drop what's out of date: a plain message this old belongs to a moment
+      // that has passed ("Coast there..." arriving in Moon orbit). Good and
+      // warning messages are never dropped for age, and nothing ages while held.
       const now = performance.now();
-      this._toastQueue = this._toastQueue.filter((q) => now - q.at < TOAST_STALE_MS);
+      if (!this._focus) {
+        this._toastQueue = this._toastQueue.filter((q) => q.opts?.kind === 'good' || q.opts?.kind === 'warn' || now - q.at < TOAST_STALE_MS);
+      }
       // While she has to act only warnings get through (setFocus(false) drains again).
       const i = this._toastQueue.findIndex((q) => !this._focus || q.opts?.kind === 'warn');
       if (i < 0) return;
@@ -457,7 +489,7 @@ export class Hud {
     if (this._focus === !!on) return;
     this._focus = !!on;
     this.root.classList.toggle('is-focus', this._focus);
-    if (!this._focus) this._releaseToasts();
+    if (!this._focus) this._holdEnded();
   }
 
   _dismissToast(entry) {

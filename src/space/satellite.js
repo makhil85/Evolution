@@ -939,7 +939,7 @@ export function buildPanelPuzzleScene(game, { toleranceScale = 1 } = {}) {
 
   const overlay = buildPuzzleOverlay();
   overlay.setTitle('Both panels are swinging! Catch each one when it faces the Sun.');
-  overlay.setLabels('Top panel: hold A or ←', 'Bottom panel: hold D or →');
+  overlay.setLabels('Top panel: turn left', 'Bottom panel: turn right');
   overlay.add(skipButton(() => solve())); // unlock mode only
 
   let holdTime = 0;
