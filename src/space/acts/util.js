@@ -1,5 +1,5 @@
 // Small helpers shared by the act files (Acts 2-5: Moon, Mars/belt, Jupiter, Europa).
-import { BODIES, STORE_KEYS, UPGRADES, SOLAR } from '../contracts.js';
+import { BODIES, STORE_KEYS, UPGRADES, SOLAR, WARP_LEVELS } from '../contracts.js';
 import { questionForBeat } from '../questions.space.js';
 import { heroName } from '../hud/hud.js';
 import { refuel, emergencyTopUp, orbitElements } from '../physics.js';
@@ -7,21 +7,27 @@ import { t } from '../level.js';
 
 export const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** Wait while she orbits: `sec` seconds of flight time, or one lap if that is shorter (lap: false, always `sec`). */
+/**
+ * Wait while she orbits: `sec` REAL seconds (lead review, 2026-10-08: at x16-x64
+ * warp a game-time wait passed in a blink). With `lap`, it is shorter if one
+ * lap of her orbit takes less than that at her warp (lap: false, always `sec`).
+ */
 export function orbitFor(game, sec, { lap = true } = {}) {
   const sh = game.ship;
   const b = BODIES[sh.soi]; const st = game.states?.[sh.soi];
+  // Game seconds per real second: the warp she has on (x1 when unset).
+  const warp = WARP_LEVELS[game.warpIndex] || 1;
   let need = sec;
   if (lap && b && st) {
-    // One lap of the orbit she is on (from its energy: a = -gm / 2E).
+    // One lap of the orbit she is on (from its energy: a = -gm / 2E), in real seconds.
     const dx = sh.x - st.x; const dz = sh.z - st.z;
     const v2 = (sh.vx - st.vx) ** 2 + (sh.vz - st.vz) ** 2;
     const E = v2 / 2 - b.gm / Math.hypot(dx, dz);
-    if (E < 0) { const a = -b.gm / (2 * E); need = Math.min(sec, 2 * Math.PI * Math.sqrt(a ** 3 / b.gm)); }
+    if (E < 0) { const a = -b.gm / (2 * E); need = Math.min(sec, 2 * Math.PI * Math.sqrt(a ** 3 / b.gm) / warp); }
   }
-  const t0 = sh.t;
+  const t0 = performance.now();
   return new Promise((done) => {
-    const id = setInterval(() => { if (game.ship.t - t0 >= need) { clearInterval(id); done(); } }, 250);
+    const id = setInterval(() => { if ((performance.now() - t0) / 1000 >= need) { clearInterval(id); done(); } }, 250);
   });
 }
 
@@ -91,10 +97,16 @@ export function personalise(q) {
  * cargoHeavy/sampleCrates/beltFact). Applies the reward and doneMessage
  * toast exactly like missions.js's own `ask()`, minus the deferred/answered
  * save bookkeeping (these beats are not progression gates).
+ *
+ * In flight it waits until she has let go of the controls for a while
+ * (missions.untilQuiet, the same gate as the step questions): a question
+ * must never pop up while her hands are on the keys. On foot it asks at once.
  */
 export async function askBeat(game, beat) {
   const q = questionForBeat(beat);
   if (!q) return { correct: true };
+  // Hands-off first; the card itself waits its turn inside hud.askQuestion (modalQueue.js).
+  await game.missions?.untilQuiet?.();
   const personal = personalise(q);
   const res = await game.hud.askQuestion(personal);
   if (res.correct) {
@@ -247,6 +259,7 @@ export async function loadSurfaceScene(game, opts) {
     const mod = await import(/* @vite-ignore */ path);
     if (mod?.createSurfaceScene) {
       const scene = mod.createSurfaceScene(game, opts);
+      scene.onFoot = true; // a walk (main.js resets warp after it)
       setTimeout(card.close, 1800);
       return scene;
     }

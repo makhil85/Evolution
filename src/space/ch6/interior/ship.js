@@ -404,6 +404,7 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
     scene,
     camera,
     debug,
+    onFoot: true, // a walk: main.js puts warp back to x1 when she is back at the controls
     start() {
       hud?.toast?.(t('On board! Walk with W A S D, drag to look. The lift joins the decks; press E at a station.', 'On board! Walk with W A S D. Press E at a station.'), { kind: 'info', ms: 5200 });
       const n = nextStation();

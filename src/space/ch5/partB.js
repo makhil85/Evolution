@@ -95,12 +95,14 @@ export function partBSteps(game) {
       from: 'saturn', to: 'uranus', act: 2,
       ids: { leave: 'c5_leave_saturn', window: 'c5_to_uranus', coast: 'c5_uranus_approach', orbit: 'c5_uranus_orbit' },
       say: t('Out of Saturn’s pull, with the water tanks full! Uranus is next: the planet that rolls round the Sun on its side. Wait for BURN NOW.', 'You left Saturn! Next stop: Uranus. Wait for the green BURN NOW sign.'),
-      beat: 'c5UranusTilt',
+      // The "knocked over" question is asked on the look step, after the wait
+      // (lead 2026-10-08: let the kid see Uranus first).
+      beat: null,
     }),
     {
       id: 'c5_uranus_look', act: 2,
       title: t('Uranus, on its side', 'Uranus is on its side'),
-      objective: '',
+      objective: t('Captured! Look round Uranus while you orbit.', 'You did it! Look at Uranus.'),
       markers: ['uranus'],
       async enter() {
         hud.toast(t('Uranus has you! Look how it is tipped right over.', 'You’re going around Uranus! It is lying on its side!'), { kind: 'good', ms: 3600 });
@@ -112,7 +114,9 @@ export function partBSteps(game) {
             'Uranus spins lying down. So it rolls round the Sun like a ball. One side gets sun for a long time, and the other side is dark.'),
         });
       },
-      beat: 'c5UranusPoleDay',
+      // Knocked over (25 s after she arrived), then the pole's day (after the fact).
+      beat: 'c5UranusTilt',
+      bonusBeats: ['c5UranusPoleDay'],
     },
     ...legSteps(game, {
       from: 'uranus', to: 'neptune', act: 2,
@@ -157,7 +161,7 @@ export function partBSteps(game) {
     {
       id: 'c5_to_pluto', act: 3,
       title: t('Catch the Pluto window', 'Head for Pluto'),
-      objective: t('Pluto is small and far: wait for BURN NOW, then hold Space until your dotted line passes close to Pluto.', 'Wait for the green BURN NOW sign. Then hold Space until your dotted line reaches Pluto.'),
+      objective: t('Pluto is small and far: wait for BURN NOW, then hold Space until your dotted line passes close to Pluto. Let go of the controls to cruise faster.', 'Wait for the green BURN NOW sign. Then hold Space until your dotted line reaches Pluto. Let go of the keys to go fast.'),
       markers: ['pluto'],
       aim: 'prograde',
       transfer: 'pluto',
@@ -178,13 +182,15 @@ export function partBSteps(game) {
     {
       id: 'c5_into_kuiper', act: 3,
       title: t('Into the Kuiper belt', 'Into the icy rocks'),
-      objective: t('Coast out into the Kuiper belt. Time warp (1-4) makes it quick.', 'Fly out to the icy rocks. Keys 1 to 4 make time go fast.'),
+      objective: t('Look round at the icy rocks of the Kuiper belt. Pluto is near!', 'Look at all the icy rocks!'),
       markers: ['pluto'],
       transfer: 'pluto',
       aim: 'prograde',
       enter() { game.target = 'pluto'; },
-      check() {
+      // A short look (lead 2026-10-08 review: the step passed in no time).
+      check(ctx, states, stepTime) {
         fuelSafetyNet(game);
+        if (stepTime < 8) return false;
         return game.ship.soi === 'pluto' || Math.hypot(game.ship.x, game.ship.z) > KUIPER.inner + 1500;
       },
     },

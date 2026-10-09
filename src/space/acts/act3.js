@@ -91,6 +91,7 @@ export function act3Steps(game) {
       enter() { game.target = 'mars'; },
       check() {
         fuelSafetyNet(game);
+        checkCeres();
         return game.ship.soi === 'mars' && isCaptured(game);
       },
       beat: 'marsScan',
@@ -111,6 +112,7 @@ export function act3Steps(game) {
       enter() { game.target = 'ceres'; },
       check() {
         fuelSafetyNet(game);
+        checkCeres(); // a flyby on the way counts (any order)
         const frac = solarPower(game.ship.x, game.ship.z, 1) / SOLAR.panelPowerAtEarth;
         return frac < 0.4;
       },
@@ -124,6 +126,7 @@ export function act3Steps(game) {
       transfer: 'belt',
       check() {
         fuelSafetyNet(game);
+        checkCeres(); // Ceres sits in the belt: a pass on the way in counts too
         return game.belt.isInBelt(game.ship.x, game.ship.z);
       },
       beat: 'enterBelt',
