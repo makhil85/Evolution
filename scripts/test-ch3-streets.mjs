@@ -102,8 +102,8 @@ try {
     ok(v.isWalkable(x, z), `(${x}, ${z}) is dry land`);
   }
 
-  // ---- the turbine and the hydro wheel move through village.animators ------
-  ok(v.animators.length === 2, `turbine and hydro wheel register animators (got ${v.animators.length})`);
+  // ---- the turbine, the hydro wheel and the antenna's blinking tip move through village.animators ------
+  ok(v.animators.length === 3, `turbine, hydro wheel and antenna tip register animators (got ${v.animators.length})`);
   let threw = false;
   try { v.update(12.5); } catch { threw = true; }
   ok(!threw, 'village.update runs the animators');

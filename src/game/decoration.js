@@ -11,7 +11,7 @@
 // are kiosks and a food truck, the fountain is a basin with a column, the
 // windmill and the watermill are a wind turbine (it turns) and a small hydro
 // station (its wheel turns), the fingerpost is a digital sign, and the space
-// kit adds a solar farm and a few masts with dishes.
+// kit adds a solar farm and a few masts with dishes or whip antennas.
 //
 // PLACEMENT AND COLLIDERS ARE UNCHANGED. Every bucket key below still names
 // the same place and the same collider as before; only what is drawn at each
@@ -303,9 +303,16 @@ function banner(frame) {
   ];
 }
 
-/** Instance one merged model at every placement, on the kit's scale. */
-function instanceModel(parent, geometry, placements, fit = FIT) {
-  const mesh = new THREE.InstancedMesh(geometry, PROP_MAT, placements.length);
+/**
+ * Instance one merged model at every placement, on the kit's scale.
+ *
+ * Culling is on. A geometry's own bounds say nothing about where its copies
+ * are, so the sphere is computed from the placements (computeBoundingSphere
+ * reads every instance matrix) - a corner of the town then skips the kinds
+ * that are wholly out of frame, instead of drawing every copy in the town.
+ */
+function instanceModel(parent, geometry, placements, fit = FIT, material = PROP_MAT) {
+  const mesh = new THREE.InstancedMesh(geometry, material, placements.length);
   placements.forEach((p, i) => {
     _pos.set(p.x, p.y ?? 0, p.z);
     _q.setFromAxisAngle(_up, p.rotY ?? 0);
@@ -314,9 +321,9 @@ function instanceModel(parent, geometry, placements, fit = FIT) {
     mesh.setMatrixAt(i, _m);
   });
   mesh.instanceMatrix.needsUpdate = true;
+  mesh.computeBoundingSphere();
   mesh.castShadow = false;
   mesh.receiveShadow = true;
-  mesh.frustumCulled = false;
   parent.add(mesh);
   return mesh;
 }
@@ -365,8 +372,15 @@ function buildTurbine(parent, x, y, z, rotY, animators) {
 }
 
 /**
- * A small hydro station on the north bank: a concrete intake house and a
- * paddle wheel at its river edge, turning about the bank's own axis.
+ * A small hydro station on the river's near bank: a concrete intake house on
+ * a plinth, and a big paddle wheel out over the water, turning on an axle.
+ *
+ * The axle runs ACROSS the river (along z, as an undershot wheel's does), so
+ * the wheel's disc faces the bank and reads face-on from the path. Its hub
+ * stands clear of the bank, and the lower paddles reach below the water
+ * surface (village.js: the water sits about 0.9 above the riverbed). The
+ * wheel's local z is what puts it in the water; the station's own position,
+ * and so its collider, is unchanged.
  */
 function buildHydro(parent, x, y, z, rotY, animators) {
   const group = new THREE.Group();
@@ -374,25 +388,32 @@ function buildHydro(parent, x, y, z, rotY, animators) {
   group.position.set(x, y, z);
   group.rotation.y = rotY;
 
+  // Hub height and reach, in the station's own units. The water is about one
+  // unit above the station's base, so the lower paddles sit in it.
+  const HUB_Y = 1.5, HUB_Z = -3.4;
+
   group.add(new THREE.Mesh(merge([
     cyl(3.0, 3.1, 0.5, P.concrete, { y: -0.05 }, 24),
     box(3.0, 2.0, 2.2, P.white, { y: 1.0, z: 0.6 }),
     box(3.2, 0.2, 2.4, P.teal, { y: 2.1, z: 0.6 }),
     box(1.0, 1.0, 0.8, P.glass, { x: 0, y: 1.2, z: -0.5 }),
+    // The axle from the intake wall out to the hub, with a post under it on the plinth.
+    box(0.22, 0.22, -HUB_Z - 0.3, P.steel, { y: HUB_Y, z: (HUB_Z - 0.3) / 2 }),
+    box(0.16, HUB_Y, 0.16, P.steel, { y: HUB_Y / 2, z: -2.2 }),
   ]), PROP_MAT));
 
-  // The wheel: six steel paddles on a hub, its axis along x (the bank).
+  // The wheel: six steel paddles, each a blade 1.5 long, on a hub. Radius 1.6.
   const wheel = new THREE.Group();
-  wheel.position.set(0, 1.5, -1.1);
-  const paddles = [cyl(0.22, 0.22, 0.9, P.steel, { rz: Math.PI / 2 }, 12)];
+  wheel.position.set(0, HUB_Y, HUB_Z);
+  const paddles = [cyl(0.24, 0.24, 1.0, P.steel, { rx: Math.PI / 2 }, 12)];
   for (let k = 0; k < 6; k++) {
-    paddles.push(box(0.7, 1.2, 0.14, P.steel, { y: 0.7, ax: (k * Math.PI * 2) / 6 }));
+    paddles.push(box(0.14, 1.5, 0.8, P.steel, { y: 0.85, az: (k * Math.PI * 2) / 6 }));
   }
   wheel.add(new THREE.Mesh(merge(paddles), PROP_MAT));
   group.add(wheel);
 
   parent.add(group);
-  animators?.push((t) => { wheel.rotation.x = t * 0.8; });
+  animators?.push((t) => { wheel.rotation.z = t * 0.8; });
   return group;
 }
 
@@ -406,6 +427,15 @@ function mastGeometry() {
     cyl(0.4, 0.4, 0.12, P.steel, { y: 4.6 }, 12),
     box(0.6, 0.05, 0.05, P.steel, { y: 1.2 }),
     box(0.05, 0.05, 0.6, P.steel, { y: 2.8 }),
+  ]);
+}
+
+/** A whip antenna on a mast top: a thin steel rod with two short cross-arms. */
+function antennaGeometry() {
+  return merge([
+    cyl(0.03, 0.05, 2.1, P.steel, { y: 1.05 }, 8),
+    box(0.7, 0.04, 0.04, P.steel, { y: 0.5 }),
+    box(0.5, 0.04, 0.04, P.steel, { y: 1.1 }),
   ]);
 }
 
@@ -709,10 +739,9 @@ export async function decorateVillage(village, parent) {
   // same. Scale is fitted to a measured size, not guessed: each Quaternius
   // piece is a different size from the next.
   const spaceSolids = [];
-  const [panel, dish, antenna] = await Promise.all([
+  const [panel, dish] = await Promise.all([
     loadShared(SP('SolarPanel_Ground')),
     loadShared(SP('Roof_Radar')),
-    loadShared(SP('Roof_Antenna')),
   ]);
   const sizeOf = (src) => {
     const box = new THREE.Box3().setFromObject(src);
@@ -759,15 +788,17 @@ export async function decorateVillage(village, parent) {
     batches += 2;
     props += placements.length;
   }
+  // The antenna masts carry a thin whip with a red warning light on its tip,
+  // which blinks as a real mast's does. (The kit's teal saucer read as a torch.)
   const antennas = MASTS.filter((m) => m.top === 'antenna');
-  if (antenna && antennas.length) {
-    const { size } = sizeOf(antenna);
-    // Fitted to 2.4 tall: the kit's base is a wide saucer, and taller reads as a UFO.
-    const k = 2.4 / size.y;
-    const placements = antennas.map((m) => ({ x: m.x, y: ground(m.x, m.z) + 4.7, z: m.z, rotY: 0, scale: k }));
-    await instanceAsset(parent, SP('Roof_Antenna'), placements, { packScale: false, tint: P.teal, outline: false, castShadow: false });
-    batches += 2;
-    props += placements.length;
+  if (antennas.length) {
+    const atTop = antennas.map((m) => ({ x: m.x, y: ground(m.x, m.z) + 4.66, z: m.z, rotY: 0.3 }));
+    instanceModel(parent, antennaGeometry(), atTop, 1);
+    const tipMat = new THREE.MeshBasicMaterial({ color: 0xff3b30 });
+    instanceModel(parent, ball(0.13, P.white, { y: 2.15 }), atTop, 1, tipMat);
+    animators?.push((t) => { tipMat.color.set(Math.sin(t * 5) > 0 ? 0xff3b30 : 0x6e1d19); });
+    batches += 3;
+    props += antennas.length;
   }
 
   return { props, batches, kinds: Object.keys(buckets).length, solids: [...solids, ...spaceSolids] };

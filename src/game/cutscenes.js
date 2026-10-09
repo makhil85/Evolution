@@ -367,8 +367,10 @@ export function createOpening({ camera, scene, sun, ground, chasePose, getAvatar
     const fogDay = scene.fog ? scene.fog.color.clone() : null;
     const sunDay = sun.color.clone();
     const sunDayI = sun.intensity;
-    const DAWN = new THREE.Color(0xf4a58a);
-    const SUN_DAWN = new THREE.Color(0xffc38a);
+    // A cool, pale haze rather than a peach one: the first shots were orange
+    // all over, and a sunrise on a clean science town reads as cool air.
+    const DAWN = new THREE.Color(0xc9dded);
+    const SUN_DAWN = new THREE.Color(0xfff1dc);
     // The launch tower's look point, from the layout.
     const pad = ROCKET_VILLAGE.rocketPad;
     const pts = { pad: [pad.x, ground(pad.x, pad.z) + TOWER_UP, pad.z] };

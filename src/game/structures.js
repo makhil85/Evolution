@@ -222,10 +222,10 @@ export const RECIPES = {
   // Lead 2026-10-09: now a materials lab and workshop. A hall 4.7 square under
   // a 4.9 roof, so the rotated footprint stays about 3.0 (the sign is still five
   // units south of it), with roll-up doors front and back, glass side windows,
-  // a skylight and an exhaust stack. The sign keeps the name "Materials Forge"
+  // a skylight and an exhaust stack. The sign keeps the name "Materials Lab"
   // because quests.js says it.
   materialsForge: {
-    label: 'P2 - Materials Forge',
+    label: 'P2 - Materials Lab',
     pieces: [
       { make: () => codePiece([part(5.0, 0.4, 5.0, 0, 0, 0, PAINT.yard)]), pos: [0, 0, 0] },
       { make: labWalls, pos: [0, 0.4, 0], outline: true },

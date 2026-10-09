@@ -15,7 +15,7 @@ const INK = '#1d3557';
 /** What each site is called on its sign (the recipes' labels carry "P1 -"). */
 const NAMES = {
   missionSchool: ['Mission School', '🏫'],
-  materialsForge: ['Materials Forge', '🧪'],
+  materialsForge: ['Materials Lab', '🧪'],
   waterLab: ['River Flow Lab', '💧'],
   windTunnel: ['Wind Tunnel', '🌬'],
   scienceCenter: ['Science Center', '🔬'],

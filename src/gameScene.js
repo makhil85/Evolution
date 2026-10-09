@@ -801,6 +801,27 @@ async function main() {
   }
 }
 
+// The layer the camera does not draw (cutscenes.js hides the same marks for its films).
+const CARD_HIDDEN_LAYER = 31;
+const CARD_MARK_NAMES = new Set(['nameSigns', 'stations', 'navArrow', 'keyBlock', 'glow']);
+
+/**
+ * Move the world's labels, station markers and sprites to a layer the camera
+ * does not draw, for the Chapter complete card. Layers, not `visible`:
+ * nameSigns.js sets `visible` every frame. Returns the function that puts the
+ * layers back.
+ */
+function hideCardMarks() {
+  const saved = new Map();
+  const hide = (o) => o.traverse((c) => {
+    if (saved.has(c)) return;
+    saved.set(c, c.layers.mask);
+    c.layers.set(CARD_HIDDEN_LAYER);
+  });
+  scene.traverse((o) => { if (o.isSprite || CARD_MARK_NAMES.has(o.name)) hide(o); });
+  return () => { for (const [c, mask] of saved) c.layers.mask = mask; };
+}
+
 /** Where the chase camera wants to be right now (also the end of the opening sweep). */
 function chasePose() {
   const p = player.position;
@@ -890,12 +911,16 @@ function tick(dt, now = performance.now()) {
       // Its orbit stays on screen behind the card until she leaves the card.
       const orbit = launch.verdict?.verdict === 'orbit' ? createArrival({ renderer, rocket, level: playLevel }) : null;
       if (orbit && !orbit.seen()) { arrivalNow = orbit; await orbit.play(); }
+      // The card is up for as long as she reads it: the town's name signs and
+      // markers step out of view for it, and come back when she leaves it.
+      const showMarks = hideCardMarks();
       story.outro({
         title: 'Lift-off! The rocket is in space!',
         line: `You did it, ${heroName()}! Every stage built, every question answered. Next: fly that rocket all the way to Europa, Jupiter's icy moon.`,
         focus: null,
         next: { href: 'chapter4.html', label: 'Next: Chapter 4 — Voyage to Europa' },
       }).then((how) => {
+        showMarks();
         if (arrivalNow) { arrivalNow.stop(); arrivalNow = null; }
         if (how === 'stay') walkBack();
       });

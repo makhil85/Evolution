@@ -335,9 +335,9 @@ export class Villagers {
         mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
         mesh.castShadow = false;
         mesh.receiveShadow = false;
-        // A crowd spread across the whole town; culled as one unit it
-        // would vanish the moment its shared bounds left the frustum.
-        mesh.frustumCulled = false;
+        // Culling stays on. The bounds are refitted to where the people
+        // actually stand every frame (update() below), so a batch is culled
+        // only when every one of its people is out of view.
         this.group.add(mesh);
       }
       return { body, legs };
@@ -423,6 +423,8 @@ export class Villagers {
 
       this.place(p, x, z, Math.atan2(b.x - a.x, b.y - a.y), time, true);
     }
+    // Ten people is cheap to refit every frame: one sphere per batch, from its instances.
+    for (const b of this.batches) { b.body.computeBoundingSphere(); b.legs.computeBoundingSphere(); }
   }
 
   /** Is this dry land, or a bridge that has actually been built? */
