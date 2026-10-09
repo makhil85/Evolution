@@ -9,6 +9,7 @@
 
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
+import { readMs } from '../src/play/readTime.js';
 
 // --- stand-ins for the browser (the film builds canvases, DOM nodes, listeners) ---
 const removed = [];
@@ -134,8 +135,10 @@ await (async () => {
   const ctx = stubCtx();
   captionLog.length = 0;
   await playOpening({ run: stubRun(log), ...ctx, camera: ctx.camera });
-  ok('opening: every shot runs once, in order, with its own length', () => {
-    assert.deepEqual(log.map((l) => l.secs), OPENING.map((sh) => sh.secs));
+  ok('opening: every shot runs once, in order, at least its own length and its caption\'s reading time', () => {
+    // Lead 2026-10-09: captions stay up readMs (5-10 s); a shot stretches to fit.
+    assert.deepEqual(log.map((l) => l.secs), OPENING.map((sh) => Math.max(sh.secs, sh.cap ? readMs(sh.cap[0]) / 1000 : 0)));
+    for (const [i, sh] of OPENING.entries()) if (sh.cap) assert.ok(log[i].secs * 1000 >= readMs(sh.cap[0]), sh.id);
   });
   ok('opening: each shot shows its Level 4 caption (or none for a bare shot)', () => {
     OPENING.forEach((sh, i) => {
