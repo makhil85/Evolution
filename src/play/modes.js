@@ -30,19 +30,19 @@ export const PLAY_MODES = Object.freeze({
   easy: Object.freeze({
     id: 'easy', label: 'Easy',
     blurb: 'An arrow shows the way to your next goal, resources glow, and one press of E collects.',
-    blurbL1: 'An arrow shows you where to go. Things to collect glow. Press E once to pick up.',
+    blurbL1: 'An arrow shows where to go. Things to collect glow. Press E once to collect.',
     navArrow: true, targetBeacon: true, resourceGlow: true, mineHits: 1, treasureHunt: false,
   }),
   medium: Object.freeze({
     id: 'medium', label: 'Medium',
     blurb: 'A marker shows the next station, but you find the way. Mining takes a few presses of E.',
-    blurbL1: 'A marker shows the next place. You find the way. Press E a few times to mine.',
+    blurbL1: 'A marker shows the next place. Press E a few times to mine.',
     navArrow: false, targetBeacon: true, resourceGlow: false, mineHits: 3, treasureHunt: false,
   }),
   hard: Object.freeze({
     id: 'hard', label: 'Hard',
-    blurb: 'No arrows or markers. Mining is hard work. A key block is hidden in one of the homes - follow the clues to find it before the final build.',
-    blurbL1: 'No arrows. Mining takes lots of presses. A treasure is hidden in a house - read the clues to find it!',
+    blurb: 'No arrows or markers. Mining takes many presses. A key block is hidden in one of the homes. Follow the clues to find it.',
+    blurbL1: 'No arrows. Lots of presses to mine. Read the clues to find the treasure.',
     navArrow: false, targetBeacon: false, resourceGlow: false, mineHits: 5, treasureHunt: true,
   }),
 });
@@ -105,8 +105,8 @@ export function choosePlayMode({ level = 4, current = savedPlayModeId() || 'easy
     card.appendChild(el('div', 'pl-eyebrow', 'Play mode'));
     card.appendChild(el('h2', 'pl-title', title));
     card.appendChild(el('p', 'pl-sub', level === 1
-      ? 'This changes how much help you get. The questions stay the same. You can change it any time.'
-      : 'This changes the help and the mining, not the questions. You can change it any time with the Help button.'));
+      ? 'This changes the help. The questions stay the same. You can change it any time.'
+      : 'This changes the help and mining. The questions stay the same.'));
 
     const row = el('div', 'pl-modes');
     row.setAttribute('role', 'radiogroup');

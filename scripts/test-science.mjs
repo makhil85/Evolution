@@ -133,7 +133,7 @@ for (const level of [1, 4]) {
   const s3 = r.solveQuest('m3');
   eq(r.state.recipeMode, 'smart', `${tag}: 3 boards -> smart recipe`);
   eq(r.recipe(), RECIPES[level].smart, `${tag}: recipe() is the smart one`);
-  ok(s3.allMath && s3.text.startsWith(level === 1 ? 'All 3 puzzles done! Now you know the cheap plan' : 'Smart path complete! Efficient recipe revealed'), `${tag}: smart toast`);
+  ok(s3.allMath && s3.text.startsWith(level === 1 ? 'All 3 puzzles done! Cheap plan' : 'Smart path complete! Efficient recipe revealed'), `${tag}: smart toast`);
   ok(level === 1 ? s3.text.endsWith('Wood 12, Stone 24, Iron 60, Science 12.') : s3.text.endsWith('2 × (wood + science) + stone = 84.'), `${tag}: smart toast by Level`);
   eq(r.state.resources.science, qs.m1.reward.science + qs.m2.reward.science + qs.m3.reward.science, `${tag}: science added for each board`);
   ok(r.state.key === false && r.state.solved.key === false, `${tag}: smart path does not open the room`);
@@ -146,14 +146,14 @@ for (const level of [1, 4]) {
   const iron = PICKUPS.find((p) => p.locked);
   const surfaceIron = PICKUPS.find((p) => p.res === 'iron' && !p.locked);
   const refused = b.collect(iron.id);
-  ok(refused.refused === true && refused.text === 'This rich iron is locked inside the room. Solve the golden hard key puzzle to open it.', `${tag}: locked iron refused before the key`);
+  ok(refused.refused === true && refused.text === (level === 1 ? 'This iron is locked. Solve the gold key puzzle to open it.' : 'This rich iron is locked inside the room. Solve the golden hard key puzzle to open it.'), `${tag}: locked iron refused before the key`);
   ok(!b.isCollected(iron.id) && b.state.resources.iron === 0, `${tag}: refused iron changes nothing`);
   ok(b.collect(surfaceIron.id).text === `Mined surface iron: +${surfaceIron.amount} iron.`, `${tag}: surface iron is fine`);
   const k = b.solveQuest('key');
   eq(b.state.recipeMode, 'brute', `${tag}: key -> brute recipe`);
   ok(b.state.key === true && b.state.solved.key === true && k.keyUnlocked, `${tag}: key sets the room unlocked flag`);
   ok(k.text.startsWith(qs.key.success) && k.text.includes(level === 1 ? 'The big plan is open.' : 'Brute-force recipe unlocked, but it '), `${tag}: key toast`);
-  ok(level === 1 ? k.text.endsWith('It needs lots of things.') : k.text.endsWith('it needs many more resources.'), `${tag}: key toast by Level`);
+  ok(level === 1 ? k.text.endsWith('The big plan is open.') : k.text.endsWith('it needs many more resources.'), `${tag}: key toast by Level`);
   eq(b.recipe(), RECIPES[level].brute, `${tag}: recipe() is the brute one`);
   const inRoom = b.collect(iron.id);
   ok(inRoom.res === 'iron' && inRoom.amount === 12 && inRoom.text === 'Mined rich locked iron: +12 iron.', `${tag}: room iron collectable after the key`);
@@ -190,7 +190,7 @@ for (const level of [1, 4]) {
   const tag = `L${level}`;
   const r = fresh(level);
   let c = r.buildCheck();
-  ok(!c.ok && c.text === (level === 1 ? 'The builders need a plan. Solve the 3 purple puzzles for a cheap plan. Or solve the gold key puzzle.' : 'The builders need a plan first. Solve 3 purple medium puzzles for the efficient plan, or solve the hard golden key puzzle for brute force.'), `${tag}: refused without a plan`);
+  ok(!c.ok && c.text === (level === 1 ? 'The builders need a plan. Solve the 3 purple puzzles or the gold key.' : 'The builders need a plan first. Solve 3 purple medium puzzles for the efficient plan, or solve the hard golden key puzzle for brute force.'), `${tag}: refused without a plan`);
   for (const k of RESOURCE_KEYS) r.state.resources[k] = 999;
   ok(!r.startBuild().ok && !r.state.built, `${tag}: start refused without a plan even with resources`);
 
@@ -308,7 +308,7 @@ ok(STORE_KEYS[4] === 'level1_science_village_v7' && STORE_KEYS[1] === 'level1_sc
   const pr = fresh(1, partial);
   ok(pr.state.resources.wood === 7 && pr.state.resources.science === 0 && pr.state.solved.force === false
     && pr.state.recipeMode === 'unknown' && pr.state.built === false && pr.state.player.x === 7 && pr.state.player.y === 20
-    && Array.isArray(pr.state.collected) && pr.state.message.startsWith('Welcome! Look around the village.'), 'partial save: missing fields defaulted');
+    && Array.isArray(pr.state.collected) && pr.state.message.startsWith('Welcome!'), 'partial save: missing fields defaulted');
   ok(pr.state.key === true && pr.state.solved.key === true, 'partial save: key flag mirrored into solved.key');
   // No storage at all: plays on in memory.
   const noStore = createScienceRules({ level: 4, storage: undefined });
@@ -373,8 +373,8 @@ function expectedPct(r, level) {
 for (const level of [1, 4]) {
   const tag = `L${level}`;
   const r = fresh(level);
-  eq(r.progress(), { pct: 8, status: level === 1 ? 'Pick: 3 puzzles or the hard key' : 'Choose smart path or hard key path' }, `${tag}: progress at start (explored = 8)`);
-  eq(r.missionLines(), [level === 1 ? 'Pick a path. Solve the 3 purple boards for a cheap plan. Or solve the gold key puzzle to open the iron room.' : 'Choose a path: solve the 3 purple boards for a cheaper plan, or the golden key puzzle to open the iron room.'], `${tag}: first mission line`);
+  eq(r.progress(), { pct: 8, status: level === 1 ? 'Pick: 3 puzzles or hard key' : 'Choose smart path or hard key path' }, `${tag}: progress at start (explored = 8)`);
+  eq(r.missionLines(), [level === 1 ? 'Pick: 3 purple boards or the gold key.' : 'Choose: solve the 3 purple boards, or the golden key puzzle.'], `${tag}: first mission line`);
   ok(r.recipeText().startsWith(level === 1 ? 'Plan locked: Solve the 3 purple boards' : 'Recipe locked: Solve all 3 purple boards'), `${tag}: recipe locked text`);
   r.solveQuest('m1');
   eq(r.progress().pct, expectedPct(r, level), `${tag}: one board`);
@@ -382,22 +382,22 @@ for (const level of [1, 4]) {
   r.solveQuest('m2'); r.solveQuest('m3');
   // 8 + 24 + 12 (plan) = 44, no resources yet.
   eq(r.progress(), { pct: expectedPct(r, level), status: 'Visit Force Lab' }, `${tag}: smart path, Force Lab next`);
-  ok(r.missionLines()[0] === 'Now pass the Force Lab. Learn that a push or pull changes motion.', `${tag}: force mission line`);
+  ok(r.missionLines()[0] === (level === 1 ? 'Now pass the Force Lab.' : 'Now pass the Force Lab. Learn that a push or pull changes motion.'), `${tag}: force mission line`);
   ok(r.missionLines()[1] === r.recipeText() && r.missionLines().length === 2, `${tag}: recipe line follows once a plan is chosen`);
   r.solveQuest('force');
   eq(r.progress(), { pct: expectedPct(r, level), status: level === 1 ? 'Visit Light & Plants Lab' : 'Visit Chemical Energy Lab' }, `${tag}: energy lab next`);
   ok(r.missionLines()[0] === (level === 1
-    ? 'Now pass the Light & Plants Lab. Learn that plants need light to grow.'
+    ? 'Now pass the Light & Plants Lab.'
     : 'Now pass the Chemical Energy Lab. Learn why future rockets need fuel and oxygen.'), `${tag}: energy mission line`);
   r.solveQuest('energy');
   const sm = RECIPES[level].smart;
-  eq(r.progress(), { pct: expectedPct(r, level), status: level === 1 ? 'Get what you need, then build on the purple spot' : 'Gather resources and build on purple foundation' }, `${tag}: resources add to the bar`);
-  ok(r.missionLines()[0].startsWith(level === 1 ? 'Get the things on the list. Then stand on the purple spot' : 'Collect the recipe resources, then stand on the purple foundation'), `${tag}: gather mission line`);
+  eq(r.progress(), { pct: expectedPct(r, level), status: level === 1 ? 'Get resources, build on purple spot' : 'Gather resources and build on purple foundation' }, `${tag}: resources add to the bar`);
+  ok(r.missionLines()[0].startsWith(level === 1 ? 'Get the list. Build on the purple spot' : 'Collect the resources. Then build on the purple foundation'), `${tag}: gather mission line`);
   for (const k of RESOURCE_KEYS) r.state.resources[k] = sm[k] * 5;
   eq(r.progress().pct, 61 + 32, `${tag}: full resources = 93 (8 + 24 + 12 + 8 + 9 + 32)`);
   r.state.built = true;
   eq(r.progress(), { pct: 100, status: 'Science Center built' }, `${tag}: progress at the end`);
-  eq(r.missionLines(), [level === 1 ? 'Science Center done! Go back to the chapters to play Chapter 2.' : 'Science Center complete! Chapter 2 is open: go back to the chapters to play it.'], `${tag}: end mission line`);
+  eq(r.missionLines(), [level === 1 ? 'Science Center done! Go to the chapters for Chapter 2.' : 'Science Center complete! Go back to the chapters for Chapter 2.'], `${tag}: end mission line`);
 
   const kk = fresh(level);
   kk.solveQuest('key');
@@ -521,7 +521,7 @@ for (const level of [1, 4]) {
   r.setHuntRequired(true);
   const before = JSON.stringify(r.state.resources);
   const c = r.buildCheck();
-  ok(!c.ok && c.text === 'The Science Center needs its Golden Core. Follow the clues - read them again with the 📜 Clue button.', `${tag}: Hard refuses the build without the Golden Core`);
+  ok(!c.ok && c.text === 'The Science Center needs its Golden Core. Press the 📜 Clue button to read the clues.', `${tag}: Hard refuses the build without the Golden Core`);
   const go = r.startBuild();
   ok(!go.ok && !r.state.built && JSON.stringify(r.state.resources) === before, `${tag}: refused build spends nothing`);
   ok(r.state.message.includes('Golden Core'), `${tag}: the refusal is the latest message`);

@@ -409,7 +409,7 @@ const ROCKET_STAGES_L4 = [
   {
     id: 'foundation', order: 1, title: 'Foundation + Frame', need: { wood: 6, stone: 6 },
     requires: ['rocket_scale', 'rocket_materials'], pieces: 2,
-    builtMessage: 'Stage 1 up. The frame is standing on the pad — you can see it from here.'
+    builtMessage: 'Stage 1 up. The frame is standing on the pad.'
   },
   {
     id: 'body', order: 2, title: 'Body + Tanks + Fins', need: { iron: 8, wood: 4 },
@@ -424,7 +424,7 @@ const ROCKET_STAGES_L4 = [
   {
     id: 'fuel', order: 4, title: 'Propellant System', need: { fuel: 6, circuits: 2 },
     requires: ['rocket_fuel'], pieces: 2,
-    builtMessage: 'Stage 4 up. The tanks are loaded and the hologram switches off — the real rocket matches it now.'
+    builtMessage: 'Stage 4 up. The tanks are loaded and the hologram switches off.'
   },
   {
     id: 'final', order: 5, title: 'Final Launch Systems', need: { gems: 4, rocketParts: 2, fuel: 2 },
@@ -485,7 +485,7 @@ export function getStage(id) {
  * @property {string}  [doneMessage]  toast when the animation finishes
  */
 
-const MISSION_FALLBACK = 'Open the Mission card and follow the glowing marker to your next station.';
+const MISSION_FALLBACK = 'Open the Mission card and follow the glowing marker.';
 
 const RAW_CHAIN = [
   {
@@ -506,7 +506,7 @@ const RAW_CHAIN = [
     // Step 1 can never actually be locked, but the invariant is "every
     // lockedMessage names an action", so it still names one.
     lockedMessage: 'The Cadet Test is open right now — walk north up the road to the Mission School on the left.',
-    missionText: 'Walk north up the road, pick up the glowing crates on the way, and take the Cadet Test at the Mission School on the left.',
+    missionText: 'Walk north to the Mission School on the left. Take the Cadet Test.',
     statusText: 'Take the Cadet Test at the Mission School'
   },
 
@@ -521,8 +521,8 @@ const RAW_CHAIN = [
       { kind: 'reveal', targetId: 'path.materialsForge' },
       { kind: 'reveal', targetId: 'materialsForge.chimneySmoke' }
     ],
-    lockedMessage: 'The blueprint desk is upstairs. Pass the Cadet Test downstairs first — cadets only above this floor.',
-    missionText: 'Go up to the blueprint room in the Mission School and work out how tall the real rocket will be.',
+    lockedMessage: 'The blueprint desk is upstairs. Pass the Cadet Test downstairs first.',
+    missionText: 'Go upstairs to the blueprint room. Work out how tall the rocket will be.',
     statusText: 'Finish the blueprint upstairs'
   },
 
@@ -546,8 +546,8 @@ const RAW_CHAIN = [
       { kind: 'unlock', targetId: 'buildMenu' },
       { kind: 'unlock', targetId: 'rank:Junior Engineer', rank: 'Junior Engineer' }
     ],
-    lockedMessage: 'The Lab is cold. Finish the blueprint at the Mission School first — the engineers need to know how big the rocket is.',
-    missionText: 'Cross to the Materials Lab on the right side of the town and choose the metal for the rocket frame.',
+    lockedMessage: 'The Lab is cold. Finish the blueprint at the Mission School first.',
+    missionText: 'Go to the Materials Lab on the right. Choose the frame metal.',
     statusText: 'Choose the frame metal at the Lab'
   },
 
@@ -558,13 +558,13 @@ const RAW_CHAIN = [
     requires: ['step_frame'], progressWeight: 9,
     unlocks: { steps: ['step_flow', 'step_drag'], stages: [] },
     effects: [
-      { kind: 'build', targetId: 'rocket.stage.foundation', pieces: 2, doneMessage: 'Stage 1 up. The frame is standing on the pad — you can see it from here.' },
+      { kind: 'build', targetId: 'rocket.stage.foundation', pieces: 2, doneMessage: 'Stage 1 up. The frame is standing on the pad.' },
       { kind: 'reveal', targetId: 'rocketPad.ringLamps' },
       { kind: 'unlock', targetId: 'waterLab' },
       { kind: 'unlock', targetId: 'windTunnel' }
     ],
     lockedMessage: 'Choose the frame metal at the Materials Lab first, then bring 6 wood and 6 stone to the pad.',
-    missionText: 'Collect 6 wood and 6 stone, then build the rocket foundation at the pad. You can build it from this side of the river.',
+    missionText: 'Collect 6 wood and 6 stone. Build the foundation at the pad.',
     statusText: 'Build the rocket foundation at the pad'
   },
 
@@ -593,7 +593,7 @@ const RAW_CHAIN = [
       { kind: 'reveal', targetId: 'windTunnel.console', visible: false }
     ],
     lockedMessage: 'The Wind Tunnel opens once the rocket foundation is standing. Build Stage 1 at the pad first.',
-    missionText: 'Test the nose shapes in the Wind Tunnel on the right and pick the one with the least drag.',
+    missionText: 'Test nose shapes in the Wind Tunnel on the right. Pick the least drag.',
     statusText: 'Test the nose shape in the Wind Tunnel'
   },
 
@@ -614,8 +614,8 @@ const RAW_CHAIN = [
       { kind: 'unlock', targetId: 'rank:Flight Engineer', rank: 'Flight Engineer' }
     ],
     lockedMessage: 'The rocket body needs the tank test at the Water Lab AND the wind tunnel test first, plus 8 iron and 4 wood.',
-    missionText: 'Collect 8 iron and 4 wood, then build the rocket body at the pad. Finishing it also builds the bridge across the river.',
-    statusText: 'Build the rocket body — it also builds the bridge'
+    missionText: 'Collect 8 iron and 4 wood. Build the rocket body at the pad.',
+    statusText: 'Build the rocket body: it builds the bridge'
   },
 
   {
@@ -781,7 +781,7 @@ const RAW_CHAIN = [
     // straight from the question. A bonus puzzle must not move the main chain.
     effects: [],
     lockedMessage: 'The pressure gauge puzzle is in the blueprint room. Finish the blueprint first.',
-    missionText: '★ The gauge in the blueprint room is showing a pattern. Work out the next reading. You never need it to launch.',
+    missionText: '★ Optional: at the Mission School, what comes next on the fuel gauge?',
     statusText: 'Optional: read the fuel gauge pattern'
   },
 
@@ -794,7 +794,7 @@ const RAW_CHAIN = [
     // straight from the question. A bonus puzzle must not move the main chain.
     effects: [],
     lockedMessage: 'The weather logs are kept in the blueprint room. Finish the blueprint first.',
-    missionText: '★ Two weather balloons filed their logs at the Mission School. Work out which one flew higher. You never need it to launch.',
+    missionText: '★ Optional: at the Mission School, which balloon flew higher?',
     statusText: 'Optional: compare the balloon altitudes'
   },
 
@@ -807,7 +807,7 @@ const RAW_CHAIN = [
     // straight from the question. A bonus puzzle must not move the main chain.
     effects: [],
     lockedMessage: 'The engineer is busy with the frame metal. Choose that first.',
-    missionText: '★ The engineer has two blocks the same size, one iron and one foam. Work out which is heavier. You never need it to launch.',
+    missionText: '★ Optional: at the Materials Lab, which is heavier, iron or foam?',
     statusText: 'Optional: weigh up the two blocks'
   },
 
@@ -820,7 +820,7 @@ const RAW_CHAIN = [
     // straight from the question. A bonus puzzle must not move the main chain.
     effects: [],
     lockedMessage: 'The new tank is still being filled. Finish the flow test first.',
-    missionText: '★ A new test tank arrived at the Water Lab. Work out how much it holds. You never need it to launch.',
+    missionText: '★ Optional: a new test tank at the Water Lab. How much does it hold?',
     statusText: 'Optional: measure the new tank'
   },
 
@@ -833,7 +833,7 @@ const RAW_CHAIN = [
     // straight from the question. A bonus puzzle must not move the main chain.
     effects: [],
     lockedMessage: 'The fuel barrel is locked until the flow test is done.',
-    missionText: '★ There is a barrel of fuel to share between four tanks at the Water Lab. You never need it to launch.',
+    missionText: '★ Optional: share a barrel of fuel between four tanks at the Water Lab.',
     statusText: 'Optional: share the fuel between the tanks'
   },
 
@@ -846,7 +846,7 @@ const RAW_CHAIN = [
     // straight from the question. A bonus puzzle must not move the main chain.
     effects: [],
     lockedMessage: 'The tunnel is running the nose cone test. Finish that first.',
-    missionText: '★ The wind tunnel is free. Try a flat card two ways and see which one slips through the air. You never need it to launch.',
+    missionText: '★ Optional: at the Wind Tunnel, try a flat card two ways.',
     statusText: 'Optional: test the card in the tunnel'
   },
 
@@ -859,7 +859,7 @@ const RAW_CHAIN = [
     // straight from the question. A bonus puzzle must not move the main chain.
     effects: [],
     lockedMessage: 'The force rig is behind the engine cutaway. Test the engine first.',
-    missionText: '★ The Science Center has a force rig set up on the pad model. Work out what the two forces are doing. You never need it to launch.',
+    missionText: '★ Optional: the force rig at the Science Center. What are the two forces doing?',
     statusText: 'Optional: read the force rig'
   },
 
@@ -872,7 +872,7 @@ const RAW_CHAIN = [
     // straight from the question. A bonus puzzle must not move the main chain.
     effects: [],
     lockedMessage: 'The fuel sample cabinet opens once the engine has been tested.',
-    missionText: '★ There is a fuel sample in the cabinet at the Science Center. Work out what happens to it when it burns. You never need it to launch.',
+    missionText: '★ Optional: a fuel sample at the Science Center. What happens when it burns?',
     statusText: 'Optional: study the fuel sample'
   },
 
@@ -885,7 +885,7 @@ const RAW_CHAIN = [
     // straight from the question. A bonus puzzle must not move the main chain.
     effects: [],
     lockedMessage: 'The mixing rig is in use. Finish the fuel mixture question first.',
-    missionText: '★ The Fuel Depot mixing rig needs the right amount of oxidiser. Work it out. You never need it to launch.',
+    missionText: '★ Optional: the mixing rig at the Fuel Depot needs the right amount.',
     statusText: 'Optional: set the mixing rig'
   },
 
@@ -898,7 +898,7 @@ const RAW_CHAIN = [
     // straight from the question. A bonus puzzle must not move the main chain.
     effects: [],
     lockedMessage: 'The fin rig is locked while the guidance test is running.',
-    missionText: '★ The Guidance Tower has a steering fin on a turntable. Work out where a quarter turn points it. You never need it to launch.',
+    missionText: '★ Optional: at the Guidance Tower, turn the fin a quarter turn.',
     statusText: 'Optional: turn the steering fin'
   },
 
@@ -911,7 +911,7 @@ const RAW_CHAIN = [
     // straight from the question. A bonus puzzle must not move the main chain.
     effects: [],
     lockedMessage: 'The Observatory opens once the engine is tested at the Science Center.',
-    missionText: '★ The Observatory telescope is pointed at the Moon. Work out why astronauts can jump so high there. You never need it to launch.',
+    missionText: '★ Optional: at the Observatory, why can astronauts jump high on the Moon?',
     statusText: 'Optional: look at the Moon through the telescope'
   },
 
@@ -922,7 +922,7 @@ const RAW_CHAIN = [
     unlocks: { steps: [], stages: [] },
     effects: [],
     lockedMessage: 'The pad crew are running the countdown check. Finish that first.',
-    missionText: '★ The pad crew want the rocket reweighed before launch. Work out what it masses with five tanks fitted. You never need it to launch.',
+    missionText: '★ Optional: at the pad, reweigh the rocket with five tanks fitted.',
     statusText: 'Optional: reweigh the rocket on the pad'
   }
 ];
@@ -1336,7 +1336,7 @@ export class QuestEngine {
    */
   missionCard() {
     const active = this.current();
-    const now = active ? active.missionText : 'The rocket flew. Open the end card to see how high it got.';
+    const now = active ? active.missionText : 'The rocket flew. See how high it got.';
     let blocked = null;
     if (active && active.kind === 'build' && active.cost && !canPay(this.state.inventory, active.cost)) {
       blocked = shortfallMessage(missingFor(this.state.inventory, active.cost));
@@ -1491,7 +1491,7 @@ export function shortfallMessage(missing) {
   const parts = Object.entries(missing || {}).map(([k, v]) => `${count(v)} more ${k}`);
   if (parts.length === 0) return 'You have everything you need — build it!';
   const list = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
-  return `Not enough yet — you need ${list}. Crates are along the path to the pad.`;
+  return `You need ${list}.`;
 }
 
 /**
