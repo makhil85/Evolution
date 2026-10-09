@@ -249,6 +249,25 @@ await (async () => {
 })();
 
 await (async () => {
+  // A returning child: a scene OBJECT (Chapter 1's style builds its set when made)
+  // is taken down at once, never played (it hid the village's scenery before).
+  store.clear();
+  const story = hookStory(hookCamera());
+  const first = story.intro({ eyebrow: 'Chapter 1', title: 'x', line: 'x' });
+  for (let i = 0; i < 400; i++) story.update(1 / 30);
+  await first;
+  let disposed = 0; let stepped = 0;
+  const obj = { duration: 20, step() { stepped += 1; }, dispose() { disposed += 1; } };
+  const again = story.intro({ eyebrow: 'Chapter 1', title: 'x', line: 'x', scene: obj });
+  for (let i = 0; i < 200; i++) story.update(1 / 30);
+  await again;
+  ok('returning: a scene object is disposed at once and never stepped', () => {
+    assert.equal(disposed, 1);
+    assert.equal(stepped, 0);
+  });
+})();
+
+await (async () => {
   // A key during the film ends the film and the intro at once.
   store.clear();
   const order = [];
@@ -260,10 +279,14 @@ await (async () => {
   };
   const p = story.intro({ eyebrow: 'Chapter 2', title: 'Forces and Machines', line: 'x', scene });
   story.update(1 / 30);
-  pressKey();
-  await later();
   let settled = false;
   p.then(() => { settled = true; });
+  pressKey();                                   // too early: skips arm after 1 s
+  await later();
+  ok('a key in the first second does not skip', () => assert.ok(!settled));
+  await new Promise((r) => setTimeout(r, 1050));
+  pressKey();
+  await later();
   await later();
   ok('a key skips the film: the intro resolves, the film ends at once', () => {
     assert.ok(settled, 'intro still waiting after a key');
@@ -287,6 +310,7 @@ await (async () => {
     },
   });
   story.update(1 / 30);
+  await new Promise((r) => setTimeout(r, 1050)); // skips arm after 1 s
   pressKey();
   await later();
   ok('ending: a key ends the film, and the complete card is still on its way', () => {

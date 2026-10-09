@@ -177,7 +177,8 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
   let capEl = null;
   function say(text) {
     if (!text && !capEl) return;
-    if (!capEl) { capEl = el('div', 'cs-caption'); document.body.appendChild(capEl); nodes.push(capEl); }
+    // end() removes the nodes after a film, so a later film (the ending) makes a fresh caption.
+    if (!capEl || !capEl.isConnected) { capEl = el('div', 'cs-caption'); document.body.appendChild(capEl); nodes.push(capEl); }
     if (capEl.textContent !== (text || '')) capEl.textContent = text || '';
     capEl.classList.toggle('is-on', !!text);
   }
@@ -228,9 +229,13 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
      * Resolves when it ends or is skipped.
      */
     intro({ eyebrow, title, line, lookAt, scene = null }) {
+      const raw = scene;
       scene = asFilm(scene);
       const full = !this.seen();
       const filmFirst = full && !!scene;   // the film, then the card (no sweep)
+      // A scene object builds its set when it is made: a returning child never
+      // sees it, so take it down now (it hid the village's scenery until then).
+      if (!filmFirst && raw && typeof raw !== 'function') raw.dispose?.();
       begin();
       const card = el('div', 'cs-title');
       card.append(el('div', 'cs-title__eyebrow', eyebrow), el('div', 'cs-title__name', title), el('div', 'cs-title__line', line));
@@ -256,7 +261,10 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
           end();
           resolve();
         };
-        const onSkip = (e) => { e.stopPropagation(); if (e.type === 'keydown') e.preventDefault(); finish(); };
+        // Any key or click skips, once the first second has passed.
+        let armed = false;
+        setTimeout(() => { armed = true; }, 1000);
+        const onSkip = (e) => { if (!armed) return; e.stopPropagation(); if (e.type === 'keydown') e.preventDefault(); finish(); };
         addEventListener('keydown', onSkip, true);
         addEventListener('pointerdown', onSkip, true);
 
@@ -379,7 +387,9 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
       // The film first: any key or click ends the film (the card still comes).
       const hint = el('div', 'cs-skip is-on', 'Press any key to skip');
       document.body.appendChild(hint);
-      const skipFilm = (e) => { e.stopPropagation(); if (e.type === 'keydown') e.preventDefault(); endRun(); };
+      let armed = false;
+      setTimeout(() => { armed = true; }, 1000);
+      const skipFilm = (e) => { if (!armed) return; e.stopPropagation(); if (e.type === 'keydown') e.preventDefault(); endRun(); };
       addEventListener('keydown', skipFilm, true);
       addEventListener('pointerdown', skipFilm, true);
       return (async () => {
