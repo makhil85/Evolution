@@ -47,6 +47,7 @@ import { createFreezeButton } from './freeze.js';
 import { createAimDial } from './hud/aimDial.js';
 import { playIntro } from './cinematics.js';
 import { addJumpPanel } from '../play/grownUp.js';
+import { install as installReadGate, noteInput } from '../play/readGate.js';
 import { IS_CH5, IS_CH6, IS_CH7, OUTER } from './chapter.js';
 import { CH5_START, CH5_UPGRADES } from './ch5/start.js';
 import { CH6_START } from './ch6/start.js';
@@ -353,6 +354,8 @@ if (OUTER && !resumed) applyOwnedUpgrades(CH5_UPGRADES);
 
 let modalOpen = false;
 bus.on('ui-modal', (open) => { modalOpen = !!open; });
+// Words wait for a quiet moment (play/readGate.js): every key, click and drag counts as her playing.
+installReadGate();
 // One past the top level is the autopilot's cruise warp (AUTOPILOT_WARP,
 // physics.js decides where it applies); keys and buttons stop at the top.
 // On foot (a walk scene) the number keys are not flight: picking Deck 3 in the
@@ -1462,6 +1465,8 @@ function tick(realDt, render = true) {
     const input = controls.sample();
     game.kidSteering = false; // on foot or in a mini-scene: not flying
     const mouse = controls.takeMouse();
+    // Walking (or a drag) is her playing too: the words wait until she stops (readGate).
+    if (input.thrust || input.turn || input.strafe || input.steady || (mouse.dragging && (mouse.dx || mouse.dy))) noteInput();
     activeScene.tick(realDt, input, modalOpen ? { dx: 0, dy: 0, wheel: 0, dragging: false } : mouse, modalOpen);
     missions.tickCalm(realDt, modalOpen || game.paused || game.frozen);
     touch.update({ onFoot: true, cinematic: false, autoAim: game.mode.autoAim });
@@ -1477,6 +1482,7 @@ function tick(realDt, render = true) {
   // for a while (missions.js, QUIET_S); the autopilot's own key presses don't count.
   game.kidSteering = !game.autopilot?.on && !ship.landedOn && !game.cinematic
     && !!(input.thrust || input.turn || input.strafe || input.fire);
+  if (game.kidSteering) noteInput();
 
   // Easy's booster during a transfer burn: one tap of Space starts it and it
   // runs until the planned push is done (the burn computer stops it); S
@@ -1631,6 +1637,7 @@ function tick(realDt, render = true) {
   // Camera BEFORE the visuals: the lens flare, distance glows and atmosphere
   // rims all read the camera, so they must see this frame's position.
   const mouse = controls.takeMouse();
+  if (mouse.dragging && (mouse.dx || mouse.dy)) noteInput(); // dragging the view is playing too
   // The chase camera stays straight behind her (lead, 2026-10-06). It used
   // to swing up to 55% of the way toward a nearby planet, so the view kept
   // turning by itself and left/right turns looked reversed.

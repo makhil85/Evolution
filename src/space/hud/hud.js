@@ -6,7 +6,7 @@
 //   const hud = createHud({ mount, bus });
 //   hud.update(state)              // every frame, cheap
 //   hud.setMission({...})          // J toggles it, this module owns that key
-//   hud.toast(text, {kind, ms})    // stays up readMs(text); long text waits for a click
+//   hud.toast(text, {kind, ms})    // stays up readMs(text); long text waits for a quiet moment, pauses while read
 //   hud.askQuestion(q) -> Promise<{correct, attempts}>
 //   hud.showFact(...) / hud.showDialogue(...) -> Promise
 //   hud.openUpgrades(...) -> Promise<id|null>
@@ -38,6 +38,8 @@ import { createOverlays } from './overlays.js';
 import { inModalTurn } from './modalQueue.js';
 import { createTally, flyIcons } from './tally.js';
 import { readMs, needsClick, READ_MAX_MS, READ_MIN_MS } from '../../play/readTime.js';
+import { IDLE_MS, isIdle, isShort } from '../../play/readGate.js';
+import { LEVEL } from '../level.js';
 
 const MISSION_OPEN_KEY = 'space_ch4_mission_open';
 const MISSION_FLASH_MS = 6000;
@@ -46,6 +48,8 @@ const TOAST_GAP_MS = 1500;
 const MAX_VISIBLE_TOASTS = 2;
 /** A queued message older than this is dropped (its moment has passed). */
 const TOAST_STALE_MS = 12000;
+/** A waiting message, banner or the mission card looks again for a quiet moment this often. */
+const QUIET_POLL_MS = 250;
 
 /**
  * How long a message stays up by itself: a child needs readMs() to read it
@@ -82,7 +86,12 @@ export class Hud {
     this._toastNextAt = 0;
     this._toastSeen = new Map();
     this._readPending = 0; // cards waiting for a click (see _readCard)
+    this._readPauses = 0; // texts being read that pause the game (see _readPause)
+    this._pausedBy = new Set(); // what has the game paused: 'card', 'map', 'read' (see _setPauseSource)
+    this._goalNext = null; // the next goal banner, waiting for a quiet moment (announce)
+    this._goalWait = 0;
     this._missionOpen = this._restoreMissionOpen();
+    this._missionHold = false; // she opened the card: it stays open while she plays (see _isFolded)
     this._missionNow = undefined;
 
     this._buildMission();
@@ -99,10 +108,10 @@ export class Hud {
     this.markers = createMarkers(this.root, { leftPanel: this.instruments.leftColumn, rightPanel: this._sidebar });
     this._buildToasts();
 
-    this._modalHost = createModalHost(this.root, { bus: this.bus });
+    this._modalHost = createModalHost(this.root, { bus: this._pauseBus('card') });
     this._question = createQuestionModal(this._modalHost);
     this._overlays = createOverlays(this._modalHost);
-    this.map = createMap(this.root, { bus: this.bus });
+    this.map = createMap(this.root, { bus: this._pauseBus('map') });
     // Always-on top-down inset (bottom-right); click it for the full map.
     this.transfer = createTransferPanel(this.root);
     this.minimap = createMinimap(this.root, { onOpenMap: () => { if (!this._modalHost.isOpen()) this.map.open(); } });
@@ -114,6 +123,7 @@ export class Hud {
     // Sensible non-empty defaults so nothing looks broken before the caller's
     // first update() lands.
     this.setMission({ act: '', title: 'Mission', objective: 'Getting the engines warm…', steps: [] });
+    this._watchPlay();
   }
 
   // --- construction --------------------------------------------------------
@@ -136,7 +146,7 @@ export class Hud {
     const chev = svg(iconInner('chevronDown'));
     chev.classList.add('sp-mission__chev');
     toggle.appendChild(chev);
-    toggle.addEventListener('click', () => this._setMissionOpen(!this._missionOpen));
+    toggle.addEventListener('click', () => this._missionClick());
     mission.appendChild(toggle);
     this._missionToggle = toggle;
 
@@ -172,11 +182,40 @@ export class Hud {
 
   _setMissionOpen(open, { remember = true } = {}) {
     this._missionOpen = !!open;
-    this._missionCard.classList.toggle('is-collapsed', !open);
-    this._missionToggle.setAttribute('aria-expanded', String(!!open));
+    // Opened by her (J, a click, the flash): it stays open while she plays, until she is idle.
+    this._missionHold = !!open;
+    this._applyMissionOpen();
     if (remember) {
       try { localStorage.setItem(MISSION_OPEN_KEY, open ? '1' : '0'); } catch { /* private mode */ }
     }
+  }
+
+  /**
+   * Lead F4 (2026-10-09): while she flies or walks the mission card folds to its
+   * title line, so the objective does not cover the view. It unfolds once she has
+   * been idle for IDLE_MS (or she clicks it). The remembered choice (open or
+   * shut, MISSION_OPEN_KEY) is not touched by the folding.
+   */
+  _isFolded() {
+    return this._missionOpen && !this._missionHold && !isIdle(IDLE_MS);
+  }
+
+  _applyMissionOpen() {
+    const showing = this._missionOpen && !this._isFolded();
+    this._missionCard.classList.toggle('is-collapsed', !showing);
+    this._missionToggle.setAttribute('aria-expanded', String(showing));
+  }
+
+  /** A click on the card: a folded card opens in full; otherwise it opens or shuts as before. */
+  _missionClick() {
+    this._setMissionOpen(this._isFolded() ? true : !this._missionOpen);
+  }
+
+  /** Fold and unfold the card as she plays and stops (a poll: walks have no hud.update). */
+  _watchPlay() {
+    if (isIdle(IDLE_MS)) this._missionHold = false;
+    this._applyMissionOpen();
+    this._foldTimer = setTimeout(() => this._watchPlay(), QUIET_POLL_MS);
   }
 
   _flashMission() {
@@ -258,7 +297,9 @@ export class Hud {
       this._missionSteps.appendChild(li);
     }
 
-    this._missionPeek.textContent = objective || act || 'Mission';
+    // The folded card shows the step's title only (the objective is for when she is idle).
+    const title = typeof m.title === 'string' ? m.title : '';
+    this._missionPeek.textContent = title || objective || act || 'Mission';
 
     if (this._missionNow !== undefined && this._missionNow !== objective) this._flashMission();
     this._missionNow = objective;
@@ -271,6 +312,23 @@ export class Hud {
    * @param {string} [text] what to do
    */
   announce(title, text = '', ms = 6500) {
+    // Lead F3 (2026-10-09): the banner waits until she has stopped playing; the newest
+    // goal replaces one still waiting.
+    this._goalNext = { title, text, ms };
+    this._showGoalWhenQuiet();
+  }
+
+  _showGoalWhenQuiet() {
+    clearTimeout(this._goalWait);
+    this._goalWait = 0;
+    const next = this._goalNext;
+    if (!next) return;
+    if (!isIdle(IDLE_MS)) { this._goalWait = setTimeout(() => this._showGoalWhenQuiet(), QUIET_POLL_MS); return; }
+    this._goalNext = null;
+    this._showGoal(next.title, next.text, next.ms);
+  }
+
+  _showGoal(title, text, ms) {
     // Stays up for readMs like a toast; a long one waits for a click instead.
     if (needsClick([title, text])) { this._readCard(text, title); return; }
     if (!this._goal) {
@@ -289,6 +347,7 @@ export class Hud {
     this._goal.classList.add('is-on');
     clearTimeout(this._goalTimer);
     this._goalTimer = setTimeout(() => { this._goal.classList.remove('is-on'); this._goal.classList.add('is-gone'); }, readLife([title, text], ms));
+    this._readPause([title, text]);
   }
 
   // --- contract: per-frame instruments --------------------------------------
@@ -315,8 +374,10 @@ export class Hud {
   /**
    * A message for the child. It stays up for readMs(text) (5-10 s, see
    * src/play/readTime.js) even when a caller asks for less; a text too long
-   * for that waits for a click instead (_readCard). Messages queue behind the
-   * one on screen rather than pushing it out early.
+   * for that waits for a click instead (_readCard). A longer text waits until
+   * she has had no input for IDLE_MS, then pauses the flight while it is read
+   * (lead 2026-10-09; a short status shows at once and never pauses). Messages
+   * queue behind the one on screen rather than pushing it out early.
    * @param {string} text
    * @param {{kind?: 'info'|'good'|'warn', ms?: number}} [opts]  ms is a floor: a longer reading time is kept, a shorter one ignored
    */
@@ -340,7 +401,9 @@ export class Hud {
     // Lead 2026-10-02: messages came too fast and went too quickly. A new one
     // waits until TOAST_GAP_MS after the last one appeared, and anything
     // already waiting goes first (the same text still merges straight away).
-    const waits = held || full || this._toastQueue.length > 0 || now < this._toastNextAt;
+    // Lead F1/F2 (2026-10-09): words only when she is not playing. A short status may
+    // show while she plays; anything longer waits for a no-input moment (_canShow).
+    const waits = held || full || this._toastQueue.length > 0 || now < this._toastNextAt || !this._canShow(message);
     if (!sameAsNewest && waits) {
       this._toastQueue = this._toastQueue.filter((q) => q.text !== message);
       this._toastQueue.push({ text: message, opts, at: now });
@@ -366,6 +429,8 @@ export class Hud {
       newest.timer = setTimeout(() => this._dismissToast(newest), readLife(message, opts.ms));
       return;
     }
+    // A longer text pauses the flight while she reads it; a short status never does.
+    if (!isShort(message, LEVEL)) this._readPause(message);
 
     const kind = ['good', 'warn'].includes(opts.kind) ? opts.kind : 'info';
     const node = el('div', `sp-toast is-${kind}`);
@@ -400,9 +465,7 @@ export class Hud {
         closed = true;
         clearTimeout(armTimer);
         host.backdrop.removeEventListener('keydown', onKey);
-        host.close();
-        // host.close() un-pauses the game: stay paused under the big map or another card.
-        if (this._stillPaused()) this.bus.emit('ui-modal', true);
+        host.close(); // the pause sources (_setPauseSource) keep the game paused under the big map or another card
         this._readPending -= 1;
         this._holdEnded();
         resolve();
@@ -439,6 +502,45 @@ export class Hud {
     return this.map.isOpen() || !!document.querySelector('.sp-modal:not([hidden]), .sp-retry-card, .pl-back');
   }
 
+  /**
+   * May this text go up now? A short status always may (it never pauses); a longer
+   * one only once she has had no input for IDLE_MS (src/play/readGate.js).
+   */
+  _canShow(text) {
+    return isShort(text, LEVEL) || isIdle(IDLE_MS);
+  }
+
+  /**
+   * Text she has to read is up: the game pauses for its reading time (readMs), then
+   * goes on by itself (lead 2026-10-09: "give the child time to read by pausing the game").
+   */
+  _readPause(text) {
+    this._readPauses += 1;
+    this._setPauseSource('read', true);
+    setTimeout(() => {
+      this._readPauses -= 1;
+      if (this._readPauses === 0) this._setPauseSource('read', false);
+    }, readMs(text));
+  }
+
+  /** The bus the cards and the map emit 'ui-modal' on: their flag joins the others (_setPauseSource). */
+  _pauseBus(source) {
+    return {
+      emit: (name, on) => { if (name === 'ui-modal') this._setPauseSource(source, on); else this.bus.emit(name, on); },
+    };
+  }
+
+  /**
+   * The game is paused while any source says so: a card, the big map, or text she is
+   * reading. One 'ui-modal' flag goes on the bus for all of them, so a text ending
+   * never unpauses under a card, and a card closing never unpauses under a text.
+   */
+  _setPauseSource(source, on) {
+    if (on) this._pausedBy.add(source); else this._pausedBy.delete(source);
+    const paused = this._pausedBy.size > 0 || this._stillPaused();
+    this.bus.emit('ui-modal', paused);
+  }
+
   /** Resolves once the shared card host is free (the pause menu can hold it). */
   _waitForHost() {
     return new Promise((resolve) => {
@@ -463,8 +565,8 @@ export class Hud {
   }
 
   /** Show queued messages one at a time, TOAST_GAP_MS apart, as slots free up. */
-  _drainToasts() {
-    const wait = Math.max(0, this._toastNextAt - performance.now());
+  _drainToasts(delay = null) {
+    const wait = delay ?? Math.max(0, this._toastNextAt - performance.now());
     this._toastQueueTimer = setTimeout(() => {
       this._toastQueueTimer = 0;
       // A card or a dismissed toast calls this again when it can go on.
@@ -477,8 +579,14 @@ export class Hud {
         this._toastQueue = this._toastQueue.filter((q) => q.opts?.kind === 'good' || q.opts?.kind === 'warn' || now - q.at < TOAST_STALE_MS);
       }
       // While she has to act only warnings get through (setFocus(false) drains again).
-      const i = this._toastQueue.findIndex((q) => !this._focus || q.opts?.kind === 'warn');
-      if (i < 0) return;
+      // A longer message also waits for a no-input moment (_canShow): look again soon.
+      const allowed = (q) => !this._focus || q.opts?.kind === 'warn';
+      const i = this._toastQueue.findIndex((q) => allowed(q) && this._canShow(q.text));
+      if (i < 0) {
+        // Only a quiet moment is missing (focus ending drains at once, see setFocus).
+        if (this._toastQueue.some(allowed)) this._drainToasts(QUIET_POLL_MS);
+        return;
+      }
       const [next] = this._toastQueue.splice(i, 1);
       this._show(next.text, next.opts);
       if (this._toastQueue.length) this._drainToasts();
@@ -577,6 +685,8 @@ export class Hud {
     removeEventListener('keydown', this._onKey);
     for (const entry of this._toasts.slice()) this._dismissToast(entry);
     clearTimeout(this._missionFlashTimer);
+    clearTimeout(this._foldTimer);
+    clearTimeout(this._goalWait);
     this.root.remove();
   }
 }

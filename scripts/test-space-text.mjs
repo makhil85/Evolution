@@ -7,7 +7,11 @@ import { readFileSync } from 'node:fs';
 //     button instead: the game pauses under it (ui-modal) until she clicks OK,
 //     or presses Enter, Space or Escape; nothing replaces it meanwhile;
 //   - messages queue (never a third one on screen, never one pushed out early);
-//   - the HUD has no always-on key help ("Press J", "M: big map", "N: hide").
+//   - the HUD has no always-on key help ("Press J", "M: big map", "N: hide");
+//   - words wait for a quiet moment (src/play/readGate.js, lead 2026-10-09): a
+//     guidance toast or a goal banner waits until she has had no input for
+//     IDLE_MS, then the game pauses for its reading time; a short status shows
+//     at once and never pauses; the mission card folds while she flies.
 //
 //   node scripts/test-space-text.mjs
 
@@ -104,6 +108,7 @@ const { createServer } = await import('vite');
 const vite = await createServer({ root: process.cwd(), server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
 const { readMs, needsClick, READ_MIN_MS } = await vite.ssrLoadModule('/src/play/readTime.js');
 const { createHud } = await vite.ssrLoadModule('/src/space/hud/hud.js');
+const { noteInput, IDLE_MS } = await vite.ssrLoadModule('/src/play/readGate.js');
 const { paintToggle } = await vite.ssrLoadModule('/src/space/hud/toggleBar.js');
 
 // --- a fake clock: timers run only when the test advances it ----------------
@@ -401,6 +406,84 @@ advance(20000);
   check('a repeated Space after 5 s still does not close it', cardOpen());
   press(' ');
   check('a first Space after 5 s closes it', !cardOpen());
+}
+
+// --- 13. words wait for a quiet moment (readGate): F1-F4 ------------------
+// noteInput() is her playing (a key, a drag, a walk); the hud reads the same clock.
+const GUIDE = 'Keep the arrow on the planet and wait for the ring to close, then tap the button.';
+{
+  advance(20000);
+  noteInput();
+  hud.toast(GUIDE, { kind: 'info' });
+  check('a guidance toast waits while she is playing', hud._toasts.length === 0);
+  for (let i = 0; i < 8; i++) { advance(400); noteInput(); }
+  check('it still waits while her input goes on (3.2 s)', hud._toasts.length === 0);
+  for (let i = 0; i < 80 && hud._toasts.length === 0; i++) advance(50);
+  const shownAt = fakeNow;
+  check(`it shows once she has had no input for IDLE_MS (${IDLE_MS} ms)`, hud._toasts.length === 1 && hud._toasts[0].message === GUIDE);
+  check('...and pauses the flight while it is read (ui-modal true)', emittedModal().at(-1) === true);
+  advance(readMs(GUIDE) - 200);
+  check(`the flight stays paused for the reading time (${readMs(GUIDE)} ms)`, emittedModal().at(-1) === true);
+  advance(400);
+  check('then the flight goes on by itself (ui-modal false)', emittedModal().at(-1) === false);
+  check('the pause lasted readMs, from when it showed', fakeNow - shownAt >= readMs(GUIDE));
+  advance(20000);
+}
+{
+  // A short status is not words to wait for: it shows at once, and never pauses.
+  noteInput();
+  const before = emittedModal().length;
+  hud.toast('+3 wood', { kind: 'good' });
+  check('a short status shows at once while she plays', hud._toasts.some((e) => e.message === '+3 wood'));
+  check('...and does not pause the flight', emittedModal().length === before);
+  advance(20000);
+}
+{
+  // The goal banner waits for a quiet moment, pauses while read, and goes on by itself.
+  noteInput();
+  const title = 'Next goal: Venus';
+  const text = 'Steer toward Venus and burn.';
+  hud.announce(title, text);
+  for (let i = 0; i < 8; i++) { advance(400); noteInput(); }
+  check('a goal banner waits while she is playing', !(hud._goal && hud._goal.classList.contains('is-on')));
+  for (let i = 0; i < 80 && !(hud._goal && hud._goal.classList.contains('is-on')); i++) advance(50);
+  check('the goal banner shows once she has had no input for IDLE_MS', hud._goal.classList.contains('is-on') && hud._goalTitle.textContent === title);
+  check('...and the flight pauses while it is read', emittedModal().at(-1) === true);
+  advance(readMs([title, text]) - 200);
+  check('...still paused for its reading time', emittedModal().at(-1) === true);
+  advance(400);
+  check('...then goes on by itself', emittedModal().at(-1) === false);
+  advance(20000);
+}
+{
+  // The mission card folds to its title line while she flies, and unfolds once she is idle.
+  const card = hud._missionCard;
+  const folded = () => card.classList.contains('is-collapsed');
+  hud.setMission({ act: 'Act 1', title: 'Reach Mars', objective: 'Fly to Mars and wait by it.', steps: [] });
+  advance(2600);
+  check('the mission card is open while she is idle', !folded());
+  noteInput();
+  advance(300);
+  check('the mission card folds to its title line while she flies', folded());
+  check('...and the title line names the step', hud._missionPeek.textContent === 'Reach Mars', hud._missionPeek.textContent);
+  advance(2600);
+  check('it unfolds once she has been idle for IDLE_MS', !folded());
+  noteInput();
+  advance(300);
+  check('it folds again while she flies', folded());
+  hud._missionToggle.click();
+  check('a click opens the folded card in full', !folded());
+  advance(2600);
+  check('...and it stays open once she is idle', !folded());
+  hud._missionToggle.click();
+  check('a click shuts the card (her choice)', folded());
+  check('the choice is remembered (MISSION_OPEN_KEY 0)', localStorage.getItem('space_ch4_mission_open') === '0');
+  noteInput();
+  advance(300);
+  advance(2600);
+  check('a shut card stays shut, flying or idle', folded());
+  hud._missionToggle.click();
+  advance(20000);
 }
 advance(20000);
 globalThis.setTimeout = realSetTimeout;
