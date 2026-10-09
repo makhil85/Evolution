@@ -4,8 +4,8 @@ The game is called **Evolution** (lead, 2026-10-09): from a village's first
 science to the stars, and later the evolution of life itself. Save keys and
 file names keep `rocket_village` so no progress is lost.
 
-Written 2026-10-08 at `main` after PR #16; updated 2026-10-08 (late) for the
-open PRs #22-#34 and Chapter 7. Read this first (section 11 lists the
+Written 2026-10-08 at `main` after PR #16; updated 2026-10-09: everything up to PR #40
+is on `main` (Chapters 1-7, the films, the Evolution rename, no hints). Read this first (section 11 lists the
 mistakes the lead keeps catching: read it before every PR), then the
 detailed docs it points to. Where this file and an older note disagree, this
 file and the newest `HANDOFF.md` session notes win.
@@ -17,7 +17,7 @@ file and the newest `HANDOFF.md` session notes win.
 | `HANDOFF.md` | Running log of every session: what changed, how things work, how to test. Newest sections at the bottom. |
 | `PLAN.md` | The work list (older; "Next items" still valid, see section 8 below) |
 | `LESSONS_PLAN.md` | The teaching-lesson design (films + questions) |
-| `CHAPTER5_PLAN.md`, `CHAPTER6_PLAN.md`, `CHAPTER7_PLAN.md` | Chapter designs (Ch6 restructured 10-07: see the note at its top; Ch7 is being built, section 8) |
+| `CHAPTER5_PLAN.md`, `CHAPTER6_PLAN.md`, `CHAPTER7_PLAN.md` | Chapter designs (Ch6 restructured 10-07: see the note at its top; Ch7 is built, section 8) |
 
 ---
 
@@ -74,7 +74,7 @@ and design the hero once (wardrobe, face, hair, girl or boy); chapter cards
 unlock in order; difficulty buttons pick Level 1 or 4; Lessons list replays
 any lesson; "Start everything over".
 
-### Chapters 1-3: the villages (walking, building, questions)
+### Chapters 1-3: village, city and town (walking, building, questions)
 | Ch | Page / code | What |
 |---|---|---|
 | 1 Science Village | `chapter1.html` -> `src/science/` | Gather resources, solve maths boards and science labs, build the Science Center; key-gate puzzle; lessons 1A (round Earth) and 1B (Eratosthenes) |
@@ -92,7 +92,7 @@ chapter openings/endings (`src/game/chapterStory.js`), the question modal
 | 4 Voyage to Europa | `chapter4.html` | Earth orbit (2 laps, zero-g), satellite rescue (two-panel solar game), a lap with it, Flight School lesson, Moon transfer, get in Moon orbit -> circle it -> land, Moon walk, lift off, leave Earth (top-down view), Mars orbit, asteroid belt (mining claw, Ceres any time, upgrades), Jupiter (radiation, moons), Europa landing and walk, end card |
 | 5 Rings to a Star | `chapter5.html` (`src/space/ch5/`) | Jupiter -> Saturn (hexagon pole pass, rings lesson, ring run shooter, momentum lesson), Uranus, Neptune, Kuiper belt, Space pool game, Pluto, the edge cutscene, fusion lesson; **ends at the edge** (10-07) |
 | 6 The Long Trip | `chapter6.html` (`src/space/ch6/`) | **Starts back in the asteroid belt** (10-07): design the ship (design board), find Rock B (rock hunt), build/test the engine (workshop + test-fire cutscene); supply ship docks, meet the crew (2 kids, 2 robots); walk the ship's four Star Trek-style decks, joined by a lift (6 stations: shield, oxygen, water, farm, power, pack list); lesson 6A tiny Earth; Part E: lesson 6B energy (4 films), route planner (10 t then 100 t of fuel, 5 routes, speed far from the Sun), fly it (timing card), fusion drive on, lesson 6C light speed, years to a star, end |
-| 7 Toward Tau Ceti (being built) | `chapter7.html` (`src/space/ch7/`) | Full power out of the Sun's family toward Tau Ceti: feel the push, zero-g float game, chemistry and biology room tasks, a holodeck quasar and the lens game, the cruise to 90% of light. See section 8 and `CHAPTER7_PLAN.md` |
+| 7 Toward Tau Ceti | `chapter7.html` (`src/space/ch7/`) | Full power out of the Sun's family toward Tau Ceti: feel the push, zero-g float game, chemistry and biology room tasks, a holodeck quasar and the lens game, the cruise to 90% of light. See section 8 and `CHAPTER7_PLAN.md` |
 
 Space features worth knowing: Easy/Medium/Hard flight modes (+ Level 1
 tables), autopilot (P), auto-turn (T), freeze (F), time warp 1-4, Retry,
@@ -213,9 +213,9 @@ Ch1-3 keys in each `contracts.js` / `quests.js`.
 
 ## 6. Testing and verifying
 
-- `npm test`: 15 suites (space physics, space questions, play, science,
-  city, ch3 hunt, lessons, ch5 flight, ch5 games, ch6 route, ch6 interior,
-  ch6 quests, minimap, flight asks, ch7 chain). Some load modules
+- `npm test`: every `scripts/test-*.mjs` (the list is in `package.json`;
+  about 2.5 minutes). The chain is joined with `&&`, so the first failing
+  suite hides the rest: run a suite on its own to see past it. Some load modules
   through Vite (`createServer().ssrLoadModule`) because `import.meta.env`.
 - **Browser checks**: Playwright is at `/opt/node-tools/node_modules/playwright/index.mjs`
   (cloud), Chromium with `--use-gl=swiftshader --enable-unsafe-swiftshader`.
@@ -499,6 +499,9 @@ went wrong once.
 - Fair choices: the right one is never the longest; hints guide but never
   contain the answer; no bare-number choices; no three questions in a row
   (a watch-only film between); no repeats across lessons and banks.
+- **No hints for the child, at any Level, in any card or game** (lead
+  2026-10-09). Wrong answers just say try again; the lesson clue strip is off
+  (`SHOW_CLUES` in `lesson/card.js`). Parent hints stay. Do not add hints.
 - When the story changes, grep every old word ("rock ship", "inside a rock")
   in questions, lessons, cards and the launcher.
 
@@ -511,6 +514,11 @@ went wrong once.
   `if (M)`, and a test that builds with no models).
 - Many PRs at once: test them merged together (an integration branch) and fix
   the conflicts there first (steps.js between #24 and #25).
+- Stacked PRs merge into their BASE branch, not `main` [#26 and #28-#39 all
+  merged into claude/* bases and `main` stopped at #27; #40 brought them
+  over]. Open every PR against `main`, or tell the lead to retarget a child
+  after its parent merges. Parallel PRs that each add a test to the
+  `package.json` test line conflict: chain them or add the tests in one place.
 - Agents: stop one that loops its report; check what an agent staged before
   committing; they must not create cloud sessions or commit; remove stale
   worktrees when done.

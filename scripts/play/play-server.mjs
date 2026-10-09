@@ -1,4 +1,4 @@
-// Rocket Village: a tiny local web server for the built game (no installs).
+// Evolution: a tiny local web server for the built game (no installs).
 // The game can't run from a double-clicked index.html (the browser blocks
 // its files from disk), so PLAY.bat / play.command start this, and it opens
 // the game in the browser. Close the black window to stop it.
@@ -34,7 +34,7 @@ function listen(port, tries = 20) {
   server.once('error', (e) => { if (e.code === 'EADDRINUSE' && tries > 0) listen(port + 1, tries - 1); else { console.error(e.message); process.exit(1); } });
   server.listen(port, '127.0.0.1', () => {
     const url = `http://localhost:${port}/`;
-    console.log(`\n  Rocket Village is running at ${url}\n  (Keep this window open while you play. Close it to stop.)\n`);
+    console.log(`\n  Evolution is running at ${url}\n  (Keep this window open while you play. Close it to stop.)\n`);
     const open = process.platform === 'win32' ? `start "" "${url}"` : process.platform === 'darwin' ? `open "${url}"` : `xdg-open "${url}"`;
     exec(open, () => {});
   });

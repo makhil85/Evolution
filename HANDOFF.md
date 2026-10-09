@@ -1,8 +1,8 @@
-# Rocket Village: handoff
+# Evolution (formerly Rocket Village): handoff
 
 Updated 2026-09-29. Start here, then `PLAN.md` for the list of items (done
 and next). Rules for working in this repo (models, folders, sound parked):
-`CLAUDE.md`. Everything is committed on `master`.
+`CLAUDE.md`. Everything is on `main` (the newest notes are at the end of this file).
 
 ## The game in one screen
 
@@ -13,8 +13,8 @@ A kids' science game in the browser (Three.js + Vite), two question Levels
 |---|---|---|
 | Launcher + girl builder | `index.html`, `character.html` (`src/launcher/`, `src/character/`) | Name and build the girl once (wardrobe, face, hair); she appears in every chapter, smiling. |
 | Chapter 1 Science Village | `chapter1.html` -> `src/science/` | 3-D, plays end to end at both Levels and all play modes. |
-| Chapter 2 City Engineering | `chapter2.html` -> `src/city/` | 3-D, same. Built structures and bridges are solid/walkable. |
-| Chapter 3 Rocket Village | `chapter3.html` -> `src/gameScene.js`, `src/game/` | Same. |
+| Chapter 2 Forces and Machines | `chapter2.html` -> `src/city/` | 3-D, same. Built structures and bridges are solid/walkable. |
+| Chapter 3 Ready for Lift-off | `chapter3.html` -> `src/gameScene.js`, `src/game/` | Same. |
 | Chapter 4 Voyage to Europa | `chapter4.html` -> `src/space/` | Flight game; plays end to end at Level 4 Easy/Medium/Hard and Level 1. |
 | Chapter 5 Rings to a Star | `chapter5.html` -> `src/space/ch5/` (same engine) | Saturn, ring run, ice giants, Space pool, Pluto, the edge, fusion, the rock ship's engine half. Level 4 built; Level 1 not tuned. |
 | Play modes (Ch1-3) | `src/play/` | Easy arrow + glow, Medium/Hard mining by E, Hard treasure hunt. |

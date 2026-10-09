@@ -721,9 +721,9 @@ const LEVEL4_SPACE_QUESTIONS = {
     ],
     hint: 'What is Jupiter’s biggest “power”? The same thing that just bent your path.',
     parentHint:
-      'In 1994 Comet Shoemaker–Levy 9 smashed into Jupiter, and the scars were bigger than Earth. Jupiter’s gravity captures or ejects many comets (though it can occasionally send some inward too, so scientists still debate how much it “protects” us).',
+      'In 1994 Comet Shoemaker–Levy 9 smashed into Jupiter, and the biggest scars were as wide as Earth. Jupiter’s gravity captures or ejects many comets (though it can occasionally send some inward too, so scientists still debate how much it “protects” us).',
     success:
-      'Yes. In 1994 a whole comet smashed into Jupiter and left scars bigger than Earth. Its gravity catches and flings many comets.',
+      'Yes. In 1994 a whole comet smashed into Jupiter and left scars as wide as Earth. Its gravity catches and flings many comets.',
     doneMessage: 'Now use that same gravity. Swing past Jupiter and let it steer you to Europa.',
     reward: { science: 20 },
   },
@@ -1082,7 +1082,7 @@ export const LEVEL1_SPACE_QUESTIONS = {
   mars_day: {
     subject: 'Time and counting',
     difficulty: 'Level 1 • counting days (tricky!)',
-    prompt: 'A day on Mars is a bit longer than on Earth. So Zara’s Mars robot wakes up later each day. On Monday it wakes at 6 o’clock. Each day after, it wakes 1 hour later. When does it wake on Friday?',
+    prompt: 'A day on Mars is a bit longer than on Earth. So Zara’s Mars robot wakes up later each day. On Monday it wakes at 6 o’clock. Pretend it wakes 1 hour later each day. When does it wake on Friday?',
     visual: {
       rows: [
         { label: 'Days', tiles: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] },
@@ -1091,8 +1091,8 @@ export const LEVEL1_SPACE_QUESTIONS = {
     },
     answers: ['10', 'ten', '10 o clock', '10 oclock', '10 o’clock', "10 o'clock", '10:00'],
     hint: 'Fill in the row one day at a time: Monday 6, Tuesday 7, ...',
-    parentHint: 'Monday to Friday is 4 steps later, not 5: 6 + 4 = 10. The tempting 11 counts the days instead of the gaps between them (a fence-post puzzle).',
-    success: 'Ten o’clock! Monday to Friday is only 4 “one hour later” steps. Mars teams really do shift their clocks like this.',
+    parentHint: 'Monday to Friday is 4 steps later, not 5: 6 + 4 = 10. The tempting 11 counts the days instead of the gaps between them (a fence-post puzzle). The hour is a pretend number: a Mars day is really about 40 minutes longer than ours.',
+    success: 'Ten o’clock! Monday to Friday is only 4 “one hour later” steps. Mars teams really do shift their clocks, about 40 minutes each day.',
     doneMessage: 'Mars is red because its dust is rusty! Next: the asteroid belt.',
   },
 
@@ -1205,7 +1205,7 @@ export const LEVEL1_SPACE_QUESTIONS = {
   jupiter_panels: {
     subject: 'Skip counting',
     difficulty: 'Level 1 • groups of 5',
-    prompt: 'At Jupiter the sunlight is weak. For each 1 panel near Earth, Zara needs 5 panels at Jupiter. Her ship had 3 panels near Earth. How many panels does she need now?',
+    prompt: 'At Jupiter the sunlight is weak. Pretend that for each 1 panel near Earth, Zara needs 5 panels at Jupiter. Her ship had 3 panels near Earth. How many panels does she need now?',
     visual: {
       rows: [
         { label: 'Near Earth', tiles: ['▭', '▭', '▭'], arrow: true },
@@ -1214,7 +1214,7 @@ export const LEVEL1_SPACE_QUESTIONS = {
     },
     answers: ['15', 'fifteen', '15 panels'],
     hint: 'Count by fives, once for each panel: 5, 10, ...',
-    parentHint: '3 × 5 = 15, as skip counting. (Sunlight at Jupiter is really about 25 times weaker than at Earth.)',
+    parentHint: '3 × 5 = 15, as skip counting. The 5 is a pretend number for small hands: sunlight at Jupiter is really about 25 times weaker than at Earth, so a real ship needs about 25 panels for each one.',
     success: 'Fifteen! That is why her Big Solar Wings are so big. They open up now.',
     doneMessage: 'Big Solar Wings built. Off to Jupiter!',
   },
@@ -1248,7 +1248,7 @@ export const LEVEL1_SPACE_QUESTIONS = {
     ],
     hint: 'Where did the comet end up? Can it still go anywhere else?',
     parentHint: 'In 1994 a comet really did smash into Jupiter. Jupiter’s gravity catches or flings away many comets.',
-    success: 'Yes! Jupiter caught it. A real comet hit Jupiter in 1994. It left marks bigger than Earth!',
+    success: 'Yes! Jupiter caught it. A real comet hit Jupiter in 1994. It left marks as big as Earth!',
     doneMessage: 'Now fly around Jupiter to reach Europa.',
   },
 

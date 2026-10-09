@@ -1,5 +1,5 @@
 @echo off
-title Rocket Village
+title Evolution
 cd /d "%~dp0"
 where node >nul 2>nul
 if %errorlevel%==0 (
@@ -13,7 +13,7 @@ if %errorlevel%==0 (
   goto :eof
 )
 echo.
-echo  Rocket Village needs Node.js to run on this computer.
+echo  Evolution needs Node.js to run on this computer.
 echo  Install it (free) from https://nodejs.org , then double-click PLAY.bat again.
 echo.
 pause

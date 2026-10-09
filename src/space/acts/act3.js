@@ -164,7 +164,7 @@ export function act3Steps(game) {
         await wait(2600);
         await hud.showFact({
           title: 'Ceres, the dwarf planet',
-          body: t('Ceres is round and about 940 km across (as wide as Texas), the biggest object in the asteroid belt. ' +
+          body: t('Ceres is round and about 940 km across (almost as wide as Texas), the biggest object in the asteroid belt. ' +
             'Scientists have spotted bright salty patches on it, left behind by water that seeped up from inside.',
             'Ceres is round. It is the biggest rock in the asteroid belt. It has shiny salt spots. Water from inside made them.'),
         });

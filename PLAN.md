@@ -1,4 +1,4 @@
-# Rocket Village: the plan (items)
+# Evolution: the plan (items)
 
 The one list of work items for the whole game: what is done, what is next.
 Updated 2026-09-29 (last commit `7da5811` plus the handoff commit). How to

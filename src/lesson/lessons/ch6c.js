@@ -177,7 +177,7 @@ export const LESSON_6C = {
       beats: [
         { dur: 2.5, cap: ['Here is light’s speed as a bar. Now our ship’s, after all those slingshots.', 'This bar is light. This one is our ship.'] },
         { dur: 5, cap: ['About 50 km/s: so fast on Earth, but next to light it is a tiny sliver.', 'Our ship is fast, but next to light it is tiny!'] },
-        { dur: 6.5, cap: ['The fusion drive pushes day and night, for years. The bar grows...', 'The engine pushes for years. The bar grows...'] },
+        { dur: 6.5, cap: ['Now a pretend super drive pushes day and night, for years. The bar grows...', 'A pretend super engine pushes for years. The bar grows...'] },
         { dur: 4, cap: ['...to 30,000 km/s: one tenth of light’s bar.', '...to one tenth of light!'] },
         { dur: 4, cap: ['Numbers this big are hard to read, so the dial switches: 10% of light speed.', 'Now the dial says: 10% of light speed.'] },
       ],
