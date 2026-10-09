@@ -45,7 +45,7 @@ function iceGeometry(seed, r, big) {
 export const BOLT_GAIN = 1.4; // the bolt's cyan, lit for the eye and not for bloom (3 blooms the whole screen)
 export const PART_COLOURS = Object.freeze({ ice: 0xd8f4ff, rock: 0xc8b49a, crack: 0xffb060, bump: 0xb0a8a0, goal: 0xbff5a0 });
 const BOLT_MAX = 8; // a shot lives 1.3 s and the gun fires every 0.22 s: six at most
-const PART_MAX = 160; // burst parts alive at once (16 per big blast, 10 per small one)
+const PART_MAX = 256; // burst parts alive at once (16 per big blast, 10 per small one)
 const PART_LIFE = 0.9;
 
 const _m = new THREE.Matrix4();

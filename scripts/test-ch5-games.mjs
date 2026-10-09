@@ -236,7 +236,7 @@ ok('a part lives its life and then is gone; a burst only takes free parts', () =
   assert.equal(fx.alive(), 0);
   // A flood of hits fills the pool and then stops, without growing it.
   for (let i = 0; i < 40; i++) fx.burst(0, 0, -20, 16, PART_COLOURS.rock);
-  assert.ok(fx.alive() <= 160 && fx.alive() > 100, `alive ${fx.alive()}`);
+  assert.ok(fx.alive() <= 256 && fx.alive() > 200, `alive ${fx.alive()}`);
   fx.dispose();
   assert.equal(scene.children.length, 0);
 });
