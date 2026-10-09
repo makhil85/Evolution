@@ -29,7 +29,9 @@ export function createHeldKeys({ now = () => performance.now() } = {}) {
     /** @param {string} code  @param {boolean} [repeat] the keydown's e.repeat */
     add(code, repeat = false) {
       const k = held.get(code);
-      if (k) { k.last = now(); if (repeat) k.repeating = true; }
+      // A fresh keydown (not a repeat) restarts the key: its keyup was lost, and
+      // the OS's first repeat is still ~500 ms away, so it must not expire yet.
+      if (k) { k.last = now(); k.repeating = repeat; }
       // A repeat for a key we do not have: it was held through a blur or a hidden
       // tab (clear() dropped it). It is repeating, so it expires like any other.
       else held.set(code, { repeating: repeat, last: now() });
