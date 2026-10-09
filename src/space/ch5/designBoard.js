@@ -144,7 +144,7 @@ export const DESIGN_STEPS = [
       { text: ['Drill it out: keep a cap at the front and build a ring behind', 'Drill it out and build behind the cap'], correct: true },
       { text: ['Push harder: heavy does not matter once we are in space', 'Push harder, heavy does not matter out here'] },
     ],
-    why: ['Drill it! The ice and metal become fuel, water and parts. The cap still shields us, and the ring behind it is home: far lighter to push.', 'Drill it out, and live behind the cap!'],
+    why: ['Drill it! Ice and metal become fuel, water and parts. The cap shields us, and the ring behind is home.', 'Drill it out, and live behind the cap!'],
   },
   {
     prompt: ['Remember the momentum lesson. Where does the fusion engine go?', 'Where does the engine go?'],
@@ -162,14 +162,14 @@ export const DESIGN_STEPS = [
       { text: ['Icy rocks are prettier', 'They look nice'] },
       { text: ['There is no reason: any rock would do', 'Any rock is fine'] },
     ],
-    why: ['Ice is water to drink and to split for fusion fuel (heavy hydrogen), and the metal makes parts. Everything we need, out here, without lifting it from Earth.', 'The rock gives water, fuel and metal!'],
+    why: ['Ice gives water to drink and fusion fuel (heavy hydrogen). Metal makes parts. Nothing needs lifting from Earth.', 'The rock gives water, fuel and metal!'],
   },
   {
     type: 'text',
-    prompt: ['For one burn, the engine needs 1 tonne of fuel for every 100 tonnes of ship. Our ship weighs 1,000 tonnes. How many tonnes of fuel for one burn? (Type a number.)', 'The ship weighs 1,000 tonnes. It needs 1 tonne of fuel for every 100 tonnes. How much fuel?'],
+    prompt: ['One burn needs 1 tonne of fuel per 100 tonnes of ship. The ship weighs 1,000 tonnes. How much fuel? (Type a number.)', 'The ship weighs 1,000 tonnes. Fuel: 1 tonne per 100 tonnes. How much?'],
     answers: ['10', '10 t', '10 tonnes'],
     hint: ['How many 100s are in 1,000?', 'How many 100s make 1,000?'],
-    why: ['1,000 ÷ 100 = 10 tonnes. Every extra 100 tonnes of ship needs 1 more tonne of fuel on every burn, so the front shield is kept as light as it can be.', '10 tonnes! Every 100 tonnes of ship needs 1 tonne of fuel.'],
+    why: ['1,000 ÷ 100 = 10 tonnes. Every extra 100 tonnes of ship needs 1 more tonne of fuel.', '10 tonnes! Every 100 tonnes of ship needs 1 tonne of fuel.'],
   },
 ];
 

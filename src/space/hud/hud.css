@@ -923,17 +923,19 @@
 .sp-hud .sp-toasts { bottom: 76px; }
 .sp-hud.is-focus .sp-toasts { bottom: 250px; }
 
-/* --- next-goal banner (hud.announce) --------------------------------------- */
+/* --- next-goal banner (hud.announce) ---------------------------------------
+ * Lead F3 (2026-10-09): a smaller strip, high up, so it covers less of the view
+ * (it used to sit at 14% down, up to 640 px wide, over the playfield). */
 .sp-hud .sp-goal {
-  position: absolute; left: 50%; top: 14%; transform: translate(-50%, -12px);
-  max-width: min(640px, 86vw); padding: 14px 26px; text-align: center;
-  background: rgba(20,16,13,.86); border: 2px solid #ffd27a; border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.45); opacity: 0; pointer-events: none;
+  position: absolute; left: 50%; top: 50px; transform: translate(-50%, -8px);
+  max-width: min(420px, 60vw); padding: 7px 14px; text-align: center;
+  background: rgba(20,16,13,.84); border: 2px solid #ffd27a; border-radius: 12px;
+  box-shadow: 0 8px 22px rgba(0,0,0,.4); opacity: 0; pointer-events: none;
   transition: opacity .5s ease, transform .5s ease; z-index: 6;
 }
 .sp-hud .sp-goal.is-on { opacity: 1; transform: translate(-50%, 0); }
-.sp-hud .sp-goal__title { font-size: calc(15px * var(--hud-scale)); font-weight: 800; color: #ffd27a; letter-spacing: .02em; }
-.sp-hud .sp-goal__text { margin-top: 6px; font-size: calc(12px * var(--hud-scale)); line-height: 1.35; }
+.sp-hud .sp-goal__title { font-size: calc(12.5px * var(--hud-scale)); font-weight: 800; color: #ffd27a; letter-spacing: .02em; }
+.sp-hud .sp-goal__text { margin-top: 3px; font-size: calc(11px * var(--hud-scale)); line-height: 1.3; }
 
 /* --- on foot (Chapters 6 and 7: body.sp-on-foot, set by main.js while a walk scene runs) ----------
  * Lead 2026-10-09: "look at the HUD display while the girl is walking". The flight panels, the flight

@@ -139,6 +139,45 @@ function makeAnimator(root, clips) {
 }
 
 /**
+ * The outline is a 0.011-unit inverted hull, about 1.1 px from the chase camera
+ * (8 units back), about 0.7 px at 12 units and about 0.4 px at 20. Past this
+ * distance the hull is not drawn: nearly half her triangles. 20 sits beyond the
+ * chapter-start sweep and the outro camera (about 17), so the outline never
+ * switches off while she is on screen in either.
+ */
+const OUTLINE_NEAR = 20;
+
+const _at = new THREE.Vector3();
+
+/**
+ * Culling and outline distance for a skinned girl. `pairs` is [{body, hull}].
+ *
+ * Her bounds are generous rather than fitted to the bind pose, because her arms
+ * and legs leave that pose as she walks; a fitted sphere would clip a swinging
+ * arm at the edge of the screen. Both meshes share the sphere.
+ */
+function cullAndOutlineLod(pairs, height) {
+  for (const { body, hull } of pairs) {
+    body.geometry.computeBoundingSphere();
+    const s = body.geometry.boundingSphere;
+    const sphere = new THREE.Sphere(s.center.clone(), Math.max(s.radius * 1.5, height));
+    for (const m of hull ? [body, hull] : [body]) {
+      m.frustumCulled = true;
+      m.boundingSphere = sphere;
+    }
+    if (!hull) continue;
+    // Set on the body, which draws first; the hull follows its flag next frame.
+    // Shadow passes come through here with an orthographic camera far away, so
+    // only the view camera decides whether the outline is drawn.
+    body.onBeforeRender = (renderer, scene, camera) => {
+      if (!camera.isPerspectiveCamera) return;
+      body.getWorldPosition(_at);
+      hull.visible = camera.position.distanceTo(_at) < OUTLINE_NEAR;
+    };
+  }
+}
+
+/**
  * The stand-in: the designed girl, rigged, at the game's scale.
  *
  * The outline is a second SkinnedMesh sharing her skeleton rather than the
@@ -159,6 +198,7 @@ function buildPlaceholder(height = AVATAR_HEIGHT) {
     outlineThickness: 0.011,
   });
   rig.group.name = 'avatarPlaceholder';
+  cullAndOutlineLod([{ body: rig.mesh, hull: rig.hull }], height);
   return rig;
 }
 
@@ -205,16 +245,13 @@ export async function loadAvatar({ height = AVATAR_HEIGHT } = {}) {
   const grounded = new THREE.Box3().setFromObject(group);
   group.position.y -= grounded.min.y;
 
-  // A skinned mesh moves far outside its bind-pose bounds; without this three
-  // culls her whenever an arm swings near the edge of the screen.
-  let skinned = false;
-  group.traverse((o) => {
-    if (o.isSkinnedMesh) { o.frustumCulled = false; skinned = true; }
-  });
-
   // toonify's outline is a scaled-up copy of the mesh, which for a skinned one
   // would hang in the bind pose while she walks out from inside it. Skinned
   // models get the shader-based outline instead.
+  let skinned = false;
+  group.traverse((o) => {
+    if (o.isSkinnedMesh) skinned = true;
+  });
   toonify(group, { outline: !skinned });
   if (skinned) {
     const hulls = [];
@@ -222,7 +259,6 @@ export async function loadAvatar({ height = AVATAR_HEIGHT } = {}) {
       if (!o.isSkinnedMesh || o.userData.isOutline) return;
       const hull = new THREE.SkinnedMesh(o.geometry, makeOutlineMaterial(0.011));
       hull.userData.isOutline = true;
-      hull.frustumCulled = false;
       hull.castShadow = false;
       hull.receiveShadow = false;
       hulls.push({ source: o, hull });
@@ -231,6 +267,10 @@ export async function loadAvatar({ height = AVATAR_HEIGHT } = {}) {
       source.parent.add(hull);
       hull.bind(source.skeleton, source.bindMatrix);
     }
+    // A skinned mesh moves far outside its bind-pose bounds, so without a
+    // sphere that covers her poses three culls her when an arm swings near the
+    // edge of the screen.
+    cullAndOutlineLod(hulls.map(({ source, hull }) => ({ body: source, hull })), height);
   }
 
   const animator = makeAnimator(group, gltf.animations || []);

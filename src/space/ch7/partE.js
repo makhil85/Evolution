@@ -25,13 +25,13 @@ export function partESteps(game) {
     {
       id: 'c7_cruise', act: ACT_E,
       title: t('Full push to 90%', 'Full push!'),
-      objective: t('The drive stays on at full power. Watch the ship speed up towards the speed of light.', 'Full push! Watch the ship go!'),
+      objective: t('Full power. Watch the ship speed up towards the speed of light.', 'Full push! Watch the ship go!'),
       markers: [],
       async enter() {
         await playCh7Cruise(game); // the push, the dial to 90%, the plan strip and the ship clock
         await hud.showDialogue([
           { who: CREW.signal, text: t('We are at about 90% of light speed. The fastest we have ever gone!', 'We are at 90% of light speed! The fastest ever!') },
-          { who: CREW.signal, text: t('Here is a strange story about very fast clocks: they tick slower. On the trip to Tau Ceti, about 7 years pass for us, but about 14 years pass on Earth.', 'Very fast clocks tick slower! About 7 years for us, about 14 on Earth!') },
+          { who: CREW.signal, text: t('A strange story: very fast clocks tick slower. On the trip to Tau Ceti, about 7 years pass for us, but about 14 on Earth.', 'Very fast clocks tick slower! About 7 years for us, about 14 on Earth!') },
           { who: 'girl', text: t('So when we get there, Earth will be 14 years older. And we will be only 7 years older!', 'So Earth gets older faster than us!') },
           { who: CREW.builder, text: t('This is a pretend drive, from a story. Nobody can build one like it yet.', 'This is a pretend engine, from a story.') },
         ]);

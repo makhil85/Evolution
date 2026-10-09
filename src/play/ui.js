@@ -272,6 +272,11 @@ export function isPlayModalOpen() {
   return locks > 0;
 }
 
+/** How many locks are held (cards, reading pauses): the HUD counts its own pauses out of this. */
+export function playLockCount() {
+  return locks;
+}
+
 export function prefersReducedMotion() {
   try { return !!(typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches); } catch { return false; }
 }

@@ -112,7 +112,7 @@ for (const level of [1, 4]) {
   const r = fresh(level);
   ok(!r.bridgeUnlocked(), `${tag}: bridge locked at start`);
   const refused = r.openQuest('bridge');
-  ok(refused.ok === false && (level === 1 ? /gold lock is still closed/ : /golden bridge lock is still closed/).test(refused.text), `${tag}: bridge quest refused while locked`);
+  ok(refused.ok === false && (level === 1 ? /gold lock is closed/ : /golden bridge lock is still closed/).test(refused.text), `${tag}: bridge quest refused while locked`);
   ok(r.solveQuest('bridge') === null, `${tag}: bridge cannot be solved while locked`);
   const meds = MEDIUM_QUESTS[level];
   for (let i = 0; i < 3; i++) {
@@ -182,7 +182,7 @@ for (const level of [1, 4]) {
   const tag = `L${level}`;
   const r = fresh(level);
   let c = r.workshopCheck();
-  ok(!c.ok && (level === 1 ? /needs the bridge first/ : /needs the unlocked bridge route first/).test(c.text), `${tag}: workshop refused before the bridge`);
+  ok(!c.ok && (level === 1 ? /needs the bridge\./ : /needs the unlocked bridge route first/).test(c.text), `${tag}: workshop refused before the bridge`);
 
   r.solveQuest('key');
   r.solveQuest('bridge');
@@ -332,13 +332,13 @@ for (const level of [1, 4]) {
   eq(r.progress(), { pct: 0, status: level === 1 ? 'Build the Workshop' : 'Build the Engineering Workshop' }, `${tag}: progress at start`);
   let lines = r.missionLines();
   eq(lines.length, 3, `${tag}: 3 mission lines at start`);
-  ok(lines[0] === 'Open the bridge: solve any 3 medium quests (0/3) or the hard one.', `${tag}: first mission line`);
+  ok(lines[0] === (level === 1 ? 'Open bridge: 3 medium (0/3) or the hard one.' : 'Open the bridge: solve any 3 medium quests (0/3) or the hard one.'), `${tag}: first mission line`);
   r.solveQuest(MEDIUM_QUESTS[level][0]);
   eq(r.progress().pct, 20, `${tag}: 1 medium = 20%`);
   r.solveQuest(MEDIUM_QUESTS[level][1]);
   r.solveQuest(MEDIUM_QUESTS[level][2]);
   eq(r.progress().pct, 60, `${tag}: 3 mediums = 60%`);
-  ok(r.missionLines()[0].startsWith(level === 1 ? 'The gold lock is open' : 'The single golden lock at the moat is open'), `${tag}: bridge-open mission line`);
+  ok(r.missionLines()[0].startsWith(level === 1 ? 'The gold lock is open' : 'The golden lock at the moat is open'), `${tag}: bridge-open mission line`);
   r.solveQuest('bridge');
   eq(r.progress().pct, 80, `${tag}: bridge = 80%`);
   ok(r.missionLines()[0].startsWith('Cross the bridge'), `${tag}: cross-the-bridge line`);
@@ -479,7 +479,7 @@ for (const level of [1, 4]) {
   ok(!easy.isHuntRequired() && easy.startWorkshop().ok, `${tag}: Easy / Medium build without the hunt`);
   const other = fresh(level);
   other.setHuntRequired(true); other.markHuntFound();
-  ok(other.workshopCheck().text.startsWith(level === 1 ? 'The workshop needs the bridge first' : 'The workshop needs the unlocked bridge route first'), `${tag}: with the gear found the normal refusals apply`);
+  ok(other.workshopCheck().text.startsWith(level === 1 ? 'Workshop needs the bridge.' : 'The workshop needs the unlocked bridge route first'), `${tag}: with the gear found the normal refusals apply`);
   const old = memStore();
   old.setItem(STORE_KEYS[level], JSON.stringify({ resources: { wood: 3 }, builtFinal: false, message: 'hi', collected: [1] }));
   const o = fresh(level, old);

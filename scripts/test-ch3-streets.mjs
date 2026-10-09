@@ -140,6 +140,51 @@ try {
     if (Math.abs(cx) < 0.5 && cz > 35 && cz < 45) north.push(t);
   }
   ok(north.length > 10, 'the north road is paved');
+
+  // ---- perf: the scatter is baked into merged cells -------------------------
+  // The town's trees, rocks and the mountain range go through bakeInstances:
+  // one static mesh per cell and material kind, not one draw per prototype.
+  // These checks run on boxes (the models cannot load here): the merge keeps
+  // every triangle, each cell's bounding sphere holds every instance in it (so
+  // culling never drops a visible one), and the draws are the cells in use.
+  const { bakeInstances, gridCellOf, sectorCellOf } = await server.ssrLoadModule('/src/game/board.js');
+  const { mountainRingLayout } = await server.ssrLoadModule('/src/game/mountains.js');
+  const cellOf = gridCellOf(BOUNDS, 4, 6);
+  const tinted = { geometry: new THREE.BoxGeometry(1.2, 2.4, 1.2), material: new THREE.MeshBasicMaterial(), triangles: 12, tint: 0x4e9e46 };
+  const textured = { geometry: new THREE.BoxGeometry(0.8, 1.6, 0.8), material: new THREE.MeshBasicMaterial({ map: new THREE.Texture() }), triangles: 12 };
+  const scatter = [];
+  for (let k = 0; k < 60; k++) {
+    scatter.push({ x: -31 + (k % 10) * 6.4, z: -49 + Math.floor(k / 10) * 9.3, rotY: k * 0.7, scale: 0.8 + (k % 3) * 0.2 });
+  }
+  const baked = bakeInstances(new THREE.Group(), [{ parts: [tinted, textured], placements: scatter }], { cellOf });
+  const tris = baked.reduce((s, m) => s + m.geometry.index.count / 3, 0);
+  ok(tris === scatter.length * 24, `the merge keeps every triangle (${tris} of ${scatter.length * 24})`);
+  const cellsUsed = new Set(scatter.map((p) => cellOf(p))).size;
+  ok(baked.length <= cellsUsed * 2 && baked.length < scatter.length * 2, `one draw per cell and kind (${baked.length} draws, ${cellsUsed} cells)`);
+  let covered = true;
+  for (const mesh of baked) {
+    const sph = mesh.geometry.boundingSphere;
+    // The tinted box is 1.2 x 2.4 x 1.2, the textured one 0.8 x 1.6 x 0.8.
+    const half = mesh.material.map ? new THREE.Vector3(0.4, 0.8, 0.4) : new THREE.Vector3(0.6, 1.2, 0.6);
+    for (const p of scatter) {
+      if (cellOf(p) !== mesh.userData.cell) continue;
+      const m = new THREE.Matrix4().compose(new THREE.Vector3(p.x, 0, p.z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), p.rotY), new THREE.Vector3(p.scale, p.scale, p.scale));
+      for (const sx of [-1, 1]) for (const sy of [-1, 1]) for (const sz of [-1, 1]) {
+        const c = new THREE.Vector3(sx * half.x, sy * half.y, sz * half.z).applyMatrix4(m);
+        if (c.distanceTo(sph.center) > sph.radius + 1e-6) covered = false;
+      }
+    }
+  }
+  ok(covered, 'every cell sphere holds every instance in it (culling cannot drop a visible one)');
+
+  // The mountain range: twelve arcs at most (mountains.js MOUNTAIN_ARCS), every cliff piece in exactly one.
+  const { byPiece } = mountainRingLayout(BOUNDS);
+  const arcs = new Set();
+  let pieces = 0;
+  for (const list of Object.values(byPiece)) {
+    for (const p of list) { arcs.add(sectorCellOf((BOUNDS.minX + BOUNDS.maxX) / 2, (BOUNDS.minZ + BOUNDS.maxZ) / 2, 12)(p)); pieces++; }
+  }
+  ok(arcs.size === 12 && pieces > 500, `the range is baked into twelve arcs (${arcs.size} arcs, ${pieces} pieces)`);
 } finally {
   await server.close();
 }

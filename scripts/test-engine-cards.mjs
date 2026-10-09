@@ -15,6 +15,10 @@
 // 8. A dialogue whose card was replaced does not close the new card.
 // 9. showEnd waits its turn like the other blocking cards.
 // 10. A step that throws is logged and the chain goes on.
+// 11. On foot (a walk, a cabin), a question waits until she has stopped walking
+//     for IDLE_MS (readGate), not return at once.
+// 12. In flight, mouse drag and any key count as not quiet: the QUIET_S wait starts over.
+// 13. On foot, a question that has waited 15 s is asked at her first short natural stop.
 //
 // Runs the real Chapter 4 chain (missions.js, acts/act1.js) headless, with a
 // stub DOM and a stub hud. The card modules (retry, overlays, toggles) run as
@@ -120,6 +124,7 @@ const { Hud } = await vite.ssrLoadModule('/src/space/hud/hud.js');
 const { createFreezeButton } = await vite.ssrLoadModule('/src/space/freeze.js');
 const { createAimToggle } = await vite.ssrLoadModule('/src/space/aimToggle.js');
 const { createAutopilot } = await vite.ssrLoadModule('/src/space/autopilot.js');
+const { noteInput, IDLE_MS } = await vite.ssrLoadModule('/src/play/readGate.js');
 
 const flush = (ms = 20) => new Promise((r) => setTimeout(r, ms));
 const results = [];
@@ -295,6 +300,7 @@ await check('6b. anyCardOpen sees the host card, the Retry card and a play-mode 
 await check('6c. T, F and P do nothing while a card is up; they work again after', async () => {
   const game = makeGame();
   game.hud.toast = () => {};
+  game.missions = { step: null };        // the autopilot's loop reads it after each step
   createFreezeButton(game);
   createAimToggle(game);
   const autopilot = createAutopilot(game, { controls: game.controls, hud: game.hud });
@@ -309,6 +315,7 @@ await check('6c. T, F and P do nothing while a card is up; they work again after
   assert.equal(game.manualAim, true, 'T works with no card');
   press('KeyP');
   assert.equal(autopilot.on, true, 'P works with no card');
+  autopilot.set(false);                  // its loop ends here, not later in the run
 });
 
 // --- 7: Retry closes without unpausing under another card -----------------------
@@ -421,6 +428,71 @@ await check('10. a throw while a step starts is logged, and the next step still 
   m.update(0.016, {}, false);            // the chain is not dead: a1_arrive completes
   await flush(60);
   assert.equal(m.step.id, 'a1_float', `step is ${m.step.id}`);
+});
+
+// --- 11: on foot, a question waits until she has stopped walking ----------------
+await check('11. on foot, a question waits until she has stopped walking for IDLE_MS', async () => {
+  const game = makeGame();
+  game.activeScene = { tick() {} };      // a walk is running
+  const m = createMissions(game);
+  noteInput();                           // she is walking now
+  let asked = false;
+  m.untilQuiet().then(() => { asked = true; });
+  m.tickCalm(0.016, false);
+  await flush(20);
+  assert.equal(asked, false, 'still walking: not yet');
+  noteInput();                           // more walking, a little later
+  await flush(IDLE_MS / 2);
+  m.tickCalm(0.016, false);
+  assert.equal(asked, false, 'half a second of no walking is not enough');
+  await flush(IDLE_MS / 2 + 100);
+  m.tickCalm(0.016, false);
+  await flush(10);
+  assert.equal(asked, true, 'once she has stopped for IDLE_MS the question may come');
+  game.activeScene = null;
+});
+
+// --- 12: in flight, a drag or a key restarts the hands-off wait -------------------
+await check('12. in flight, a drag or a key in the last moment restarts the QUIET_S wait', async () => {
+  const game = makeGame();
+  const m = createMissions(game);
+  noteInput();                           // she drags the view
+  m.tickCalm(QUIET_S + 1, false);        // a long time has passed, but she is still on the mouse
+  let quietNow = false;
+  m.untilQuiet().then((ok) => { quietNow = ok; });
+  await flush(10);
+  assert.equal(quietNow, false, 'not quiet while she drags');
+  await flush(300);                      // she lets go (no input for 0.3 s)
+  m.tickCalm(QUIET_S + 1, false);
+  await flush(10);
+  assert.equal(quietNow, true, 'quiet once she has let go and QUIET_S has passed');
+});
+
+// --- 13: on foot, a question that has waited 15 s is asked at her first short stop ---
+await check('13. on foot, a question waiting 15 s is asked at her first short natural stop (not lost)', async () => {
+  const game = makeGame();
+  game.activeScene = { tick() {} };
+  const m = createMissions(game);
+  // A fake clock for performance.now (readGate and missions read it), restored after.
+  const realNow = performance.now;
+  let t = 1e6;
+  performance.now = () => t;
+  try {
+    noteInput();
+    let asked = false;
+    m.untilQuiet().then(() => { asked = true; });
+    const tick = async (ms) => { t += ms; noteInput(); m.tickCalm(ms / 1000, false); await Promise.resolve(); };
+    for (let i = 0; i < 64; i++) await tick(250);       // 16 s of walking
+    assert.equal(asked, false, 'still walking after 16 s: not asked yet');
+    for (let i = 0; i < 3; i++) { t += 250; m.tickCalm(0.25, false); await Promise.resolve(); }   // she stops
+    assert.equal(asked, false, 'stopped only 0.75 s: the natural stop (1 s) is not yet');
+    t += 250; m.tickCalm(0.25, false); await Promise.resolve();
+    await Promise.resolve();
+    assert.equal(asked, true, 'stopped for 1 s after the cap: asked');
+  } finally {
+    performance.now = realNow;
+    game.activeScene = null;
+  }
 });
 
 console.error = realError;

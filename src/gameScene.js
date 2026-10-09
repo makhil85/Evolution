@@ -36,6 +36,7 @@ import { createFrameMonitor } from './game/frameMonitor.js';
 import { createChapterStory, heroName, confetti } from './game/chapterStory.js';
 import { createOpening, createArrival } from './game/cutscenes.js';
 import { createHud } from './game/hud.js';
+import { install, whenIdle } from './play/readGate.js';
 import { audio } from './game/audio.js';
 import { QUESTIONS } from './game/questions.js';
 import { createNavArrow } from './play/navArrow.js';
@@ -82,6 +83,7 @@ const camera = new THREE.PerspectiveCamera(52, mount.clientWidth / mount.clientH
 // Input
 // ---------------------------------------------------------------------------
 const keys = createHeldKeys(); // also lets go on blur / a lost keyup
+install(); // the read gate: any key, click or touch is "she is playing" (src/play/readGate.js)
 /** True when the keystroke belongs to a text field, not the game. */
 function typingInField(e) {
   const t = e.target;
@@ -94,7 +96,8 @@ addEventListener('keydown', (e) => {
   // question was literally untypeable and it gates the launch.
   if (typingInField(e)) return;
   if (['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','ShiftLeft'].includes(e.code)) e.preventDefault();
-  keys.add(e.code, e.repeat);
+  // A key pressed while the game is paused (a card, a reading pause) is not kept: nothing walks after it.
+  if (!playBlocked() && !(hud && hud.isModalOpen())) keys.add(e.code, e.repeat);
 });
 addEventListener('keyup', (e) => keys.delete(e.code));
 
@@ -219,7 +222,8 @@ let state = null;
 let effects = null;
 let stations = null;
 let rocket = null;
-let elapsed = 0;
+let elapsed = 0; // real time, for the ambient world (water, villagers)
+let gameTime = 0; // the game's own clock: stops while a reading pause is up (hud.isReadPaused)
 const shadowAnchor = new THREE.Vector3(0, 0, 0);
 let onInteract = null;
 let hud = null;
@@ -691,7 +695,7 @@ async function main() {
       // before the two mass puzzles.
       const lesson = LESSON_BEFORE[step.questionId];
       if (lesson && !lessonSeen(lesson.id)) {
-        lessonOnce(lesson).then(() => onInteract());
+        lessonOnce(lesson).then(() => whenIdle()).then(() => onInteract());
         return;
       }
       hud.askQuestion(q, (ok) => { if (ok) hud.update(engine); }, {
@@ -733,6 +737,7 @@ async function main() {
       // space in a test can be launched, so the chapter's ending still comes.
       (async () => {
         await lessonOnce(LESSON_3B);
+        await whenIdle(); // the tuner opens by itself after the lesson: only once she has stopped playing
         const build = await openLaunchTuner({ mode: playMode?.id || 'medium' });
         if (!build) { hud.update(engine); return; }
         const res = engine.launch?.();
@@ -779,7 +784,7 @@ async function main() {
   const intro = {
     eyebrow: 'Chapter 3',
     title: 'Ready for Lift-off',
-    line: engine.state.launched ? `Welcome back, ${heroName()}! The rocket has flown.` : `Build a real rocket, ${heroName()}: answer the science questions, build it stage by stage, and launch it.`,
+    line: engine.state.launched ? `Welcome back, ${heroName()}! The rocket has flown.` : `Build a real rocket, ${heroName()}: answer the questions, build it stage by stage, launch it.`,
     lookAt: new THREE.Vector3(0, 0, -8),
   };
   opening = createOpening({
@@ -793,6 +798,7 @@ async function main() {
   applyMode(loadPlayMode());
   modeChip = createModeChip({ level: playLevel, onChange: (id) => applyMode(PLAY_MODES[id]) });
   if (savedPlayModeId() === null) {
+    await whenIdle(); // a card she did not ask for opens only once she has stopped playing
     chooserOpen = true;
     try { await choosePlayMode({ level: playLevel }); } finally { chooserOpen = false; }
     applyMode(loadPlayMode());
@@ -889,9 +895,14 @@ function frame() {
 
 /** One frame of everything. Split from frame() so tests can step it by hand. */
 function tick(dt, now = performance.now()) {
+  // A reading pause (a line on screen, the OK card) freezes the game: the rocket,
+  // pickups, stations, nav, mining and her walk get no time. The ambient world keeps dt.
+  const gdt = hud && hud.isReadPaused() ? 0 : dt;
+  elapsed += dt;
+  gameTime += gdt;
 
   // While the rocket is flying it owns the camera and the player is a passenger.
-  const flying = launch && launch.update(dt);
+  const flying = launch && launch.update(gdt);
   // ...and it must give control back. Without this the session ended at apogee:
   // frozen camera, no movement, dark sky, forever.
   if (launch && launch.finished && !launch.handedBack) {
@@ -914,7 +925,7 @@ function tick(dt, now = performance.now()) {
       const showMarks = hideCardMarks();
       story.outro({
         title: 'Lift-off! The rocket is in space!',
-        line: `You did it, ${heroName()}! Every stage built, every question answered. Next: fly that rocket all the way to Europa, Jupiter's icy moon.`,
+        line: `You did it, ${heroName()}! Every stage built. Next: fly to Europa, Jupiter's icy moon.`,
         focus: null,
         next: { href: 'chapter4.html', label: 'Next: Chapter 4 — Voyage to Europa' },
       }).then((how) => {
@@ -926,7 +937,7 @@ function tick(dt, now = performance.now()) {
   }
   let motion = null;
   if (controller && !flying) {
-    motion = controller.step(dt, emotes ? emotes.input(readInput(), dt) : readInput());
+    motion = controller.step(gdt, emotes ? emotes.input(readInput(), gdt) : readInput());
     if (motion && motion.moving && motion.onGround) audio.footstep(motion.running);
     if (!opening?.update(dt) && !story?.update(dt)) updateCamera(dt);
   }
@@ -938,16 +949,15 @@ function tick(dt, now = performance.now()) {
   if (village) village.update(elapsed);
   if (villagers) villagers.update(dt, elapsed);
   if (nameSigns) nameSigns.update(player.position, camera.position);
-  if (pickups) pickups.update(elapsed, player.position);
-  if (miner) miner.update(dt);
-  if (tools) tools.update(dt);
+  if (pickups) pickups.update(gameTime, player.position);
+  if (miner) miner.update(gdt);
+  if (tools) tools.update(gdt);
   if (nav) {
     nav.setTarget(playMode.navArrow || playMode.targetBeacon ? objective() : null);
-    nav.update(dt, player.position);
+    nav.update(gdt, player.position);
   }
   if (stations) {
-    elapsed += dt;
-    const near = stations.update(elapsed, player.position);
+    const near = stations.update(gameTime, player.position);
     if (hud) {
       const step = engine && engine.current();
       const isTarget = near && step && step.stationId === near.id;
