@@ -15,6 +15,7 @@ import { createEmotes } from '../game/emotes.js';
 import { guardContext } from '../game/contextGuard.js';
 import { createFrameMonitor } from '../game/frameMonitor.js';
 import { createChapterStory, heroName, confetti } from '../game/chapterStory.js';
+import { playOpening, playEnding } from './cutscenes.js';
 import { createHud } from '../game/hud.js';
 import { createNavArrow } from '../play/navArrow.js';
 import { createMiner } from '../play/mining.js';
@@ -250,6 +251,7 @@ function riseScienceCenter(pieces) {
           line: `Well done, ${heroName()}! You solved the puzzles and built the Science Center. Next: build a whole city.`,
           focus: new THREE.Vector3(c.x, world.heightAt(c.x, c.z), c.z),
           next: { href: 'chapter2.html', label: 'Next: Chapter 2 — Forces and Machines' },
+          scene: playEnding(cutCtx()),   // dusk, the dome opens, the villagers gather (cutscenes.js)
         });
       }
     }
@@ -414,6 +416,8 @@ async function main() {
   window.__science = {
     scene, renderer, camera, world, rules, controller, hud, avatar, player, THREE, interact, nearestUsable,
     nav, miner, hunt, nextObjective, applyMode, getMode: () => mode, emotes,
+    // Test hook: play the ending scene now (the Science Center's completion, without building it).
+    playEnding: () => { story?.outro({ title: 'The Science Center is built!', line: 'Test: the ending.', next: null, scene: playEnding(cutCtx()) }); },
   };
   say(`Chapter 1 ready - Level ${LEVEL}`);
   // Unlock mode only: the grown-up "Jump" panel.
@@ -431,7 +435,7 @@ async function main() {
       fill() { for (const r of Object.keys(rules.state.resources)) rules.state.resources[r] = Math.max(rules.state.resources[r], 99); rules.save(); refreshHud(); },
     });
   }
-  // The opening: sweep down over the village to her, title card, a wave.
+  // The opening: dawn over the sea, the ship sinks, the camera comes down the road to her, then the title card (cutscenes.js).
   story = createChapterStory({
     camera, chasePose, getAvatar: () => avatar, getPlayerPos: () => player.position, chapter: 1, level: LEVEL,
   });
@@ -439,8 +443,13 @@ async function main() {
   await story.intro({
     eyebrow: 'Chapter 1',
     title: 'Science Village',
-    line: rules.state.built ? `Welcome back, ${heroName()}! The Science Center is built.` : `Help the village, ${heroName()}: gather supplies, solve the puzzles and build the Science Center.`,
+    line: rules.state.built
+      ? `Welcome back, ${heroName()}! The Science Center is built.`
+      : (LEVEL === 1
+        ? `Help the village, ${heroName()}! Get things, solve puzzles and build the Science Center.`
+        : `Help the village, ${heroName()}: gather supplies, solve the puzzles and build the Science Center.`),
     lookAt: new THREE.Vector3((BOUNDS.minX + BOUNDS.maxX) / 2, 0, (BOUNDS.minZ + BOUNDS.maxZ) / 2),
+    scene: playOpening(cutCtx()),
   });
   // First time in a village chapter: ask how much help she wants (saved, shared by Chapters 1-3).
   if (savedPlayModeId() === null) {
@@ -451,6 +460,11 @@ async function main() {
 }
 
 // --- loop -------------------------------------------------------------------
+/** What the chapter's cutscenes need (src/science/cutscenes.js). */
+function cutCtx() {
+  return { scene, camera, world, sun, getAvatar: () => avatar, getPlayerPos: () => player.position, chasePose };
+}
+
 /** Where the chase camera wants to be right now (also the end of the opening sweep). */
 function chasePose() {
   const p = player.position;

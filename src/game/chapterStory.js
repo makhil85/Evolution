@@ -21,6 +21,8 @@
 // `scene` (optional, the full version only) is an async film played before
 // the title card / before the complete card: `async (run) => { await run(secs,
 // (t, k) => { ...move the camera and props... }); }`. See run() below.
+// A scene may also be an object { duration, step(t, say), dispose() } (Chapter
+// 1's style): it is wrapped into a film, say(text) shows a bottom caption.
 import * as THREE from 'three';
 import { loadProfile, SEEN_PREFIX } from '../launcher/profile.js';
 import { keepUnlock } from '../launcher/profile.js';
@@ -46,7 +48,12 @@ function injectCss() {
 .cs-bars::before { top: 0; transform: translateY(-100%); }
 .cs-bars::after { bottom: 0; transform: translateY(100%); }
 .cs-bars.is-on::before, .cs-bars.is-on::after { transform: none; }
-body.cs-cinematic .rv-hud { opacity: 0; transition: opacity .5s; pointer-events: none; }
+body.cs-cinematic .rv-hud, body.cs-cinematic .pl-back, body.cs-cinematic .pl-chip, body.cs-cinematic .play-nav-text,
+body.cs-cinematic .pl-hint, body.cs-cinematic .pl-cluebtn, body.cs-cinematic #rvBackToChapters { opacity: 0; transition: opacity .5s; pointer-events: none; }
+.cs-caption { position: fixed; left: 50%; bottom: calc(11vh + 14px); z-index: 9000; width: min(92vw, 820px); transform: translate(-50%, 8px);
+  text-align: center; color: #fff; font: 600 clamp(16px, 2.3vw, 22px)/1.35 'Segoe UI', 'Trebuchet MS', system-ui, Arial, Helvetica, sans-serif;
+  text-shadow: 0 2px 12px rgba(0,0,0,.8); opacity: 0; transition: opacity .6s, transform .6s; pointer-events: none; }
+.cs-caption.is-on { opacity: 1; transform: translate(-50%, 0); }
 .cs-title { position: fixed; left: 50%; top: 30%; transform: translate(-50%, 12px); z-index: 9001;
   text-align: center; color: #fff; opacity: 0; transition: opacity .8s, transform .8s; pointer-events: none;
   font-family: 'Segoe UI', 'Trebuchet MS', system-ui, Arial, Helvetica, sans-serif; text-shadow: 0 2px 18px rgba(0,0,0,.55); width: min(92vw, 760px); }
@@ -78,7 +85,7 @@ body.cs-cinematic .rv-hud { opacity: 0; transition: opacity .5s; pointer-events:
 .cs-btn--stay { background: #eef1f7; color: #2a3347; }
 .cs-btn:focus-visible { outline: 3px solid #ffb347; outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
-  .cs-bars::before, .cs-bars::after, .cs-title, .cs-card, .cs-card__stars span { transition: none; }
+  .cs-bars::before, .cs-bars::after, .cs-title, .cs-card, .cs-card__stars span, .cs-caption { transition: none; }
 }`;
   document.head.appendChild(s);
 }
@@ -166,6 +173,19 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
   });
   const endRun = () => { filmOver = true; shot = null; filmStop?.(); filmStop = null; };
 
+  // A caption line under the picture (Chapter 1's scenes use it).
+  let capEl = null;
+  function say(text) {
+    if (!text && !capEl) return;
+    if (!capEl) { capEl = el('div', 'cs-caption'); document.body.appendChild(capEl); nodes.push(capEl); }
+    if (capEl.textContent !== (text || '')) capEl.textContent = text || '';
+    capEl.classList.toggle('is-on', !!text);
+  }
+  /** A scene object { duration, step(t, say), dispose() } as a film. */
+  const asFilm = (scene) => (!scene || typeof scene === 'function' ? scene : async (play) => {
+    try { await play(scene.duration, (t) => scene.step(t, say)); } finally { say(null); scene.dispose?.(); }
+  });
+
   const bars = el('div', 'cs-bars');
   document.body.appendChild(bars);
 
@@ -208,6 +228,7 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
      * Resolves when it ends or is skipped.
      */
     intro({ eyebrow, title, line, lookAt, scene = null }) {
+      scene = asFilm(scene);
       const full = !this.seen();
       const filmFirst = full && !!scene;   // the film, then the card (no sweep)
       begin();
@@ -292,6 +313,7 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
      * @returns {Promise<'next'|'stay'>}
      */
     outro({ title, line, focus = null, next = null, scene = null }) {
+      scene = asFilm(scene);
       begin();
       const after = () => {
         getAvatar()?.play?.('cheer', { hold: 4 });
