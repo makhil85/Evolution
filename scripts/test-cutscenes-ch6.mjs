@@ -54,6 +54,11 @@ const vite = await createServer({ server: { middlewareMode: true }, appType: 'cu
 try {
   const THREE = await vite.ssrLoadModule('three');
   const arrival = await vite.ssrLoadModule('/src/space/ch6/arrival.js');
+  const { ROCK_B_R } = await vite.ssrLoadModule('/src/space/ch6/opening.js');
+  const { BODIES } = await vite.ssrLoadModule('/src/space/contracts.js');
+  ok('Rock B is smaller than Ceres in the flight scene and the arrival (lead 2026-10-09)', () => {
+    assert.ok(ROCK_B_R < BODIES.ceres.radius, `Rock B ${ROCK_B_R} vs Ceres ${BODIES.ceres.radius}`);
+  });
   const { ARRIVAL_DURATION, ARRIVAL_CAPTIONS, ARRIVAL_TITLE, arrivalSeenKey, arrivalSeen, playCh6Arrival } = arrival;
 
   console.log('shot list');

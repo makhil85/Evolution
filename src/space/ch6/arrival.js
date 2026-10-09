@@ -24,12 +24,13 @@ import * as THREE from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { buildOverlay, blendCamera, waitForSkip, ease } from '../cinematics.js';
 import { buildRockShip } from '../ch5/ending.js';
+import { ROCK_B_R } from './opening.js';
 import { BELT } from '../contracts.js';
 import { t as lvl, LEVEL } from '../level.js';
 
 export const ARRIVAL_DURATION = 28;
 const SKIP_AFTER_MS = 1500;
-const ROCK_B_R = 5.4; // Rock B's radius in scene units: smaller than Ceres (7), about 9x her ship (1.2 long)
+// ROCK_B_R (Rock B's radius in scene units, smaller than Ceres' 7) is shared with the flight scene.
 const ROCK_B_AT = [6, 0, -22]; // (f, u, r): off to her right, ahead of the nose
 const CERES_R = 7; // Ceres's radius in scene units (contracts.js)
 const UP = new THREE.Vector3(0, 1, 0);
