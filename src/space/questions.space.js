@@ -24,7 +24,8 @@
 
 import { checkAnswer as checkChapter3Answer } from '../game/questions.js';
 import { heroQuestion } from '../launcher/hero.js';
-import { IS_CH5, IS_CH6 } from './chapter.js';
+import { IS_CH5, IS_CH6, IS_CH7 } from './chapter.js';
+import { ch7Bank } from './ch7/questions.ch7.js';
 import { ch5Bank } from './ch5/questions.ch5.js';
 import { partEBank } from './ch6/questions.partE.js';
 import { partBBank } from './ch6/questions.partB.js';
@@ -1435,6 +1436,8 @@ function selectBank() {
   if (IS_CH5) return ch5Bank(difficultyLevel());
   // Chapter 6: the station questions (Part B), the life-on-board questions and Part E's, Level 1 overlays merged.
   // (The engine build moved here from Chapter 5, with its question.)
+  // Chapter 7: one bank merged from each part's file (ch7/questions.ch7.js), at the child's Level.
+  if (IS_CH7) return ch7Bank(difficultyLevel());
   if (IS_CH6) return { c5_deuterium: ch5Bank(difficultyLevel()).c5_deuterium, ...partBBank(difficultyLevel()), ...partQuestsBank(difficultyLevel()), ...partEBank(difficultyLevel()) };
   if (difficultyLevel() !== 1) return LEVEL4_SPACE_QUESTIONS;
   const out = {};

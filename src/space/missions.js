@@ -34,11 +34,13 @@ import { t } from './level.js';
 import { bodyState } from './orbits.js';
 import { questionForBeat, getSpaceQuestion } from './questions.space.js';
 import { heroName } from './hud/hud.js';
-import { IS_CH5, IS_CH6, OUTER } from './chapter.js';
+import { IS_CH5, IS_CH6, IS_CH7, OUTER } from './chapter.js';
 import { CH5_ACT_TITLES } from './ch5/start.js';
 import { ch5Steps } from './ch5/steps.js';
 import { CH6_ACT_TITLES } from './ch6/start.js';
 import { ch6Steps } from './ch6/steps.js';
+import { CH7_ACT_TITLES } from './ch7/start.js';
+import { ch7Steps } from './ch7/steps.js';
 import { phasesNow, restorePhases } from './ch5/lineup.js';
 import { inModalTurn } from './hud/modalQueue.js';
 import { orbitElements } from './physics.js';
@@ -50,7 +52,7 @@ const ACT_TITLES_CH4 = {
   4: 'Act 4: Jupiter',
   5: 'Finale: Europa',
 };
-const ACT_TITLES = IS_CH6 ? CH6_ACT_TITLES : IS_CH5 ? CH5_ACT_TITLES : ACT_TITLES_CH4;
+const ACT_TITLES = IS_CH7 ? CH7_ACT_TITLES : IS_CH6 ? CH6_ACT_TITLES : IS_CH5 ? CH5_ACT_TITLES : ACT_TITLES_CH4;
 
 // --- helpers ----------------------------------------------------------------
 
@@ -100,7 +102,7 @@ import { act5Steps } from './acts/act5.js';
 // --- the steps ----------------------------------------------------------------
 
 function buildSteps(game) {
-  const steps = IS_CH6 ? ch6Steps(game) : IS_CH5 ? ch5Steps(game) : [
+  const steps = IS_CH7 ? ch7Steps(game) : IS_CH6 ? ch6Steps(game) : IS_CH5 ? ch5Steps(game) : [
     ...act1Steps(game),
     ...act2Steps(game),
     ...act3Steps(game),

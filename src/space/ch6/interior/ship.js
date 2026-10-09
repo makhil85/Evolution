@@ -147,9 +147,12 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
   }
 
   // Spots (stations or quests): where each one is, on which deck.
+  // A spot may also name its deck and borrow another spot's place there
+  // (`{ id, deck, near: 'pack' }`): Chapter 7's room tasks reuse the decks'
+  // station places without touching the deck files.
   const stations = spots.map((info) => {
-    const deck = deckOf(info.id);
-    const s = decks[deck]?.stations?.[info.id];
+    const deck = info.deck || deckOf(info.id);
+    const s = decks[deck]?.stations?.[info.near || info.id];
     if (!s) throw new Error(`[interior] ${info.id} has no spot on deck ${deck}`);
     return { ...info, deck, ...s, done: doneAlready.includes(info.id) };
   });
