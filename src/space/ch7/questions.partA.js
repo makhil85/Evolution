@@ -1,9 +1,10 @@
 // Chapter 7, Part A question bank: the star map on the bridge. Two questions, on
 // the numbers the opening and the map show: how long the trip takes at a tenth of
 // light speed (119 years, which is why the drive goes to full power), and which
-// of the five stars is nearest the Sun. Same schema as ch6/questions.partQuests.js:
-// Level 4 entries plus a Level 1 overlay with the same ids. Numbers come from
-// voyage.js and are re-derived in scripts/test-ch7-voyage.mjs.
+// of the four stars on the card is nearest the Sun. Same schema as
+// ch6/questions.partQuests.js: Level 4 entries plus a Level 1 overlay with the
+// same ids. Numbers come from voyage.js and are re-derived in
+// scripts/test-ch7-voyage.mjs.
 import { NEIGHBOURS, TAU_CETI_LY, TAU_YEARS_AT_TENTH, TAU_LEVEL1_LY, TAU_LEVEL1_YEARS } from './voyage.js';
 
 const ACT_A = 1;
@@ -48,8 +49,8 @@ export const CH7A_QUESTIONS = {
     prompt: 'Look at the star map. Which of these stars is the nearest to the Sun?',
     choices: NEAREST_ORDER.map((id) => ({ text: starChoice(id), correct: id === 'alpha' })),
     hint: 'Nearest means the smallest number of light-years.',
-    parentHint: 'Alpha Centauri is 4.4 light-years away, the nearest of these five. (Its neighbour Proxima Centauri is a little closer still, at about 4.2 light-years.)',
-    success: 'Yes! Alpha Centauri is the nearest, at 4.4 light-years. Light takes 4.4 years to come from there.',
+    parentHint: 'Alpha Centauri is 4.4 light-years away, the nearest of these four. (Its neighbour Proxima Centauri is a little closer still, at about 4.2 light-years.)',
+    success: 'Yes! Alpha Centauri is the nearest of these, at 4.4 light-years. Light takes 4.4 years to come from there.',
     doneMessage: 'Now we know the way!',
     reward: { science: 10 },
   },
@@ -57,7 +58,7 @@ export const CH7A_QUESTIONS = {
 
 export const CH7A_LEVEL1 = {
   c7_tau_years: {
-    difficulty: 'Level 1 • times ten',
+    title: 'Ten times slower', subject: 'Ten lots', difficulty: 'Level 1 • times ten',
     prompt: `Light takes about ${TAU_LEVEL1_LY} years to get to a star like Tau Ceti. Suppose our ship is 10 times slower. How many years for the ship? (Type a number.)`,
     answers: [String(TAU_LEVEL1_YEARS), `${TAU_LEVEL1_YEARS} years`],
     hint: 'Count 12 ten times: 12, 24, 36, ...',
@@ -65,10 +66,10 @@ export const CH7A_LEVEL1 = {
     success: `Yes! ${TAU_LEVEL1_YEARS} years is far too long. So the drive goes to full power!`,
   },
   c7_nearest_star: {
-    difficulty: 'Level 1 • the smallest',
-    prompt: 'Look at the star map. Which star is the nearest to us?',
+    title: 'Our closest star', subject: 'Smallest', difficulty: 'Level 1 • the smallest',
+    prompt: 'Look at the star map. Which of these stars is the nearest to us?',
     choices: NEAREST_ORDER.map((id) => ({ text: starChoice(id, true), correct: id === 'alpha' })),
     hint: 'Which number is the smallest?',
-    success: 'Yes! Alpha Centauri is the nearest. Its light takes about 4 years to reach us.',
+    success: 'Yes! Alpha Centauri is the nearest of these. Its light takes about 4 years to reach us.',
   },
 };

@@ -184,6 +184,14 @@ try {
         assert.ok(c.text.includes(shown), `${c.text} should show ${shown}`);
       }
     });
+    ok(`Level ${level}: the nearest question offers the four stars on the card, says "of these", and never "five"`, () => {
+      const q = A.c7_nearest_star;
+      assert.equal(q.choices.length, 4);
+      for (const text of [q.prompt, q.success, q.parentHint].filter(Boolean)) {
+        assert.doesNotMatch(text, /five/);
+        assert.doesNotMatch(text, /Alpha Centauri is (the )?nearest(?! of these)/);
+      }
+    });
     ok(`Level ${level}: the push speed after a minute is about 600 m/s, the right choice is the closest to 588`, () => {
       const q = E.c7_push_speed;
       assert.equal(q.type, 'choice');
@@ -202,6 +210,9 @@ try {
       }
       const longest = Math.max(...q.choices.map((c) => c.text.length));
       assert.ok(correct[0].text.length < longest, 'the right choice is not the longest');
+    });
+    if (level === 1) ok('Level 1: the push speed card says "about 10" metres per second, every second', () => {
+      assert.match(E.c7_push_speed.prompt, /goes up by about 10 metres per second, every second/);
     });
     ok(`Level ${level}: Earth's years are 7 x 2 = 14, asked from the ship's 7, and 14 is not printed in the question`, () => {
       const q = E.c7_clock_gap;

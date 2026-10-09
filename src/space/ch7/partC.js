@@ -7,7 +7,9 @@
 //      microbe helpers and the bones in low g (the sick bay).
 // Each task (tasks.js) is followed by its question (questions.partC.js). Which
 // tasks are done has its own save key, like Chapter 6's quests, so a reload
-// straight into a step doesn't make her redo them.
+// straight into a step doesn't make her redo them. The key is cleared when the
+// act starts (the two-tries restart goes back there), so the walks and their
+// questions are done again.
 import { t, LEVEL } from '../level.js';
 import { lessonOnce } from '../../lesson/card.js';
 import { LESSON_7B } from '../../lesson/lessons/ch7b.js';
@@ -22,6 +24,7 @@ const WALK_CALM_S = 1.5; // the pause before a question asked on foot (as in Cha
 const KEY = `rocket_village_ch7_tasks_L${LEVEL}`;
 const loadDone = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; } };
 const saveDone = (ids) => { try { localStorage.setItem(KEY, JSON.stringify(ids)); } catch { /* private mode */ } };
+const clearDone = () => { try { localStorage.removeItem(KEY); } catch { /* private mode */ } };
 
 const CHEMISTRY = ['split', 'plants'];
 const BIOLOGY = ['microbes', 'bones'];
@@ -40,6 +43,9 @@ async function walkTasks(game, ids) {
       // The question first, then the task counts as done. On foot a short pause
       // with a toast, so she knows it is coming.
       game.hud.toast(t('Mission Control has a question...', 'A question is coming!'), { kind: 'info', ms: 1400 });
+      // ask() resolves only once the question is answered right: two wrong tries
+      // reload the act from its start (hud.askQuestion never resolves), so a task
+      // is never saved as done on a miss.
       await game.missions.ask(TASK_BEAT[id], { calm: WALK_CALM_S });
       done.add(id); saveDone([...done]);
     },
@@ -55,6 +61,7 @@ export function partCSteps(game) {
       objective: t('Find out what everything is made of, then split water and make the plants’ air.', 'Learn about atoms first.'),
       markers: [],
       async enter() {
+        clearDone(); // a fresh start of the act: no task is done yet
         await hud.showDialogue([
           { who: who('builder'), text: t('Before we touch the water, we need to know what it is made of.', 'First: what is everything made of?') },
           { who: who('biologist'), text: t('Echo will show us. Watch closely: the atoms are the key.', 'Watch closely. Echo will show us.') },
