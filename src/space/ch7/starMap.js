@@ -260,9 +260,9 @@ export function buildStarMap3D() {
     update(camera, reveal, time) {
       const w = window.innerWidth; const h = window.innerHeight;
       const shown = Math.floor(Math.min(1, Math.max(0, reveal)) * stars.length + 1e-6);
+      // Every label follows its star, shown or not (the camera keeps moving after the reveal).
       stars.forEach((s, i) => {
         s.label.style.opacity = i < shown ? '1' : '0';
-        if (i >= shown) return;
         v.copy(s.p).project(camera);
         const x = (v.x * 0.5 + 0.5) * w; const y = (-v.y * 0.5 + 0.5) * h;
         s.label.style.transform = `translate(${Math.round(x + 14)}px, ${Math.round(y - 30)}px)`;

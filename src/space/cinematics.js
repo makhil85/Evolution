@@ -21,6 +21,7 @@ import * as THREE from 'three';
 import { SHIP, INK, SHIP_PALETTE } from './contracts.js';
 import { toonRamp } from '../game/toonPipeline.js';
 import { heroName } from './hud/hud.js';
+import { readMs } from '../play/readTime.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 
@@ -65,6 +66,12 @@ function injectCss() {
   cssInjected = true;
 }
 
+/** A card's words fade in over this long: the reading time starts after it. */
+export const CARD_FADE_S = 1;
+
+/** Seconds a card's words must stay up: their reading time (5-10 s, readMs) plus the fade in. */
+export function cardSeconds(...parts) { return readMs(parts.filter(Boolean).join(' ')) / 1000 + CARD_FADE_S; }
+
 export function buildOverlay({ eyebrow, title, sub, startBlack }) {
   injectCss();
   const root = document.createElement('div');
@@ -102,6 +109,8 @@ export function buildOverlay({ eyebrow, title, sub, startBlack }) {
     hideTitle() { root.querySelector('.cine__title').classList.remove('is-shown'); },
     showSkip(v) { root.querySelector('.cine__skip').classList.toggle('is-shown', v); },
     remove() { root.remove(); },
+    /** Seconds the title card's words need on screen (set its hide time from it, not a fixed number). */
+    readS: cardSeconds(eyebrow, title, sub),
   };
 }
 
@@ -268,7 +277,7 @@ export function playIntro(game) {
           boosterSpin.set(0.6, 0.25, 0.9);
           puffs.burst(booster.position.clone().addScaledVector(back, -0.1), 0.9);
           game.flightCam.shake(0.3);
-          game.hud.toast?.('Booster separation!', { kind: 'good', ms: 2200 });
+          game.hud.toast?.('Booster separation!', { kind: 'good', ms: readMs('Booster separation!') });
         }
       } else {
         booster.position.addScaledVector(boosterVel, dt);
@@ -290,7 +299,7 @@ export function playIntro(game) {
       blendCamera(camera, camPos, camLook, w);
 
       if (t > 1.2 && !overlay._titled) { overlay._titled = true; overlay.showTitle(); }
-      if (t > 7.4 && !overlay._untitled) { overlay._untitled = true; overlay.hideTitle(); }
+      if (t > 1.2 + overlay.readS && !overlay._untitled) { overlay._untitled = true; overlay.hideTitle(); }
       if (t > 8.6 && !overlay._unbarred) { overlay._unbarred = true; overlay.bars(false); document.body.classList.remove('in-cinematic'); }
       if (t >= DURATION) {
         game.cinematic = null;
@@ -357,7 +366,10 @@ export function playOutro(game) {
   line.renderOrder = 30;
   scene.add(line);
 
-  const DURATION = 13;
+  // The title comes at 7.5 s and stays until the film ends: the film runs long
+  // enough for its words to be read (the last sentence is about 9 s on screen).
+  const TITLE_AT = 7.5;
+  const DURATION = TITLE_AT + overlay.readS + 0.5;
   let t = 0;
   let finish;
   const done = new Promise((r) => { finish = r; });
@@ -392,7 +404,7 @@ export function playOutro(game) {
       camera.up.set(0, 1, 0);
       camera.lookAt(look);
 
-      if (t > 7.5 && !overlay._titled) { overlay._titled = true; overlay.showTitle(); }
+      if (t > TITLE_AT && !overlay._titled) { overlay._titled = true; overlay.showTitle(); }
       if (t >= DURATION) { game.cinematic = null; finish(); }
     },
   };
@@ -460,6 +472,7 @@ export function playZeroG(game) {
 
   const CANOPY_C = new THREE.Vector3(0, 1.05, -0.8);
   const DURATION = 11;
+  const TITLE_AT = 2.4;
   let t = 0;
   let finish;
   const done = new Promise((r) => { finish = r; });
@@ -521,8 +534,8 @@ export function playZeroG(game) {
       const inW = ease(Math.min(1, t / 1.4)) * (t > DURATION - 1.2 ? ease((DURATION - t) / 1.2) : 1);
       blendCamera(camera, pos, look, inW);
 
-      if (t > 2.4 && !overlay._titled) { overlay._titled = true; overlay.showTitle(); }
-      if (t > 7.2 && !overlay._untitled) { overlay._untitled = true; overlay.hideTitle(); }
+      if (t > TITLE_AT && !overlay._titled) { overlay._titled = true; overlay.showTitle(); }
+      if (t > TITLE_AT + overlay.readS && !overlay._untitled) { overlay._untitled = true; overlay.hideTitle(); }
       if (t >= DURATION) { game.cinematic = null; finish(); }
     },
   };

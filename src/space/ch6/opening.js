@@ -345,7 +345,7 @@ export function playCh6Opening(game) {
       const wOut = 1 - ease((t - (DURATION - 2)) / 2);
       blendCamera(camera, local(camPos.getPoint(k)), local(camLook.getPoint(k)), Math.min(wIn, wOut));
       if (t > 1.5 && !overlay._a) { overlay._a = true; overlay.showTitle(); }
-      if (t > 6 && !overlay._b) { overlay._b = true; overlay.hideTitle(); }
+      if (t > 1.5 + overlay.readS && !overlay._b) { overlay._b = true; overlay.hideTitle(); }
       if (t >= DURATION) { game.cinematic = null; finish(); }
     },
   };

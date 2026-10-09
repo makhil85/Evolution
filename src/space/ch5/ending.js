@@ -428,10 +428,11 @@ export function playCh5Ending(game, { eyebrow = lvl('Engine half', 'Engine half'
       const w = Math.min(ease(t / 1.5), 1 - ease((t - (DURATION - 1.5)) / 1.5));
       blendCamera(camera, camPos, look, w);
 
+      // Each card stays up for its reading time (cardSeconds), then the next comes.
       beat('t1', 0.8, () => overlay.showTitle());
-      beat('t2', 4.2, () => overlay.hideTitle());
-      beat('t3', 10.4, () => title2.showTitle());
-      beat('t4', 15.6, () => title2.hideTitle());
+      beat('t2', 0.8 + overlay.readS, () => overlay.hideTitle());
+      beat('t3', 1.0 + overlay.readS, () => title2.showTitle());
+      beat('t4', 1.0 + overlay.readS + title2.readS, () => title2.hideTitle());
       if (t >= DURATION) { game.cinematic = null; finish(); }
     },
   };
