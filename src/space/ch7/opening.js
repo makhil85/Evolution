@@ -39,7 +39,9 @@ const GLOW = 420; // the Sun's glow sprite, scene units (constant: it reads as a
 // The camera, in the flight scene (ship at the origin, flying towards -Z, the Sun at +Z):
 // in front of her and to one side, looking back at her and the Sun behind her, so the
 // plume shows as a flame behind the ship. It pulls back a little as she goes.
-const CAM_A = [[40, 12, -120], [70, 30, -170]];
+// Lead review 2026-10-09: the hull hid the plume from in front (at 3 s the
+// plume was behind the cap), so the camera is to one side, so the flame shows.
+const CAM_A = [[70, 10, -40], [110, 30, -60]];
 const LOOK_A = [0, 0, 60];
 
 // The star map: the camera's target and its offset direction (from above the plane).
@@ -103,7 +105,7 @@ function buildSunBall() {
   g.add(light);
   return {
     group: g, light, ball, glow,
-    /** Put the Sun at distance d behind her; its ball shrinks as it recedes (apparent size ~ 1/d). */
+    /** Put the Sun at distance d behind her: its ball's apparent size falls as 1/d (its light as 1/d^2, so the glow sprite keeps a fixed size). */
     place(d) {
       g.position.set(0, 0, d);
       ball.scale.setScalar((SUN_D0) / d);
@@ -134,7 +136,7 @@ function buildBackdrop() {
 
 /**
  * The cutscene. Resolves when it ends (the flight scene is back).
- * Test hook while it runs: window.__ch7Opening = { t, phase() }.
+ * Test hook while it runs: window.__ch7Opening.t (seconds in); removed at the end.
  * @param {object} game the space game (scene, shipView, controls, cinematic)
  * @returns {Promise<void>}
  */
@@ -166,7 +168,7 @@ export function playCh7Opening(game) {
   scene.add(sun.group);
   const back = buildBackdrop();
   scene.add(back.pts);
-  const fill = new THREE.HemisphereLight(0xcfe0ff, 0x2a2420, 0.35);
+  const fill = new THREE.HemisphereLight(0xcfe0ff, 0x2a2420, 0.5); // lifted: the first frames read dark (critic: mean 0.08-0.11)
   scene.add(fill);
   const dial = buildDial();
   const caption = buildCaption();
@@ -175,6 +177,9 @@ export function playCh7Opening(game) {
   let map = null;
 
   let t = 0;
+  // Test hook while the cutscene runs (removed at the end): window.__ch7Opening.t, seconds in.
+  const hook = { get t() { return t; } };
+  window.__ch7Opening = hook;
   let switched = false;
   let darkened = false;
   let finish;
@@ -192,7 +197,7 @@ export function playCh7Opening(game) {
     dial.show(false);
     map = buildStarMap3D();
     scene.add(map.group);
-    const sunFill = new THREE.HemisphereLight(0xcfe0ff, 0x2a2420, 0.2);
+    const sunFill = new THREE.HemisphereLight(0xcfe0ff, 0x2a2420, 0.3);
     scene.add(sunFill);
     map.sunFill = sunFill;
   };
@@ -246,6 +251,7 @@ export function playCh7Opening(game) {
   };
 
   return done.finally(() => {
+    if (window.__ch7Opening === hook) delete window.__ch7Opening;
     skip.dispose();
     overlay.showSkip(false);
     overlay.bars(false);

@@ -28,7 +28,7 @@ export const CH7A_QUESTIONS = {
     subject: 'Times',
     difficulty: 'Level 4',
     prompt:
-      `Light takes ${TAU_CETI_LY} years to get to Tau Ceti. Our ship goes at 10% of light speed, one tenth as fast as light. ` +
+      `Light takes ${TAU_CETI_LY} years to get to Tau Ceti. Suppose our ship went at only 10% of light speed, one tenth as fast as light. ` +
       'How many years would the trip take at that speed? (Type a number.)',
     answers: [String(TAU_YEARS_AT_TENTH), `${TAU_YEARS_AT_TENTH} years`],
     hint: 'One tenth as fast means ten times as long. Multiply 11.9 by 10.',
@@ -58,7 +58,7 @@ export const CH7A_QUESTIONS = {
 export const CH7A_LEVEL1 = {
   c7_tau_years: {
     difficulty: 'Level 1 • times ten',
-    prompt: `Light takes ${TAU_LEVEL1_LY} years to get to a star like Tau Ceti. Our ship is 10 times slower. How many years for the ship? (Type a number.)`,
+    prompt: `Light takes about ${TAU_LEVEL1_LY} years to get to a star like Tau Ceti. Suppose our ship is 10 times slower. How many years for the ship? (Type a number.)`,
     answers: [String(TAU_LEVEL1_YEARS), `${TAU_LEVEL1_YEARS} years`],
     hint: 'Count 12 ten times: 12, 24, 36, ...',
     parentHint: `10 times 12 is ${TAU_LEVEL1_YEARS}. So the ship would take ${TAU_LEVEL1_YEARS} years, which is far too long: the drive goes to full power.`,

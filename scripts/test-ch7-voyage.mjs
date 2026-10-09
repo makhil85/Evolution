@@ -203,13 +203,21 @@ try {
       const longest = Math.max(...q.choices.map((c) => c.text.length));
       assert.ok(correct[0].text.length < longest, 'the right choice is not the longest');
     });
-    ok(`Level ${level}: the clocks gap is 7 years (14 - 7), and the answer is typed as a number`, () => {
+    ok(`Level ${level}: Earth's years are 7 x 2 = 14, asked from the ship's 7, and 14 is not printed in the question`, () => {
       const q = E.c7_clock_gap;
       assert.equal(q.type, 'text');
-      assert.deepEqual(q.answers, ['7', '7 years']);
-      assert.equal(14 - 7, 7);
-      assert.match(q.prompt, /14/);
-      assert.match(q.prompt, /7/);
+      assert.deepEqual(q.answers, ['14', '14 years']);
+      // the ratio of Earth's years to the ship's, from the raw formulas (trip from rest)
+      const d = K * (gam(0.9) - 1);
+      const coast = 11.9 - 2 * d;
+      const shipT = 2 * K * atanh(0.9) + coast / 0.9 / gam(0.9);
+      const earthT = 2 * K * gam(0.9) * 0.9 + coast / 0.9;
+      const ratio = Math.round(earthT / shipT);
+      assert.equal(ratio, 2, `ratio ${earthT / shipT}`);
+      assert.equal(Math.round(shipT) * ratio, Math.round(earthT), 'the story: 7 x 2 = 14');
+      assert.match(q.prompt, /\b7 years\b/);
+      assert.ok(!/\b14\b/.test(q.prompt), 'the answer 14 is not on screen');
+      assert.ok(!/\b14\b/.test(q.hint), 'the hint does not give 14');
     });
     ok(`Level ${level}: no choice is a bare number, and no hint gives its answer away`, () => {
       const all = [...Object.values(A), ...Object.values(E)];

@@ -7,7 +7,10 @@
 //
 // Parent hint (both questions): the drive is pretend. No drive we can build
 // today could do this.
-import { MINUTE_SPEED_STORY, MINUTE_SPEED_EXACT, FIVE_SECOND_SPEED, SHIP_YEARS_STORY, EARTH_YEARS_STORY, CLOCK_GAP_STORY, TRIP } from './voyage.js';
+import { MINUTE_SPEED_STORY, MINUTE_SPEED_EXACT, FIVE_SECOND_SPEED, SHIP_YEARS_STORY, EARTH_YEARS_STORY, TRIP } from './voyage.js';
+
+/** Earth's years for each ship year on the trip, rounded (about 2: 14.4 / 7.4). The question asks for the Earth years, not the gap. */
+const EARTH_RATIO = Math.round(TRIP.earthYears / TRIP.shipYears);
 
 const ACT_E = 5;
 const fmt = (n) => n.toLocaleString('en-US');
@@ -23,7 +26,7 @@ export const CH7E_QUESTIONS = {
     title: 'Faster and faster',
     subject: 'Multiplying by 60',
     difficulty: 'Level 4',
-    prompt: 'At full push (one g), the speed goes up by about 10 metres per second, every second. After one minute of full push, about how fast is the ship going?',
+    prompt: 'Starting from standing still, at full push (one g), the speed goes up by about 10 metres per second, every second. After one minute of full push, about how fast is the ship going?',
     choices: [
       { text: `About ${fmt(MINUTE_SPEED_STORY / 10)} metres per second` },
       { text: `About ${fmt(MINUTE_SPEED_STORY)} metres per second`, correct: true },
@@ -44,11 +47,11 @@ export const CH7E_QUESTIONS = {
     title: 'Two clocks',
     subject: 'Taking away',
     difficulty: 'Level 4',
-    prompt: `The trip takes about ${SHIP_YEARS_STORY} years on the ship's clocks, and about ${EARTH_YEARS_STORY} years on Earth's clocks. How many more years pass on Earth than on the ship? (Type a number.)`,
-    answers: [String(CLOCK_GAP_STORY), `${CLOCK_GAP_STORY} years`],
-    hint: 'Find the two numbers in the question. Take the smaller one away from the bigger one.',
-    parentHint: `${EARTH_YEARS_STORY} − ${SHIP_YEARS_STORY} = ${CLOCK_GAP_STORY}. The exact trip is ${TRIP.shipYears.toFixed(1)} years on board and ${TRIP.earthYears.toFixed(1)} on Earth, from a standstill. Very fast clocks tick slower, but this is only a story, not a lesson.`,
-    success: `Yes! ${CLOCK_GAP_STORY} more years on Earth. Very fast clocks tick slower, so the ship's clocks count less time.`,
+    prompt: `On the trip, the ship's clocks count about ${SHIP_YEARS_STORY} years. For every year the ship counts, Earth's clocks count about ${EARTH_RATIO} years. How many years pass on Earth? (Type a number.)`,
+    answers: [String(EARTH_YEARS_STORY), `${EARTH_YEARS_STORY} years`],
+    hint: `Earth's years are ${EARTH_RATIO} lots of the ship's years. Add the ship's ${SHIP_YEARS_STORY} that many times.`,
+    parentHint: `${SHIP_YEARS_STORY} × ${EARTH_RATIO} = ${EARTH_YEARS_STORY}. The exact trip is ${TRIP.shipYears.toFixed(1)} years on board and ${TRIP.earthYears.toFixed(1)} on Earth, from a standstill. Very fast clocks tick slower, but this is only a story, not a lesson.`,
+    success: `Yes! ${EARTH_YEARS_STORY} years on Earth, about twice the ship's ${SHIP_YEARS_STORY}. Very fast clocks tick slower, so the ship's clocks count less time.`,
     doneMessage: 'Earth is getting older... and so are we, a little slower!',
     reward: { science: 10 },
   },
@@ -58,7 +61,7 @@ export const CH7E_QUESTIONS = {
 export const CH7E_LEVEL1 = {
   c7_push_speed: {
     difficulty: 'Level 1 • counting by tens',
-    prompt: 'The speed goes up by 10 metres per second, every second. After 5 seconds, how fast is the ship going?',
+    prompt: 'Starting from standing still, the speed goes up by 10 metres per second, every second. After 5 seconds, how fast is the ship going?',
     choices: [
       { text: `${MINUTE_SPEED_STORY / 60} metres per second` },
       { text: `${FIVE_SECOND_SPEED} metres per second`, correct: true },
@@ -71,10 +74,10 @@ export const CH7E_LEVEL1 = {
   },
   c7_clock_gap: {
     difficulty: 'Level 1 • taking away',
-    prompt: `The ship's clock says ${SHIP_YEARS_STORY} years. Earth's clock says ${EARTH_YEARS_STORY} years. How many more years on Earth? (Type a number.)`,
-    answers: [String(CLOCK_GAP_STORY), `${CLOCK_GAP_STORY} years`],
-    hint: 'Count on from the ship’s years to Earth’s years, one step at a time.',
-    parentHint: `${EARTH_YEARS_STORY} − ${SHIP_YEARS_STORY} = ${CLOCK_GAP_STORY}. Very fast clocks tick slower: that is only a story.`,
-    success: `Yes! ${CLOCK_GAP_STORY} more years on Earth than on the ship.`,
+    prompt: `The ship's clock counts ${SHIP_YEARS_STORY} years. Earth's clocks count ${EARTH_RATIO} years for every 1 on the ship. How many years pass on Earth? (Type a number.)`,
+    answers: [String(EARTH_YEARS_STORY), `${EARTH_YEARS_STORY} years`],
+    hint: 'Count the ship’s years twice, and add the two lots together.',
+    parentHint: `${SHIP_YEARS_STORY} × ${EARTH_RATIO} = ${EARTH_YEARS_STORY}. Very fast clocks tick slower: that is only a story.`,
+    success: `Yes! ${EARTH_YEARS_STORY} years on Earth, while the ship's clock counted ${SHIP_YEARS_STORY}.`,
   },
 };

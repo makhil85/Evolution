@@ -26,7 +26,8 @@ import { OPENING_TO, TOP_SPEED, dialSpeed, percentOf, clockWords, rapidity, C_OV
 const DURATION = 30;
 const T_PUSH = 18; // the push runs 20% -> 90% over this (about 1.2 years on the ship's clock)
 const T_COAST = 19.5; // the drive goes quiet: the coast
-const N_STREAK = 90;
+// Few and dim (lead: streak clutter, AGENT_HANDOFF section 11): 30 lines at half opacity.
+const N_STREAK = 30;
 const STAR_R = 4000;
 const UP = new THREE.Vector3(0, 1, 0);
 
@@ -103,7 +104,7 @@ function buildStreaks() {
   const col = new Float32Array(N_STREAK * 6);
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  const mat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  const mat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending });
   const lines = new THREE.LineSegments(geo, mat);
   lines.frustumCulled = false;
   lines.visible = false;
@@ -118,10 +119,13 @@ function buildStreaks() {
         const d = dirs[i];
         tang.copy(heading).addScaledVector(d, -heading.dot(d));
         tail.copy(d).addScaledVector(tang, len).normalize();
-        const i6 = i * 6;
-        pos.set([d.x * STAR_R, d.y * STAR_R, d.z * STAR_R, tail.x * STAR_R, tail.y * STAR_R, tail.z * STAR_R], i6);
+        // Written straight into the buffers (no array per streak, per frame).
+        const o = i * 6;
+        pos[o] = d.x * STAR_R; pos[o + 1] = d.y * STAR_R; pos[o + 2] = d.z * STAR_R;
+        pos[o + 3] = tail.x * STAR_R; pos[o + 4] = tail.y * STAR_R; pos[o + 5] = tail.z * STAR_R;
         const c = k * tint[i];
-        col.set([c * 0.9, c * 0.95, c, 0, 0, 0], i6);
+        col[o] = c * 0.9; col[o + 1] = c * 0.95; col[o + 2] = c;
+        col[o + 3] = 0; col[o + 4] = 0; col[o + 5] = 0; // the tail fades to nothing
       }
       geo.attributes.position.needsUpdate = true;
       geo.attributes.color.needsUpdate = true;
@@ -132,7 +136,7 @@ function buildStreaks() {
 
 /**
  * The cutscene. Resolves when it ends (the flight scene is back).
- * Test hook while it runs: window.__ch7Cruise = { t }.
+ * Test hook while it runs: window.__ch7Cruise.t (seconds in); removed at the end.
  * @param {object} game the space game (scene, shipView, controls, cinematic)
  * @returns {Promise<void>}
  */
@@ -161,7 +165,7 @@ export function playCh7Cruise(game) {
   scene.add(ship.group);
   const streaks = buildStreaks();
   scene.add(streaks.lines);
-  const fill = new THREE.HemisphereLight(0xcfe0ff, 0x2a2420, 0.35);
+  const fill = new THREE.HemisphereLight(0xcfe0ff, 0x2a2420, 0.5); // lifted with the opening's fill (the frames read dark)
   scene.add(fill);
   const dial = buildDial();
   const clock = buildClock();
@@ -177,6 +181,9 @@ export function playCh7Cruise(game) {
   let shownLine = null;
 
   let t = 0;
+  // Test hook while the cutscene runs (removed at the end): window.__ch7Cruise.t, seconds in.
+  const hook = { get t() { return t; } };
+  window.__ch7Cruise = hook;
   let finish;
   const done = new Promise((r) => { finish = r; });
   const skip = waitForSkip(1500, () => overlay.showSkip(true));
@@ -239,6 +246,7 @@ export function playCh7Cruise(game) {
   };
 
   return done.finally(() => {
+    if (window.__ch7Cruise === hook) delete window.__ch7Cruise;
     skip.dispose();
     overlay.showSkip(false);
     overlay.bars(false);
