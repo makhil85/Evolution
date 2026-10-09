@@ -332,5 +332,39 @@ ok(!isPlayModalOpen(), 'input lock is a no-op in node');
   globalThis.addEventListener = prevAdd; globalThis.removeEventListener = prevRemove; globalThis.document = prevDoc;
 }
 
+// Normal holds keep walking; a short tap is let go on keyup.
+{
+  const prevAdd = globalThis.addEventListener; const prevRemove = globalThis.removeEventListener; const prevDoc = globalThis.document;
+  globalThis.addEventListener = () => {};
+  globalThis.removeEventListener = () => {};
+  globalThis.document = { hidden: false, addEventListener: () => {}, removeEventListener: () => {} };
+  let now = 0;
+  const k = createHeldKeys({ now: () => now });
+  const repeatFor = (code, ms) => { for (let t = 0; t < ms; t += 33) { now += 33; k.add(code, true); } };
+  k.add('ArrowRight');
+  repeatFor('ArrowRight', 3000);
+  ok(k.has('ArrowRight'), 'one key held with repeats keeps walking for seconds');
+  k.delete('ArrowRight');
+  ok(!k.has('ArrowRight'), 'the held key is released on its keyup');
+  k.add('KeyD'); now += 80;
+  ok(k.has('KeyD'), 'a short tap is held until its keyup');
+  k.delete('KeyD');
+  ok(!k.has('KeyD') && k.size === 0, 'a short tap is released on keyup');
+  // Two keys: Left held and repeating, then Up pressed and repeating too; both stay.
+  k.add('ArrowLeft'); repeatFor('ArrowLeft', 1000);
+  k.add('ArrowUp'); repeatFor('ArrowUp', 1000);
+  ok(k.has('ArrowLeft') && k.has('ArrowUp'), 'two keys held with repeats both stay');
+  k.delete('ArrowUp'); k.delete('ArrowLeft');
+  ok(k.size === 0, 'both keys released on their keyups');
+  // Held through a blur: clear() dropped it, then its repeats come back. It
+  // walks again, and if its keyup is lost it still stops once the repeats go quiet.
+  k.clear(); repeatFor('KeyW', 300);
+  ok(k.has('KeyW'), 'a key still repeating after a blur walks again');
+  now += 2000;
+  ok(!k.has('KeyW'), 'and stops when its repeats go quiet (keyup lost)');
+  k.dispose();
+  globalThis.addEventListener = prevAdd; globalThis.removeEventListener = prevRemove; globalThis.document = prevDoc;
+}
+
 console.log(`test-play: ${passed} passed, ${failures.length} failed`);
 if (failures.length) process.exit(1);
