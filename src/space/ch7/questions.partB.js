@@ -120,7 +120,7 @@ export const CH7B_LEVEL1 = {
     success: 'Yes! The big spanner pushes you back harder.',
   },
   c7b_throw_sum: {
-    title: 'Float faster', subject: 'Bigger push', difficulty: 'Level 1 • faster or slower',
+    title: 'Spanner or wrench', subject: 'Bigger push', difficulty: 'Level 1 • faster or slower',
     prompt: 'You throw a big spanner instead of the small wrench, at the same speed. Do you float faster or slower?',
     choices: [
       { text: 'Faster', correct: true },

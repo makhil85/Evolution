@@ -256,19 +256,23 @@ ok('Level 4 numbers: 2 oxygen molecules from 4 water; 12 oxygen atoms in 6 CO2; 
   assert.equal(h, 7);
   assert.equal(6 * (L.BONES.lossTenths[0] / 10), 6);
 });
-ok('Level 1 numbers: 2 from 4 water; 4 oxygen atoms in 2 CO2; 4 after 2 hours; 3% over 3 months', () => {
+ok('Level 1 numbers: 2 from 4 water; 4 oxygen atoms in 2 CO2; 4 after 2 hours; 4 blocks left after 3 months with no bike', () => {
   const b = bankAt(1);
   assert.deepEqual(b.c7_split_oxygen.answers.slice(0, 1), ['2']);
   assert.deepEqual(b.c7_plants_oxygen_atoms.answers.slice(0, 1), ['4']);
   assert.deepEqual(b.c7_microbes_hours.answers.slice(0, 1), ['4']);
-  assert.deepEqual(b.c7_bones_percent.answers.slice(0, 1), ['3']);
+  assert.deepEqual(b.c7_bones_percent.answers.slice(0, 1), ['4']); // 10 blocks, minus 2 a month for 3 months
 });
-ok('bones: the loss is said to be with no exercise (the sum is the no-exercise rate), at both Levels', () => {
-  for (const level of [4, 1]) {
-    const q = bankAt(level).c7_bones_percent;
-    assert.match(q.prompt, /with no exercise/, `Level ${level}`);
-    assert.doesNotMatch(q.prompt, /some exercise/, `Level ${level}`);
-  }
+ok('bones: Level 4 says the loss is with no exercise (the no-exercise rate); Level 1 uses the bike game’s blocks, not percent', () => {
+  const q4 = bankAt(4).c7_bones_percent;
+  assert.match(q4.prompt, /with no exercise/);
+  assert.doesNotMatch(q4.prompt, /some exercise/);
+  const q1 = bankAt(1).c7_bones_percent;
+  assert.doesNotMatch(q1.prompt, /%|percent/);
+  assert.match(q1.prompt, /blocks/);
+  assert.match(q1.prompt, new RegExp(`${L.BONES.blocks.start} bone blocks`));
+  assert.match(q1.prompt, new RegExp(`lose ${L.BONES.blocks.lossBlocks[0]} blocks each month`));
+  assert.deepEqual(q1.answers.slice(0, 1), [String(L.blocksLeft([0, 0, 0]))]);
 });
 ok('no hint gives its answer as a number (the parent hint may)', () => {
   for (const level of [4, 1]) {
@@ -291,6 +295,16 @@ ok('every Chapter 7 question has a Level 1 overlay with its own title and subjec
   for (const [id, o] of Object.entries(overlays)) {
     assert.ok(o.title && o.subject, `${id}: Level 1 title and subject`);
     assert.ok(l4[id], `${id} has no Level 4 question`);
+  }
+});
+ok('no Level 1 title equals its own Level 4 title (every Chapter 7 question)', () => {
+  const l4 = ch7Bank(4);
+  for (const p of QPARTS) {
+    for (const [name, level1] of Object.entries(p).filter(([k]) => k.endsWith('_LEVEL1'))) {
+      for (const [id, o] of Object.entries(level1)) {
+        assert.notEqual(o.title.toLowerCase(), l4[id].title.toLowerCase(), `${name} ${id}: Level 1 title is the Level 4 title`);
+      }
+    }
   }
 });
 ok('no Level 1 card shows a Level 4 subject word: Level 1 subjects share no word with any Level 4 subject', () => {
