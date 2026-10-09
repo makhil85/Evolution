@@ -33,6 +33,8 @@ import { MARKER_COLOR } from './stations.js';
 import { audio } from './audio.js';
 import { loadProfile } from '../launcher/profile.js';
 import { skipButton } from '../play/grownUp.js';
+import { lockPlayInput, unlockPlayInput } from '../play/ui.js';
+import { readMs, needsClick } from '../play/readTime.js';
 import { IS_LEVEL1 as IS_L1 } from '../space/level.js';
 
 /**
@@ -81,24 +83,22 @@ const MISSION_OPEN_KEY = 'rocket_village_mission_open';
 /** How long a NEW objective holds the card open before it folds back away. */
 const MISSION_FLASH_MS = 7000;
 
-/** Toast lifetime: a Grade 3 reader needs time, so it scales with length.
- *  The calm rules match Chapter 4 (lead 2026-10-02): at least 5 s on screen,
- *  at most 2 at once, a new one 1.5 s after the last, held back while a
- *  question or play card is open (warnings pass), dropped when 8 s stale,
- *  and the same text again within 10 s is not shown twice. */
-const TOAST_MIN_MS = 5000;
-const TOAST_PER_CHAR_MS = 45;
-const TOAST_MAX_MS = 10000;
+/** Messages (lead 2026-10-09: "kids need time reading"). A message stays up
+ *  readMs(text): 5-10 s by its word count (src/play/readTime.js). One that
+ *  needs more than 10 s is a card with an OK button, and the game pauses under
+ *  it until she clicks (or presses Enter or Space). Messages queue in order:
+ *  at most 2 toasts at once, a new one 1.5 s after the last, none while a
+ *  question or play card is open (warnings pass), and a message that has
+ *  waited 20 s in line is dropped. The same text again within 10 s is not shown twice. */
 const MAX_VISIBLE_TOASTS = 2;
 const TOAST_GAP_MS = 1500;
-const TOAST_STALE_MS = 8000;
+const TOAST_STALE_MS = 20000;
 const TOAST_DUP_MS = 10000;
 
 const BADGE_GLYPH = { done: '✓', active: '●', open: '○', locked: '○' };
 
 /** How long the one-time spawn nudge stays up before it fades for good. */
 const ONBOARD_DELAY_MS = 500;
-const ONBOARD_LIFE_MS = 9000;
 
 // ---------------------------------------------------------------------------
 // Small DOM helpers
@@ -209,10 +209,12 @@ export class Hud {
     this.root.setAttribute('data-rv-hud', '1');
 
     this._toasts = [];
-    this._toastQueue = [];     // waiting messages {message, kind, at}
+    this._toastQueue = [];     // waiting messages {message, kind, at}, in order
     this._toastQueueTimer = 0;
     this._toastNextAt = 0;     // performance.now() before which a new toast waits
     this._toastSeen = new Map(); // message -> when it was last shown
+    this._read = null;         // the click card for a long message, while it is up: {message}
+    this._onReadKey = null;
     this._inventory = {};
     this._modal = null;      // {question, cb, validate, wrongCount, token}
     this._destroyed = false;
@@ -239,6 +241,7 @@ export class Hud {
     this._buildInteract();
     this._buildToasts();
     this._buildModal();
+    this._buildReadCard();
 
     mount.appendChild(this.root);
 
@@ -426,7 +429,7 @@ export class Hud {
     this._missionOpen = !!open;
     this._missionCard.classList.toggle('is-collapsed', !open);
     this._missionToggle.setAttribute('aria-expanded', String(!!open));
-    this._missionToggle.title = open ? 'Hide the mission (M)' : 'Show the mission (M)';
+    this._missionToggle.title = open ? 'Hide the mission' : 'Show the mission';
     if (remember) {
       try { localStorage.setItem(MISSION_OPEN_KEY, open ? '1' : '0'); } catch { /* private mode */ }
     }
@@ -633,6 +636,41 @@ export class Hud {
     });
   }
 
+  /**
+   * The read-it card: a long message (more than 10 s to read) with an OK button.
+   * It uses the question modal's backdrop and card, so it looks like the rest
+   * of the game's cards. The game is paused under it (the play-mode input lock).
+   */
+  _buildReadCard() {
+    this._readBackdrop = el('div', 'rv-modal rv-read');
+    this._readBackdrop.hidden = true;
+
+    const card = el('div', 'rv-modal__card');
+    card.setAttribute('role', 'alertdialog');
+    card.setAttribute('aria-modal', 'true');
+    this._readText = el('p', 'rv-modal__prompt rv-read__text', '');
+    card.appendChild(this._readText);
+
+    const actions = el('div', 'rv-modal__actions');
+    this._readOk = el('button', 'rv-btn rv-btn--go', 'OK');
+    this._readOk.type = 'button';
+    actions.appendChild(this._readOk);
+    card.appendChild(actions);
+
+    this._readBackdrop.appendChild(card);
+    this.root.appendChild(this._readBackdrop);
+
+    this._readOk.addEventListener('click', () => this._closeReadCard());
+    // Enter or Space closes it from anywhere, not only when OK has the focus.
+    // Registered while the card is up (see _showReadCard).
+    this._onReadKey = (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+      e.preventDefault();
+      e.stopPropagation();
+      this._closeReadCard();
+    };
+  }
+
   // --- contract: progress -------------------------------------------------
 
   /**
@@ -820,6 +858,10 @@ export class Hud {
    * A repeat of the newest toast bumps a ×N counter instead of stacking, so
    * picking up five crates does not bury the mission card.
    *
+   * Each message stays up readMs(text) (5-10 s). One that needs more than 10 s
+   * to read becomes a card with an OK button, and the game waits for the click.
+   * Messages wait in line behind each other, so none is pushed off early.
+   *
    * @param {string} text
    * @param {'info'|'good'|'warn'|'bad'} [kind]
    * @returns {void}
@@ -839,7 +881,7 @@ export class Hud {
         shown.countEl.hidden = false;
       }
       clearTimeout(shown.timer);
-      shown.timer = setTimeout(() => this._dismissToast(shown), this._toastLife(message));
+      shown.timer = setTimeout(() => this._dismissToast(shown), readMs(message));
       this._toastSeen.set(message, now);
       return;
     }
@@ -847,19 +889,63 @@ export class Hud {
     const seenAt = this._toastSeen.get(message);
     if (seenAt !== undefined && now - seenAt < TOAST_DUP_MS) return;
 
-    // Too soon after the last one, or a card is open: wait in line.
+    // Join the line (a newer copy of a waiting message moves to the back), then
+    // show whatever the screen has room for now.
+    this._toastQueue = this._toastQueue.filter((q) => q.message !== message);
+    this._toastQueue.push({ message, kind, at: now });
+    this._showQueued();
+  }
+
+  /**
+   * Can this waiting message go up now? A click card needs the screen to be
+   * clear; a toast needs a free slot. Nothing shows under a click card, and
+   * while a question or play card is open only warnings get through (and only
+   * as toasts: a long one waits for the card to close).
+   */
+  _roomFor({ message, kind }, now) {
+    if (this._read || now < this._toastNextAt) return false;
     const urgent = kind === 'warn' || kind === 'bad';
-    // Both slots taken by messages younger than the 5 s minimum: wait too,
-    // rather than pushing one off before she could read it.
-    const full = this._toasts.length >= MAX_VISIBLE_TOASTS && now - this._toasts[0].shownAt < TOAST_MIN_MS;
-    if ((this._focusNow() && !urgent) || now < this._toastNextAt || (full && !urgent)) {
-      this._toastQueue = this._toastQueue.filter((q) => q.message !== message);
-      this._toastQueue.push({ message, kind, at: now });
-      this._drainToasts();
-      return;
+    const long = needsClick(message);
+    if (this._focusNow() && (!urgent || long)) return false;
+    return long ? this._toasts.length === 0 : this._toasts.length < MAX_VISIBLE_TOASTS;
+  }
+
+  /**
+   * Show the first waiting message the screen has room for, then look again
+   * soon. Runs at once from toast(), and every 250 ms while anything waits (a
+   * toast leaving, a card closing or a question closing frees the line).
+   */
+  _showQueued() {
+    if (this._destroyed) return;
+    clearTimeout(this._toastQueueTimer);
+    this._toastQueueTimer = 0;
+    const now = performance.now();
+    // Held behind a card is not stale: the 20 s starts once the card is closed.
+    if (this._focusNow()) for (const q of this._toastQueue) q.at = now;
+    this._toastQueue = this._toastQueue.filter((q) => now - q.at < TOAST_STALE_MS);
+    for (let i = 0; i < this._toastQueue.length; i += 1) {
+      const q = this._toastQueue[i];
+      if (this._roomFor(q, now)) {
+        this._toastQueue.splice(i, 1);
+        this._showNow(q.message, q.kind, now);
+        break;
+      }
+      // A message that needs a click keeps its place: nothing jumps ahead of it.
+      if (needsClick(q.message)) break;
     }
+    if (this._toastQueue.length) {
+      this._toastQueueTimer = setTimeout(() => this._showQueued(), 250);
+    }
+  }
+
+  /** Put one message on screen: a toast for 5-10 s, or the click card. */
+  _showNow(message, kind, now) {
     this._toastSeen.set(message, now);
     this._toastNextAt = now + TOAST_GAP_MS;
+    if (needsClick(message)) {
+      this._showReadCard(message);
+      return;
+    }
 
     const node = el('div', `rv-toast is-${['good', 'warn', 'bad'].includes(kind) ? kind : 'info'}`);
     node.appendChild(el('span', 'rv-toast__text', message));
@@ -868,46 +954,41 @@ export class Hud {
     node.appendChild(countEl);
 
     const entry = { node, countEl, message, repeat: 1, timer: 0, shownAt: now };
-    entry.timer = setTimeout(() => this._dismissToast(entry), this._toastLife(message));
+    entry.timer = setTimeout(() => this._dismissToast(entry), readMs(message));
     this._toasts.push(entry);
     this._toastLayer.appendChild(node);
-
-    while (this._toasts.length > MAX_VISIBLE_TOASTS) this._dismissToast(this._toasts[0]);
   }
 
-  /** A question card, a play card or the chapter story is up (focus mode). */
+  /**
+   * Open the read-it card for a long message. The game pauses (the input lock
+   * is the same one the play-mode cards use) until OK, Enter or Space.
+   */
+  _showReadCard(message) {
+    this._read = { message };
+    this._readText.textContent = personalise(message);
+    this._readBackdrop.hidden = false;
+    this._readBackdrop.classList.add('is-open');
+    lockPlayInput();
+    if (typeof addEventListener === 'function') addEventListener('keydown', this._onReadKey, true);
+    // Focus OK so a keyboard or tab user is on the button (after the paint).
+    setTimeout(() => { try { this._readOk.focus(); } catch { /* detached */ } }, 0);
+  }
+
+  /** Close the read-it card and let the next message come up. Safe to call twice. */
+  _closeReadCard() {
+    if (!this._read) return;
+    this._read = null;
+    this._readBackdrop.hidden = true;
+    this._readBackdrop.classList.remove('is-open');
+    if (typeof removeEventListener === 'function') removeEventListener('keydown', this._onReadKey, true);
+    unlockPlayInput();
+    this._toastNextAt = performance.now() + TOAST_GAP_MS;
+    this._showQueued();
+  }
+
+  /** A question card, a play card or the read-it card is up (focus mode). */
   _focusNow() {
-    return !!this._modal || (typeof document !== 'undefined' && !!document.body.dataset.playModal);
-  }
-
-  /** Show waiting messages one at a time, TOAST_GAP_MS apart; drop stale ones. */
-  _drainToasts() {
-    if (this._toastQueueTimer || this._destroyed) return;
-    const wait = Math.max(250, this._toastNextAt - performance.now());
-    this._toastQueueTimer = setTimeout(() => {
-      this._toastQueueTimer = 0;
-      const now = performance.now();
-      const focus = this._focusNow();
-      // Held behind a card is not stale: a reward toast from the answer she
-      // is still reading starts its 8 s only once the card closes.
-      if (focus) for (const q of this._toastQueue) q.at = now;
-      this._toastQueue = this._toastQueue.filter((q) => now - q.at < TOAST_STALE_MS);
-      if (!this._toastQueue.length) return;
-      // Only warnings may go while a card is open or both slots are still young.
-      const full = this._toasts.length >= MAX_VISIBLE_TOASTS && now - this._toasts[0].shownAt < TOAST_MIN_MS;
-      const i = focus || full ? this._toastQueue.findIndex((q) => q.kind === 'warn' || q.kind === 'bad') : 0;
-      if (i >= 0) {
-        const [next] = this._toastQueue.splice(i, 1);
-        this._toastNextAt = 0;
-        this.toast(next.message, next.kind);
-      }
-      // Keep checking while anything waits (a card closing frees the line).
-      if (this._toastQueue.length) this._drainToasts();
-    }, wait);
-  }
-
-  _toastLife(message) {
-    return Math.min(TOAST_MAX_MS, TOAST_MIN_MS + message.length * TOAST_PER_CHAR_MS);
+    return !!this._modal || !!this._read || (typeof document !== 'undefined' && !!document.body.dataset.playModal);
   }
 
   _dismissToast(entry) {
@@ -919,6 +1000,7 @@ export class Hud {
     // Remove after the fade rather than on a transitionend that may never fire
     // (the element can be detached while a tab is backgrounded).
     setTimeout(() => entry.node.remove(), 220);
+    if (this._toastQueue.length) this._showQueued();
   }
 
   // --- contract: the question modal ---------------------------------------
@@ -1368,12 +1450,14 @@ export class Hud {
     if (!text) return; // nothing authored yet — say nothing rather than guess
 
     this._onboardShown = true;
+    // Too long to read in 10 s: the same line as a card she clicks away.
+    if (needsClick(text)) { this._showReadCard(text); return; }
     this._onboardText.textContent = text;
     this._onboard.hidden = false;
     // rAF so the browser paints the hidden->visible flip before the
     // transition starts, or the fade-in never runs.
     requestAnimationFrame(() => this._onboard.classList.add('is-in'));
-    this._onboardTimers.push(setTimeout(() => this._hideOnboard(), ONBOARD_LIFE_MS));
+    this._onboardTimers.push(setTimeout(() => this._hideOnboard(), readMs(text)));
   }
 
   _hideOnboard() {
@@ -1391,7 +1475,9 @@ export class Hud {
     this._destroyed = true;
     for (const entry of this._toasts.slice()) this._dismissToast(entry);
     clearTimeout(this._toastQueueTimer);
+    this._toastQueue = [];
     for (const t of this._onboardTimers.splice(0)) clearTimeout(t);
+    this._closeReadCard();
     this.closeQuestion();
     this.root.remove();
   }

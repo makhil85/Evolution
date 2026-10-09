@@ -11,6 +11,7 @@ import {
 } from '../src/science/contracts.js';
 import { PICKUPS, STATIONS } from '../src/science/layout.js';
 import { checkAnswer } from '../src/game/questions.js';
+import { readMs, needsClick } from '../src/play/readTime.js';
 
 let passed = 0;
 const failures = [];
@@ -553,6 +554,28 @@ for (const level of [1, 4]) {
 }
 
 // ---------------------------------------------------------------------------
+// --- the messages a child reads (lead 2026-10-09) ----------------------------
+// Each one stays up readMs(text) (5-10 s), or is an OK card when it needs more
+// than 10 s (src/game/hud.js). Level 1 wording is short, so its messages must
+// all be toasts, never cards.
+for (const level of [1, 4]) {
+  const tag = `L${level}`;
+  const r = fresh(level);
+  const solve = r.solveQuest('m1');
+  const texts = {
+    solve: solve && solve.text,
+    wrongAnswer: r.text.wrongAnswer('m1'),
+    wrongLab: r.text.wrongAnswer('force'),
+    nothingNear: r.text.nothingNear,
+  };
+  for (const [name, text] of Object.entries(texts)) {
+    ok(typeof text === 'string' && text.length > 0, `${tag} ${name}: a message exists`);
+    const ms = readMs(text);
+    ok(ms >= 5000 && ms <= 10000, `${tag} ${name}: readMs is 5-10 s (${ms} ms)`);
+    if (level === 1) ok(!needsClick(text), `${tag} ${name}: Level 1 reads as a toast, not a card`);
+  }
+}
+
 console.log(`${passed} checks passed${failures.length ? `, ${failures.length} FAILED` : ''}`);
 if (failures.length) {
   console.error(failures.map((f) => ` - ${f}`).join('\n'));

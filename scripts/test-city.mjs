@@ -11,6 +11,7 @@ import {
 } from '../src/city/contracts.js';
 import { PICKUPS, stationsFor } from '../src/city/layout.js';
 import { checkAnswer } from '../src/game/questions.js';
+import { readMs, needsClick } from '../src/play/readTime.js';
 
 let passed = 0;
 const failures = [];
@@ -488,6 +489,18 @@ for (const level of [1, 4]) {
 }
 
 // ---------------------------------------------------------------------------
+// --- the messages a child reads (lead 2026-10-09) ----------------------------
+// Each one stays up readMs(text) (5-10 s), or is an OK card when it needs more
+// than 10 s (src/game/hud.js). Level 1 wording is short, so its messages must
+// all be toasts, never cards.
+for (const level of [1, 4]) {
+  const tag = `L${level}`;
+  const solve = fresh(level).solveQuest('water');
+  const ms = readMs(solve.text);
+  ok(ms >= 5000 && ms <= 10000, `${tag} solve: readMs is 5-10 s (${ms} ms)`);
+  if (level === 1) ok(!needsClick(solve.text), `${tag} solve: Level 1 reads as a toast, not a card`);
+}
+
 console.log(`${passed} checks passed${failures.length ? `, ${failures.length} FAILED` : ''}`);
 if (failures.length) {
   console.error(failures.map((f) => ` - ${f}`).join('\n'));
