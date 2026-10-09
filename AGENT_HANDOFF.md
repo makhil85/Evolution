@@ -54,7 +54,7 @@ npm ci                 # once (close the game first on Windows, or EPERM)
 npm run dev            # http://localhost:5173/   (chapters: /chapter1.html ... /chapter6.html)
 npm test               # every suite (15 now); must pass before every commit
 npm run build          # must pass too
-npm run package        # build + release/RocketVillage.zip (double-click PLAY.bat to play)
+npm run package        # build + release/Evolution.zip (double-click PLAY.bat to play)
 ```
 
 - **Grown-up mode**: add `?unlock=all` to any page (`?unlock=off` undoes it).
@@ -354,6 +354,14 @@ After that, from the lead and `PLAN.md`, roughly in order:
 - `npm run package` needs Node (or Python) on the player's PC to serve the
   game; double-clicking `index.html` cannot work (browser file rules).
 - Touch pad (Ch4-6) is simulated-only; AIM/JUMP now holds Q.
+- **Chapter 3 town is heavy**: about 420k triangles and up to 148 draw calls
+  in any view. Most of it is `board.js` (236k, instanced batches with
+  `frustumCulled = false`, lines ~207 and ~453), the avatar (82k, skinned,
+  culling off in `avatar.js`) and mountains (33k). Decorations and villagers
+  are culled now. Target: <= 120 calls, well under 300k.
+- **Not yet seen on screen** (2026-10-09): the Ch7 float game, the low-g walk,
+  the Part C cards at Level 1, the holodeck frames and the Ch7 opening camera.
+  The node tests and the critics' card checks pass; a play-through is owed.
 
 ## 10. Lessons learned (read before you start)
 
