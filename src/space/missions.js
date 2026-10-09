@@ -49,6 +49,9 @@ import { IDLE_MS, idleMs, isIdle } from '../play/readGate.js';
 
 /** Input within this long (ms) still counts as hands on, for the flight's hands-off wait. */
 const HANDS_ON_MS = 250;
+/** A question on foot that has waited this long is asked at her first short natural stop. */
+const WALK_WAIT_CAP_MS = 15000;
+const NATURAL_STOP_MS = 1000;
 
 const ACT_TITLES_CH4 = {
   1: 'Act 1: Earth orbit',
@@ -164,7 +167,7 @@ export function createMissions(game) {
   // overwrite (the first promise would then never settle).
   let calms = []; // [{ left, resolve }] calm pauses, counted down in game seconds
   let quiet = 0; // seconds since she last steered, dragged the view or walked (see tickCalm)
-  let quietWaits = []; // [resolve] questions waiting for hands-off flying
+  let quietWaits = []; // [{ resolve, since }] questions waiting for hands-off flying (or walking)
   const ready = { cancel: null }; // the Ready button's wait (readyToLeave), so a jump can take it down
   const deferred = new Set(save.deferred || []);
   const answered = new Set(save.answered || []);
@@ -228,7 +231,7 @@ export function createMissions(game) {
    *  gave the wait up. */
   function untilQuiet() {
     if (game.activeScene ? isIdle(IDLE_MS) : quiet >= QUIET_S) return Promise.resolve(true);
-    return new Promise((resolve) => { quietWaits.push(resolve); });
+    return new Promise((resolve) => { quietWaits.push({ resolve, since: performance.now() }); });
   }
 
   /** A jump gives up every calm and quiet wait the old step is in: they resolve
@@ -237,7 +240,7 @@ export function createMissions(game) {
     const cs = calms; calms = [];
     for (const c of cs) c.resolve();
     const qs = quietWaits; quietWaits = [];
-    for (const r of qs) r(false);
+    for (const w of qs) w.resolve(false);
   }
 
   /** Put away what the step a jump leaves behind had up: its waits (calm, quiet,
@@ -507,9 +510,18 @@ export function createMissions(game) {
     tickCalm(dt, paused) {
       // Not quiet while she steers, drags the view (mouse) or presses any key (readGate's clock).
       if (!paused) quiet = (game.kidSteering || idleMs() < HANDS_ON_MS) ? 0 : quiet + dt;
-      if (quietWaits.length && (game.activeScene ? isIdle(IDLE_MS) : quiet >= QUIET_S)) {
-        const rs = quietWaits; quietWaits = [];
-        for (const r of rs) r(true);
+      if (quietWaits.length) {
+        // On foot: she has stopped walking for IDLE_MS, or, after WALK_WAIT_CAP_MS, at the
+        // first short natural stop (the HUD's rule for words, critic 2026-10-09).
+        const now = performance.now();
+        const ready = (w) => (game.activeScene
+          ? isIdle(IDLE_MS) || (now - w.since >= WALK_WAIT_CAP_MS && isIdle(NATURAL_STOP_MS))
+          : quiet >= QUIET_S);
+        const rs = quietWaits.filter(ready);
+        if (rs.length) {
+          quietWaits = quietWaits.filter((w) => !rs.includes(w));
+          for (const w of rs) w.resolve(true);
+        }
       }
       if (!calms.length || paused) return;
       // In place (no new list each frame): finish the ones that are due.

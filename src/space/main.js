@@ -168,9 +168,14 @@ scene.add(shipBeacon);
 
 const hud = createHud({ mount: document.getElementById('hud-root'), bus });
 const controls = createControls({ bus, element: renderer.domElement });
-// On-screen buttons on touch screens (hud/touch.js): they press the same keys.
-const touch = createTouchPad(hud.root, { controls, bus, warpIndex: () => game.warpIndex, warpLevels: WARP_LEVELS });
-// Touch screens have no M key: the small map says how to get the big one.
+// On-screen buttons on touch screens with no mouse (hud/touch.js): they press the same keys.
+const touch = createTouchPad(hud.root, { controls, bus });
+// The camera view button in the left column (instruments.js): the same as C (cycleView).
+hud.instruments.cameraButton.addEventListener('click', () => {
+  hud.instruments.cameraButton.blur();
+  cycleView();
+});
+// No M key on a touch screen: the small map says how to get the big one.
 if (touch.enabled) {
   const hint = document.createElement('div');
   hint.className = 'sp-minimap__hint';
@@ -367,11 +372,23 @@ bus.on('warp-request', (i) => {
 // The Slow / Fast buttons while the autopilot flies: the most warp it may ask
 // for (autopilot.js holds its warp to this).
 bus.on('autopilot-warp-limit', (i) => { game.autopilotWarpMax = Math.max(0, Math.min(WARP_LEVELS.length, i)); });
-bus.on('camera-cycle', () => {
-  if (game.activeScene) return; // C is for the flight camera only
+/** The next flight camera view, said in a short status (C, and the view button in flight). */
+function cycleFlightView() {
   const m = flightCam.cycle();
   hud.toast(m === 'chase' ? 'Camera: behind the ship' : m === 'orbit' ? 'Camera: free look (drag to spin)' : 'Camera: top view: best for reading your path', { ms: 2200 });
-});
+}
+/**
+ * C and the view button. On foot (a walk scene) it is the walk's own view switch, toggleView()
+ * (ship walks), with a short status; in flight, the flight camera's next view.
+ */
+function cycleView() {
+  const scene = game.activeScene;
+  if (!scene) { cycleFlightView(); return; }
+  if (!scene.toggleView) return;
+  const v = scene.toggleView();
+  hud.toast(v === 'over' || v === 'top' || v === 'above' ? 'Camera: from above' : v ? 'Camera: behind her' : 'Camera: changed', { kind: 'info', ms: 2000 });
+}
+bus.on('camera-cycle', cycleView);
 bus.on('rewind', () => {
   // Nothing to rescue on the ground or on foot: R on the Moon walk used to
   // rewind the parked ship 10 s back into the air, so after the walk she was
@@ -1006,15 +1023,6 @@ function landSteerOn() {
     && performance.now() - (game.landingAt || 0) < 300;
 }
 
-/** Seconds of waiting ahead: to the next burn window, or to the closest approach. */
-function waitAhead() {
-  let w = 0;
-  const p = transferPlan && transferPlan.target === game.target ? transferPlan.p : null;
-  if (p && Number.isFinite(p.tau)) w = Math.max(w, p.tau - (ship.t - transferPlan.simT));
-  const c = game.prediction?.closest;
-  if (c && Number.isFinite(c.t)) w = Math.max(w, c.t - ship.t);
-  return w;
-}
 /**
  * A full planner search in progress, run a slice per frame: { target, simT,
  * it } (it = planTransferSteps generator). When it finishes it becomes
@@ -1465,6 +1473,8 @@ function tick(realDt, render = true) {
     const input = controls.sample();
     game.kidSteering = false; // on foot or in a mini-scene: not flying
     const mouse = controls.takeMouse();
+    // The view button names the walk's own view while she walks (instruments.js).
+    hud.instruments.setCameraLabel(activeScene.toggleView ? t('Change view', 'Change view') : null);
     // Walking (or a drag) is her playing too: the words wait until she stops (readGate).
     if (input.thrust || input.turn || input.strafe || input.steady || (mouse.dragging && (mouse.dx || mouse.dy))) noteInput();
     activeScene.tick(realDt, input, modalOpen ? { dx: 0, dy: 0, wheel: 0, dragging: false } : mouse, modalOpen);
@@ -1522,7 +1532,7 @@ function tick(realDt, render = true) {
   // the nose on it spun the ship - and the camera behind it - round and round.
   // She holds her attitude while warping; no burn can happen then anyway.
   const landSteer = landSteerOn() && input.turn === 0;
-  aimToggle.update({ applies: !ship.landedOn && (game.mode.autoAim || (game.mode.id === 'medium' && performance.now() - (game.landingAt || 0) < 300)) });
+  aimToggle.update();
   if ((game.mode.autoAim || landSteer) && !game.manualAim && game.warpIndex === 0 && (input.steady || xferSteer || landSteer) && aimAngle !== null && !ship.landedOn) {
     // Easy mode: hold Space and the ship turns itself to where the step wants
     // it pointed. A damped P-controller on the heading error; the physics'
@@ -1781,9 +1791,8 @@ function tick(realDt, render = true) {
     solar: { power, distanceFromSun: realAU(Math.hypot(ship.x, ship.z)), fractionOfEarth: solarPower(ship.x, ship.z, 1) / SOLAR.panelPowerAtEarth },
     // Chapter 5's cruise runs faster than the top button says: show it.
     warp: OUTER && warpState.warp > WARP_LEVELS[game.warpIndex] ? warpState.warp : WARP_LEVELS[game.warpIndex],
-    // The warp buttons only when there's a long wait ahead (lead: over 100 s);
-    // keys 1-4 work any time. While the autopilot flies, its speed buttons live here.
-    warpUseful: game.warpIndex > 0 || waitAhead() > 100 || !!game.autopilot?.on,
+    // The camera view button's name (instruments.js).
+    cameraMode: flightCam.mode,
     autopilotOn: !!game.autopilot?.on,
     autopilotWarpMax: game.autopilotWarpMax,
     warpAllowed: warpState.warpAllowed,

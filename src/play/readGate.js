@@ -13,7 +13,8 @@
 //    has not touched the controls for IDLE_MS (whenIdle), and while it is up the
 //    game is paused for its reading time (readMs, src/play/readTime.js).
 // Each chapter's HUD does the pausing (src/game/hud.js for Chapters 1-3,
-// src/space/hud/hud.js for 4-7); this file only knows about input and words.
+// src/space/hud/hud.js for 4-7, where main.js feeds noteInput from her steering,
+// walking and view drags); this file only knows about input and words.
 
 import { wordCount } from './readTime.js';
 
@@ -32,7 +33,7 @@ const now = () => (typeof performance !== 'undefined' ? performance.now() : Date
 let lastInput = -Infinity;
 let installed = false;
 
-/** Note a control input (the listeners do this; the flight loop calls it while she steers). */
+/** Note a control input (the listeners do this; main.js also calls it while she steers, walks or drags). */
 export function noteInput(t = now()) { lastInput = t; }
 
 /** How long since her last control input, in ms. */
