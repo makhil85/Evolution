@@ -20,7 +20,11 @@ import { sunRadiance, ambientRadiance } from './bodyShaders.js';
 export const RING_INNER = 1.18;
 export const RING_OUTER = 2.33;
 
-export function createRings({ map, planetRadius, segments = 256 }) {
+/**
+ * peak: optional cap on the ring's linear colour (the ring run passes 1.1, under
+ * the 1.25 bloom threshold). Off by default, so the planet views keep their look.
+ */
+export function createRings({ map, planetRadius, segments = 256, peak = 1e9 }) {
   const geo = new THREE.RingGeometry(RING_INNER, RING_OUTER, segments, 6);
   const mat = new THREE.ShaderMaterial({
     name: 'saturn-rings',
@@ -37,6 +41,7 @@ export function createRings({ map, planetRadius, segments = 256 }) {
       uFlat: { value: 1 },
       uTint: { value: new THREE.Color(1.0, 0.9, 0.76) },
       uGain: { value: 3.6 },
+      uPeak: { value: peak },
     },
     vertexShader: /* glsl */`
       #include <common>
@@ -63,6 +68,7 @@ export function createRings({ map, planetRadius, segments = 256 }) {
       uniform float uPlanetR;
       uniform vec3 uTint;
       uniform float uGain;
+      uniform float uPeak;
       varying vec3 vWorldPos;
       varying float vR;
       void main() {
@@ -108,6 +114,12 @@ export function createRings({ map, planetRadius, segments = 256 }) {
         }
 
         vec3 col = albedo * (uSunColor * refl * shadow * 0.9 + uAmbient * 0.6 * alpha);
+        // Looking back at the Sun through the rings, the forward-scatter boost
+        // pushed this past the bloom threshold (1.25 linear): the halo popped on
+        // and off as the camera swung. Scale the whole colour down to uPeak (keeps
+        // the hue; continuous, so no pop).
+        float peakC = max(max(col.r, col.g), col.b);
+        col *= min(1.0, uPeak / max(peakC, 1e-4));
         float cover = 1.0 - exp(-tau / mu);
         // premultiplied: col already is the light leaving this patch of ring
         gl_FragColor = vec4(col, clamp(cover, 0.0, 1.0));
