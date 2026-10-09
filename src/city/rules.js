@@ -22,7 +22,7 @@ import { questionsFor } from './questions.js';
 
 const DEFAULT_MESSAGES = {
   4: 'Solve any 3 medium quests or the hard problem. Then the golden bridge lock at the moat opens. The bridge puzzle builds 5 planks.',
-  1: 'Solve 3 medium quests or the hard one. Then the gold lock opens.',
+  1: '3 medium quests or the hard one. Then the gold lock at the moat opens.',
 };
 
 /** Old collect() labels, by pickup type. */
@@ -298,7 +298,7 @@ export function createCityRules({ level, storage } = {}) {
       return {
         ok: false,
         text: L('The workshop needs the unlocked bridge route first: solve the hard problem or any 3 medium quests, then solve the 5-plank bridge puzzle.',
-          'The workshop needs the bridge. Solve the hard one or 3 medium quests first.'),
+          'Workshop needs the bridge. First the hard one or 3 mediums, then the bridge puzzle.'),
         missing: [],
       };
     }
@@ -350,7 +350,7 @@ export function createCityRules({ level, storage } = {}) {
   function missionLines() {
     const next = [];
     if (!bridgeUnlocked()) {
-      next.push(L(`Open the bridge: solve any 3 medium quests (${mediumSolvedCount()}/3) or the hard one.`, 'Open the bridge: 3 medium quests, or the hard one.'));
+      next.push(L(`Open the bridge: solve any 3 medium quests (${mediumSolvedCount()}/3) or the hard one.`, `Open bridge: 3 medium (${mediumSolvedCount()}/3) or the hard one.`));
       for (const m of mediums) if (!state.solved[m]) next.push(MEDIUM_OPTION_TEXT[lvl][m]);
       if (!state.solved.key) next.push('Hard: Blueprint Lock outside the moat');
     }

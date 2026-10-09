@@ -95,7 +95,7 @@ const L4 = {
     },
     {
       id: 'townHouse', at: TOWN.at, radius: 2.0,
-      clue: 'Count the purple boards and teal labs, then subtract 2. Go to the north home with that number, counting from the west. Press E there.',
+      clue: 'Count purple boards and teal labs, minus 2. North of the long road, count the buildings from the west. Press E at that number.',
       found: 'You found the Golden Core! It glows in your hands. The Science Center can be built now.',
     },
   ],

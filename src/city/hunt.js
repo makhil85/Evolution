@@ -89,7 +89,7 @@ const L4 = {
     },
     {
       id: 'crossroad3', at: CROSS3, radius: 2.2,
-      clue: 'Count the roads crossing the long east road from the Science Center. Go to crossroad half the west-column buildings, plus 1. Press E there.',
+      clue: 'Count roads crossing the long east road from the Science Center. Go to crossroad number half the west-column buildings, plus 1. Press E there.',
       found: 'The third crossroad, right beside the bridge lock. The water lies just ahead.',
     },
     {

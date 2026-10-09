@@ -373,7 +373,7 @@ function expectedPct(r, level) {
 for (const level of [1, 4]) {
   const tag = `L${level}`;
   const r = fresh(level);
-  eq(r.progress(), { pct: 8, status: level === 1 ? 'Pick: 3 puzzles or hard key' : 'Choose smart path or hard key path' }, `${tag}: progress at start (explored = 8)`);
+  eq(r.progress(), { pct: 8, status: level === 1 ? 'Pick: 3 puzzles or gold key' : 'Choose smart path or hard key path' }, `${tag}: progress at start (explored = 8)`);
   eq(r.missionLines(), [level === 1 ? 'Pick: 3 purple boards or the gold key.' : 'Choose: solve the 3 purple boards, or the golden key puzzle.'], `${tag}: first mission line`);
   ok(r.recipeText().startsWith(level === 1 ? 'Plan locked: Solve the 3 purple boards' : 'Recipe locked: Solve all 3 purple boards'), `${tag}: recipe locked text`);
   r.solveQuest('m1');

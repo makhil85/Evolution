@@ -779,7 +779,7 @@ async function main() {
   const intro = {
     eyebrow: 'Chapter 3',
     title: 'Ready for Lift-off',
-    line: engine.state.launched ? `Welcome back, ${heroName()}! The rocket has flown.` : `Build a real rocket, ${heroName()}: answer the science questions, build it stage by stage, and launch it.`,
+    line: engine.state.launched ? `Welcome back, ${heroName()}! The rocket has flown.` : `Build a real rocket, ${heroName()}: answer the questions, build it stage by stage, launch it.`,
     lookAt: new THREE.Vector3(0, 0, -8),
   };
   opening = createOpening({
@@ -914,7 +914,7 @@ function tick(dt, now = performance.now()) {
       const showMarks = hideCardMarks();
       story.outro({
         title: 'Lift-off! The rocket is in space!',
-        line: `You did it, ${heroName()}! Every stage built, every question answered. Next: fly that rocket all the way to Europa, Jupiter's icy moon.`,
+        line: `You did it, ${heroName()}! Every stage built. Next: fly to Europa, Jupiter's icy moon.`,
         focus: null,
         next: { href: 'chapter4.html', label: 'Next: Chapter 4 — Voyage to Europa' },
       }).then((how) => {

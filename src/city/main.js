@@ -286,7 +286,7 @@ function riseStructure(target, pieces, doneMessage, questKey) {
         story?.outro({
           title: 'The Engineering Workshop is built!',
           line: t(`Amazing work, ${heroName()}! The city has water, power, a bridge and a workshop. Next: build a rocket.`,
-            `Great job, ${heroName()}! The city has water, power, a bridge and a workshop. Next: a rocket!`),
+            `Great job, ${heroName()}! The city has a bridge and a workshop. Next: a rocket!`),
           focus: new THREE.Vector3(c.x, world.heightAt(c.x, c.z), c.z),
           next: { href: 'chapter3.html', label: 'Next: Chapter 3 — Ready for Lift-off' },
           // The film: the workshop opens, the cart crosses the truss, the rocket plan.

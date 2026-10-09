@@ -348,7 +348,7 @@ export function createScienceRules({ level, storage } = {}) {
     p += Math.round(resPart * 32);
     const pct = Math.min(99, p);
     let status;
-    if (state.recipeMode === 'unknown') status = L('Choose smart path or hard key path', 'Pick: 3 puzzles or hard key');
+    if (state.recipeMode === 'unknown') status = L('Choose smart path or hard key path', 'Pick: 3 puzzles or gold key');
     else if (!state.solved.force) status = 'Visit Force Lab';
     else if (!state.solved.energy) status = lvl === 1 ? 'Visit Light & Plants Lab' : 'Visit Chemical Energy Lab';
     else status = L('Gather resources and build on purple foundation', 'Get resources, build on purple spot');

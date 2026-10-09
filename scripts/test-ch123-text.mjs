@@ -64,6 +64,8 @@ function check(where, kind, text) {
 // 1. Quest chain, stages and engine lines (quests.js and its Level 1 overlay)
 // ---------------------------------------------------------------------------
 const quests = await import('../src/game/quests.js');
+/** A behaviour check: records a failure in the same list as an over-long text. */
+const must = (cond, where) => { if (!cond) over.push(`${where} [behaviour]`); };
 const overlay = await import('../src/game/quests.level1.js');
 
 for (const s of quests.QUEST_CHAIN) {
@@ -85,6 +87,10 @@ check('engine launch refused', 'message', fresh.launch().message);
 check('engine collect', 'message', fresh.collect('wood').message);
 check('engine shortfall (2 kinds)', 'message', quests.shortfallMessage({ iron: 4, wood: 2 }));
 check('engine shortfall (3 kinds)', 'message', quests.shortfallMessage({ gems: 4, rocketParts: 2, fuel: 2 }));
+check('engine shortfall (wood and stone)', 'message', quests.shortfallMessage({ wood: 6, stone: 6 }));
+// The logs-and-rocks note is for wood and stone only.
+must(quests.shortfallMessage({ wood: 6, stone: 6 }).endsWith('Logs and rocks: on the path.'), 'shortfall names the logs and rocks for wood and stone');
+must(!quests.shortfallMessage({ gems: 4, fuel: 2 }).includes('on the path'), 'shortfall adds no logs note for gems and fuel');
 check('engine station (start)', 'message', fresh.stationMessage('missionSchool'));
 check('engine supply drop', 'message', quests.createQuestEngine({
   ...quests.defaultSave(), completedSteps: ['step_cadet', 'step_blueprint', 'step_frame'],
@@ -202,6 +208,7 @@ const FILES = [
   'src/science/rules.js', 'src/city/rules.js', 'src/city/newtonTree.js',
   'src/science/hunt.js', 'src/city/hunt.js', 'src/game/hunt.js', 'src/game/pickups.js',
   'src/play/modes.js', 'src/play/hunt.js', 'src/science/layout.js', 'src/city/layout.js',
+  'src/science/main.js', 'src/city/main.js', 'src/gameScene.js',
 ];
 const SKIP_CALLEE = /^(Error|TypeError|RangeError|warn|assert|querySelector|querySelectorAll|getElementById|setAttribute|addEventListener|fetch|import|log|error)$/;
 const SKIP_KEYS = new Set(['id', 'className', 'class', 'style', 'href', 'src', 'role', 'kind', 'type', 'key', 'stationId',

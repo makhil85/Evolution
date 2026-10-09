@@ -332,7 +332,7 @@ for (const level of [1, 4]) {
   eq(r.progress(), { pct: 0, status: level === 1 ? 'Build the Workshop' : 'Build the Engineering Workshop' }, `${tag}: progress at start`);
   let lines = r.missionLines();
   eq(lines.length, 3, `${tag}: 3 mission lines at start`);
-  ok(lines[0] === (level === 1 ? 'Open the bridge: 3 medium quests, or the hard one.' : 'Open the bridge: solve any 3 medium quests (0/3) or the hard one.'), `${tag}: first mission line`);
+  ok(lines[0] === (level === 1 ? 'Open bridge: 3 medium (0/3) or the hard one.' : 'Open the bridge: solve any 3 medium quests (0/3) or the hard one.'), `${tag}: first mission line`);
   r.solveQuest(MEDIUM_QUESTS[level][0]);
   eq(r.progress().pct, 20, `${tag}: 1 medium = 20%`);
   r.solveQuest(MEDIUM_QUESTS[level][1]);
@@ -479,7 +479,7 @@ for (const level of [1, 4]) {
   ok(!easy.isHuntRequired() && easy.startWorkshop().ok, `${tag}: Easy / Medium build without the hunt`);
   const other = fresh(level);
   other.setHuntRequired(true); other.markHuntFound();
-  ok(other.workshopCheck().text.startsWith(level === 1 ? 'The workshop needs the bridge.' : 'The workshop needs the unlocked bridge route first'), `${tag}: with the gear found the normal refusals apply`);
+  ok(other.workshopCheck().text.startsWith(level === 1 ? 'Workshop needs the bridge.' : 'The workshop needs the unlocked bridge route first'), `${tag}: with the gear found the normal refusals apply`);
   const old = memStore();
   old.setItem(STORE_KEYS[level], JSON.stringify({ resources: { wood: 3 }, builtFinal: false, message: 'hi', collected: [1] }));
   const o = fresh(level, old);

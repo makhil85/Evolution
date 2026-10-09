@@ -10,7 +10,7 @@
 
 export const STEP_TEXT_L1 = {
   step_cadet: {
-    lockedMessage: 'The Cadet Test is open now. Walk up the road to the Mission School.',
+    lockedMessage: 'Walk up the road to the Mission School.',
     missionText: 'Go to the Mission School. Take the Cadet Test.',
     statusText: 'Take the Cadet Test',
     done: { 'rocketPad.hologram': 'A rocket picture lights up across the river.' },
@@ -30,7 +30,7 @@ export const STEP_TEXT_L1 = {
     label: 'Base',
     title: 'Build Stage 1 — Base + Frame',
     lockedMessage: 'Pick the metal at the Lab first. Then get 6 wood and 6 stone.',
-    missionText: 'Get 6 wood and 6 stone. Build at the pad.',
+    missionText: 'Get 6 wood (logs) and 6 stone (rocks).',
     statusText: 'Build the base at the pad',
     done: { 'rocket.stage.foundation': 'Stage 1 is up! The frame stands on the pad.' },
   },
@@ -49,7 +49,7 @@ export const STEP_TEXT_L1 = {
   build_body: {
     lockedMessage: 'Do the Water Lab and Wind Tunnel tests. Then get 8 iron and 4 wood.',
     missionText: 'Get 8 iron and 4 wood. Build at the pad.',
-    statusText: 'Build the rocket body',
+    statusText: 'Build the rocket body: bridge too',
     done: { bridge: 'The bridge is done! Now you can cross the river.' },
   },
   step_thrust: {
@@ -108,43 +108,43 @@ export const STEP_TEXT_L1 = {
   },
   bonus_pattern: {
     lockedMessage: 'This puzzle is in the plan room. Finish the plan first.',
-    missionText: '★ Extra: what comes next on the dial?',
+    missionText: '★ Extra: upstairs, what comes next on the dial?',
     statusText: 'Extra: the dial pattern',
   },
   bonus_place_value: {
     label: 'Bonus • Balloons',
     lockedMessage: 'This puzzle is in the plan room. Finish the plan first.',
-    missionText: '★ Extra: which balloon flew higher?',
+    missionText: '★ Extra: upstairs, which balloon flew higher?',
     statusText: 'Extra: which balloon was higher',
   },
   bonus_mass: {
     lockedMessage: 'The engineer is busy. Pick the metal first.',
-    missionText: '★ Extra: which block is heavier, iron or foam?',
+    missionText: '★ Extra: at the Lab, iron or foam, which is heavier?',
     statusText: 'Extra: the two blocks',
   },
   bonus_volume: {
     lockedMessage: 'The new tank is not ready. Do the tank test first.',
-    missionText: '★ Extra: how much does the new tank hold?',
+    missionText: '★ Extra: Water Lab. How much does the new tank hold?',
     statusText: 'Extra: the new tank',
   },
   bonus_division: {
     lockedMessage: 'The fuel barrel opens after the tank test.',
-    missionText: '★ Extra: share the fuel between four tanks.',
+    missionText: '★ Extra: at the Water Lab, share fuel between 4 tanks.',
     statusText: 'Extra: share the fuel',
   },
   bonus_shape: {
     lockedMessage: 'The tunnel is busy. Finish the nose test first.',
-    missionText: '★ Extra: try a flat card two ways.',
+    missionText: '★ Extra: Wind Tunnel. Try a flat card two ways.',
     statusText: 'Extra: the card in the tunnel',
   },
   bonus_forces: {
     lockedMessage: 'Test the engine at the Science Center first.',
-    missionText: '★ Extra: what do the two pushes do?',
+    missionText: '★ Extra: Science Center. What do the two pushes do?',
     statusText: 'Extra: the two pushes',
   },
   bonus_states: {
     lockedMessage: 'This opens after the engine test.',
-    missionText: '★ Extra: what happens to fuel when it burns?',
+    missionText: '★ Extra: Science Center. What happens to fuel when it burns?',
     statusText: 'Extra: the fuel sample',
   },
   bonus_ratio: {
@@ -154,17 +154,17 @@ export const STEP_TEXT_L1 = {
   },
   bonus_angle: {
     lockedMessage: 'Finish the aim test at the Tower first.',
-    missionText: '★ Extra: turn the fin a quarter turn.',
+    missionText: '★ Extra: at the Tower, turn the fin a quarter turn.',
     statusText: 'Extra: turn the fin',
   },
   bonus_gravity: {
     lockedMessage: 'The tower opens after the engine test.',
-    missionText: '★ Extra: why can you jump so high on the Moon?',
+    missionText: '★ Extra: the tower. Why jump high on the Moon?',
     statusText: 'Extra: the Moon',
   },
   bonus_liftoff_mass: {
     lockedMessage: 'Do the countdown check first.',
-    missionText: '★ Extra: weigh the rocket before launch.',
+    missionText: '★ Extra: the pad. Weigh the rocket before launch.',
     statusText: 'Extra: weigh the rocket',
   },
 };

@@ -564,7 +564,7 @@ const RAW_CHAIN = [
       { kind: 'unlock', targetId: 'windTunnel' }
     ],
     lockedMessage: 'Choose the frame metal at the Materials Lab first, then bring 6 wood and 6 stone to the pad.',
-    missionText: 'Collect 6 wood and 6 stone. Build the foundation at the pad.',
+    missionText: 'Collect 6 wood (logs) and 6 stone (rocks). Build the foundation at the pad.',
     statusText: 'Build the rocket foundation at the pad'
   },
 
@@ -756,7 +756,7 @@ const RAW_CHAIN = [
       { kind: 'unlock', targetId: 'rank:Chief Engineer', rank: 'Chief Engineer' }
     ],
     lockedMessage: 'The Observatory opens once the engine is tested at the Science Center. This one is extra credit — you never need it to launch.',
-    missionText: '★ The Observatory has an extra-hard challenge. You never need it to launch.',
+    missionText: '★ Optional: the Observatory\'s extra-hard challenge.',
     statusText: 'Optional: take the Chief Engineer Challenge'
   },
 
@@ -1491,7 +1491,9 @@ export function shortfallMessage(missing) {
   const parts = Object.entries(missing || {}).map(([k, v]) => `${count(v)} more ${k}`);
   if (parts.length === 0) return 'You have everything you need — build it!';
   const list = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
-  return `You need ${list}.`;
+  // Wood and stone come from the logs and rocks on the path, so say where they are.
+  const outdoors = count(missing?.wood) > 0 || count(missing?.stone) > 0;
+  return `You need ${list}.${outdoors ? ' Logs and rocks: on the path.' : ''}`;
 }
 
 /**

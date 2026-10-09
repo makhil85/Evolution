@@ -81,7 +81,7 @@ const LEVEL_1 = {
     {
       id: 'home',
       at: doorAt('home9'), radius: HOME_R,
-      clue: 'Clue 4: Walk back. Find the home numbered 2 more than 7. Press E.',
+      clue: 'Clue 4: Walk back down the road. Find the home numbered 2 more than 7.',
       found: 'The crystal is here! It glows blue.',
     },
   ],

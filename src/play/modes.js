@@ -106,7 +106,7 @@ export function choosePlayMode({ level = 4, current = savedPlayModeId() || 'easy
     card.appendChild(el('h2', 'pl-title', title));
     card.appendChild(el('p', 'pl-sub', level === 1
       ? 'This changes the help. The questions stay the same. You can change it any time.'
-      : 'This changes the help and mining. The questions stay the same.'));
+      : 'This changes the help and mining. The questions stay the same. Change it any time with the Help button.'));
 
     const row = el('div', 'pl-modes');
     row.setAttribute('role', 'radiogroup');
