@@ -34,7 +34,7 @@ const CSS_ID = 'ch7-lens-css';
 // the browser), at 16:9 and at most 640 px wide. The card still scrolls if a window is shorter.
 const CSS = `
 .lens-card .ls-line { min-height: 1.45em; margin: 4px 0 0; font-size: 15px; }
-.lens-card .lens-canvas { display: block; width: min(100%, 640px, calc((100vh - 340px) * 16 / 9)); height: auto; margin: 8px auto 0; border-radius: 12px; background: #05060c; touch-action: none; cursor: crosshair; }
+.lens-card .lens-canvas { display: block; width: min(100%, 640px, max(320px, calc((100vh - 340px) * 16 / 9))); height: auto; margin: 8px auto 0; border-radius: 12px; background: #05060c; touch-action: none; cursor: crosshair; }
 .lens-card .ls-actions { margin-top: 10px; }
 `;
 function injectCss() {

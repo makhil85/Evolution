@@ -34,15 +34,16 @@ const px = (m) => m * SCALE;
 const CSS_ID = 'ch7-float-css';
 // Lead 2026-10-09: every button must be on screen at 1280x720, 1280x600 and 1024x640.
 // The room is the only part that gives way: its width is 16:9 of the height left
-// after the text and the buttons (the 330 px is that text and button height, measured
-// in the browser). The card still scrolls if a small window is shorter than that.
+// after the text and the buttons (the 340 px is that text and button height, measured
+// in the browser), but never under 320 px wide; the card scrolls in a window that short.
 const CSS = `
 .fg-card .ls-line { min-height: 0; margin: 6px 0 0; font-size: 15px; }
 .fg-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
 .fg-row button { min-height: 38px; padding: 0 12px; border-radius: 12px; border: 2px solid rgba(255,255,255,.18); background: #1a2540; color: inherit; font: inherit; font-weight: 800; cursor: pointer; }
 .fg-row button[aria-pressed="true"] { border-color: #7fd3ff; background: rgba(127,211,255,.16); }
 .fg-row button:disabled { opacity: .4; cursor: default; }
-.fg-view { width: min(100%, calc((100vh - 340px) * 16 / 9)); margin: 8px auto 0; }
+.fg-view { width: min(100%, max(320px, calc((100vh - 340px) * 16 / 9))); margin: 8px auto 0; }
+.fg-gap { width: 1px; align-self: stretch; margin: 0 6px; background: rgba(255,255,255,.22); }
 .fg-view .fg-canvas { display: block; width: 100%; height: auto; }
 .fg-note { font-size: 16px; font-weight: 800; line-height: 1.4; margin-top: 6px; min-height: 1.4em; }
 .fg-note.is-warn { color: #ffd27a; }
@@ -180,6 +181,7 @@ export function playFloatGame({ mode = LEVEL === 1 ? 'easy' : 'medium', seed = n
     btnRow.append(b);
     return { b, id: m.id };
   });
+  btnRow.append(el('span', 'fg-gap')); // the modes, then the tools: a line between the two sets
   const toolBtns = Object.values(TOOLS).map((T) => {
     const b = el('button', null); b.type = 'button';
     b.addEventListener('click', () => { picked = picked === T.id ? null : T.id; paint(); });
