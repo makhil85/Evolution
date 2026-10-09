@@ -394,6 +394,7 @@ await check('9b. hud.closeCards closes the host card and the map', async () => {
 });
 
 await check('9c. a turn asked before a queue reset never runs, even when the turn ahead settles later', async () => {
+  resetModalTurns(); await flush(5); // a clean queue: no turn left stuck by an earlier check
   let release = () => {};
   inModalTurn(() => new Promise((r) => { release = r; }));
   let ranOld = false;

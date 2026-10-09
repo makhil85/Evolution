@@ -242,7 +242,7 @@ export function createMissions(game) {
     ready.cancel?.();
     hud.closeCards?.();
     game.bus?.emit?.('cards-reset');
-    playUi.closeAllLayers?.();
+    playUi.closeAllLayers();
   }
 
   /** Does this step send her out of the system she is in? An escape does, and so does a
