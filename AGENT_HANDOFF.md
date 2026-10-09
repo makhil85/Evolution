@@ -294,6 +294,15 @@ belt). Chapter 2 is renamed **Forces and Machines** (was City Engineering),
 Chapter 3 **Ready for Lift-off** (was Rocket Village), and the game
 **Evolution**.
 
+**Later: a city chapter between the city and the rocket** (lead 2026-10-09).
+Chapter 2 "Forces and Machines" may get real city model structures (a model
+kit for city buildings, like the sci-fi kit for the ship), and a new chapter
+can sit between it and Chapter 3 "Ready for Lift-off", so the civilizational
+jump happens in steps: village -> city -> (new: e.g. the age of engines and
+electricity, the first flights) -> the space-age rocket town. Chapter numbers
+and save keys will need care when it is inserted (launcher CHAPTERS, page
+names, `rocket_village_seen_ch<n>` flags).
+
 **Later: genetics and evolution** (lead 2026-10-09; the game's name). Chapters
 after Tau Ceti about life itself, built on Chapter 4's lesson 4G (cells, DNA,
 proteins) and Chapter 7's tiny-life lesson: genes and inheritance (why
