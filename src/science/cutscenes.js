@@ -87,15 +87,18 @@ function prefersReduced() {
  * scenery (its forest belt stands on that grass, so it would float on the sea;
  * the flowers and bushes go too). Returns the restore.
  */
-function hideVillage(scene, world) {
+function hideVillage(scene, world, markers) {
   const hidden = [
     scene.getObjectByName('townsfolk'), scene.getObjectByName('navArrow'),
     world.root?.getObjectByName('groundOuter'), world.root?.getObjectByName('scenery'),
+    world.root?.getObjectByName('pickups'),
   ].filter(Boolean);
   const was = hidden.map((o) => o.visible);
   for (const o of hidden) o.visible = false;
   world.setLabelsVisible?.(false);
+  markers?.(true);   // pickup glows, station beacons and the highlight ring (main.js filmMarkers)
   return () => {
+    markers?.(false);
     hidden.forEach((o, i) => { o.visible = was[i]; });
     world.setLabelsVisible?.(true);
   };
@@ -274,16 +277,60 @@ function buildBridgeAndCity() {
   return { group: g, gear };
 }
 
+// The shore: a sand bank that slopes from the village's edge down into the curved
+// sea, so no hard rim shows against the horizon (lead, films fix round).
+const MAP_HALF = 40;     // half the village map (MAP_W * TILE / 2)
+const BEACH = 12;        // the bank runs this far out from the edge, down to the sea
+const SHORE_N = 52;      // the shore grid's half size (MAP_HALF + BEACH)
+const outsideMap = (x, z) => Math.max(Math.abs(x) - MAP_HALF, Math.abs(z) - MAP_HALF, 0);
+
+function buildShore() {
+  const side = SHORE_N * 2 + 1;
+  const pos = new Float32Array(side * side * 3);
+  const col = new Float32Array(side * side * 3);
+  const cGrass = new THREE.Color(0x6db85a), cSand = new THREE.Color(0xd9c48f), cSea = new THREE.Color(0x3f9fd6);
+  const c = new THREE.Color();
+  for (let j = 0; j < side; j++) {
+    for (let i = 0; i < side; i++) {
+      const x = i - SHORE_N, z = j - SHORE_N;
+      const d = outsideMap(x, z);
+      const k = smooth(d / BEACH);
+      const p = (j * side + i) * 3;
+      pos[p] = x; pos[p + 1] = k * (seaY(x, z) + 0.04); pos[p + 2] = z;
+      if (d < 1.5) c.copy(cGrass).lerp(cSand, d / 1.5);
+      else c.copy(cSand).lerp(cSea, (d - 1.5) / (BEACH - 1.5));
+      col[p] = c.r; col[p + 1] = c.g; col[p + 2] = c.b;
+    }
+  }
+  const index = [];
+  for (let j = 0; j < side - 1; j++) {
+    for (let i = 0; i < side - 1; i++) {
+      const d = outsideMap(i - SHORE_N + 0.5, j - SHORE_N + 0.5);
+      if (d <= 0 || d >= BEACH) continue;
+      const a = j * side + i, b = a + 1, cc = a + side, dd = cc + 1;
+      index.push(a, cc, b, b, cc, dd);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  geo.setIndex(index);
+  geo.computeVertexNormals();
+  return new THREE.Mesh(geo, new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: toonRamp }));
+}
+
 // --- the opening --------------------------------------------------------------------
 
 /** Seconds: the opening's scene (the title card adds its own hold, see chapterStory.js). */
 export const OPENING_LENGTH = 26;
 const OPEN_LEN = OPENING_LENGTH;
+/** The ship is drawn 2.4x: the hull has to stay readable at the camera's distance (the hull-first beat). */
+const SHIP_SCALE = 2.4;
 /** The opening's captions: [start time, [Level 4, Level 1]]. */
 export const CAPS_OPEN = [
   [0, ['Dawn over Science Village. A ship sails out to sea.', 'Morning. A boat sails away.']],
   [6, ['Watch the ship. Its hull sinks out of sight first. The sea is curved, like the Earth!', 'Its bottom goes away first. The Earth is round!']],
-  [12, ['The sun rises. Her stick\'s shadow gets shorter as the sun climbs.', 'The sun is up. The shadow gets short.']],
+  [13, ['The sun rises. Her stick\'s shadow gets shorter as the sun climbs.', 'The sun is up. The shadow gets short.']],
   [18, ['The village gate. The villagers are up and waiting.', 'The gate. Hello, everyone!']],
   [22, ['Our scientist is here! Let\'s help the village.', 'Hello! Let\'s help the village.']],
 ];
@@ -301,10 +348,14 @@ export function playOpening(ctx) {
   const { scene, camera, world, sun, getAvatar, chasePose } = ctx;
   const reduced = ctx.reduced ?? prefersReduced();
   const home = chasePose();
+  // The hull beat (6-13 s): the camera holds low on the shore, close to the ship
+  // (2.4x size, so the hull is big enough at ~130 units), until the hull has
+  // dipped out of sight and the mast still shows.
   const KEYS = [
-    [0, -150, 70, -190, 10, 4, -10],
-    [6, -60, 24, -112, 20, 2, -62],
-    [12, -22, 6, -60, 70, 2, -82],
+    [0, -110, 45, -135, 20, 2, -40],
+    [5, -62, 20, -110, 60, 1, -70],
+    [8, -34, 4, -76, 84, 0.8, -78],
+    [13, -20, 2.2, -62, 118, 0.6, -82],
     [18, -10, 10, -40, -16, 0, -6],
     [22, -6.5, 4.8, -18, -21, 1.6, 6],
     [OPEN_LEN, home.pos.x, home.pos.y, home.pos.z, home.look.x, home.look.y, home.look.z],
@@ -314,6 +365,8 @@ export function playOpening(ctx) {
   root.name = 'cutscene:opening';
   const sea = buildSea();
   const ship = buildShip();
+  ship.scale.setScalar(SHIP_SCALE);
+  const shore = buildShore();
   const sunDisc = buildDisc(9, 0xffd27a, 15, 0.14);
   const stick = buildStick();
   const gate = buildGate();
@@ -324,14 +377,15 @@ export function playOpening(ctx) {
     root.add(p.g);
     return p;
   });
-  root.add(sea, ship, sunDisc, stick.group, stick.shadow, gate);
+  root.add(sea, shore, ship, sunDisc, stick.group, stick.shadow, gate);
   scene.add(root);
 
-  const restoreVillage = hideVillage(scene, world);
+  const restoreVillage = hideVillage(scene, world, ctx.markers);
   const sunI0 = sun.intensity;
   const sunC0 = sun.color.clone();
   const bg0 = (scene.background || new THREE.Color(0x8ed0f5)).clone();
   const fog0 = (scene.fog ? scene.fog.color : new THREE.Color(0x8ed0f5)).clone();
+  const fogNF0 = scene.fog ? { near: scene.fog.near, far: scene.fog.far } : null;
 
   const pos = new THREE.Vector3();
   const look = new THREE.Vector3();
@@ -347,9 +401,16 @@ export function playOpening(ctx) {
       camera.lookAt(look);
 
       // The ship sails away to the north-east, over the curve of the sea.
-      const sx = 40 + 6.2 * tq, sz = -62 - 1.7 * tq;
+      const sx = 56 + 4.6 * tq, sz = -64 - 1.4 * tq;
       ship.position.set(sx, seaY(sx, sz), sz);
-      ship.rotation.y = Math.atan2(6.2, -1.7);
+      ship.rotation.y = Math.atan2(4.6, -1.4);
+
+      // Haze: the village is far off at the start, so the fog starts thin and thickens to the usual.
+      if (fogNF0 && scene.fog) {
+        const kf = smooth(tq / 12);
+        scene.fog.near = lerp(160, fogNF0.near, kf);
+        scene.fog.far = lerp(900, fogNF0.far, kf);
+      }
 
       // Dawn: the sun rises low in the east (its light and shadow warm up with it).
       const u = tq / OPEN_LEN;
@@ -378,13 +439,14 @@ export function playOpening(ctx) {
       if (done) return;
       done = true;
       scene.remove(root);
-      for (const g of [sea, ship, sunDisc, stick.group, stick.shadow, gate]) disposeTree(g);
+      for (const g of [sea, shore, ship, sunDisc, stick.group, stick.shadow, gate]) disposeTree(g);
       for (const p of folk) disposeTree(p.g);
       restoreVillage();
       sun.intensity = sunI0;
       sun.color.copy(sunC0);
       scene.background?.copy(bg0);
       scene.fog?.color.copy(fog0);
+      if (fogNF0 && scene.fog) { scene.fog.near = fogNF0.near; scene.fog.far = fogNF0.far; }
     },
   };
 }
@@ -432,7 +494,8 @@ export function playEnding(ctx) {
   const moon = buildDisc(10, 0xfff4d6, 16, 0.22);
   moon.position.set(MOON_AT.x, MOON_AT.y, MOON_AT.z);
   const sunDisc = buildDisc(11, 0xffa45a, 18, 0.2);
-  root.add(sea, city.group, stars, moon, sunDisc);
+  const shore = buildShore();
+  root.add(sea, shore, city.group, stars, moon, sunDisc);
   scene.add(root);
 
   // The dome opens (two halves slide apart over a dark drum) and the telescope
@@ -485,7 +548,7 @@ export function playEnding(ctx) {
     return { p, hx: home.x, hz: home.z, tx, tz, walkHead: Math.atan2(tx - home.x, tz - home.z), faceHead: Math.atan2(hero.x - tx, hero.z - tz) };
   });
 
-  const restoreVillage = hideVillage(scene, world);
+  const restoreVillage = hideVillage(scene, world, ctx.markers);
   const was = world.root ? [world.root.getObjectByName('scienceCenter4'), world.root.getObjectByName('scienceCenter5')] : [];
   const wasVisible = was.map((o) => o?.visible);
   for (const o of was) if (o) o.visible = false;
@@ -549,6 +612,7 @@ export function playEnding(ctx) {
       done = true;
       scene.remove(root, wrap);
       disposeTree(sea);
+      disposeTree(shore);
       disposeTree(city.group);
       disposeTree(stars);
       disposeTree(moon);

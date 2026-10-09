@@ -462,7 +462,22 @@ async function main() {
 // --- loop -------------------------------------------------------------------
 /** What the chapter's cutscenes need (src/science/cutscenes.js). */
 function cutCtx() {
-  return { scene, camera, world, sun, getAvatar: () => avatar, getPlayerPos: () => player.position, chasePose };
+  return { scene, camera, world, sun, getAvatar: () => avatar, getPlayerPos: () => player.position, chasePose, markers: filmMarkers };
+}
+
+/** The films hide the pickup glows, the station beacons and the highlight ring; `off` = true hides them, false brings them back. */
+let filming = false;
+function filmMarkers(off) {
+  filming = off;
+  if (off) {
+    world.setPickupGlow(false);
+    world.setStationBeacons(false);
+    world.highlight(null);
+  } else {
+    world.setPickupGlow(mode.resourceGlow);
+    world.setStationBeacons(mode.targetBeacon);
+    lastNear = '';   // the next frame re-highlights the nearest thing
+  }
 }
 
 /** Where the chase camera wants to be right now (also the end of the opening sweep). */
@@ -517,7 +532,7 @@ function tick(dt) {
     world.update(dt, elapsed, player.position, camera.position);
     const n = rules && nearestUsable(player.position.x, player.position.z);
     const key = n ? `${n.kind}:${n.id}` : '';
-    if (key !== lastNear) {
+    if (!filming && key !== lastNear) {
       lastNear = key;
       world.highlight(n ? n.kind : null, n ? n.id : null);
     }
