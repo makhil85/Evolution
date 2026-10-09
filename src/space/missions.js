@@ -456,6 +456,8 @@ export function createMissions(game) {
     /** Hands-off flying first (QUIET_S): for questions asked outside the step engine
      *  (acts/util.js askBeat, the belt's beats). Resolves at once on foot. */
     untilQuiet,
+    /** Bumped by every jump(): a flow that started before it is stale (acts/util.js askBeat). */
+    get generation() { return gen; },
     /** Save now (main.js calls this every few seconds while flying). */
     save() { persist(); },
     /** Ask a beat's question the way a step's own beat is asked: counted as

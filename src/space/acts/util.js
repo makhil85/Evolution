@@ -106,7 +106,10 @@ export async function askBeat(game, beat) {
   const q = questionForBeat(beat);
   if (!q) return { correct: true };
   // Hands-off first; the card itself waits its turn inside hud.askQuestion (modalQueue.js).
-  await game.missions?.untilQuiet?.();
+  // A grown-up jump while it waits makes this flow stale: its question is not asked.
+  const my = game.missions?.generation;
+  const go = await game.missions?.untilQuiet?.();
+  if (go === false || game.missions?.generation !== my) return { correct: false, stale: true };
   const personal = personalise(q);
   const res = await game.hud.askQuestion(personal);
   if (res.correct) {
