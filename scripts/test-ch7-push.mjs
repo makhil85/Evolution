@@ -109,7 +109,7 @@ ok('floating, she keeps a steady speed until she touches something (no friction 
   }
 });
 ok('Easy has the arrow to the next part; Medium and Hard do not', () => {
-  assert.equal(MODES.easy.hint, true); assert.equal(MODES.medium.hint, false); assert.equal(MODES.hard.hint, false);
+  assert.equal(MODES.easy.hint, false); assert.equal(MODES.medium.hint, false); assert.equal(MODES.hard.hint, false);
 });
 ok('a room is the same for the same mode and seed, and has 3 parts to collect', () => {
   const a = newGame('medium', 12); const b = newGame('medium', 12);
@@ -152,7 +152,7 @@ for (const r of rows) {
 }
 ok('do-nothing play never wins on any mode', () => { for (const r of rows) assert.equal(r.none, 0, r.mode); });
 ok('random play wins at most 10% on Hard', () => { const h = rows.find((r) => r.mode === 'hard'); assert.ok(h.rnd <= 0.1 * N, `${h.rnd}/${N}`); });
-ok('the bot clears every Easy room, and the hint arrow is on', () => {
+ok('the bot clears every Easy room (no hint arrow: lead 2026-10-09)', () => {
   const e = rows.find((r) => r.mode === 'easy');
   assert.equal(e.bot, N);
 });

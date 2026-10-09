@@ -53,7 +53,7 @@ export const PART_R = 0.6; // a part within this distance is hers
 const DECIDE_S = 0.25; // a bot (or a child) acts about four times a second
 
 export const MODES = Object.freeze({
-  easy: Object.freeze({ id: 'easy', label: ['Easy', 'Easy'], drift: 0.3, handles: 8, blocks: 1, parts: 3, throws: Infinity, time: 150, hint: true }),
+  easy: Object.freeze({ id: 'easy', label: ['Easy', 'Easy'], drift: 0.3, handles: 8, blocks: 1, parts: 3, throws: Infinity, time: 150, hint: false }),
   medium: Object.freeze({ id: 'medium', label: ['Medium', 'Medium'], drift: 0.6, handles: 5, blocks: 2, parts: 3, throws: Infinity, time: 150, hint: false }),
   hard: Object.freeze({ id: 'hard', label: ['Hard', 'Hard'], drift: 0.9, handles: 3, blocks: 3, parts: 3, throws: 3, time: 100, hint: false }),
 });

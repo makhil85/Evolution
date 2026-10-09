@@ -892,11 +892,11 @@ export function parentHintsFor(reachedQuestionIds) {
  */
 export function wrongAnswerMessage(question, attemptCount = 1) {
   const q = typeof question === 'string' ? getQuestion(question) : question;
-  const hint = q && q.hint ? q.hint : 'Have another go — nothing is lost.';
+  // Lead 2026-10-09: no hints for the child, at any Level (q.hint stays for the Parent Hints panel).
   const n = Number.isFinite(attemptCount) ? attemptCount : 1;
   return n >= 2
-    ? `Not quite. ${hint} — a grown-up can open the Parent Hints panel for a bigger clue.`
-    : `Not quite. ${hint}`;
+    ? 'Not quite. Have another go — a grown-up can open the Parent Hints panel.'
+    : 'Not quite. Have another go — nothing is lost.';
 }
 
 export default QUESTIONS;

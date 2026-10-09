@@ -16,6 +16,7 @@
 // away in plain words: it appears under the film from beat `clueAt` (default:
 // the last beat) and stays above the question. The animation is unchanged:
 // the clue is a strip under the picture, never over it. Level 4 never shows it.
+// Off since 2026-10-09 (lead: no hints at any Level): see SHOW_CLUES.
 //
 // Captions wait to be read: a beat lasts at least 1.5 s + 0.35 s per word
 // (1.5x that at Level 1). When a caption needs longer than its beat, the
@@ -38,6 +39,7 @@ import { skipButton } from '../play/grownUp.js';
 
 const SEEN_PREFIX = 'rocket_village_lesson_';
 const TICK_MS = 50;
+const SHOW_CLUES = false; // lead 2026-10-09: no hints for the child
 
 const pick = (pair) => (Array.isArray(pair) ? t(pair[0], pair[1]) : pair);
 
@@ -86,7 +88,9 @@ export function planAt(plan, time) {
 
 /** The film's Level 1 clue, or '' (Level 4, or a film without one). */
 export function clueText(film) {
-  if (LEVEL !== 1 || !film.clue) return '';
+  // Lead 2026-10-09: no hints at any Level, so the Level 1 clue is never shown
+  // (the films keep their `clue` text; set SHOW_CLUES to bring the strip back).
+  if (SHOW_CLUES !== true || LEVEL !== 1 || !film.clue) return '';
   return Array.isArray(film.clue) ? (film.clue[1] || '') : film.clue;
 }
 
@@ -316,7 +320,7 @@ export function playLesson(lesson, { bus = null } = {}) {
       afterQuestion();
       return;
     }
-    feedback('warn', [`${t('Not quite.', 'Not quite.')} ${pick(qq.hint)} ${t('One more try!', 'Try again!')}`]);
+    feedback('warn', [t('Not quite. One more try!', 'Not quite. Try again!')]);
   }
 
   function afterQuestion() {

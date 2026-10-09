@@ -243,7 +243,7 @@ export function playDesignBoard({ bus = null } = {}) {
     const q = DESIGN_STEPS[ix];
     if (!right && tries < 2) {
       btn.classList?.add('is-wrong'); if (btn.tagName === 'BUTTON' && btn.classList.contains('ls-choice')) btn.disabled = true;
-      fb.className = 'ls-feedback is-warn'; fb.textContent = q.hint ? pick(q.hint) : t('Not quite. Think again!', 'Try again!'); fb.hidden = false;
+      fb.className = 'ls-feedback is-warn'; fb.textContent = t('Not quite. Think again!', 'Try again!'); fb.hidden = false;
       return;
     }
     done = true; triesLog.push(tries);
