@@ -229,27 +229,24 @@ function makeCard(svg, name) {
 // The opening
 // ---------------------------------------------------------------------------
 
-const REVEAL_A = [30, 58, 118];  // high over her side of the town, south-east
-const REVEAL_B = [0, 44, 86];    // the same town, from the south end of the main road
-const TOWN_LOOK = [0, 0, -10];   // the middle of the town
-const ROAD_CTRL = [0, 22, 30];   // the sweep dips over the road, past the hub
-const ROAD_END = [5, 13, -8];    // alongside the road, level with mission control
-const PAD_END = [9, 15, -33];    // by the launch tower
-const TOWER_UP = 6;              // the look point rises this much above the pad's ground
-
-/** Mission control = the Science Center, which sits on the road's west side. */
-function building(id) {
-  return ROCKET_VILLAGE.buildings.find((b) => b.id === id);
-}
+// Every opening camera stays inside the map (x -34..34, z -52..62; village.js
+// BOUNDS), so the edge of the world never shows. The road runs at roof height.
+const REVEAL_A = [22, 26, 60];   // high over her side of the town, at the south edge
+const REVEAL_B = [0, 11, 58];    // the same town, low, from the south end of the main road
+const TOWN_LOOK = [0, 4, -14];   // the middle of the town, low, so the far edge is fogged
+const ROAD_CTRL = [0, 10, 28];   // the sweep runs at roof height along the road
+const ROAD_END = [3, 8, -6];     // on the road by the hub, level with the houses
+const PAD_END = [8, 14, -14];    // back from the launch tower, so the whole tower fits with sky above
+const TOWER_UP = 7;              // the look point: the middle of the launch tower
 
 /**
  * Camera pose for one opening shot at progress u (0..1). Writes _P (position)
- * and _L (look). `pts` holds the two look points (mission control, the pad) and
- * `her` is her chase pose ({ p, l } arrays) for the last shot.
+ * and _L (look). `pts.pad` is the launch tower's look point and `her` her chase
+ * pose ({ p, l } arrays) for the last shot.
  */
 const _P = [0, 0, 0];
 const _L = [0, 0, 0];
-const HER_CTRL = [4, 30, 15];
+const HER_CTRL = [5, 18, 16];    // the last move comes down to her at roof height, not from above
 function openingPose(id, u, pts, her) {
   const k = smooth(u);
   switch (id) {
@@ -263,16 +260,49 @@ function openingPose(id, u, pts, her) {
       break;
     case 'road':
       bez3(_P, REVEAL_B, ROAD_CTRL, ROAD_END, k);
-      lerp3(_L, TOWN_LOOK, pts.sci, k);
+      lerp3(_L, TOWN_LOOK, pts.pad, k);
       break;
     case 'pad':
       lerp3(_P, ROAD_END, PAD_END, k);
-      lerp3(_L, pts.sci, pts.pad, k);
+      lerp3(_L, pts.pad, pts.pad, 0);
       break;
     default: // 'her': round to her chase pose, looking at her
       bez3(_P, PAD_END, HER_CTRL, her.p, k);
       lerp3(_L, pts.pad, her.l, k);
   }
+}
+
+/**
+ * The opening's camera for one shot, as plain arrays (for tests). `ground(x, z)`
+ * is the terrain height and `her` her chase pose ({ p, l }).
+ */
+export function openingCamera(id, u, ground, her) {
+  const pad = ROCKET_VILLAGE.rocketPad;
+  openingPose(id, u, { pad: [pad.x, ground(pad.x, pad.z) + TOWER_UP, pad.z] }, her);
+  return { p: [..._P], l: [..._L] };
+}
+
+/**
+ * Labels, station markers, the nav arrow and pickup glows (and every Sprite)
+ * move to a layer the camera does not draw, for the length of a film. Layers,
+ * not `visible`: nameSigns.js and friends set `visible` every frame, which would
+ * undo a hide. Returns what restoreWorldMarks() needs.
+ */
+const HIDDEN_LAYER = 31;
+const WORLD_MARK_NAMES = new Set(['nameSigns', 'stations', 'navArrow', 'keyBlock', 'glow']);
+function hideWorldMarks(scene) {
+  const saved = new Map();
+  const hide = (o) => o.traverse((c) => {
+    if (saved.has(c)) return;
+    saved.set(c, c.layers.mask);
+    c.layers.set(HIDDEN_LAYER);
+  });
+  scene.traverse((o) => { if (o.isSprite || WORLD_MARK_NAMES.has(o.name)) hide(o); });
+  return saved;
+}
+function restoreWorldMarks(saved) {
+  for (const [c, mask] of saved) c.layers.mask = mask;
+  saved.clear();
 }
 
 /** Picture card: slides in from the right, out to the left (a plain fade when reduced). */
@@ -339,13 +369,24 @@ export function createOpening({ camera, scene, sun, ground, chasePose, getAvatar
     const sunDayI = sun.intensity;
     const DAWN = new THREE.Color(0xf4a58a);
     const SUN_DAWN = new THREE.Color(0xffc38a);
-    // The two look points, from the layout (mission control and the launch tower).
-    const hq = building('scienceCenter');
+    // The launch tower's look point, from the layout.
     const pad = ROCKET_VILLAGE.rocketPad;
-    const pts = {
-      sci: [hq.x, ground(hq.x, hq.z), hq.z],
-      pad: [pad.x, ground(pad.x, pad.z) + TOWER_UP, pad.z],
-    };
+    const pts = { pad: [pad.x, ground(pad.x, pad.z) + TOWER_UP, pad.z] };
+    const hidden = hideWorldMarks(scene);
+    // The fog closes in for the film, so the map's edges fade into the sunrise haze
+    // instead of showing as a cliff over the sky (the game's own fog is 70 to 230).
+    const fogRange = scene.fog ? [scene.fog.near, scene.fog.far] : null;
+    if (scene.fog) { scene.fog.near = 40; scene.fog.far = 150; }
+    // A flat green plain under the map for the film: past the map's edge there is ground
+    // that fades into the haze, not the sky showing under a floating island.
+    const plain = new THREE.Mesh(
+      new THREE.PlaneGeometry(700, 700),
+      new THREE.MeshToonMaterial({ color: 0x6fae55, gradientMap: toonRamp }),
+    );
+    plain.name = 'filmPlain';
+    plain.rotation.x = -Math.PI / 2;
+    plain.position.y = -1.5;
+    scene.add(plain);
 
     const st = { t: 0, skip: false, shot: -1, wave: false, her: { p: [0, 0, 0], l: [0, 0, 0] } };
     const loc = { index: 0, u: 0, ok: false };
@@ -365,6 +406,11 @@ export function createOpening({ camera, scene, sun, ground, chasePose, getAvatar
       cap.set(null);
       titleEl.classList.remove('is-on');
       setTimeout(() => { titleEl.remove(); skipHint.remove(); cards.forEach((c) => c.remove()); cap.node.remove(); }, 900);
+      restoreWorldMarks(hidden);
+      if (fogRange) { scene.fog.near = fogRange[0]; scene.fog.far = fogRange[1]; }
+      scene.remove(plain);
+      plain.geometry.dispose();
+      plain.material.dispose();
       cinematicOff(h);
       storageSet(seenKey);
       run = null;

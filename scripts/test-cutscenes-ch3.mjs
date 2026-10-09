@@ -12,9 +12,10 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {
-  OPENING_SHOTS, ARRIVAL_SHOTS, totalSeconds, captionText, locate, arrivalCamera,
+  OPENING_SHOTS, ARRIVAL_SHOTS, totalSeconds, captionText, locate, arrivalCamera, openingCamera,
   createOpening, createArrival,
 } from '../src/game/cutscenes.js';
+import { ROCKET_VILLAGE } from '../src/game/rocketVillageLayout.js';
 
 let passed = 0;
 const ok = (name, fn) => { fn(); passed += 1; console.log(`  ok  ${name}`); };
@@ -75,6 +76,32 @@ ok('locate finds the shot and the progress through it', () => {
 ok('locate past the end reports not ok', () => {
   const end = locate(ARRIVAL_SHOTS, totalSeconds(ARRIVAL_SHOTS) + 0.5);
   assert.equal(end.ok, false);
+});
+
+console.log('opening camera');
+// village.js BOUNDS: the map's edge must never be in a shot.
+const BOUNDS = { minX: -34, maxX: 34, minZ: -52, maxZ: 62 };
+const HER = { p: [0, 3.4, 62.2], l: [0, 1.1, 55] }; // her chase pose at the start (yaw 0)
+ok('every opening camera position is inside the map, so the world edge never shows', () => {
+  for (const sh of OPENING_SHOTS) {
+    for (let i = 0; i <= 10; i++) {
+      const [x, y, z] = openingCamera(sh.id, i / 10, () => 0, HER).p;
+      // The last shot ends on her chase pose (7.2 behind her, z 62.2), which gameplay uses anyway.
+      const maxZ = sh.id === 'her' ? BOUNDS.maxZ + 0.5 : BOUNDS.maxZ;
+      assert.ok(x >= BOUNDS.minX && x <= BOUNDS.maxX && z >= BOUNDS.minZ && z <= maxZ,
+        `${sh.id} u=${i / 10}: camera at ${x.toFixed(1)}, ${z.toFixed(1)} is off the map`);
+      assert.ok(y >= 2, `${sh.id} u=${i / 10}: camera ${y.toFixed(1)} is under the ground`);
+    }
+  }
+});
+ok('the road runs at roof height and the pad shot looks at the launch tower', () => {
+  for (let i = 0; i <= 10; i++) {
+    const [, y] = openingCamera('road', i / 10, () => 0, HER).p;
+    assert.ok(y <= 12, `road camera ${y.toFixed(1)} is above roof height`);
+  }
+  const pad = ROCKET_VILLAGE.rocketPad;
+  const look = openingCamera('pad', 1, () => 0, HER).l;
+  assert.ok(Math.hypot(look[0] - pad.x, look[2] - pad.z) < 0.01, 'pad shot is not looking at the tower');
 });
 
 console.log('orbit camera');
