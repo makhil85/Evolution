@@ -45,16 +45,16 @@ function buildTree() {
 
 const QUIZ = {
   4: {
-    q: 'Newton drops a BIG apple and a SMALL apple from the same branch at the same moment (no wind). Which one reaches the ground first?',
+    q: 'Newton drops a BIG apple and a SMALL apple at the same moment. Which lands first?',
     options: ['The big apple', 'The small apple', 'They land at the same time'],
     answer: 2,
-    why: 'Gravity speeds up heavy and light things the same way, so they land together. (A feather is slow only because air gets in its way: on the Moon, with no air, a hammer and a feather landed together!)',
+    why: 'Gravity speeds up heavy and light things alike, so they land together. A feather is slow only because of air.',
   },
   1: {
     q: 'If you let go of an apple, which way does it go?',
     options: ['Up to the sky', 'Down to the ground', 'It floats where it is'],
     answer: 1,
-    why: 'Gravity pulls things DOWN. That is why apples, balls and you always come back down!',
+    why: 'Gravity pulls things DOWN. That is why apples come back down!',
   },
 };
 
@@ -177,25 +177,25 @@ export function createNewtonTree({ scene, at, heightAt, level, storeKey, getAvat
     const reply = (text) => show({ text, choices: [next('Then what?', story)] });
     show({
       who: 'Apple tree',
-      text: `An apple just fell right next to you, ${name}! Why do you think it fell DOWN, and not up or sideways?`,
+      text: L(`An apple just fell right next to you, ${name}! Why do you think it fell DOWN, and not up or sideways?`, `An apple fell next to you, ${name}! Why did it fall DOWN?`),
       choices: [
-        next('Something pulled it down', () => reply(L('Great thinking! Something invisible pulled it. A very curious young man wondered the same thing...', 'Great thinking! Something you can’t see pulled it. A young man once asked the same thing...'))),
-        next('It got tired of hanging', () => reply(L('Ha! Apples don’t get tired... but something DID pull it down. A very curious young man wondered about this too...', 'Ha! Apples don’t get tired... but something DID pull it down. A young man once asked about this too...'))),
-        next('The wind blew it', () => reply(L('Wind can shake an apple loose, but wind blows sideways. So why did it go straight DOWN? A very curious young man wondered about this too...', 'Wind blows sideways. So why did it fall straight DOWN? A young man once asked about this too...'))),
+        next('Something pulled it down', () => reply(L('Great thinking! Something invisible pulled it. A curious young man wondered the same.', 'Great thinking! Something you can’t see pulled it.'))),
+        next('It got tired of hanging', () => reply(L('Ha! Apples don’t get tired, but something DID pull it down.', 'Ha! Something DID pull it down.'))),
+        next('The wind blew it', () => reply(L('Wind can shake an apple loose, but wind blows sideways. So why did it go straight DOWN?', 'Wind blows sideways. So why did it fall straight DOWN?'))),
       ],
     });
   }
 
   function story() {
     show({
-      text: L('About 350 years ago, a young scientist named Isaac Newton sat in his garden in England. He watched an apple fall from a tree and asked: what pulls it towards the ground?', 'Long ago, a young scientist named Isaac Newton sat in his garden. He saw an apple fall. He asked: what pulls it down?'),
+      text: L('About 350 years ago, Isaac Newton sat in his garden. He saw an apple fall and asked: what pulls it to the ground?', 'Isaac Newton saw an apple fall. What pulled it down?'),
       choices: [next('What did he find out?', story2)],
     });
   }
 
   function story2() {
     show({
-      text: 'Newton said the whole Earth pulls on everything. He called the pull GRAVITY. Then he looked up at the Moon and had a big idea... Do you think the Earth pulls on the Moon too?',
+      text: L('Newton said the Earth pulls on everything. He called the pull GRAVITY. Does the Earth pull on the Moon too?', 'Earth pulls on everything. It is called GRAVITY. Does Earth pull the Moon too?'),
       choices: [
         next('Yes, it pulls the Moon too!', () => moon(true)),
         next('No, the Moon is too far away', () => moon(false)),
@@ -205,7 +205,7 @@ export function createNewtonTree({ scene, at, heightAt, level, storeKey, getAvat
 
   function moon(yes) {
     show({
-      text: `${yes ? 'Yes! That was Newton’s big idea.' : 'That is what most people thought! But Newton worked out that it does.'} Gravity reaches all the way to the Moon. The Moon is always falling towards Earth, but it zooms sideways so fast that it keeps missing! That is what an orbit is. (Remember that when you fly to Europa!)`,
+      text: `${yes ? L('Yes! That was Newton’s big idea.', 'Yes, Newton agreed.') : L('Newton worked out that it does.', 'Newton said it does.')} ${L('The Moon falls towards Earth, but it zooms sideways so fast that it keeps missing. That is an orbit.', 'The Moon falls and zooms sideways. That is an orbit.')}`,
       choices: [next('Ask me a gravity question!', quiz)],
     });
   }
@@ -248,7 +248,7 @@ export function createNewtonTree({ scene, at, heightAt, level, storeKey, getAvat
     if (right) getAvatar()?.play?.('cheer');
     show({
       who: right ? 'Correct!' : 'Here is the answer',
-      text: `${why}${first ? ' You earned +1 Science! 🔬' : ''} Gravity pulls YOU back down too.`,
+      text: `${why}${first ? ' You earned +1 Science! 🔬' : ''}`,
       choices: [next('Thanks, Newton!', close)],
     });
   }

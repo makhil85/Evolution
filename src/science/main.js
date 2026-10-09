@@ -257,7 +257,7 @@ function riseScienceCenter(pieces) {
         const c = tileToWorld(BUILD_TILE.tx, BUILD_TILE.ty);
         story?.outro({
           title: 'The Science Center is built!',
-          line: `Well done, ${heroName()}! You solved the puzzles and built the Science Center. Next: build a whole city.`,
+          line: `Well done, ${heroName()}! You built the Science Center. Next: build a whole city.`,
           focus: new THREE.Vector3(c.x, world.heightAt(c.x, c.z), c.z),
           next: { href: 'chapter2.html', label: 'Next: Chapter 2 — Forces and Machines' },
           scene: playEnding(cutCtx()),   // dusk, the dome opens, the villagers gather (cutscenes.js)

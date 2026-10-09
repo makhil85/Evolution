@@ -58,30 +58,30 @@ function decoysFor(level, finalId) {
 const LEVEL_1 = {
   title: 'The Hidden Guidance Crystal',
   itemName: ITEM_NAME,
-  intro: 'The rocket needs a Guidance Crystal to steer. It is hidden inside one of the homes in this town. Read each clue and find the place. When you get there, stand close and press E.',
+  intro: 'Find the Guidance Crystal in one of the homes. Read each clue. Press E.',
   steps: [
     {
       id: 'fountain',
       at: { x: 0, z: 25 }, radius: 5.4,
-      clue: 'Clue 1: Walk up the road from where you began. In the middle of the market, water splashes in a round pool. Go and stand next to it.',
+      clue: 'Clue 1: Find the fountain in the market. Press E next to it.',
       found: 'Splash! You found the market fountain.',
     },
     {
       id: 'lab',
       at: { x: -25, z: 17.5 }, radius: 4.6,
-      clue: 'Clue 2: Look at the stalls by the fountain. Count the stalls with a GREEN roof. Now look at the signs on the buildings. Find a sign with that many WORDS on it. Stand in front of that building.',
+      clue: 'Clue 2: Count the green stalls. Find the sign with that many words. Press E.',
       found: 'Three green stalls, and three words on the sign: River Flow Lab. Well done!',
     },
     {
       id: 'mill',
       at: { x: 16, z: 14.6 }, radius: 4.6,
-      clue: 'Clue 3: Turn so the river is in front of you. Now walk far to your RIGHT along the river. Find the little power station with a big wheel in the water.',
+      clue: 'Clue 3: Face the river. Walk far right to the water wheel. Press E.',
       found: 'The water wheel is turning. You found the power station!',
     },
     {
       id: 'home',
       at: doorAt('home9'), radius: HOME_R,
-      clue: 'Clue 4: Walk back down the road to where you started. Homes stand on both sides. Each one has a number on its sign. Find the home with the number 2 more than 7. The crystal is inside.',
+      clue: 'Clue 4: Walk back down the road. Find the home numbered 2 more than 7.',
       found: 'The crystal is here! It glows blue.',
     },
   ],
@@ -97,7 +97,7 @@ const LEVEL_1 = {
 const LEVEL_4 = {
   title: 'The Hidden Guidance Crystal',
   itemName: ITEM_NAME,
-  intro: 'The rocket\'s guidance computer needs a Guidance Crystal, and it is hidden inside one of the homes in this town. These clues never name a place, so you have to work each one out. North is the way you face when you walk up the main road toward the river. Stand close to each place and press E.',
+  intro: 'The Guidance Crystal is hidden in a home. The clues never name a place. North is toward the river. Press E at each place.',
   steps: [
     {
       id: 'midpoint',
@@ -108,7 +108,7 @@ const LEVEL_4 = {
     {
       id: 'quarter',
       at: { x: -12.5, z: 12 }, radius: 4,
-      clue: 'Clue 2: The River Flow Lab and the Wind Tunnel stand on the same east-west line. Start at the River Flow Lab and walk toward the Wind Tunnel. Stop when you have covered one quarter of the way.',
+      clue: 'Clue 2: Walk a quarter of the way from the River Flow Lab to the Wind Tunnel. Press E.',
       found: 'A quarter of the way along the line. Correct.',
     },
     {
@@ -120,7 +120,7 @@ const LEVEL_4 = {
     {
       id: 'home',
       at: doorAt('home17'), radius: HOME_R,
-      clue: 'Clue 4: The homes stand in the meadows beside the road where you began, each with a number on its sign. Exactly ONE of those numbers is prime (careful: not every odd number is prime). The crystal is inside that home.',
+      clue: 'Clue 4: Homes by the start road have numbers on their signs. Exactly one number is prime. Press E at that home.',
       found: 'Seventeen has no factors except 1 and itself. The crystal is here!',
     },
   ],
@@ -141,7 +141,7 @@ export function launchGate({ mode, found }) {
   if (mode && mode.treasureHunt && !found) {
     return {
       ok: false,
-      message: `The rocket cannot launch yet. Its guidance computer needs the ${ITEM_NAME}, hidden in one of the homes. Press Clue to read the next hint.`,
+      message: `The rocket needs the ${ITEM_NAME} first. Press Clue for the next clue.`,
     };
   }
   return { ok: true };
