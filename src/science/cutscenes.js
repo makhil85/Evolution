@@ -2,24 +2,27 @@
 // 2026-10-09: "add entrance and exit animation scenes ... keep the scene
 // relevant to the chapters").
 //
-// OPENING (26 s, the first visit, before the title card):
+// OPENING (29 s, the first visit, before the title card):
 //   0-6    dawn: the camera far out over the sea to the north-west; a sailing
 //          ship heads away over the water.
-//   6-12   the camera dives to the north shore. The sea is a big curved sphere,
+//   6-13   the camera dives to the north shore. The sea is a big curved sphere,
 //          so the ship's hull sinks out of sight before its mast (a hint of
 //          Lesson 1A: the Earth is round).
-//   12-18  the sun rises over the sea; her stick's shadow shortens as it climbs
+//   13-19  the sun rises over the sea; her stick's shadow shortens as it climbs
 //          (a hint of Lesson 1B).
-//   18-22  the camera comes down the north road past the village gate.
-//   22-26  the camera settles behind her; the villagers wave, she waves.
+//   19-24  the camera comes down the north road past the village gate.
+//   24-29  the camera settles behind her; the villagers wave, she waves.
 //
-// ENDING (25 s, the first completion, before the "Chapter complete" card):
+// ENDING (29.8 s, the first completion, before the "Chapter complete" card):
 //   0-6    the Science Center is finished; the camera circles it as dusk falls.
-//   6-12   the dome opens and the telescope swings up to the Moon; the first
+//   6-12.6 the dome opens and the telescope swings up to the Moon; the first
 //          stars come out.
-//   12-18  the villagers walk in from their homes and gather in front of her.
-//   18-25  the camera looks west down the road, over the bridge, to the far
+//   12.6-18.6 the villagers walk in from their homes and gather in front of her.
+//   18.6-29.8 the camera looks west down the road, over the bridge, to the far
 //          city (Chapter 2, Forces and Machines: bridges and gears).
+//
+// Captions are timed so each one has its reading time (readMs, src/play/readTime.js)
+// before the next starts; chapterStory.js holds the film if a gap is too short.
 //
 // Both return a scene for chapterStory (src/game/chapterStory.js):
 // { duration, step(t, say), dispose() }. Captions are [Level 4, Level 1] pairs
@@ -322,7 +325,7 @@ function buildShore() {
 // --- the opening --------------------------------------------------------------------
 
 /** Seconds: the opening's scene (the title card adds its own hold, see chapterStory.js). */
-export const OPENING_LENGTH = 26;
+export const OPENING_LENGTH = 29;
 const OPEN_LEN = OPENING_LENGTH;
 /** The ship is drawn 2.4x: the hull has to stay readable at the camera's distance (the hull-first beat). */
 const SHIP_SCALE = 2.4;
@@ -330,9 +333,9 @@ const SHIP_SCALE = 2.4;
 export const CAPS_OPEN = [
   [0, ['Dawn over Science Village. A ship sails out to sea.', 'Morning. A boat sails away.']],
   [6, ['Watch the ship. Its hull sinks out of sight first. The sea is curved, like the Earth!', 'Its bottom goes away first. The Earth is round!']],
-  [13, ['The sun rises. Her stick\'s shadow gets shorter as the sun climbs.', 'The sun is up. The shadow gets short.']],
-  [18, ['The village gate. The villagers are up and waiting.', 'The gate. Hello, everyone!']],
-  [22, ['Our scientist is here! Let\'s help the village.', 'Hello! Let\'s help the village.']],
+  [13.2, ['The sun rises. Her stick\'s shadow gets shorter as the sun climbs.', 'The sun is up. The shadow gets short.']],
+  [18.7, ['The village gate. The villagers are up and waiting.', 'The gate. Hello, everyone!']],
+  [23.8, ['Our scientist is here! Let\'s help the village.', 'Hello! Let\'s help the village.']],
 ];
 // The villagers along the north road, on the way down from the gate (x, z, facing).
 const OPEN_FOLK = [
@@ -454,15 +457,15 @@ export function playOpening(ctx) {
 // --- the ending ---------------------------------------------------------------------
 
 /** Seconds: the ending's scene (the "Chapter complete" card follows it). */
-export const ENDING_LENGTH = 25;
+export const ENDING_LENGTH = 29.8;
 const END_LEN = ENDING_LENGTH;
 /** The ending's captions: [start time, [Level 4, Level 1]]. */
 export const CAPS_END = [
   [0, ['The Science Center is finished! Dusk falls over the village.', 'The Science Center is done! The sun goes down.']],
   [6, ['The dome opens. The telescope turns to the Moon, and the first stars come out.', 'The roof opens. The telescope looks at the Moon. Stars!']],
-  [12, ['The villagers come to thank her.', 'The people say thank you!']],
-  [18, ['Cheers, scientist! The road goes west, over the bridge, to a great city.', 'Hooray! The road goes to a big city.']],
-  [22, ['Next: Chapter 2, Forces and Machines: bridges and gears!', 'Next: bridges and gears!']],
+  [12.6, ['The villagers come to thank her.', 'The people say thank you!']],
+  [18.6, ['Cheers, scientist! The road goes west, over the bridge, to a great city.', 'Hooray! The road goes to a big city.']],
+  [24.6, ['Next: Chapter 2, Forces and Machines: bridges and gears!', 'Next: bridges and gears!']],
 ];
 const DOME_Y = CENTER.slabTop + 2.4 + 0.14 + 1.1 + 0.14;   // the Science Center's dome base (centre.js)
 const MOON_AT = { x: CENTER.x - 20, y: 40, z: CENTER.z - 120 };

@@ -1,8 +1,8 @@
-# Rocket Village: handoff
+# Evolution (formerly Rocket Village): handoff
 
 Updated 2026-09-29. Start here, then `PLAN.md` for the list of items (done
 and next). Rules for working in this repo (models, folders, sound parked):
-`CLAUDE.md`. Everything is committed on `master`.
+`CLAUDE.md`. Everything is on `main` (the newest notes are at the end of this file).
 
 ## The game in one screen
 
@@ -13,8 +13,8 @@ A kids' science game in the browser (Three.js + Vite), two question Levels
 |---|---|---|
 | Launcher + girl builder | `index.html`, `character.html` (`src/launcher/`, `src/character/`) | Name and build the girl once (wardrobe, face, hair); she appears in every chapter, smiling. |
 | Chapter 1 Science Village | `chapter1.html` -> `src/science/` | 3-D, plays end to end at both Levels and all play modes. |
-| Chapter 2 City Engineering | `chapter2.html` -> `src/city/` | 3-D, same. Built structures and bridges are solid/walkable. |
-| Chapter 3 Rocket Village | `chapter3.html` -> `src/gameScene.js`, `src/game/` | Same. |
+| Chapter 2 Forces and Machines | `chapter2.html` -> `src/city/` | 3-D, same. Built structures and bridges are solid/walkable. |
+| Chapter 3 Ready for Lift-off | `chapter3.html` -> `src/gameScene.js`, `src/game/` | Same. |
 | Chapter 4 Voyage to Europa | `chapter4.html` -> `src/space/` | Flight game; plays end to end at Level 4 Easy/Medium/Hard and Level 1. |
 | Chapter 5 Rings to a Star | `chapter5.html` -> `src/space/ch5/` (same engine) | Saturn, ring run, ice giants, Space pool, Pluto, the edge, fusion, the rock ship's engine half. Level 4 built; Level 1 not tuned. |
 | Play modes (Ch1-3) | `src/play/` | Easy arrow + glow, Medium/Hard mining by E, Hard treasure hunt. |
@@ -661,3 +661,21 @@ lines are in place but not tuned.
   town (Materials Lab, hydro station, antenna masts); the medieval kit is gone.
 - Merge order: #22-#27, #28-#33, #34, #35-#38, #39. Each PR is stacked on the
   one before; retarget a child when its parent merges.
+
+## Session 2026-10-09 (later): integrity check, no hints, reading time, no key legends
+
+- **Integrity check** of everything merged (10 checkers): see the fix PR after
+  #40. Fixed: Ch7 cards fit 1280x720/600 and 1024x640; Part C restart redoes
+  the tasks; Ch7 facts and Level 1 titles; the grown-up Jump drops the old
+  step's flow and closes every card (`missions.jump`, `play/ui.js`
+  `closeAllLayers`); Enter on Retry no longer fires Ready; the Ch2 truss is
+  green from the first shot; Ch4/Ch6 facts; names and docs.
+- **No hints** for the child (lead): see AGENT_HANDOFF section 11.
+- **Reading time** (lead): `src/play/readTime.js` (`readMs`, `needsClick`);
+  used by `game/hud.js` (Ch1-3), `space/hud/hud.js` (Ch4-7), `chapterStory.js`
+  (Ch1-3 films), the lesson films and the space films.
+- **No key legends** (lead): removed from both HUDs, step text, the burn
+  panel, the aim dial, the toggles; mining shows "Mine wood 2/3" on its pill.
+- Open: the Ch7 lens Skip stall seen once in a browser after a grown-up
+  Jump was not reproduced in node (most likely the hands-off wait before the
+  question). Check it when playing.

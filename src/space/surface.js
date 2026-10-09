@@ -701,7 +701,7 @@ export function createSurfaceScene(game, { body = 'moon', onBeat = null } = {}) 
       { who: 'girl', text: t('I’m standing on the Moon! Everything is grey, and the sky is black even in the daytime.', 'I’m on the Moon! It is all grey. The sky is black, even in the day.') },
       { who: 'Mission Control', text: t('The Moon pulls on you six times more weakly than Earth does. Try a big jump: press Space!', 'The Moon pulls on you much less than Earth. Try a big jump: press Space!') },
     ]);
-    mission(0, t('Press Space to take a big jump. (W A S D to walk, Shift to bound, drag to look around.)', 'Press Space to jump high! (W A S D to walk.)'));
+    mission(0, t('Press Space to take a big jump.', 'Press Space to jump high!'));
     await until(() => flags.bigJump);
     await wait(0.8);
     await beat('moonWalk');

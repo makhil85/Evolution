@@ -467,7 +467,6 @@ async function main() {
   emotes = createEmotes({
     getAvatar: () => avatar, getTarget: () => player, height: AVATAR_HEIGHT,
     isBlocked: () => !!(hud && hud.isModalOpen()) || playBlocked() || !!(launch && launch.active),
-    hint: (m) => hud.toast(m, 'info'),
   });
 
   effects = createEffectRunner({
@@ -759,7 +758,6 @@ async function main() {
     ROCKET_VILLAGE.playerStart.z
   );
   say(`spawn: ${ROCKET_VILLAGE.playerStart.x}, ${ROCKET_VILLAGE.playerStart.z}`);
-  say('WASD move | Shift run | Space jump | E use | drag to turn');
   hud.update(engine);
   hud.setInventory(engine.state.inventory);
 
@@ -955,7 +953,7 @@ function tick(dt, now = performance.now()) {
       const isTarget = near && step && step.stationId === near.id;
       const mineable = pickups && !pickups.autoCollect ? pickups.nearestWithin(player.position, MINE_REACH) : null;
       if (hud.isModalOpen() || playBlocked()) hud.hideInteract();
-      else if (mineable) hud.setInteract(`Mine ${mineable.node.resource}`, 'E');
+      else if (mineable) hud.setInteract(`Mine ${mineable.node.resource} ${miner.progressOf(mineable.id)}/${playMode.mineHits}`, 'E');
       else if (huntZoneHere()) hud.setInteract('Look here', 'E');
       else if (!near) hud.hideInteract();
       else hud.setInteract(isTarget ? (step.title || 'Start') : 'Not yet', isTarget ? 'E' : '');

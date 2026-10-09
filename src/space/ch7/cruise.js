@@ -1,4 +1,4 @@
-// Chapter 7, Part E: the full push (30 s, skippable after 1.5 s). The fusion
+// Chapter 7, Part E: the full push (about 31 s, skippable after 1.5 s). The fusion
 // drive stays at full power (1 g) and the ship speeds up from 20% of light
 // speed to about 90%. Lead 2026-10-08: "the ship keeps on accelerating with the
 // fusion drive until it reaches about 90% of light speed". No sleep pods and no
@@ -23,7 +23,7 @@ import { t as lvl, IS_LEVEL1 } from '../level.js';
 import { buildDial, buildCaption } from './opening.js';
 import { OPENING_TO, TOP_SPEED, dialSpeed, percentOf, clockWords, rapidity, C_OVER_G_YEARS } from './voyage.js';
 
-const DURATION = 30;
+const DURATION = 31;
 const T_PUSH = 18; // the push runs 20% -> 90% over this (about 1.2 years on the ship's clock)
 const T_COAST = 19.5; // the drive goes quiet: the coast
 // Few and dim (lead: streak clutter, AGENT_HANDOFF section 11): 30 lines at half opacity.
@@ -173,10 +173,11 @@ export function playCh7Cruise(game) {
   const caption = buildCaption();
 
   // The captions: each one shows from its start time to its end (seconds into the cutscene).
+  // Each stays up for its reading time (readMs, 5-10 s, here the longer Level 4 text) plus the fade in.
   const LINES = [
-    [2.2, 8, lvl('Full push: one g. It feels like the pull of Earth, all the way.', 'Full push! It feels like Earth’s pull.')],
+    [2.2, 9.4, lvl('Full push: one g. It feels like the pull of Earth, all the way.', 'Full push! It feels like Earth’s pull.')],
     [10.5, 17, lvl('The speed keeps going up, and the clock on board keeps ticking.', 'Faster and faster!')],
-    [T_COAST + 0.5, DURATION - 2.5, lvl('90% of light speed. The drive goes quiet, and we coast with no push at all.', '90% of light speed! The engine is off. We float.')],
+    [T_COAST + 0.5, 27.8, lvl('90% of light speed. The drive goes quiet, and we coast with no push at all.', '90% of light speed! The engine is off. We float.')],
   ];
   let shownLine = null;
 
@@ -240,7 +241,7 @@ export function playCh7Cruise(game) {
       }
 
       if (t > 1.2 && !overlay._a) { overlay._a = true; overlay.showTitle(); }
-      if (t > 5.5 && !overlay._b) { overlay._b = true; overlay.hideTitle(); }
+      if (t > 1.2 + overlay.readS && !overlay._b) { overlay._b = true; overlay.hideTitle(); }
       if (t >= DURATION) { game.cinematic = null; finish(); }
     },
   };

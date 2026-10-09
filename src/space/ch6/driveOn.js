@@ -21,12 +21,16 @@
 // builds its own close-up Sun out along the real Sun's direction, where it
 // covers the real one.
 import * as THREE from 'three';
-import { buildOverlay, blendCamera, waitForSkip, ease } from '../cinematics.js';
+import { buildOverlay, blendCamera, waitForSkip, ease, cardSeconds } from '../cinematics.js';
 import { createStarship, FLIGHT_LENGTH } from './starship.js';
 import { t as lvl } from '../level.js';
 import { CRUISE_PERCENT, LIGHT_KMS } from './routes.js';
 
-const DURATION = 24;
+// The next card ("Next: how fast is light, anyway?") comes at NEXT_AT and stays
+// up for its reading time; the film runs until it has been read.
+const NEXT_AT = 20;
+const NEXT_TEXT = [lvl('Fusion drive on', 'Engine on!'), `${CRUISE_PERCENT}% of light speed`, lvl('Next: how fast is light, anyway?', 'How fast is light?')];
+const DURATION = Math.max(24, NEXT_AT + cardSeconds(...NEXT_TEXT) + 0.5);
 const SUN_R = 300; // the close-up Sun's radius, scene units
 const RP = 420; // the closest pass, from the Sun's centre
 const E = 1.25; // how open the swing is (a hyperbola)
@@ -189,9 +193,12 @@ export function playDriveOn(game, { speedKms = 60 } = {}) {
   game.paused = true;
   game.warpIndex = 0;
 
-  // Her ship is inside the starship now: hide it.
+  // Her ship is inside the starship now: hide it. The flight starship (her craft, at
+  // her place) is hidden too: this scene's own starship does the move (lead 2026-10-09).
   const shipQuat = shipView.group.quaternion.clone();
   shipView.group.visible = false;
+  const flightStar = game._starship?.ship.group;
+  if (flightStar) flightStar.visible = false;
   const ship = createStarship({ detail: 'near' });
   ship.group.scale.setScalar(FLIGHT_LENGTH / ship.dims.length);
   ship.setRingSpin(0.5);
@@ -346,10 +353,10 @@ export function playDriveOn(game, { speedKms = 60 } = {}) {
         if (kms < 3000) dial.kms(kms); else dial.pct((kms / LIGHT_KMS) * 100);
       }
       if (t > 1 && !overlay._a) { overlay._a = true; overlay.showTitle(); }
-      if (t > 4.5 && !overlay._b) { overlay._b = true; overlay.hideTitle(); }
+      if (t > 1 + overlay.readS && !overlay._b) { overlay._b = true; overlay.hideTitle(); }
       if (t > 19 && !overlay._c) { overlay._c = true; overlay.darken(); dial.show(false); }
-      if (t > 20 && !next) {
-        next = buildOverlay({ eyebrow: lvl('Fusion drive on', 'Engine on!'), title: lvl(`${CRUISE_PERCENT}% of light speed`, `${CRUISE_PERCENT}% of light speed`), sub: lvl('Next: how fast is light, anyway?', 'How fast is light?'), startBlack: true });
+      if (t > NEXT_AT && !next) {
+        next = buildOverlay({ eyebrow: NEXT_TEXT[0], title: NEXT_TEXT[1], sub: NEXT_TEXT[2], startBlack: true });
         next.showTitle();
       }
       if (t >= DURATION) { game.cinematic = null; finish(); }
@@ -363,6 +370,7 @@ export function playDriveOn(game, { speedKms = 60 } = {}) {
     shipView.group.position.set(0, 0, 0);
     shipView.group.quaternion.copy(shipQuat);
     shipView.group.visible = true;
+    if (flightStar) flightStar.visible = true;
     skip.dispose();
     overlay.showSkip(false);
     overlay.bars(false);

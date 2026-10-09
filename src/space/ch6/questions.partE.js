@@ -100,7 +100,7 @@ export const CH6E_QUESTIONS = {
       { text: 'Thick rock at the back would warm the crew up from behind, so it stays at the front' },
     ],
     hint: 'Think about which way the ship is flying, and what the rays and dust hit first.',
-    parentHint: 'Near light speed, thin gas and dust hit like bullets from the way the ship flies. Only the front needs thick armour, and every extra tonne of rock costs fuel to push.',
+    parentHint: 'At a tenth of light speed, thin gas and dust hit like bullets from the way the ship flies. Only the front needs thick armour, and every extra tonne of rock costs fuel to push.',
     success: 'Yes! Everything we fly into comes from the front. Rock all round would only add weight, and weight costs fuel.',
     doneMessage: 'Fusion drive on!',
     reward: { science: 10 },

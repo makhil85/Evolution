@@ -365,7 +365,7 @@ export function createScienceRules({ level, storage } = {}) {
         ? 'Now pass the Light & Plants Lab. Learn that plants need light to grow.'
         : 'Now pass the Chemical Energy Lab. Learn why future rockets need fuel and oxygen.';
     }
-    return L('Collect the recipe resources, then stand on the purple foundation and press E to build the Science Center.', 'Get the things on the list. Then stand on the purple spot and press E to build.');
+    return L('Collect the recipe resources, then stand on the purple foundation to build the Science Center.', 'Get the things on the list. Then stand on the purple spot to build.');
   }
 
   /** Mission card lines: the old mission text, then the recipe once a plan is chosen. Never empty. */
@@ -393,7 +393,6 @@ export function createScienceRules({ level, storage } = {}) {
     welcome: defaultMessage,
     nothingNear: L('Move closer to a resource, board, lab, locked room, or foundation.', 'Walk closer to something to use it.'),
     blocked: 'Blocked. Some areas need a key or another path.',
-    focusMath: 'Purple boards are in the village square. Stand near a board and press Space.',
     focusIron: L('The locked iron room is in the north-east. Look for the golden-lock door and solve the hard key puzzle there to open it.', 'The iron room is at the top right. Find the door with the gold lock. Solve the hard puzzle there.'),
     /** The wrong-answer toast: math boards point at the parent hints; no hint for the child (lead 2026-10-09). */
     wrongAnswer: (q) => (MATH_QUESTS.includes(q) || q === 'key'

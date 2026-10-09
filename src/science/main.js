@@ -144,6 +144,12 @@ function nearestUsable(px, pz) {
   return best;
 }
 
+/** The interact pill for a resource on Medium/Hard: "Pick up Wood 2/3", so pressing again visibly helps. */
+function usableLabel(n) {
+  if (n.kind !== 'pickup' || mode.mineHits <= 1 || !miner || /locked/.test(n.label)) return n.label;
+  return `${n.label} ${miner.progressOf(n.id)}/${mode.mineHits}`;
+}
+
 function refreshHud() {
   const pr = rules.progress();
   hud.setProgress(pr.pct, pr.status);
@@ -382,7 +388,7 @@ async function main() {
   };
   emotes = createEmotes({
     getAvatar: () => avatar, getTarget: () => player, height: 1.4,
-    isBlocked: playBlocked, hint: (m) => hud.toast(m, 'info'),
+    isBlocked: playBlocked,
   });
   hud.setParentHints(Object.values(QUESTIONS).map((q) => ({ id: q.id, title: q.title, parentHint: q.hint })));
   // Play modes: arrow, mining, the treasure hunt and the "Help" chip.
@@ -538,7 +544,7 @@ function tick(dt) {
     }
     if (hud) {
       if (!n || playBlocked()) hud.hideInteract();
-      else hud.setInteract(n.label, 'E');
+      else hud.setInteract(usableLabel(n), 'E');
     }
   }
   renderer.render(scene, camera);

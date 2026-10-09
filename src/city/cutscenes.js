@@ -19,6 +19,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { Mesher, makeGear, LIT, GLOW } from './worldKit.js';
 import { toonRamp, outlineMaterial } from '../game/toonPipeline.js';
 import { t as pick } from '../space/level.js';
+import { readMs } from '../play/readTime.js';
 import { tileToWorld, TILE } from './contracts.js';
 
 /** The shot lists. `secs` is the shot's length; `cap` the caption pair (or null). */
@@ -116,7 +117,10 @@ function caption() {
 async function playShots(run, list, frames, cap) {
   for (const sh of list) {
     cap.say(sh.cap);
-    await run(sh.secs, frames[sh.id]);
+    // Lead 2026-10-09: a caption stays up long enough for a child to read it
+    // (readMs: 5-10 s); the shot stretches to fit (its frame runs on k = 0..1).
+    const read = sh.cap ? readMs(pick(sh.cap[0], sh.cap[1])) / 1000 : 0;
+    await run(Math.max(sh.secs, read), frames[sh.id]);
   }
   cap.say(null);
 }
@@ -215,6 +219,7 @@ function buildTruss() {
   const geo = mergeGeometries(geos, false);
   geos.forEach((g) => g.dispose());
   const colors = new Float32Array(geo.attributes.position.count * 3);
+  for (let i = 0; i < colors.length; i += 3) REST.toArray(colors, i);   // green until the cart paints it
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   const mesh = new THREE.Mesh(geo, new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: toonRamp }));
   const perMember = geos[0].attributes.position.count;   // 24 vertices per box

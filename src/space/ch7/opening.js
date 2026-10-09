@@ -1,4 +1,4 @@
-// Chapter 7's opening (30 s, skippable after 1.5 s): the drive goes to full
+// Chapter 7's opening (about 36 s, skippable after 1.5 s): the drive goes to full
 // power and the ship leaves the Sun behind for Tau Ceti.
 //
 // Lead 2026-10-08: "the ship's high speed has increased and the ship is leaving
@@ -9,10 +9,12 @@
 //      looking back. The Sun is behind the ship, a bright ball with a glow, and
 //      it shrinks to a bright star as she pulls away. The speed dial climbs
 //      from 10% of light speed past 20%, in a steady rapidity climb (voyage.js).
-//   2. The star map (18-30 s, after a fade): the camera pulls back from the Sun
+//   2. The star map (18 s on, after a fade): the camera pulls back from the Sun
 //      to the five neighbours (starMap.js), Tau Ceti ringed as the target, and a
 //      caption: a Sun-like star that may have planets, where one day we might
-//      look for life. Nobody knows yet.
+//      look for life. Nobody knows yet. The caption is long, so it stays up for
+//      its reading time and then the film waits for a click on Continue (lead
+//      2026-10-09: kids need time to read; a grown-up's Skip still skips).
 //
 // Same cutscene contract as Chapter 6's (ch6/opening.js and ch6/driveOn.js):
 // flight paused, own objects and lights, `game.cinematic` with calm, the camera
@@ -20,17 +22,22 @@
 // purpose: the calm is the point. The drive is pretend (no drive we can build
 // today could do this). The flight ship is put back beside her at the end.
 import * as THREE from 'three';
-import { buildOverlay, blendCamera, waitForSkip, ease } from '../cinematics.js';
+import { buildOverlay, blendCamera, waitForSkip, ease, CARD_FADE_S } from '../cinematics.js';
 import { createStarship, FLIGHT_LENGTH } from '../ch6/starship.js';
 import { showStarship } from '../ch6/opening.js';
+import { readMs } from '../../play/readTime.js';
 import { t as lvl } from '../level.js';
 import { CRUISE_START, OPENING_TO, dialSpeed, percentOf } from './voyage.js';
 import { buildStarMap3D, STAR_MAP_CAPTION } from './starMap.js';
 
-const DURATION = 30;
 const T_CUT = 16.5; // the Sun has shrunk to a star: the picture fades
 const T_SWITCH = 17.9; // the screen is black: the flight scene goes, the map comes
 const T_MAP = 18; // the map fades in
+const CAPTION_AT = 24; // all five stars are in (the reveal ends at 24 s): the caption comes
+// The caption fades in over CARD_FADE_S, then stays up for its reading time (readMs; this one
+// is long, so 10 s). Then the film waits at the star map for her Continue. After Continue, a 2 s fade to the end.
+const T_HOLD = CAPTION_AT + readMs(STAR_MAP_CAPTION) / 1000 + CARD_FADE_S;
+const DURATION = T_HOLD + 2;
 const SUN_R = 260; // the Sun's radius at the start, scene units
 const SUN_D0 = 2000; // how far behind she starts (the Sun shrinks as this grows)
 const SUN_GROW = 14; // the Sun is 15 times further by the cut: a bright star
@@ -69,6 +76,23 @@ export function buildDial() {
     /** Speed as a fraction of light speed (0.1 = 10%). */
     set(v) { big.textContent = `${percentOf(v).toFixed(1)}%`; },
     remove() { box.remove(); },
+  };
+}
+
+/** The Continue button, in the foot of the letterbox bar: the star map waits for it. */
+export function buildContinue(onClick) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'c7-continue';
+  btn.style.cssText = 'position:fixed;left:50%;bottom:2.4vh;transform:translateX(-50%);z-index:50;cursor:pointer;'
+    + 'padding:8px 24px;border-radius:999px;border:2px solid #9fe8a8;background:rgba(10,16,32,.85);color:#fff;'
+    + 'font:800 clamp(15px,1.5vw,20px) system-ui,sans-serif;display:none';
+  btn.textContent = lvl('Continue', 'Go on!');
+  btn.addEventListener('click', onClick);
+  document.body.appendChild(btn);
+  return {
+    show(v) { btn.style.display = v ? '' : 'none'; },
+    remove() { btn.remove(); },
   };
 }
 
@@ -172,6 +196,8 @@ export function playCh7Opening(game) {
   scene.add(fill);
   const dial = buildDial();
   const caption = buildCaption();
+  let go = false; // she has read the caption and clicked Continue (or skipped): the film may end
+  const cont = buildContinue(() => { go = true; cont.show(false); });
 
   // Phase 2 objects, built at the switch: the 3-D star map.
   let map = null;
@@ -185,7 +211,7 @@ export function playCh7Opening(game) {
   let finish;
   const done = new Promise((r) => { finish = r; });
   const skip = waitForSkip(1500, () => overlay.showSkip(true));
-  skip.promise.then(() => { t = Math.max(t, DURATION - 2.5); });
+  skip.promise.then(() => { go = true; cont.show(false); t = Math.max(t, DURATION - 2.5); });
   setTimeout(() => { overlay.light(); overlay.bars(true); }, 300);
   const camPos = new THREE.Vector3(); const look = new THREE.Vector3();
   const tmp = new THREE.Vector3();
@@ -209,6 +235,8 @@ export function playCh7Opening(game) {
     get t() { return t; }, // tests: seconds into the scene
     apply(dt, camera) {
       dt = Math.max(0, Math.min(dt, 0.1));
+      // The star map holds at the end of the caption's reading time until she clicks Continue.
+      if (!go && t >= T_HOLD) { t = T_HOLD; dt = 0; cont.show(true); }
       t += dt;
       shipView.group.visible = false;
 
@@ -231,7 +259,7 @@ export function playCh7Opening(game) {
         dial.show(t > 0.4 && t < T_CUT + 0.5);
         dial.set(dialSpeed(CRUISE_START, OPENING_TO, k));
         if (t > 1.2 && !overlay._a) { overlay._a = true; overlay.showTitle(); }
-        if (t > 5.5 && !overlay._b) { overlay._b = true; overlay.hideTitle(); }
+        if (t > 1.2 + overlay.readS && !overlay._b) { overlay._b = true; overlay.hideTitle(); }
       } else {
         // Phase 2: the star map, after the fade.
         if (!switched) switchToMap();
@@ -243,8 +271,8 @@ export function playCh7Opening(game) {
         // The stars appear one at a time, Tau Ceti last; the caption comes once they are all there.
         const reveal = (t - 19.5) / 4.5;
         map.update(camera, reveal, t);
-        if (t > 23.5 && !caption._on) { caption._on = true; caption.show(STAR_MAP_CAPTION); }
-        if (t > 28.6 && caption._on) { caption.hide(); caption._on = false; }
+        if (t >= CAPTION_AT && !caption._on && !caption._done) { caption._on = true; caption._done = true; caption.show(STAR_MAP_CAPTION); }
+        if (go && caption._on) { caption.hide(); caption._on = false; }
       }
       if (t >= DURATION) { game.cinematic = null; finish(); }
     },
@@ -260,6 +288,7 @@ export function playCh7Opening(game) {
     setTimeout(() => overlay.remove(), 1000);
     dial.remove();
     caption.remove();
+    cont.remove();
     if (!switched) {
       scene.remove(ship.group, sun.group, back.pts, fill);
       ship.dispose(); sun.dispose(); back.dispose();
@@ -269,8 +298,7 @@ export function playCh7Opening(game) {
     }
     shipView.group.position.set(0, 0, 0);
     shipView.group.quaternion.copy(shipQuat);
-    shipView.group.visible = true;
-    showStarship(game); // her ship's own starship beside her, for the rest of the chapter
+    showStarship(game); // the starship is her craft from here on (main.js, aboardStarship)
     game.controls.setEnabled(true);
     game.paused = false;
   });

@@ -152,6 +152,12 @@ function nearestUsable(px, pz) {
   return best;
 }
 
+/** The interact pill for a resource on Medium/Hard: "Pick up Wood 2/3", so pressing again visibly helps. */
+function usableLabel(n) {
+  if (n.kind !== 'pickup' || mode.mineHits <= 1 || !miner || /locked/.test(n.label)) return n.label;
+  return `${n.label} ${miner.progressOf(n.id)}/${mode.mineHits}`;
+}
+
 function refreshHud() {
   const pr = rules.progress();
   hud.setProgress(pr.pct, pr.status);
@@ -159,7 +165,7 @@ function refreshHud() {
   if (mode.treasureHunt && hunt && !hunt.isFound() && !rules.state.builtFinal) {
     lines.push(LEVEL === 1 ? 'Treasure: a Master Gear is hidden in a home. Press the Clue button.' : 'Treasure: a Master Gear is hidden in one of the homes. Follow the clues (Clue button).');
   }
-  if (newton && !newton.heard()) lines.push('Bonus: sit under the apple tree near the start and press E. 🍎');
+  if (newton && !newton.heard()) lines.push('Bonus: sit under the apple tree near the start. 🍎');
   hud.setMission({ lines });
   hud.setBadges(rules.badges().map((b, i) => ({ id: `b${i}`, label: b.label, state: b.done ? 'done' : 'open' })));
   hud.setInventory(rules.state.resources);
@@ -428,7 +434,7 @@ async function main() {
   };
   emotes = createEmotes({
     getAvatar: () => avatar, getTarget: () => player, height: 1.4,
-    isBlocked: playBlocked, hint: (m) => hud.toast(m, 'info'),
+    isBlocked: playBlocked,
   });
   hud.setParentHints(Object.values(QUESTIONS).map((q) => ({ id: q.id, title: q.title, parentHint: q.hint })));
   // Play modes: arrow, mining, the treasure hunt and the "Help" chip.
@@ -561,7 +567,7 @@ function tick(dt) {
     }
     if (hud) {
       if (!n || playBlocked()) hud.hideInteract();
-      else hud.setInteract(n.label, 'E');
+      else hud.setInteract(usableLabel(n), 'E');
     }
   }
   renderer.render(scene, camera);

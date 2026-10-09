@@ -2,6 +2,7 @@
 import { BODIES, STORE_KEYS, UPGRADES, SOLAR, WARP_LEVELS } from '../contracts.js';
 import { questionForBeat } from '../questions.space.js';
 import { heroName } from '../hud/hud.js';
+import { readMs } from '../../play/readTime.js';
 import { refuel, emergencyTopUp, orbitElements } from '../physics.js';
 import { t } from '../level.js';
 
@@ -106,14 +107,17 @@ export async function askBeat(game, beat) {
   const q = questionForBeat(beat);
   if (!q) return { correct: true };
   // Hands-off first; the card itself waits its turn inside hud.askQuestion (modalQueue.js).
-  await game.missions?.untilQuiet?.();
+  // A grown-up jump while it waits makes this flow stale: its question is not asked.
+  const my = game.missions?.generation;
+  const go = await game.missions?.untilQuiet?.();
+  if (go === false || game.missions?.generation !== my) return { correct: false, stale: true };
   const personal = personalise(q);
   const res = await game.hud.askQuestion(personal);
   if (res.correct) {
     if (q.reward?.resources) {
       for (const [k, v] of Object.entries(q.reward.resources)) game.resources[k] = (game.resources[k] || 0) + v;
     }
-    if (personal.doneMessage) game.hud.toast(personal.doneMessage, { kind: 'good', ms: 4500 });
+    if (personal.doneMessage) game.hud.toast(personal.doneMessage, { kind: 'good' });
   }
   return res;
 }
@@ -178,9 +182,9 @@ export async function offerUpgrades(game, { includeMelt = true } = {}) {
   const ok = applyUpgrade(game, id);
   if (ok) {
     const def = upgrades[id];
-    game.hud.toast(id === 'meltIce' ? def.label : t(`🎉 ${def.label} built!`, `🎉 Yay! ${def.label} built!`), { kind: 'good', ms: 3000 });
+    game.hud.toast(id === 'meltIce' ? def.label : t(`🎉 ${def.label} built!`, `🎉 Yay! ${def.label} built!`), { kind: 'good' });
   } else {
-    game.hud.toast(t('Not enough resources for that yet.', 'You need more rocks for that.'), { kind: 'warn', ms: 2500 });
+    game.hud.toast(t('Not enough resources for that yet.', 'You need more rocks for that.'), { kind: 'warn' });
   }
   return ok ? id : null;
 }
@@ -203,7 +207,7 @@ export function fuelSafetyNet(game) {
   if (game.ship.fuel <= 0) {
     const given = emergencyTopUp(game.ship, game.fuelCapacity);
     if (given > 0) {
-      game.hud.toast(t('Mission Control: emergency fuel transfer complete. You are not stranded!', 'Mission Control sent you more fuel!'), { kind: 'good', ms: 4200 });
+      game.hud.toast(t('Mission Control: emergency fuel transfer complete. You are not stranded!', 'Mission Control sent you more fuel!'), { kind: 'good' });
     }
   }
 }
@@ -252,14 +256,15 @@ export async function loadSurfaceScene(game, opts) {
   // while the walk was built, and a child thought she had crashed. A big
   // "Landed!" card covers that, and stays a moment once the walk starts.
   const name = BODIES[opts?.body]?.name || 'the surface';
-  const card = landedCard(t(`Landed on ${name}!`, `You landed on ${name}!`),
-    t('A soft, safe touchdown. Climbing down the ladder...', 'Safe and soft! Climbing down...'));
+  const title = t(`Landed on ${name}!`, `You landed on ${name}!`);
+  const sub = t('A soft, safe touchdown. Climbing down the ladder...', 'Safe and soft! Climbing down...');
+  const card = landedCard(title, sub);
   try {
     const mod = await import('../surface.js');
     if (mod?.createSurfaceScene) {
       const scene = mod.createSurfaceScene(game, opts);
       scene.onFoot = true; // a walk (main.js resets warp after it)
-      setTimeout(card.close, 1800);
+      setTimeout(card.close, readMs([title, sub]));  // stays up for its reading time
       return scene;
     }
   } catch { /* surface.js not built yet */ }

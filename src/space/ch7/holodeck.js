@@ -20,6 +20,7 @@
 // allocations per frame (scratch vectors below), everything disposed.
 import * as THREE from 'three';
 import { t } from '../level.js';
+import { readMs } from '../../play/readTime.js';
 import { EINSTEIN_RAD, SHADOW_SHARE } from './lensLogic.js';
 
 const D0 = 40;                                          // the camera's usual distance: the hole's rig is scaled to it
@@ -31,6 +32,14 @@ const SKY_R = 300;                                      // the starfield's dista
 const TILT = { x: 0.62, z: 0.18 };                      // the disk's tilt: the jets point along its normal
 const LOAD_S = 4;                                       // the holodeck loads for this long
 const FLY_S = 22;                                       // then the guided fly-by
+// The captions, [Level 4, Level 1] as one text each. The loading words stay up for their
+// reading time (readMs, 5-10 s, plus a second) even when the loading is shorter, so the
+// fly-by's words wait for them.
+export const CAPTIONS = Object.freeze({
+  load: t('Holodeck: loading a quasar, 2.4 billion light-years away...', 'The holodeck: loading a quasar. It is very, very far away...'),
+  quasar: t('A quasar like 3C 273. Its light has been on its way for 2.4 billion years.', 'A quasar! Its light has been coming for a very long time.'),
+});
+const LOAD_CAPTION_S = readMs(CAPTIONS.load) / 1000 + 1 + 1 / 30; // the reading time, the fade, and a frame of margin
 const SKIP_AFTER = 1.5;                                 // the Continue button shows after this (cutscene rule)
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -331,12 +340,16 @@ export function buildHolodeckScene(game = {}) {
     return elapsed < LOAD_S + FLY_S && !skipped ? 'fly' : 'done';
   }
 
+  // Which caption is up: the loading words until they have been read, then the quasar's.
+  function captionPhase() {
+    const p = phase();
+    return p === 'load' || (p === 'fly' && elapsed < LOAD_CAPTION_S) ? 'load' : p;
+  }
+
   // The captions change once per phase, not every frame.
   function showCaption(p) {
     if (!caption) return;
-    caption.querySelector('.holo-title').textContent = p === 'load'
-      ? t('Holodeck: loading a quasar, 2.4 billion light-years away...', 'The holodeck: loading a quasar. It is very, very far away...')
-      : t('A quasar like 3C 273. Its light has been on its way for 2.4 billion years.', 'A quasar! Its light has been coming for a very long time.');
+    caption.querySelector('.holo-title').textContent = p === 'load' ? CAPTIONS.load : CAPTIONS.quasar;
     caption.querySelector('.holo-hint').textContent = p === 'fly'
       ? t('Arrows: turn. Up and down: closer or further.', 'Arrows: turn. Up and down: closer or further.')
       : '';
@@ -388,7 +401,7 @@ export function buildHolodeckScene(game = {}) {
     hole.ring.lookAt(camera.position);
 
     if (skipBtn && !skipBtn.shown && te > SKIP_AFTER) { skipBtn.shown = true; skipBtn.el.style.opacity = '1'; skipBtn.el.style.pointerEvents = 'auto'; }
-    const p = phase();
+    const p = captionPhase();
     if (p !== shownPhase) { shownPhase = p; showCaption(p); }
 
     if (!finished && (te >= LOAD_S + FLY_S || skipped)) {

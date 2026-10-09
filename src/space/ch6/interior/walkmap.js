@@ -11,11 +11,17 @@
 //   map.fits(x, z, r)           a disc of radius r
 //   map.collide(p, v)           walker.move's collide(pos, vel): p {x,z}, v {x,y}
 //   map.reset(x, z)             after a teleport (the last good spot)
+//   map.clearAt(q)              the chase camera: q = { x, z, r, y, m } (a caller's scratch object, so no
+//                               numbers are boxed a frame): a disc of radius r at height y is over the floor and
+//                               clear of every solid whose top (plus m) is below y
 //
 // Shapes (deck-local metres, +Z away from the lift):
 //   { rect: [x, z, w, d], rot? }     centre, width (x), depth (z), turn (rad)
 //   { disc: [x, z, r] }
 //   { ring: [x, z, r0, r1], from?, to? }   annulus, optionally an arc (rad, atan2(x, z))
+// A solid may give its height, h (m, the top): the walker still cannot pass it, but the chase camera may go
+// over it when it is above the top (clearAt). No h means full height (a wall, a crew mate): the camera never
+// goes over it.
 
 const inShape = (s, x, z) => {
   if (s.rect) {
@@ -64,21 +70,38 @@ export function createWalkMap({ floors = [], solids = [], cell = 0.2, bodyR = 0.
   x0 -= cell; z0 -= cell;
   const nx = Math.ceil((x1 - x0) / cell) + 2;
   const nz = Math.ceil((z1 - z0) / cell) + 2;
-  const grid = new Uint8Array(nx * nz);
+  const grid = new Uint8Array(nx * nz); // walkable: on a floor and off every solid
+  const ground = new Uint8Array(nx * nz); // on a floor, solid or not (the camera's floor)
+  const top = new Float32Array(nx * nz).fill(-1); // the highest solid top in a cell (Infinity for full height), -1 none
   for (let j = 0; j < nz; j++) {
     const z = z0 + (j + 0.5) * cell;
     for (let i = 0; i < nx; i++) {
       const x = x0 + (i + 0.5) * cell;
-      if (floors.some((s) => inShape(s, x, z)) && !solids.some((s) => inShape(s, x, z))) grid[j * nx + i] = 1;
+      const c = j * nx + i;
+      if (!floors.some((s) => inShape(s, x, z))) continue;
+      ground[c] = 1;
+      let t = -1;
+      for (const s of solids) if (inShape(s, x, z)) t = Math.max(t, s.h ?? Infinity);
+      top[c] = t;
+      if (t < 0) grid[c] = 1;
     }
   }
-  const walkable = (x, z) => {
+  const cellAt = (x, z) => {
     const i = Math.floor((x - x0) / cell); const j = Math.floor((z - z0) / cell);
-    return i >= 0 && j >= 0 && i < nx && j < nz && grid[j * nx + i] === 1;
+    return i >= 0 && j >= 0 && i < nx && j < nz ? j * nx + i : -1;
   };
+  const walkable = (x, z) => { const c = cellAt(x, z); return c >= 0 && grid[c] === 1; };
   // Her edge: the centre and eight points round it.
   const RING = Array.from({ length: 8 }, (_, k) => [Math.sin((k / 8) * Math.PI * 2), Math.cos((k / 8) * Math.PI * 2)]);
   const fits = (x, z, r = bodyR) => walkable(x, z) && RING.every(([sx, sz]) => walkable(x + sx * r, z + sz * r));
+  // The chase camera's test (no allocation: it runs every frame). The centre and the eight points round it.
+  const clearAt = (q) => {
+    for (let k = -1; k < 8; k++) {
+      const c = k < 0 ? cellAt(q.x, q.z) : cellAt(q.x + RING[k][0] * q.r, q.z + RING[k][1] * q.r);
+      if (c < 0 || !ground[c] || top[c] + q.m >= q.y) return false;
+    }
+    return true;
+  };
 
   const last = { x: 0, z: 0, ok: false };
   function collide(p, v) {
@@ -89,7 +112,7 @@ export function createWalkMap({ floors = [], solids = [], cell = 0.2, bodyR = 0.
     p.x = last.x; p.z = last.z; v.x = 0; v.y = 0;
   }
   return {
-    walkable, fits, collide,
+    walkable, fits, clearAt, collide,
     reset(x, z) { last.x = x; last.z = z; last.ok = fits(x, z); },
     /** For tests and the lab: the share of the grid she can walk, and its floor area in m^2. */
     area() { let n = 0; for (const c of grid) n += c; return n * cell * cell; },

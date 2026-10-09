@@ -31,7 +31,7 @@ export function act5Steps(game) {
         fuelSafetyNet(game);
         return game.ship.landedOn === 'europa';
       },
-      after() { hud.toast(t('Touchdown on Europa! Climb down and look for a crack in the ice.', 'You landed on Europa! Climb down and find the crack in the ice.'), { kind: 'good', ms: 3600 }); },
+      after() { hud.toast(t('Touchdown on Europa! Climb down and look for a crack in the ice.', 'You landed on Europa! Climb down and find the crack in the ice.'), { kind: 'good' }); },
     },
     // Biology lesson (lead 2026-10-05): cells, DNA and proteins, i.e. what
     // the drill is looking for, before she walks to the crack. Once per Level.
@@ -42,7 +42,7 @@ export function act5Steps(game) {
       markers: ['europa'],
       async enter() {
         await lessonOnce(LESSON_4G, { bus: game.bus });
-        hud.toast(t('Now you try! Walk to the crack in the ice and drill for signs of life.', 'Now you try! Walk to the crack and drill.'), { kind: 'good', ms: 4500 });
+        hud.toast(t('Now you try! Walk to the crack in the ice and drill for signs of life.', 'Now you try! Walk to the crack and drill.'), { kind: 'good' });
       },
     },
     {

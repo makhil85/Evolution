@@ -1,5 +1,5 @@
-ROCKET VILLAGE - how to play
-============================
+EVOLUTION - how to play
+=======================
 
 Windows:  double-click PLAY.bat
 Mac:      double-click play.command

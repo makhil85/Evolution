@@ -32,15 +32,24 @@ const pick = (pair) => (Array.isArray(pair) ? t(pair[0], pair[1]) : pair);
 const px = (m) => m * SCALE;
 
 const CSS_ID = 'ch7-float-css';
+// Lead 2026-10-09: every button must be on screen at 1280x720, 1280x600 and 1024x640.
+// The room is the only part that gives way: its width is 16:9 of the height left
+// after the text and the buttons (the 340 px is that text and button height, measured
+// in the browser), but never under 320 px wide; the card scrolls in a window that short.
 const CSS = `
-.fg-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
-.fg-row button { min-height: 40px; padding: 0 14px; border-radius: 12px; border: 2px solid rgba(255,255,255,.18); background: #1a2540; color: inherit; font: inherit; font-weight: 800; cursor: pointer; }
+.fg-card .ls-line { min-height: 0; margin: 6px 0 0; font-size: 15px; }
+.fg-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.fg-row button { min-height: 38px; padding: 0 12px; border-radius: 12px; border: 2px solid rgba(255,255,255,.18); background: #1a2540; color: inherit; font: inherit; font-weight: 800; cursor: pointer; }
 .fg-row button[aria-pressed="true"] { border-color: #7fd3ff; background: rgba(127,211,255,.16); }
 .fg-row button:disabled { opacity: .4; cursor: default; }
-.fg-note { font-size: 16px; font-weight: 800; line-height: 1.4; margin-top: 8px; min-height: 1.4em; }
+.fg-view { width: min(100%, max(320px, calc((100vh - 340px) * 16 / 9))); margin: 8px auto 0; }
+.fg-gap { width: 1px; align-self: stretch; margin: 0 6px; background: rgba(255,255,255,.22); }
+.fg-view .fg-canvas { display: block; width: 100%; height: auto; }
+.fg-note { font-size: 16px; font-weight: 800; line-height: 1.4; margin-top: 6px; min-height: 1.4em; }
 .fg-note.is-warn { color: #ffd27a; }
 .fg-note.is-good { color: #9fe8a8; }
-.fg-blurb { font-size: 15px; color: #cfe8ff; margin-top: 4px; }
+.fg-blurb { font-size: 15px; color: #cfe8ff; margin: 4px 0 0; }
+.fg-card .ls-actions { margin-top: 10px; }
 `;
 function injectCss() {
   if (document.getElementById(CSS_ID)) return;
@@ -158,30 +167,31 @@ function banner(ctx, text, color) {
 export function playFloatGame({ mode = LEVEL === 1 ? 'easy' : 'medium', seed = null, bus = null } = {}) {
   injectStyles(); injectCss();
   const crew = CREW_INFO.builder;
-  const card = el('div', 'pl-card ls-card');
+  const card = el('div', 'pl-card ls-card fg-card');
   card.dataset.game = 'float';
   const eyebrow = el('div', 'pl-eyebrow', `${t('Engine room, drive off', 'Engine room')} · ${crew.name}`);
   eyebrow.style.color = crew.color;
   const title = el('h2', 'pl-title', t('Zero g: float to the hatch', 'Float to the hatch'));
   const tip = el('p', 'ls-line', t('The drive is off, so nothing pulls or pushes us. We drift in a straight line. Collect the 3 parts, then reach the hatch on the right.', 'Collect the 3 parts, then reach the hatch on the right.'));
-  const modeRow = el('div', 'fg-row');
+  // The modes and the tools share one row, so the card is one row shorter (it must fit the window).
+  const btnRow = el('div', 'fg-row');
   const modeBtns = Object.values(MODES).map((m) => {
     const b = el('button', null, pick(m.label)); b.type = 'button';
     b.addEventListener('click', () => newRoom(m.id, null));
-    modeRow.append(b);
+    btnRow.append(b);
     return { b, id: m.id };
   });
-  const toolRow = el('div', 'fg-row');
+  btnRow.append(el('span', 'fg-gap')); // the modes, then the tools: a line between the two sets
   const toolBtns = Object.values(TOOLS).map((T) => {
     const b = el('button', null); b.type = 'button';
     b.addEventListener('click', () => { picked = picked === T.id ? null : T.id; paint(); });
-    toolRow.append(b);
+    btnRow.append(b);
     return { b, T };
   });
   let picked = null; // the tool she is about to throw (null: she pushes)
   const blurb = el('p', 'fg-blurb');
-  const view = el('div', 'ls-view');
-  const cv = document.createElement('canvas'); cv.width = STAGE_W; cv.height = STAGE_H; cv.className = 'ls-canvas';
+  const view = el('div', 'ls-view fg-view');
+  const cv = document.createElement('canvas'); cv.width = STAGE_W; cv.height = STAGE_H; cv.className = 'ls-canvas fg-canvas';
   cv.style.cursor = 'pointer';
   view.append(cv);
   const ctx = cv.getContext('2d');
@@ -190,7 +200,7 @@ export function playFloatGame({ mode = LEVEL === 1 ? 'easy' : 'medium', seed = n
   const retryBtn = el('button', 'ls-btn ls-btn--ghost', t('Try again', 'Try again')); retryBtn.type = 'button';
   const nextBtn = el('button', 'ls-btn', t('Next ✓', 'Next ✓')); nextBtn.type = 'button'; nextBtn.disabled = true;
   actions.append(el('div', 'ls-dots'), retryBtn, nextBtn);
-  card.append(eyebrow, title, tip, modeRow, toolRow, blurb, view, note, actions);
+  card.append(eyebrow, title, tip, btnRow, blurb, view, note, actions);
 
   let s = null; let seedNow = 0; let modeNow = mode;
   let acc = 0; let last = 0; let frame = 0; let closed = false; let finishFn;
@@ -282,7 +292,8 @@ export function playFloatGame({ mode = LEVEL === 1 ? 'easy' : 'medium', seed = n
   };
   window.__float = api;
   // Unlock mode only: a grown-up can skip the game (the hatch opens for her).
-  const skip = skipButton(() => { api.solve(); if (s) s.status = 'won'; finish(); }, 'ls-btn ls-btn--ghost');
+  // paint() first: finish() only closes when Next is enabled, and that is set by paint().
+  const skip = skipButton(() => { api.solve(); if (s) s.status = 'won'; paint(); finish(); }, 'ls-btn ls-btn--ghost');
   if (skip) actions.prepend(skip);
   newRoom(modeNow, seed);
   last = performance.now();

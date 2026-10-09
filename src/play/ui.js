@@ -10,10 +10,11 @@
 // attached later never see those keys, but a listener registered before the
 // modal opened still can, hence the flag.
 
-const HAS_DOM = typeof document !== 'undefined' && typeof window !== 'undefined';
+/** Checked on each call, not at import: a test can install a DOM after this module loads. */
+const hasDom = () => typeof document !== 'undefined' && typeof window !== 'undefined';
 
 export const PLAY_CSS = `
-.pl-back, .pl-chip, .play-nav-text, .pl-hint, .pl-cluebtn {
+.pl-back, .pl-chip, .play-nav-text, .pl-cluebtn {
   --pl-panel: rgba(16, 22, 30, 0.92);
   --pl-line: rgba(255, 255, 255, 0.14);
   --pl-text: #eef4ff;
@@ -28,7 +29,7 @@ export const PLAY_CSS = `
   -webkit-font-smoothing: antialiased;
   box-sizing: border-box;
 }
-.pl-back *, .pl-chip *, .pl-hint *, .pl-cluebtn * { box-sizing: border-box; }
+.pl-back *, .pl-chip *, .pl-cluebtn * { box-sizing: border-box; }
 
 /* --- modal layer ---------------------------------------------------------- */
 .pl-back {
@@ -98,7 +99,6 @@ export const PLAY_CSS = `
 .pl-mode__what .pl-ck { flex: none; width: 14px; text-align: center; font-weight: 900; color: var(--acc); }
 .pl-mode__what li.is-off .pl-ck { color: rgba(169, 184, 210, 0.55); }
 .pl-mode__whathead { margin-top: auto; padding-top: 2px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; color: var(--pl-muted); }
-.pl-foot { margin-top: 14px; text-align: center; font-size: 12.5px; color: var(--pl-muted); }
 .pl-key {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 22px; height: 22px; padding: 0 6px; border-radius: 7px; margin: 0 1px;
@@ -142,23 +142,8 @@ export const PLAY_CSS = `
 /* Focus mode: under a question card (game/hud.js sets the class) the pills
  * and the Clue button step away; they used to sit on top of the card. */
 body.rv-question-open .play-nav-text,
-body.rv-question-open .pl-hint,
-body.rv-question-open .pl-cluebtn { display: none !important; }
-
-/* --- the mining hint --------------------------------------------------------- */
-.pl-hint {
-  position: fixed; left: 50%; bottom: 196px; transform: translate(-50%, 6px);
-  z-index: 99990;
-  display: block;
-  padding: 8px 16px; border-radius: 999px;
-  background: var(--pl-panel); border: 1px solid rgba(255, 209, 102, 0.55);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
-  color: var(--pl-text); font-size: 15px; font-weight: 800; white-space: nowrap;
-  pointer-events: none; opacity: 0;
-  transition: opacity 220ms ease, transform 220ms ease;
-}
-.pl-hint .pl-key { vertical-align: middle; margin: 0 3px 2px; }
-.pl-hint.is-in { opacity: 1; transform: translate(-50%, 0); }
+body.rv-question-open .pl-cluebtn,
+body.rv-question-open .pl-chip { display: none !important; }
 
 /* --- the "Clue" button ------------------------------------------------------- */
 .pl-cluebtn {
@@ -233,14 +218,13 @@ body.rv-question-open .pl-cluebtn { display: none !important; }
 @media (prefers-reduced-motion: reduce) {
   .pl-back, .pl-card, .pl-clue, .pl-found, .pl-found__icon, .pl-found__spark, .pl-cluebtn.is-new { animation: none; }
   .pl-found__spark { opacity: 0.8; }
-  .pl-mode, .pl-hint, .play-nav-text { transition: none; }
+  .pl-mode, .play-nav-text { transition: none; }
   .pl-mode:hover { transform: none; }
 }
 
 /* --- narrow screens ------------------------------------------------------------------ */
 @media (max-width: 900px) {
   .play-nav-text { bottom: auto; top: 104px; left: auto; right: 12px; transform: none; max-width: calc(100vw - 130px); }
-  .pl-hint { bottom: auto; top: calc(46% + 56px); }
   .pl-cluebtn { bottom: auto; top: 104px; }
 }
 @media (max-width: 720px) {
@@ -260,7 +244,7 @@ body.rv-question-open .pl-cluebtn { display: none !important; }
 
 /** Add the stylesheet once (no-op outside a browser). */
 export function ensurePlayStyles() {
-  if (!HAS_DOM || document.getElementById('play-styles')) return;
+  if (!hasDom() || document.getElementById('play-styles')) return;
   const s = document.createElement('style');
   s.id = 'play-styles';
   s.textContent = PLAY_CSS;
@@ -272,13 +256,13 @@ let locks = 0;
 
 /** Set `document.body.dataset.playModal = '1'` (counted, so nesting is safe). */
 export function lockPlayInput() {
-  if (!HAS_DOM) return;
+  if (!hasDom()) return;
   locks += 1;
   document.body.dataset.playModal = '1';
 }
 
 export function unlockPlayInput() {
-  if (!HAS_DOM) return;
+  if (!hasDom()) return;
   locks = Math.max(0, locks - 1);
   if (locks === 0) delete document.body.dataset.playModal;
 }
@@ -336,14 +320,21 @@ export function openLayer(card, { onKey, onClose } = {}) {
   const close = () => {
     if (closed) return;
     closed = true;
+    openLayers.delete(close);
     off();
     back.remove();
     openLayerCount -= 1;
     unlockPlayInput();
     if (onClose) onClose();
   };
+  openLayers.add(close);
   return { back, close };
 }
+
+/** Every open play card's close(), so a grown-up Jump can clear them all (missions.js). */
+const openLayers = new Set();
+/** Close every open play card (the grown-up Jump calls it before the new step). */
+export function closeAllLayers() { for (const close of [...openLayers]) close(); }
 
 /** Small stroke icons (24x24, currentColor) for the three modes. */
 export const MODE_ICONS = {

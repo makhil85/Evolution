@@ -42,7 +42,8 @@ import { ch6Steps } from './ch6/steps.js';
 import { CH7_ACT_TITLES } from './ch7/start.js';
 import { ch7Steps } from './ch7/steps.js';
 import { phasesNow, restorePhases } from './ch5/lineup.js';
-import { inModalTurn, resetModalTurns } from './hud/modalQueue.js';
+import { inModalTurn, resetModalTurns, anyCardOpen } from './hud/modalQueue.js';
+import * as playUi from '../play/ui.js';
 import { orbitElements } from './physics.js';
 
 const ACT_TITLES_CH4 = {
@@ -160,6 +161,7 @@ export function createMissions(game) {
   let calms = []; // [{ left, resolve }] calm pauses, counted down in game seconds
   let quiet = 0; // seconds since she last steered by hand (main.js sets game.kidSteering)
   let quietWaits = []; // [resolve] questions waiting for hands-off flying
+  const ready = { cancel: null }; // the Ready button's wait (readyToLeave), so a jump can take it down
   const deferred = new Set(save.deferred || []);
   const answered = new Set(save.answered || []);
 
@@ -216,10 +218,31 @@ export function createMissions(game) {
     return new Promise((resolve) => { calms.push({ left: sec, resolve }); });
   }
 
-  /** Hands-off flying before a question (QUIET_S): none needed on foot or in a mini-scene. */
+  /** Hands-off flying before a question (QUIET_S): none needed on foot or in a mini-scene.
+   *  Resolves true when she has let go, false when a jump gave the wait up. */
   function untilQuiet() {
-    if (game.activeScene || quiet >= QUIET_S) return Promise.resolve();
+    if (game.activeScene || quiet >= QUIET_S) return Promise.resolve(true);
     return new Promise((resolve) => { quietWaits.push(resolve); });
+  }
+
+  /** A jump gives up every calm and quiet wait the old step is in: they resolve
+   *  now (quiet ones with false), and the flow that asked sees its generation has gone. */
+  function flushWaits() {
+    const cs = calms; calms = [];
+    for (const c of cs) c.resolve();
+    const qs = quietWaits; quietWaits = [];
+    for (const r of qs) r(false);
+  }
+
+  /** Put away what the step a jump leaves behind had up: its waits (calm, quiet,
+   *  the Ready button) and its cards. The HUD's card host (question, dialogue, map),
+   *  the Retry card (retry.js listens for 'cards-reset') and the play-mode cards. */
+  function dropOldFlow() {
+    flushWaits();
+    ready.cancel?.();
+    hud.closeCards?.();
+    game.bus?.emit?.('cards-reset');
+    playUi.closeAllLayers();
   }
 
   /** Does this step send her out of the system she is in? An escape does, and so does a
@@ -246,8 +269,9 @@ export function createMissions(game) {
    * In orbit, and the next step leaves it: she looks round as
    * long as she likes and leaves when she presses "Ready" (lead 2026-10-08,
    * instead of a guessed wait). The autopilot presses it after a short look.
+   * `hold.cancel` takes the button down again (a jump, missions.jump).
    */
-  function readyToLeave() {
+  function readyToLeave(hold) {
     const name = BODIES[game.ship.soi]?.name || 'here';
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -267,17 +291,23 @@ export function createMissions(game) {
     document.body.appendChild(btn);
     return new Promise((resolve) => {
       let auto = 0;
-      const go = () => { clearInterval(auto); removeEventListener('keydown', onKey); btn.remove(); resolve(); };
-      const onKey = (e) => { if (e.code === 'Enter' && !document.querySelector('.sp-modal.is-open')) go(); };
+      const go = () => {
+        clearInterval(auto); removeEventListener('keydown', onKey); btn.remove();
+        if (hold.cancel === go) hold.cancel = null;
+        resolve();
+      };
+      // Enter goes on only when no card has the keyboard (the Retry card's "No" too).
+      const onKey = (e) => { if (e.code === 'Enter' && !anyCardOpen()) go(); };
       btn.addEventListener('click', () => { btn.blur(); go(); });
       addEventListener('keydown', onKey);
+      hold.cancel = go;
       // The autopilot flies on by itself after a short look (never under a card).
       let apFor = 0;
       auto = setInterval(() => {
         // Burned away without pressing it: she is on her way, so the step goes on.
         if (!inClosedOrbit()) { go(); return; }
         // Her map card, a fact, a question: the button stays out of the way.
-        const card = hud.isModalOpen();
+        const card = hud.isModalOpen() || anyCardOpen();
         btn.style.display = card ? 'none' : '';
         apFor = game.autopilot?.on && !card ? apFor + 0.5 : 0;
         if (apFor >= 8) go();
@@ -286,12 +316,16 @@ export function createMissions(game) {
   }
 
   /** Ask a beat's question once she has let go of the controls. hud.askQuestion
-   *  takes the card's turn (modalQueue.js), so questions never replace each other. */
-  async function ask(beat) {
+   *  takes the card's turn (modalQueue.js), so questions never replace each other.
+   *  `my` is the generation the question belongs to: once a jump has moved on
+   *  (gen changed) it is never asked, and an answer that comes late is not counted. */
+  async function ask(beat, my = gen) {
     const q = questionForBeat(beat);
-    if (!q) return;
+    if (!q || my !== gen) return;
     await untilQuiet();
+    if (my !== gen) return;
     const res = await hud.askQuestion(personalise(q));
+    if (my !== gen) return;
     if (res.correct) {
       answered.add(q.id);
       deferred.delete(q.id);
@@ -305,10 +339,11 @@ export function createMissions(game) {
     }
   }
 
-  async function askDeferred() {
+  async function askDeferred(my = gen) {
     for (const id of [...deferred]) {
+      if (my !== gen) return;
       const q = getSpaceQuestion(id);
-      if (q) await ask(q.beat);
+      if (q) await ask(q.beat, my);
     }
   }
 
@@ -330,33 +365,42 @@ export function createMissions(game) {
     entered = false;
     stepTime = 0;
     const step = steps[index];
-    // Leaving a stable orbit (round a planet or moon; not from the ground, nor
-    // straight on from a departure that is still under way): her call.
-    if (departs(step) && !departs(steps[index - 1]) && game.ship.soi !== 'sun' && !game.ship.landedOn && inClosedOrbit()) {
-      game.escapeStep = false; game.aimHint = null; game.transferTarget = null; game.captureTarget = null;
-      await inModalTurn(readyToLeave); // in the card queue: no card opens under the button
+    // A throw here must not leave the chain dead: it is logged and the step goes on.
+    try {
+      // Leaving a stable orbit (round a planet or moon; not from the ground, nor
+      // straight on from a departure that is still under way): her call.
+      if (departs(step) && !departs(steps[index - 1]) && game.ship.soi !== 'sun' && !game.ship.landedOn && inClosedOrbit()) {
+        game.escapeStep = false; game.aimHint = null; game.transferTarget = null; game.captureTarget = null;
+        await inModalTurn(() => readyToLeave(ready)); // in the card queue: no card opens under the button
+        if (my !== gen) return; // a jump took the button down: the new step owns the chain
+      }
+      showStep();
+      // First step of an act: remember the save as it is now, the place the
+      // two-tries rule restarts from. (complete() has just saved the new index.)
+      if (steps.findIndex((s) => s.act === step.act) === index) {
+        try {
+          localStorage.setItem(ACT_KEY, localStorage.getItem(SAVE_KEY) || '');
+          localStorage.setItem(CKPT_KEY, localStorage.getItem(SAVE_KEY) || '');
+        } catch { /* private mode */ }
+      }
+      // A sensible target for the predictor and markers even before (or without)
+      // the step's own enter(): after a reload the old target is gone.
+      // Real bodies only: a custom transfer target (Act 1's satellite) isn't
+      // something the predictor can compute a closest approach to.
+      game.target = [step.transfer, step.capture, step.land, step.markers?.[0]].find((id) => id && BODIES[id]) || game.target;
+      game.aimHint = step.aim || null;
+      // Aboard the starship (Chapter 6 from the dock, Chapter 7): set before the first frame of a
+      // reload or a Jump, not only inside enter() (ch6/steps.js, ch7/steps.js).
+      if (step.aboard !== undefined) game.aboardStarship = step.aboard;
+      game.transferTarget = step.transfer || null;
+      game.captureTarget = step.capture || null;
+      game.landTarget = step.land || null;
+      game.escapeStep = !!step.escape;
+      announceGoal(step);
+      try { await step.enter?.(game); } catch (e) { console.error('mission enter', step.id, e); }
+    } catch (e) {
+      console.error('mission enter', step.id, e);
     }
-    showStep();
-    // First step of an act: remember the save as it is now, the place the
-    // two-tries rule restarts from. (complete() has just saved the new index.)
-    if (steps.findIndex((s) => s.act === step.act) === index) {
-      try {
-        localStorage.setItem(ACT_KEY, localStorage.getItem(SAVE_KEY) || '');
-        localStorage.setItem(CKPT_KEY, localStorage.getItem(SAVE_KEY) || '');
-      } catch { /* private mode */ }
-    }
-    // A sensible target for the predictor and markers even before (or without)
-    // the step's own enter(): after a reload the old target is gone.
-    // Real bodies only: a custom transfer target (Act 1's satellite) isn't
-    // something the predictor can compute a closest approach to.
-    game.target = [step.transfer, step.capture, step.land, step.markers?.[0]].find((id) => id && BODIES[id]) || game.target;
-    game.aimHint = step.aim || null;
-    game.transferTarget = step.transfer || null;
-    game.captureTarget = step.capture || null;
-    game.landTarget = step.land || null;
-    game.escapeStep = !!step.escape;
-    announceGoal(step);
-    try { await step.enter?.(game); } catch (e) { console.error('mission enter', step.id, e); }
     if (my === gen) entered = true; // a step jumped away from while its enter ran is not "entered"
   }
 
@@ -364,6 +408,8 @@ export function createMissions(game) {
     const my = gen;
     busy = true;
     const step = steps[index];
+    // Every await is followed by a check of the generation: a jump while this
+    // step is finishing (its question, its after(), a calm wait) ends the flow here.
     try {
       // A task done in the world (a step with a check: an orbit, a landing, a
       // puzzle): tick it off, then a calm moment before any question.
@@ -371,25 +417,34 @@ export function createMissions(game) {
       if (step.check && hasQuestion) {
         showStep(true);
         await calmFor(step.calm ?? CALM_S);
+        if (my !== gen) return;
       }
-      if (step.beat) await ask(step.beat);
+      if (step.beat) { await ask(step.beat, my); if (my !== gen) return; }
       // Extra maths/pattern questions tied to the same moment (lead request:
       // more maths), asked the same way so answers and "later" are saved.
-      for (const b of step.bonusBeats || []) await ask(b);
+      for (const b of step.bonusBeats || []) {
+        await ask(b, my);
+        if (my !== gen) return;
+      }
       await step.after?.(game);
-      if (deferred.size) await askDeferred();
+      if (my !== gen) return;
+      if (deferred.size) { await askDeferred(my); if (my !== gen) return; }
     } catch (e) {
       console.error('mission complete', step.id, e);
     }
     if (my !== gen) return; // jumped away while this step was completing: the jump owns the chain now
     index = Math.min(index + 1, steps.length - 1);
-    persist();
-    // Just answered a question: a stable place to come back to (Retry).
-    if (step.beat || step.bonusBeats?.length) {
-      try { localStorage.setItem(CKPT_KEY, localStorage.getItem(SAVE_KEY) || ''); } catch { /* private mode */ }
-    }
     busy = false;
-    await enterStep();
+    try {
+      persist();
+      // Just answered a question: a stable place to come back to (Retry).
+      if (step.beat || step.bonusBeats?.length) {
+        try { localStorage.setItem(CKPT_KEY, localStorage.getItem(SAVE_KEY) || ''); } catch { /* private mode */ }
+      }
+    } catch (e) {
+      console.error('mission complete', step.id, e);
+    }
+    enterStep(); // logs its own throws, so nothing is left unhandled
   }
 
   return {
@@ -404,11 +459,16 @@ export function createMissions(game) {
     /** Hands-off flying first (QUIET_S): for questions asked outside the step engine
      *  (acts/util.js askBeat, the belt's beats). Resolves at once on foot. */
     untilQuiet,
+    /** Bumped by every jump(): a flow that started before it is stale (acts/util.js askBeat). */
+    get generation() { return gen; },
     /** Save now (main.js calls this every few seconds while flying). */
     save() { persist(); },
     /** Ask a beat's question the way a step's own beat is asked: counted as
      *  answered, or deferred and asked again later (Chapter 6's stations). */
-    ask(beat, { calm: sec = 0 } = {}) { return calmFor(sec).then(() => ask(beat)).then(() => persist()); },
+    ask(beat, { calm: sec = 0 } = {}) {
+      const my = gen; // the step it was asked in: a jump in the calm wait drops it
+      return calmFor(sec).then(() => ask(beat, my)).then(() => persist());
+    },
     /**
      * Two wrong tries on a question (lead rule): back to the start of this
      * act - the save from then is put back and the page reloads into it.
@@ -442,7 +502,7 @@ export function createMissions(game) {
       if (!paused) quiet = game.kidSteering ? 0 : quiet + dt;
       if (quietWaits.length && (game.activeScene || quiet >= QUIET_S)) {
         const rs = quietWaits; quietWaits = [];
-        for (const r of rs) r();
+        for (const r of rs) r(true);
       }
       if (!calms.length || paused) return;
       // In place (no new list each frame): finish the ones that are due.
@@ -458,7 +518,7 @@ export function createMissions(game) {
       stepTime += dt;
       const step = steps[index];
       const done = step.check ? step.check(game, states, stepTime) : true;
-      if (done) complete();
+      if (done) complete().catch((e) => console.error('mission complete', step.id, e));
     },
     markerIds() {
       // The satellite's docking camera frames its own shot: no planet labels
@@ -478,6 +538,7 @@ export function createMissions(game) {
       gen++;
       busy = false;
       resetModalTurns();
+      dropOldFlow();
       index = i;
       enterStep();
     },

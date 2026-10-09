@@ -58,12 +58,12 @@ export function paintToggle(btn, key, name, state, tip) {
   if (btn.dataset.sig === sig) return;
   btn.dataset.sig = sig;
   btn.replaceChildren();
-  const k = document.createElement('span'); k.className = 'sp-tg__key'; k.textContent = key;
+  // No key letter on the switch (lead 2026-10-09): the key is in the tooltip and the label.
   const n = document.createElement('span'); n.textContent = name;
   const d = document.createElement('span'); d.className = 'sp-tg__dot';
-  btn.append(k, n, d);
+  btn.append(n, d);
   btn.classList.toggle('is-warn', state === 'warn');
   btn.classList.toggle('is-on', state === 'on');
-  btn.title = tip;
-  btn.setAttribute('aria-label', tip);
+  btn.title = key ? `${tip} (key ${key})` : tip;
+  btn.setAttribute('aria-label', key ? `${name}, key ${key}. ${tip}` : `${name}. ${tip}`);
 }

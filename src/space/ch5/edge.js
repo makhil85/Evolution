@@ -1,20 +1,19 @@
 // The edge of the Sun's family (Chapter 5, after Pluto): the camera pulls
 // back from her ship, past the Kuiper belt and Neptune's path, out through
 // the heliosphere (the bubble of the Sun's wind, which Voyager 1 left in
-// 2012) to the Oort cloud, then sweeps back to her. ~20 s, skippable.
+// 2012) to the Oort cloud, then sweeps back to her. About 25-30 s (the labels set it), skippable.
 //
 // Flight is paused. The bubble, the orbit lines and the Oort cloud are added
 // for the scene only. The Oort cloud is drawn much closer than it really is
 // (the label says so): at true scale it would be a dot-less void on screen.
 import * as THREE from 'three';
 import { BODIES } from '../contracts.js';
-import { buildOverlay, blendCamera, waitForSkip, ease } from '../cinematics.js';
+import { buildOverlay, blendCamera, waitForSkip, ease, cardSeconds } from '../cinematics.js';
 import { t as lvl } from '../level.js';
 
 const AU = BODIES.neptune.orbit / 30; // Neptune is 30 AU out
 const HELIO_R = 120 * AU;
 const OORT = [3.6 * HELIO_R, 5 * HELIO_R]; // squeezed in a lot (really 2,000+ AU)
-const DURATION = 21;
 
 function orbitLine(r, color, opacity) {
   const pts = [];
@@ -104,14 +103,26 @@ export function playEdgePullBack(game) {
   voyager.position.copy(vDir).multiplyScalar(HELIO_R * 0.99);
   root.add(voyager);
 
-  const labels = {
-    kuiper: pin(lvl('Kuiper belt: icy leftovers', 'Kuiper belt: icy rocks')),
-    neptune: pin(lvl('Neptune’s path', 'Neptune’s path')),
-    helio: pin(lvl('Heliosphere: the bubble of the Sun’s wind', 'The Sun’s bubble')),
-    voyager: pin(lvl('Voyager 1 flew out of the bubble in 2012', 'Voyager 1 got out here in 2012')),
-    oort: pin(lvl('Oort cloud: a shell of icy comets (really 10x further still)', 'Oort cloud: lots of icy comets, very far away')),
+  // Each label stays up for its own reading time at this Level (cardSeconds: readMs plus the
+  // fade), one after another, 2.6 s apart: two can be on at once (each is pinned to its own place).
+  const LABEL_TEXT = {
+    neptune: lvl('Neptune’s path', 'Neptune’s path'),
+    kuiper: lvl('Kuiper belt: icy leftovers', 'Kuiper belt: icy rocks'),
+    helio: lvl('Heliosphere: the bubble of the Sun’s wind', 'The Sun’s bubble'),
+    voyager: lvl('Voyager 1 flew out of the bubble in 2012', 'Voyager 1 got out here in 2012'),
+    oort: lvl('Oort cloud: a shell of icy comets (really 10x further still)', 'Oort cloud: lots of icy comets, very far away'),
   };
-  const show = { neptune: [6, 8.6], kuiper: [8.8, 11], helio: [11.2, 13.6], voyager: [13.8, 16], oort: [16.2, 19.5] }; // one at a time
+  const labels = {};
+  const show = {};
+  let labelAt = 7;
+  for (const [id, text] of Object.entries(LABEL_TEXT)) {
+    labels[id] = pin(text);
+    show[id] = [labelAt, labelAt + cardSeconds(text)];
+    labelAt += 2.6;
+  }
+  // The outer view holds until the last label has been read, then the camera swings back.
+  const T_BACK = Math.max(...Object.values(show).map((w) => w[1])) + 0.5;
+  const DURATION = T_BACK + 3;
   // The pull-back as camera distances at given times (eased in log steps), so
   // each stop gets time on screen: her ship, the planets and Kuiper belt, the
   // bubble, the Oort shell.
@@ -140,9 +151,11 @@ export function playEdgePullBack(game) {
     camera.getWorldDirection(fwd);
     const ahead = d.copy(world).sub(camera.position).dot(fwd) > 0;
     v.copy(world).project(camera);
-    const vis = on && ahead && Math.abs(v.x) < 0.85 && Math.abs(v.y) < 0.8; // well inside the frame
+    // Kept inside the frame (a label near the edge is pinned there, not hidden: a tall screen would hide them early).
+    const x = Math.max(-0.85, Math.min(0.85, v.x)); const y = Math.max(-0.8, Math.min(0.8, v.y));
+    const vis = on && ahead;
     el.style.opacity = vis ? 1 : 0;
-    if (vis) { el.style.left = `${(v.x * 0.5 + 0.5) * innerWidth}px`; el.style.top = `${(-v.y * 0.5 + 0.5) * innerHeight}px`; }
+    if (vis) { el.style.left = `${(x * 0.5 + 0.5) * innerWidth}px`; el.style.top = `${(-y * 0.5 + 0.5) * innerHeight}px`; }
   };
 
   game.cinematic = {
@@ -157,17 +170,17 @@ export function playEdgePullBack(game) {
       const sun = new THREE.Vector3(-ship.x, 0, -ship.z);
       // Pull back: from just behind her to far enough to see the Oort shell.
       // ...and back in to her ship at the end.
-      const back = ease((t - 18) / 3);
+      const back = ease((t - T_BACK) / 3);
       const dist = 40 * Math.pow(distAt(t) / 40, 1 - back);
-      const toSun = ease((t - 2) / 8) * (1 - ease((t - 18) / 3));
+      const toSun = ease((t - 2) / 8) * (1 - ease((t - T_BACK) / 3));
       look.lerpVectors(new THREE.Vector3(), sun, toSun);
       camPos.copy(look).add(new THREE.Vector3(0.2, 0.75, 0.62).normalize().multiplyScalar(dist));
-      const w = ease(t / 1.5) * (1 - ease((t - 19) / 2));
+      const w = ease(t / 1.5) * (1 - ease((t - T_BACK - 1) / 2));
       blendCamera(camera, camPos, look, w);
       // Fade the props in as they come into view.
-      lines.forEach((l) => { l.material.opacity = 0.55 * ease((t - 3) / 2) * (1 - ease((t - 18) / 2)); });
-      helio.material.uniforms.uAlpha.value = ease((t - 7) / 3) * (1 - ease((t - 18) / 2));
-      oort.material.opacity = 0.8 * ease((t - 13) / 3) * (1 - ease((t - 18.5) / 2));
+      lines.forEach((l) => { l.material.opacity = 0.55 * ease((t - 3) / 2) * (1 - ease((t - T_BACK) / 2)); });
+      helio.material.uniforms.uAlpha.value = ease((t - 7) / 3) * (1 - ease((t - T_BACK) / 2));
+      oort.material.opacity = 0.8 * ease((t - 13) / 3) * (1 - ease((t - T_BACK - 0.5) / 2));
       // Labels.
       const near = new THREE.Vector3(ship.x, 0, ship.z).normalize();
       place(labels.kuiper, v.clone().copy(near).multiplyScalar(62000).add(sun), camera, t > show.kuiper[0] && t < show.kuiper[1]);
@@ -176,7 +189,7 @@ export function playEdgePullBack(game) {
       place(labels.voyager, voyager.position.clone().add(sun), camera, t > show.voyager[0] && t < show.voyager[1]);
       place(labels.oort, new THREE.Vector3(0, OORT[1] * 0.85, 0).add(sun), camera, t > show.oort[0] && t < show.oort[1]);
       if (t > 0.8 && !overlay._titled) { overlay._titled = true; overlay.showTitle(); }
-      if (t > 3.5 && !overlay._untitled) { overlay._untitled = true; overlay.hideTitle(); }
+      if (t > 0.8 + overlay.readS && !overlay._untitled) { overlay._untitled = true; overlay.hideTitle(); }
       if (t >= DURATION) { game.cinematic = null; camera.far = farWas; camera.updateProjectionMatrix(); finish(); }
     },
   };

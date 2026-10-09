@@ -87,7 +87,7 @@ round?", "Did he use a stick's shadow or a telescope?").
 
 ---
 
-## Chapter 2: City Engineering (`src/city/`), two lessons
+## Chapter 2: Forces and Machines (`src/city/`), two lessons
 
 Lead, 2026-10-05: two lessons in Chapter 2. Triangles in bridges, then
 Archimedes as a second history lesson. Seesaws, water towers and shadows move
@@ -120,7 +120,7 @@ water spill, so it was not all gold").
 
 ---
 
-## Chapter 3: Rocket Village (`src/game/`, `src/gameScene.js`)
+## Chapter 3: Ready for Lift-off (`src/game/`, `src/gameScene.js`)
 
 ### 3A. Push back, go forward (before Step 7: Engine Thrust)
 

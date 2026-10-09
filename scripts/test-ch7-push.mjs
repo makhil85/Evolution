@@ -238,6 +238,11 @@ ok('the drop time question: 4.5 seconds at gentle (Level 4) and about 5 at Level
   const o = CH7B_LEVEL1.c7b_gentle_drop;
   assert.ok(o.choices.some((c) => c.correct && c.text === 'about 5 seconds'));
 });
+ok('the throw sum’s parent hint: 6 is the wrench’s momentum, not a speed (the wrench goes 2 m/s)', () => {
+  const q = CH7B_QUESTIONS.c7b_throw_sum;
+  assert.ok(q.parentHint.includes(`(The 6 is the wrench’s momentum, not a speed: the wrench itself goes ${TOOLS.wrench.speed} m/s.)`), q.parentHint);
+  assert.doesNotMatch(q.parentHint, /6 m\/s/);
+});
 ok('the full push question: 10 times quicker (4.5 s over 0.45 s), at both Levels', () => {
   const q = CH7B_QUESTIONS.c7b_full_drop;
   assert.ok(q.choices.some((c) => c.correct && c.text === 'about 10 times'));

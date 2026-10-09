@@ -18,9 +18,11 @@
 // the clue is a strip under the picture, never over it. Level 4 never shows it.
 // Off since 2026-10-09 (lead: no hints at any Level): see SHOW_CLUES.
 //
-// Captions wait to be read: a beat lasts at least 1.5 s + 0.35 s per word
-// (1.5x that at Level 1). When a caption needs longer than its beat, the
-// picture slows down to match, so what is said and what is shown stay together.
+// Captions wait to be read (lead 2026-10-09): a beat lasts at least readMs(caption)
+// (5-10 s, src/play/readTime.js; Level 1's shorter words still get 5 s). When a
+// caption needs longer than its beat, the picture slows down to match, so what is
+// said and what is shown stay together. A caption too long even for that (needsClick)
+// stays up and the film waits for a "Next" click before it goes on.
 //
 // Questions (lead's rule, same as Flight School): two tries, a cheer on a right
 // answer, after the second miss the answer is shown with a kind explanation
@@ -36,6 +38,7 @@ import { t, LEVEL } from '../space/level.js';
 import { el, openLayer, prefersReducedMotion } from '../play/ui.js';
 import { STAGE_W, STAGE_H } from './draw.js';
 import { skipButton } from '../play/grownUp.js';
+import { readMs, needsClick } from '../play/readTime.js';
 
 const SEEN_PREFIX = 'rocket_village_lesson_';
 const TICK_MS = 50;
@@ -54,22 +57,24 @@ export function markSeen(id) {
   try { localStorage.setItem(seenKey(id), '1'); } catch { /* private mode */ }
 }
 
-/** Seconds a caption needs on screen to be read. */
+/** Seconds a caption stays on screen to be read: readMs(), in seconds. */
 export function readSeconds(text) {
-  const words = String(text || '').trim().split(/\s+/).filter(Boolean).length;
-  return (1.5 + 0.35 * words) * (LEVEL === 1 ? 1.5 : 1);
+  return readMs(text) / 1000;
 }
 
 /**
  * The real-time plan of a film: each beat lasts max(authored, reading time).
- * @returns {{ beats: {start: number, real: number, aStart: number, dur: number, cap: string}[], length: number, authored: number }}
+ * A beat with `click` (its caption needs more than readMs) ends in a "Next" click
+ * (never the last beat: the film's end already waits for one).
+ * @returns {{ beats: {start: number, real: number, aStart: number, dur: number, cap: string, predict: boolean, click: boolean}[], length: number, authored: number }}
  */
 export function filmPlan(film) {
   let real = 0; let authored = 0;
-  const beats = film.beats.map((b) => {
+  const last = film.beats.length - 1;
+  const beats = film.beats.map((b, k) => {
     const cap = pick(b.cap);
     const r = Math.max(b.dur, readSeconds(cap));
-    const out = { start: real, real: r, aStart: authored, dur: b.dur, cap };
+    const out = { start: real, real: r, aStart: authored, dur: b.dur, cap, predict: !!b.predict, click: needsClick(cap) && k < last };
     real += r; authored += b.dur;
     return out;
   });
@@ -164,7 +169,8 @@ export function playLesson(lesson, { bus = null } = {}) {
   injectStyles();
   const films = lesson.films;
   const plans = films.map(filmPlan);
-  const predictStops = plans.map((p, i) => p.beats.filter((_, k) => films[i].beats[k].predict).map((b) => b.start + b.real));
+  // Where a film stops by itself: a predict beat (until "Show me") or a click beat (until "Next").
+  const stops = plans.map((p) => p.beats.filter((b) => b.predict || b.click).map((b) => ({ at: b.start + b.real, predict: b.predict, click: b.click })));
   const results = [];
   let resolveFn;
   const promise = new Promise((r) => { resolveFn = r; });
@@ -178,7 +184,8 @@ export function playLesson(lesson, { bus = null } = {}) {
   let lastCap = '';
   let lastNow = performance.now();
   let closed = false;
-  const held = new Set(); // predict pauses already made in this film
+  let clickWait = false; // a caption too long to read by itself waits for "Next"
+  const held = new Set(); // predict and click pauses already made in this film
 
   // --- build the card ---
   const card = el('div', 'pl-card ls-card');
@@ -235,18 +242,37 @@ export function playLesson(lesson, { bus = null } = {}) {
   });
   try { bus?.emit?.('ui-modal', true); } catch { /* bus gone */ }
 
-  replayBtn.addEventListener('click', () => { time = 0; held.clear(); setPaused(false); render(); });
+  replayBtn.addEventListener('click', () => { clearClickWait(); time = 0; held.clear(); setPaused(false); render(); });
   pauseBtn.addEventListener('click', () => setPaused(!paused));
   nextBtn.addEventListener('click', onNext);
 
   function setPaused(on, predict = false) {
+    if (clickWait && !on) return; // only "Next" goes on from a click beat
     paused = !!on;
     pauseBtn.textContent = paused ? (predict ? `▶ ${t('Show me', 'Show me')}` : '▶ Play') : '❚❚ Pause';
     pauseBtn.classList.toggle('is-ready', paused && predict);
     pauseBtn.setAttribute('aria-pressed', String(paused));
   }
 
+  /** Ends a click beat's wait (the caption is read): the film can go on. */
+  function clearClickWait() {
+    clickWait = false;
+    pauseBtn.hidden = false;
+    nextBtn.disabled = true;
+    nextBtn.classList.remove('is-ready');
+  }
+
+  function waitForClick() {
+    clickWait = true;
+    setPaused(true);
+    pauseBtn.hidden = true;
+    nextBtn.disabled = false;
+    nextBtn.classList.add('is-ready');
+    try { nextBtn.focus(); } catch { /* closed */ }
+  }
+
   function setFilm(i) {
+    clearClickWait();
     ix = i; mode = 'watch'; time = 0; seenEnd = false; q = null; lastCap = ''; held.clear();
     setPaused(false);
     card.classList.remove('is-asking');
@@ -332,6 +358,7 @@ export function playLesson(lesson, { bus = null } = {}) {
 
   function onNext() {
     if (mode === 'watch') {
+      if (clickWait) { clearClickWait(); setPaused(false); return; }
       if (!seenEnd) return;
       if (films[ix].question) startQuestion();
       else if (ix < films.length - 1) setFilm(ix + 1);
@@ -403,10 +430,13 @@ export function playLesson(lesson, { bus = null } = {}) {
     if (!paused && mode === 'watch') {
       const before = time;
       time += dt;
-      // A predict beat: hold at its end until "Show me".
-      // (Held just short of the end, so the predict caption stays up.)
-      const stop = predictStops[ix].find((e) => !held.has(e) && before < e && time >= e - 0.02);
-      if (stop !== undefined) { held.add(stop); time = stop - 0.02; setPaused(true, true); }
+      // A predict beat: hold at its end until "Show me". A click beat: hold until "Next".
+      // (Held just short of the end, so the caption stays up.)
+      const stop = stops[ix].find((e) => !held.has(e.at) && before < e.at && time >= e.at - 0.02);
+      if (stop !== undefined) {
+        held.add(stop.at); time = stop.at - 0.02;
+        if (stop.click) waitForClick(); else setPaused(true, true);
+      }
     }
     render();
   }
@@ -419,7 +449,7 @@ export function playLesson(lesson, { bus = null } = {}) {
     },
     /** One move a child would make: end the film -> question -> right answer -> next. */
     next() {
-      if (mode === 'watch') { time = plans[ix].length; render(); onNext(); return this.state(); }
+      if (mode === 'watch') { clearClickWait(); time = plans[ix].length; render(); onNext(); return this.state(); }
       if (!q.done) choices.querySelector('[data-correct="1"]')?.click();
       onNext();
       return closed ? 'finished' : this.state();

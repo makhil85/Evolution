@@ -59,17 +59,24 @@ function tauAt(L) {
   return 0.7 + (0.9 * (L - APPROACH - SLOW)) / AFTER;
 }
 
-function shipDart(ctx, x, y, ang, flame, T) {
+/** Her craft on the slingshot card: the starship, small (exported for the tests). */
+export function shipDart(ctx, x, y, ang, flame, T) {
   ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
   if (flame) {
     ctx.fillStyle = '#ffb03b';
     const fl = 26 + 6 * Math.sin(T * 40);
     ctx.beginPath(); ctx.moveTo(-9, -6); ctx.lineTo(-9 - fl, 0); ctx.lineTo(-9, 6); ctx.closePath(); ctx.fill();
   }
-  // The rock ship, side on: a lumpy grey rock with the drive behind.
-  ctx.fillStyle = '#a9a39a';
-  ctx.beginPath(); ctx.ellipse(2, 0, 13, 9, 0, 0, TAU); ctx.fill();
-  rect(ctx, -12, -4, 6, 8, '#7fd3ff', 2);
+  // The starship (ch6/starship.js), seen from above and to the side: the cap at the front
+  // (+x), a cream spine, the orange habitat ring across the middle, the drive bell behind.
+  // She is aboard it from the dock on (lead 2026-10-09), so it is her craft, not a rock.
+  ctx.fillStyle = '#8a96a8';
+  ctx.beginPath(); ctx.moveTo(-10, -2.5); ctx.lineTo(-16, -4.5); ctx.lineTo(-16, 4.5); ctx.lineTo(-10, 2.5); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#f4f1ea';
+  ctx.fillRect(-10, -2, 22, 4);
+  ctx.fillRect(12, -6, 3, 12); // the cap
+  ctx.strokeStyle = '#ff9a3c'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.ellipse(2, 0, 3, 9, 0, 0, TAU); ctx.stroke(); // the ring, edge on
   ctx.restore();
 }
 
@@ -114,7 +121,7 @@ export function playSlingshots({ bus = null, plan, mode = flyingMode() }) {
   const actions = el('div', 'ls-actions');
   const dots = el('div', 'ls-dots');
   legs.forEach(() => dots.appendChild(el('span', 'ls-dot')));
-  const pressBtn = el('button', 'ls-btn', t('Press! (Space)', 'Press! (Space)'));
+  const pressBtn = el('button', 'ls-btn', t('Press!', 'Press!'));
   pressBtn.type = 'button';
   actions.append(dots, pressBtn);
   card.append(eyebrow, title, view, tip, actions);

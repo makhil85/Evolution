@@ -921,6 +921,48 @@
   outline-offset: 2px;
 }
 
+/* --- the read-it card: a long message waits for an OK click (hud.js) ----- */
+
+.rv-hud .rv-read__text {
+  font-size: 19px;
+  line-height: 1.5;
+}
+
+/* The wait before OK works (5 s): a thin meter that fills, then goes. */
+.rv-hud .rv-read__meter {
+  height: 6px;
+  margin-top: 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.rv-hud .rv-read__fill {
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: var(--rv-cool);
+}
+
+.rv-hud .rv-read__meter.is-timing .rv-read__fill {
+  animation: rv-read-fill 5s linear forwards;
+}
+
+@keyframes rv-read-fill {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+.rv-hud .rv-read .rv-modal__actions {
+  justify-content: center;
+}
+
+.rv-hud .rv-read .rv-btn {
+  min-width: 120px;
+  padding: 12px 26px;
+  font-size: 18px;
+}
+
 /* --- animations --------------------------------------------------------- */
 
 @keyframes rv-pulse {

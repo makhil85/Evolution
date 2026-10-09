@@ -62,7 +62,7 @@ const LEVEL4_SPACE_QUESTIONS = {
       'A wing makes lift by deflecting air downward. No air, no lift. The tempting wrong answer is “no gravity”, but gravity is almost as strong in low orbit as on the ground.',
     success:
       'Right! A wing is an air-pusher. Out here there is nothing to push, so the ship turns with small puffs of gas from its thrusters instead.',
-    doneMessage: 'Thrusters online. Tap ← and → (or A and D) to feel the little puffs turn the ship.',
+    doneMessage: 'Thrusters online. Turn left and right to feel the little puffs turn the ship.',
     reward: { science: 10 },
   },
 
@@ -218,7 +218,7 @@ const LEVEL4_SPACE_QUESTIONS = {
     parentHint:
       'A prograde burn raises the opposite side of the orbit (the apoapsis). The burn point stays at the same height, because she is already there.',
     success: 'Exactly! Pushing forward lifts the far side of the orbit. Push enough, and the far side reaches the Moon.',
-    doneMessage: 'Plan your burn so the far side of your orbit touches the Moon’s path. Press M to see the map.',
+    doneMessage: 'Plan your burn so the far side of your orbit touches the Moon’s path. Click the small map to see it big.',
     reward: { science: 15 },
   },
 
@@ -389,7 +389,7 @@ const LEVEL4_SPACE_QUESTIONS = {
     success:
       'Yes! The Moon’s pull is only about 1/6 of Earth’s. To get away from Earth you need about 11 km/s; from the Moon only about 2.4 km/s. ' +
       'So leaving the Moon takes only about 1/20 of the energy. That’s why a small engine was enough!',
-    doneMessage: 'Next stop: Mars! Use time warp (keys 1 to 4) while you’re far from everything.',
+    doneMessage: 'Next stop: Mars! Use the time-warp buttons while you’re far from everything.',
     reward: { science: 20 },
   },
 
@@ -721,9 +721,9 @@ const LEVEL4_SPACE_QUESTIONS = {
     ],
     hint: 'What is Jupiter’s biggest “power”? The same thing that just bent your path.',
     parentHint:
-      'In 1994 Comet Shoemaker–Levy 9 smashed into Jupiter, and the scars were bigger than Earth. Jupiter’s gravity captures or ejects many comets (though it can occasionally send some inward too, so scientists still debate how much it “protects” us).',
+      'In 1994 Comet Shoemaker–Levy 9 smashed into Jupiter, and the biggest scars were as wide as Earth. Jupiter’s gravity captures or ejects many comets (though it can occasionally send some inward too, so scientists still debate how much it “protects” us).',
     success:
-      'Yes. In 1994 a whole comet smashed into Jupiter and left scars bigger than Earth. Its gravity catches and flings many comets.',
+      'Yes. In 1994 a whole comet smashed into Jupiter and left scars as wide as Earth. Its gravity catches and flings many comets.',
     doneMessage: 'Now use that same gravity. Swing past Jupiter and let it steer you to Europa.',
     reward: { science: 20 },
   },
@@ -898,7 +898,7 @@ export const LEVEL1_SPACE_QUESTIONS = {
     parentHint:
       'Wings need air to push against; gravity doesn’t need air at all. The tempting “it floats” mixes up “no air” with “no gravity”.',
     success: 'Right! No air, no gliding. So in space the ship folds its wings. It turns with little puffs of gas.',
-    doneMessage: 'Press ← and → to turn the ship.',
+    doneMessage: 'Turn left and right to turn the ship.',
   },
 
   zero_g: {
@@ -1076,13 +1076,13 @@ export const LEVEL1_SPACE_QUESTIONS = {
     hint: 'Remember how high you jumped on the Moon. Is the Moon’s pull big or small?',
     parentHint: 'The Moon’s gravity is about 1/6 of Earth’s, so leaving it takes only about 1/20 of the energy.',
     success: 'Yes! The Moon pulls only about 1/6 as hard as Earth. So leaving it takes much, much less fuel: about 1/20!',
-    doneMessage: 'On your way to Mars! Keys 1 to 4 make time go fast.',
+    doneMessage: 'On your way to Mars! The time-warp buttons make time go fast.',
   },
 
   mars_day: {
     subject: 'Time and counting',
     difficulty: 'Level 1 • counting days (tricky!)',
-    prompt: 'A day on Mars is a bit longer than on Earth. So Zara’s Mars robot wakes up later each day. On Monday it wakes at 6 o’clock. Each day after, it wakes 1 hour later. When does it wake on Friday?',
+    prompt: 'A day on Mars is a bit longer than on Earth. So Zara’s Mars robot wakes up later each day. On Monday it wakes at 6 o’clock. Pretend it wakes 1 hour later each day. When does it wake on Friday?',
     visual: {
       rows: [
         { label: 'Days', tiles: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] },
@@ -1091,8 +1091,8 @@ export const LEVEL1_SPACE_QUESTIONS = {
     },
     answers: ['10', 'ten', '10 o clock', '10 oclock', '10 o’clock', "10 o'clock", '10:00'],
     hint: 'Fill in the row one day at a time: Monday 6, Tuesday 7, ...',
-    parentHint: 'Monday to Friday is 4 steps later, not 5: 6 + 4 = 10. The tempting 11 counts the days instead of the gaps between them (a fence-post puzzle).',
-    success: 'Ten o’clock! Monday to Friday is only 4 “one hour later” steps. Mars teams really do shift their clocks like this.',
+    parentHint: 'Monday to Friday is 4 steps later, not 5: 6 + 4 = 10. The tempting 11 counts the days instead of the gaps between them (a fence-post puzzle). The hour is a pretend number: a Mars day is really about 40 minutes longer than ours.',
+    success: 'Ten o’clock! Monday to Friday is only 4 “one hour later” steps. Mars teams really do shift their clocks, about 40 minutes each day.',
     doneMessage: 'Mars is red because its dust is rusty! Next: the asteroid belt.',
   },
 
@@ -1205,7 +1205,7 @@ export const LEVEL1_SPACE_QUESTIONS = {
   jupiter_panels: {
     subject: 'Skip counting',
     difficulty: 'Level 1 • groups of 5',
-    prompt: 'At Jupiter the sunlight is weak. For each 1 panel near Earth, Zara needs 5 panels at Jupiter. Her ship had 3 panels near Earth. How many panels does she need now?',
+    prompt: 'At Jupiter the sunlight is weak. Pretend that for each 1 panel near Earth, Zara needs 5 panels at Jupiter. Her ship had 3 panels near Earth. How many panels does she need now?',
     visual: {
       rows: [
         { label: 'Near Earth', tiles: ['▭', '▭', '▭'], arrow: true },
@@ -1214,7 +1214,7 @@ export const LEVEL1_SPACE_QUESTIONS = {
     },
     answers: ['15', 'fifteen', '15 panels'],
     hint: 'Count by fives, once for each panel: 5, 10, ...',
-    parentHint: '3 × 5 = 15, as skip counting. (Sunlight at Jupiter is really about 25 times weaker than at Earth.)',
+    parentHint: '3 × 5 = 15, as skip counting. The 5 is a pretend number for small hands: sunlight at Jupiter is really about 25 times weaker than at Earth, so a real ship needs about 25 panels for each one.',
     success: 'Fifteen! That is why her Big Solar Wings are so big. They open up now.',
     doneMessage: 'Big Solar Wings built. Off to Jupiter!',
   },
@@ -1248,7 +1248,7 @@ export const LEVEL1_SPACE_QUESTIONS = {
     ],
     hint: 'Where did the comet end up? Can it still go anywhere else?',
     parentHint: 'In 1994 a comet really did smash into Jupiter. Jupiter’s gravity catches or flings away many comets.',
-    success: 'Yes! Jupiter caught it. A real comet hit Jupiter in 1994. It left marks bigger than Earth!',
+    success: 'Yes! Jupiter caught it. A real comet hit Jupiter in 1994. It left marks as big as Earth!',
     doneMessage: 'Now fly around Jupiter to reach Europa.',
   },
 

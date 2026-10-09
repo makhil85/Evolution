@@ -9,6 +9,7 @@ import { BODIES, TEXTURE_BASE } from '../contracts.js';
 import { createRings } from '../rings.js';
 import { t as lvl } from '../level.js';
 import { skipButton } from '../../play/grownUp.js';
+import { readMs } from '../../play/readTime.js';
 import { createRun, stepRun, result, botInput, goalMet, skipRun } from './ringRunLogic.js';
 
 const R = 2400; // Saturn's radius in the scene (only the look matters)
@@ -264,7 +265,7 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
     if (phase === 'count') {
       const n = 3 - Math.floor(clock);
       panel.big(n > 0 ? String(n) : lvl('Go!', 'Go!'));
-      if (clock > 3.4) { phase = 'play'; panel.big(''); setTimeout(() => panel.tip(''), 4000); }
+      if (clock > 3.4) { phase = 'play'; panel.big(''); }
       sync(dt);
       return;
     }
@@ -295,8 +296,11 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
     debug,
     start() {
       const L = run.level;
-      panel.tip(lvl(`Arrows steer · Space fires · get ${L.goal.ice} ice 🧊 and ${L.goal.rock} rock 🪨 · big rocks take ${L.bigHits} hits`,
-        `Arrows to steer. Space to shoot. Get ${L.goal.ice} ice and ${L.goal.rock} rock!`));
+      const tip = lvl(`Space fires · get ${L.goal.ice} ice 🧊 and ${L.goal.rock} rock 🪨 · big rocks take ${L.bigHits} hits`,
+        `Space to shoot. Get ${L.goal.ice} ice and ${L.goal.rock} rock!`);
+      // Stays up for its reading time (lead 2026-10-09), not a fixed 4 s.
+      panel.tip(tip);
+      setTimeout(() => panel.tip(''), readMs(tip));
       return done;
     },
     tick,

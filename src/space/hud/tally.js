@@ -153,7 +153,7 @@ export function createTally(mount, { onOpenBay } = {}) {
     }
     bay.hidden = !(s.canBuild || s.canMelt);
     bay.classList.toggle('is-ready', !!s.canBuild);
-    bay.textContent = s.canBuild ? t('🔧 Build upgrades (U)', '🔧 Build it! (U)') : t('💧 Upgrade bay: melt ice (U)', '💧 Make fuel (U)');
+    bay.textContent = s.canBuild ? t('🔧 Build upgrades', '🔧 Build it!') : t('💧 Upgrade bay: melt ice', '💧 Make fuel');
   }
 
   return {

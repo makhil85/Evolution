@@ -15,7 +15,7 @@ export function act4Steps(game) {
     {
       id: 'a4_approach', act: 4,
       title: 'Approach Jupiter',
-      objective: t('Coast to Jupiter. Time warp helps on the long coast. If the banner asks for a small burn, it’s fine-tuning your path.', 'Fly to Jupiter and wait. Keys 1 to 4 make time go fast.'),
+      objective: t('Coast to Jupiter. Time warp helps on the long coast. If the banner asks for a small burn, it’s fine-tuning your path.', 'Fly to Jupiter and wait. Time warp makes time go fast.'),
       markers: ['jupiter'],
       // Playtest: a slightly-off transfer arrived 6,000 u out, just outside
       // Jupiter's pull, with nothing to correct it. The planner cue stays on
@@ -85,7 +85,7 @@ export function act4Steps(game) {
         radiation.tick(states);
         return game.ship.soi === 'jupiter' && isCaptured(game);
       },
-      after() { hud.toast(t('Jupiter has you! Now wait for the burn window to Europa.', 'You’re going around Jupiter! Now wait for the sign to go to Europa.'), { kind: 'good', ms: 3600 }); },
+      after() { hud.toast(t('Jupiter has you! Now wait for the burn window to Europa.', 'You’re going around Jupiter! Now wait for the sign to go to Europa.'), { kind: 'good' }); },
     },
     {
       id: 'a4_europa_orbit', act: 4,
@@ -105,7 +105,7 @@ export function act4Steps(game) {
         return isCaptured(game);
       },
       beat: 'europaOrbit',
-      after() { hud.toast(t('Landing clearance granted. Legs down. Slow and gentle.', 'Time to land. Slow and gentle!'), { kind: 'good', ms: 3600 }); },
+      after() { hud.toast(t('Landing clearance granted. Legs down. Slow and gentle.', 'Time to land. Slow and gentle!'), { kind: 'good' }); },
     },
   ];
 }

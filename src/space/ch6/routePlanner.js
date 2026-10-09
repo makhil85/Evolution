@@ -47,7 +47,7 @@ function body(ctx, id, dim) {
     g.addColorStop(0, '#fff6c8'); g.addColorStop(0.55, '#ffc34d'); g.addColorStop(1, 'rgba(255,160,40,0)');
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(m.x, m.y, m.r * 1.6, 0, TAU); ctx.fill();
   } else if (id === 'belt') {
-    // A scatter of rocks, and her rock ship among them.
+    // A scatter of rocks, and the big belt rock she mined.
     for (let i = 0; i < 14; i++) circle(ctx, m.x + Math.sin(i * 2.3) * 14, m.y - 90 + i * 13, 2, '#9a8f80');
     circle(ctx, m.x, m.y, m.r, '#b8aa98', '#ffd27a', 2);
   } else {

@@ -11,6 +11,7 @@
 // and the only thing that lifts it is F or the button.
 
 import { toggleBar, paintToggle } from './hud/toggleBar.js';
+import { anyCardOpen } from './hud/modalQueue.js';
 
 /** @param {object} game  sets game.frozen; reads game.cinematic / activeScene */
 export function createFreezeButton(game) {
@@ -45,7 +46,7 @@ body.sp-is-frozen .sp-frozen-edge { display: block; }`;
     game.frozen = next;
     paint();
     game.hud?.toast?.(next
-      ? 'Frozen. Everything waits for you - press F (or the button) when you want to carry on.'
+      ? 'Frozen. Everything waits for you - press F when you want to carry on.'
       : 'Off we go again!', { kind: 'info', ms: next ? 4000 : 2000 });
   }
   function toggle() { set(!game.frozen); }
@@ -56,17 +57,17 @@ body.sp-is-frozen .sp-frozen-edge { display: block; }`;
     const t = e.target;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
     // A question card or the pause menu is already holding the game: let it.
-    if (document.querySelector('.sp-modal button')) return;
     if (!canFreeze()) return;
     toggle();
   });
 
   // Nothing to freeze during a cutscene, a walk on the Moon, the ending, or
-  // while a card or a mini-game is up (those hold the game already).
+  // while a card (a question, the Retry card...) or a mini-game is up (those
+  // hold the game already).
   function canFreeze() {
     return !game.cinematic && !game.activeScene && !game.paused
       && document.body.dataset.playModal !== '1'
-      && !document.querySelector('.sp-modal button');
+      && !anyCardOpen();
   }
 
   paint();

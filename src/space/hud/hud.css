@@ -340,7 +340,6 @@
 }
 .sp-hud .sp-mission__step.is-done { color: var(--sp-text); text-decoration: line-through; text-decoration-color: rgba(247,239,226,.35); }
 .sp-hud .sp-mission__step.is-done::before { content: '●'; color: var(--sp-good); }
-.sp-hud .sp-mission__hint { margin-top: 6px; font-size: calc(10.8px * var(--hud-scale)); color: rgba(205,191,169,.7); }  /* -> 14px */
 
 /* Orbit readout */
 .sp-hud .sp-orbit__state { font-size: calc(12.3px * var(--hud-scale)); font-weight: 800; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }  /* -> 16px */
@@ -712,6 +711,10 @@
   filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.45));
 }
 .sp-hud .sp-minimap__canvas { display: block; }
+/* Touch screens only (main.js adds it): the small map's tap hint. */
+.sp-hud .sp-btn.sp-btn--wait { position: relative; overflow: hidden; opacity: 0.5; }
+.sp-hud .sp-btn__fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: rgba(255, 255, 255, 0.3); animation: sp-btn-fill 5s linear forwards; pointer-events: none; }
+@keyframes sp-btn-fill { from { width: 0; } to { width: 100%; } }
 .sp-hud .sp-minimap__hint {
   text-align: center;
   font-size: calc(9.5px * var(--hud-scale));
@@ -873,7 +876,6 @@
 .sp-hud.is-focus .sp-warp-panel,
 .sp-hud.is-focus .sp-orbit,
 .sp-hud.is-focus .sp-mission__steps,
-.sp-hud.is-focus .sp-mission__hint,
 .sp-hud.is-focus .sp-mission__act,
 .sp-hud.is-focus .sp-supplies .sp-gauge + .sp-gauge,
 .sp-hud.is-focus .sp-gauge__note,
@@ -932,3 +934,22 @@
 .sp-hud .sp-goal.is-on { opacity: 1; transform: translate(-50%, 0); }
 .sp-hud .sp-goal__title { font-size: calc(15px * var(--hud-scale)); font-weight: 800; color: #ffd27a; letter-spacing: .02em; }
 .sp-hud .sp-goal__text { margin-top: 6px; font-size: calc(12px * var(--hud-scale)); line-height: 1.35; }
+
+/* --- on foot (Chapters 6 and 7: body.sp-on-foot, set by main.js while a walk scene runs) ----------
+ * Lead 2026-10-09: "look at the HUD display while the girl is walking". The flight panels, the flight
+ * switches, the minimap, the transfer and aim panels, the markers and the burn banner
+ * are for flying: they go while she walks, and come back in flight. Kept: the mission card, the toasts,
+ * the station prompt, the Retry button (a way back at any time, lead 2026-10-09) and the grown-up Jump.
+ * Freeze stays while the game is frozen (so she can carry on). */
+body.sp-on-foot .sp-hud .sp-instruments,
+body.sp-on-foot .sp-hud .sp-minimap,
+body.sp-on-foot .sp-hud .sp-xfer,
+body.sp-on-foot .sp-hud .sp-aim,
+body.sp-on-foot .sp-hud .sp-landing,
+body.sp-on-foot .sp-hud .sp-orbit,
+body.sp-on-foot .sp-hud .sp-tally,
+body.sp-on-foot .sp-hud .sp-markers,
+body.sp-on-foot #burnCue { display: none !important; }
+body.sp-on-foot .sp-hud .sp-toggles > .sp-autopilot,
+body.sp-on-foot .sp-hud .sp-toggles > .sp-aimtoggle { display: none !important; }
+body.sp-on-foot:not(.sp-is-frozen) .sp-hud .sp-toggles { display: none !important; }

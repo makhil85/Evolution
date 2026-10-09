@@ -51,7 +51,7 @@ export function act3Steps(game) {
     const c = game.states.ceres;
     if (Math.hypot(game.ship.x - c.x, game.ship.z - c.z) > BODIES.ceres.soi) return;
     ceresVisited = true;
-    hud.toast(t('You reached Ceres, the dwarf planet! Visit ticked off.', 'You reached Ceres!'), { kind: 'good', ms: 4000 });
+    hud.toast(t('You reached Ceres, the dwarf planet! Visit ticked off.', 'You reached Ceres!'), { kind: 'good' });
     game.missions?.refresh?.();
     game.missions?.ask?.('ceresScan', { calm: CALM_S }).then(() => { ceresAsked = true; });
   }
@@ -96,7 +96,7 @@ export function act3Steps(game) {
       },
       beat: 'marsScan',
       bonusBeats: ['marsCraters'],
-      after() { game.target = 'ceres'; hud.toast(t('Mars scanned! Now we leave Mars for the asteroid belt.', 'Bye, Mars! Next: the asteroid belt.'), { kind: 'info', ms: 3600 }); },
+      after() { game.target = 'ceres'; hud.toast(t('Mars scanned! Now we leave Mars for the asteroid belt.', 'Bye, Mars! Next: the asteroid belt.'), { kind: 'info' }); },
     },
     {
       id: 'a3_power', act: 3,
@@ -144,7 +144,7 @@ export function act3Steps(game) {
         tickMining();
         return mining.allSampled;
       },
-      after() { game.target = 'ceres'; hud.toast('Samples complete! On to Ceres.', { kind: 'good', ms: 3200 }); },
+      after() { game.target = 'ceres'; hud.toast('Samples complete! On to Ceres.', { kind: 'good' }); },
     },
     {
       id: 'a3_ceres', act: 3,
@@ -160,11 +160,11 @@ export function act3Steps(game) {
       async enter() {
         game.target = 'ceres';
         if (ceresVisited) return;
-        hud.toast(t('Telescope locked on Ceres... scanning.', 'Looking at Ceres...'), { kind: 'info', ms: 2600 });
+        hud.toast(t('Telescope locked on Ceres... scanning.', 'Looking at Ceres...'), { kind: 'info' });
         await wait(2600);
         await hud.showFact({
           title: 'Ceres, the dwarf planet',
-          body: t('Ceres is round and about 940 km across (as wide as Texas), the biggest object in the asteroid belt. ' +
+          body: t('Ceres is round and about 940 km across (almost as wide as Texas), the biggest object in the asteroid belt. ' +
             'Scientists have spotted bright salty patches on it, left behind by water that seeped up from inside.',
             'Ceres is round. It is the biggest rock in the asteroid belt. It has shiny salt spots. Water from inside made them.'),
         });
@@ -179,7 +179,7 @@ export function act3Steps(game) {
     {
       id: 'a3_build_wings', act: 3,
       title: 'Build Big Solar Wings',
-      objective: t('At Jupiter, sunlight is 1/25 as strong. Open the upgrade bay (press U, or the button under Mined) and build Big Solar Wings (4 silicon, 2 metal). Mine more in the belt if you need to.', 'Jupiter is far from the Sun, so the sunlight there is weak. Press U and build Big Solar Wings. Grab more rocks if you need them.'),
+      objective: t('At Jupiter, sunlight is 1/25 as strong. Open the upgrade bay (the button under Mined) and build Big Solar Wings (4 silicon, 2 metal). Mine more in the belt if you need to.', 'Jupiter is far from the Sun, so the sunlight there is weak. Open the upgrade bay and build Big Solar Wings. Grab more rocks if you need them.'),
       markers: ['ceres'],
       async enter() { lastOfferAt = 0; await offerBuildLoop(); },
       check(ctx, states, stepTime) {
@@ -190,7 +190,7 @@ export function act3Steps(game) {
         return false;
       },
       beat: 'buildSolarWings',
-      after() { game.target = 'jupiter'; hud.toast(t('Solar wings deployed. Set course for Jupiter!', 'Big wings open! Next stop: Jupiter!'), { kind: 'good', ms: 3600 }); },
+      after() { game.target = 'jupiter'; hud.toast(t('Solar wings deployed. Set course for Jupiter!', 'Big wings open! Next stop: Jupiter!'), { kind: 'good' }); },
     },
     {
       id: 'a3_depart', act: 3,
@@ -216,7 +216,7 @@ export function act3Steps(game) {
             (game.resources.ice || 0) - (hasUpgrade(game, 'radiationShield') ? 0 : 2) >= 1 && stepTime - fuelOfferAt > 4) {
           fuelOfferAt = stepTime;
           offering = true;
-          hud.toast(t('Fuel is low for the long trip to Jupiter. Melt some of your ice into fuel!', 'Fuel is low. Turn some ice into fuel!'), { kind: 'warn', ms: 4200 });
+          hud.toast(t('Fuel is low for the long trip to Jupiter. Melt some of your ice into fuel!', 'Fuel is low. Turn some ice into fuel!'), { kind: 'warn' });
           offerUpgrades(game, { includeMelt: true })
             .then((id) => { if (id !== 'meltIce') fuelOfferDeclined = true; })
             .finally(() => { offering = false; });

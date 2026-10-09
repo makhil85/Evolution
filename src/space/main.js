@@ -52,6 +52,7 @@ import { CH5_START, CH5_UPGRADES } from './ch5/start.js';
 import { CH6_START } from './ch6/start.js';
 import { CH7_START } from './ch7/start.js';
 import { setMoonPulls } from './gravity.js';
+import { FLIGHT_LENGTH } from './ch6/starship.js';
 import { playCh5Opening } from './ch5/opening.js';
 import { t, IS_LEVEL1, LEVEL } from './level.js';
 
@@ -168,9 +169,12 @@ const hud = createHud({ mount: document.getElementById('hud-root'), bus });
 const controls = createControls({ bus, element: renderer.domElement });
 // On-screen buttons on touch screens (hud/touch.js): they press the same keys.
 const touch = createTouchPad(hud.root, { controls, bus, warpIndex: () => game.warpIndex, warpLevels: WARP_LEVELS });
+// Touch screens have no M key: the small map says how to get the big one.
 if (touch.enabled) {
-  const hint = hud.minimap.el.querySelector('.sp-minimap__hint');
-  if (hint) hint.textContent = t('Tap for the big map', 'Tap for the big map');
+  const hint = document.createElement('div');
+  hint.className = 'sp-minimap__hint';
+  hint.textContent = t('Tap for the big map', 'Tap the small map to see it big.');
+  hud.minimap.el.appendChild(hint);
 }
 const flightCam = createFlightCamera({ camera, baseFov: RENDER.fov });
 
@@ -222,6 +226,11 @@ const game = {
   /** A cinematic overriding the camera this frame (cinematics.js), or null.
    *  `calm: true` turns off the speed dust and warp streaks while it plays. */
   cinematic: null,
+  /** Aboard the starship (lead 2026-10-09): from Chapter 6's dock on, and all of Chapter 7. Her small
+   *  rocket is never drawn then; the starship is her craft (see aboardPivot and frameStarship). */
+  aboardStarship: IS_CH7,
+  /** Before a walk starts from the flight view (runScene): a chapter may play a film first (ch7/boardFilm.js). */
+  beforeWalk: null,
   /** The flying mode (contracts FLIGHT_MODES / FLIGHT_MODES_L1): how much the game helps. */
   mode: MODES.medium,
   /** Which way the current step wants her pointed: 'prograde' | 'retrograde' | 'target' | null. */
@@ -239,6 +248,57 @@ const game = {
 };
 window.__space = game; // debug handle, like Chapter 3's
 game.camera = camera; // debug: tests read the flight camera
+
+// Aboard the starship (lead 2026-10-09: "why does she go back to the old rocket ship while
+// she is actually in the big newly built ship?"). Once aboard, her small rocket is not drawn
+// and the starship is her craft: it sits where she is and points where she points (the
+// frame below), its plume follows her burn, and the flight camera is a chase view of the
+// starship. Physics and flight logic run underneath, untouched.
+// The frame: the starship's own metres scaled to scene units as showStarship scales it
+// (370 m long, FLIGHT_LENGTH units). Its origin is the hub; nose -Z, port +X, aft +Z.
+const STARSHIP_M = 370; // createStarship's dims.length, in metres
+const aboardPivot = new THREE.Group();
+aboardPivot.name = 'aboardPivot';
+aboardPivot.scale.setScalar(FLIGHT_LENGTH / STARSHIP_M);
+scene.add(aboardPivot);
+// The flight camera, aboard: the same camera as in her small ship (chase, the C modes, zoom
+// and drag all come from flightCam.update), with its offset from her scaled to the starship's
+// size and looking at its hub, which is her place. Never closer than ABOARD_MIN scene units,
+// so the eye stays clear of the stern (the stern is about 10 units aft of the hub).
+const ABOARD_K = FLIGHT_LENGTH / SHIP.flightLength;
+const ABOARD_MIN = 12;
+function frameStarship(cam) {
+  cam.position.multiplyScalar(ABOARD_K);
+  const d = cam.position.length();
+  if (d < ABOARD_MIN) {
+    if (d > 1e-6) cam.position.multiplyScalar(ABOARD_MIN / d);
+    else cam.position.set(0, 0, ABOARD_MIN);
+  }
+  cam.up.set(0, 1, 0);
+  cam.lookAt(0, 0, 0);
+}
+// Her small rocket goes, and the starship takes its place, every frame she is aboard.
+let plumeCut = false;
+function placeAboard(paused, thrust) {
+  shipView.group.visible = false;
+  aboardPivot.rotation.y = shipView.group.rotation.y; // the same heading as her nose
+  aboardPivot.updateMatrixWorld(true);
+  const star = game._starship?.ship;
+  if (!star) return;
+  star.group.position.set(0, 0, 0);
+  star.group.quaternion.copy(aboardPivot.quaternion);
+  // The plume follows her burn. A cutscene starts with the plume off (set once, as it starts),
+  // then sets it itself.
+  if (game.cinematic) {
+    if (!plumeCut) star.setDrive(0);
+    plumeCut = true;
+  } else {
+    plumeCut = false;
+    star.setDrive(paused ? 0 : thrust);
+  }
+}
+// The board film's hand-over: one frame of the scene as it is now, as a PNG (boardFilm.js).
+game.frameSnapshot = () => { composer.render(); return renderer.domElement.toDataURL('image/png'); };
 // Rock break-apart, pieces flying in, the upgrade build effect (PLAN item 11).
 game.beltFx = createBeltFx(game);
 
@@ -791,7 +851,7 @@ function updateCaptureCue(thrust) {
     aimHelp = {
       phase: 'ready', inS,
       line: aimLine(inS > 10
-        ? t(`Get ready: at your lowest point (in about ${inS} s) you’ll turn to face backwards, opposite to your motion, and burn.${inS > 100 ? ' Time warp (1-4) is fine until then.' : ''}`, `Get ready! Soon you face the way you came, then hold Space.${inS > 100 ? ' Keys 1 to 4 make time go fast.' : ''}`)
+        ? t(`Get ready: at your lowest point (in about ${inS} s) you’ll turn to face backwards, opposite to your motion, and burn.${inS > 100 ? ' The time-warp buttons are fine until then.' : ''}`, `Get ready! Soon you face the way you came, then hold Space.${inS > 100 ? ' The time-warp buttons make time go fast.' : ''}`)
         : t(`Turn now: at your lowest point (in ${inS} s) you burn facing backwards, opposite to your motion.`, 'Face the way you came now. Soon you hold Space.')),
     };
   }
@@ -1353,7 +1413,7 @@ function updateBurnCue(states, thrust) {
   const wait = Math.ceil(tau);
   help(tau < 20 ? 'point' : 'wait', { tau, dvNeed: Math.abs(p.dv), dvDone: 0, along });
   cue('wait', tau > 100
-    ? t(`Burn window in ${wait} s. Use time warp (keys 1 to 4) to get there faster`, `Coast and wait ${wait} s for the green sign. Keys 1 to 4 make time go fast.`)
+    ? t(`Burn window in ${wait} s. Use the time-warp buttons to get there faster`, `Coast and wait ${wait} s for the green sign. The time-warp buttons make time go fast.`)
     : t(`Burn window in ${wait} s. Get ready to point ${along ? 'along your path' : 'backwards (against your motion)'}`, `Burn window in ${wait} s. Get ready to ${along ? 'point forward' : 'face the way you came'}`));
 }
 
@@ -1405,6 +1465,8 @@ function tick(realDt, render = true) {
     activeScene.tick(realDt, input, modalOpen ? { dx: 0, dy: 0, wheel: 0, dragging: false } : mouse, modalOpen);
     missions.tickCalm(realDt, modalOpen || game.paused || game.frozen);
     touch.update({ onFoot: true, cinematic: false, autoAim: game.mode.autoAim });
+    // On foot the flight panels and switches go (hud.css, body.sp-on-foot); the mission card and toasts stay.
+    document.body.classList.toggle('sp-on-foot', !!activeScene.onFoot);
     if (render) composer.render();
     return;
   }
@@ -1563,6 +1625,8 @@ function tick(realDt, render = true) {
   _sunDir.set(-ship.x, 0, -ship.z).normalize();
   shipView.setSunDirection(_sunDir);
   shipView.update(realDt);
+  // Aboard: her rocket is never drawn (cutscenes that show it again turn it back on, so this runs every frame).
+  if (game.aboardStarship) placeAboard(paused, physInput.thrust);
 
   // Camera BEFORE the visuals: the lens flare, distance glows and atmosphere
   // rims all read the camera, so they must see this frame's position.
@@ -1582,6 +1646,9 @@ function tick(realDt, render = true) {
     hold: game.warpIndex > 0, follow: game.autopilot?.on ? 0.9 : 2.4,
     mouse: modalOpen ? { dx: 0, dy: 0, wheel: 0, dragging: false } : mouse,
   });
+  // Aboard, the chase view is of the starship. Before any cinematic takes over, so a
+  // cutscene blends from it (not from her rocket's old view).
+  if (game.aboardStarship) frameStarship(camera);
   // A cinematic (opening / ending) takes the camera over, blending from the
   // flight camera's pose it was just given.
   if (game.cinematic) game.cinematic.apply(realDt, camera, states);
@@ -1610,7 +1677,7 @@ function tick(realDt, render = true) {
   }
 
   // Zoomed out, the ship is sub-pixel: an orange arrow keeps her findable.
-  shipBeacon.visible = flightCam.distance > 12;
+  shipBeacon.visible = flightCam.distance > 12 && !game.aboardStarship;
   shipBeacon.scale.setScalar(flightCam.distance * 0.035);
   shipBeacon.rotation.y = shipView.group.rotation.y;
 
@@ -1640,7 +1707,9 @@ function tick(realDt, render = true) {
     // onto the planned one instead of in jumps.
     predictorClock = physInput.thrust > 0 ? 0.1 : 0.2;
   }
-  trajectory.setVisible(!ship.landedOn && !game.cinematic?.hidePath);
+  // Aboard, her predicted path (the line off the ship) is shown only on a step that
+  // flies to a target (a transfer): the starship has no trail of its own to draw.
+  trajectory.setVisible(!ship.landedOn && !game.cinematic?.hidePath && !(game.aboardStarship && !game.transferTarget));
   trajectory.update({ time: ship.t, origin: _origin, positions: states });
 
   const _tc = performance.now();
@@ -1793,6 +1862,11 @@ game.debugShot = async (name, w = 1600, h = 900) => {
  * dialogue and mission card keep working, so a scene can ask questions.
  */
 game.runScene = async (sceneObj) => {
+  // A walk from the flight view may first play its film (the flight view is still up
+  // here, so the film runs on the flight frame; see ch7/boardFilm.js).
+  if (sceneObj.onFoot && game.beforeWalk && !activeScene) {
+    try { await game.beforeWalk(); } catch (e) { console.error('before walk', e); }
+  }
   activeScene = sceneObj;
   game.activeScene = sceneObj; // tests reach its debug handle through this
   renderPass.scene = sceneObj.scene;
@@ -1815,6 +1889,7 @@ game.runScene = async (sceneObj) => {
     renderPass.scene = scene;
     renderPass.camera = camera;
     document.body.classList.remove('in-scene');
+    document.body.classList.remove('sp-on-foot');
     sceneObj.dispose?.();
     last = performance.now();
     fit();

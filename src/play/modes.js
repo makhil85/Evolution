@@ -143,9 +143,6 @@ export function choosePlayMode({ level = 4, current = savedPlayModeId() || 'easy
       row.appendChild(b);
     }
     card.appendChild(row);
-    const foot = el('div', 'pl-foot');
-    foot.append('Use ', el('span', 'pl-key', '←'), ' ', el('span', 'pl-key', '→'), ' to look, ', el('span', 'pl-key', 'Enter'), ' to choose.');
-    card.appendChild(foot);
 
     const focusAt = (i) => {
       const n = (i + buttons.length) % buttons.length;
@@ -197,6 +194,8 @@ export function createModeChip({ level = 4, onChange = () => {}, top, right } = 
   };
   set(loadPlayMode().id);
   chip.addEventListener('click', async () => {
+    // Not over another card: the chooser would stack under it (lead 2026-10-09).
+    if (typeof document !== 'undefined' && document.body.dataset.playModal === '1') return;
     const id = await choosePlayMode({ level, current: loadPlayMode().id });
     set(id);
     onChange(id);

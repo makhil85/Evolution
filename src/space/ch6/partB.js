@@ -42,12 +42,12 @@ export function partBSteps(game) {
             // The question first, then the station counts as done: two missed
             // tries restart the act, and then she redoes this station too. On
             // foot a short pause with a toast, so she knows it is coming.
-            hud.toast(t('Mission Control has a question...', 'A question is coming!'), { kind: 'info', ms: 1400 });
+            hud.toast(t('Mission Control has a question...', 'A question is coming!'), { kind: 'info' });
             await game.missions.ask(STATION_BEAT[id], { calm: WALK_CALM_S });
             done.add(id); saveDone([...done]);
           },
         }));
-        hud.toast(t('The crew ring is built! Our ship is a home now.', 'The ship is a home now!'), { kind: 'good', ms: 4200 });
+        hud.toast(t('The crew ring is built! Our ship is a home now.', 'The ship is a home now!'), { kind: 'good' });
       },
     },
   ];

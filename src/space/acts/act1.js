@@ -114,7 +114,7 @@ export function act1Steps(game) {
         await wait(2600);
       },
       beat: 'wingsFolded',
-      after() { hud.toast(t('Wings folded. Thrusters online. The ← and → arrow keys (or A and D) turn the ship.', 'Wings folded away! Press ← and → to turn.'), { kind: 'good', ms: 3500 }); },
+      after() { hud.toast(t('Wings folded. Thrusters online. Turn the ship to steer it.', 'Wings folded away! Now you can turn.'), { kind: 'good' }); },
     },
     {
       id: 'a1_float', act: 1,
@@ -160,7 +160,7 @@ export function act1Steps(game) {
         puzzleDone = false;
         rig.toFree();
         showMarker(ctx);
-        hud.toast(t('A weather satellite! One of its solar wings has gone dark. Catch up with it.', 'A satellite! One of its wings is broken. Let’s go and fix it!'), { kind: 'info', ms: 4200 });
+        hud.toast(t('A weather satellite! One of its solar wings has gone dark. Catch up with it.', 'A satellite! One of its wings is broken. Let’s go and fix it!'), { kind: 'info' });
       },
       check(ctx, states, stepTime) {
         rig.frame(ctx, stepTime);
@@ -186,19 +186,19 @@ export function act1Steps(game) {
           ctx.transferTarget = null;
           ctx.aimHint = null;
           rig.startCreep();
-          hud.toast(t('Docking thrusters on! Matching its speed... creeping closer...', 'Slowly... slowly... getting closer!'), { kind: 'info', ms: 3600 });
+          hud.toast(t('Docking thrusters on! Matching its speed... creeping closer...', 'Slowly... slowly... getting closer!'), { kind: 'info' });
         }
         return rig.docked;
       },
       beat: 'satelliteMet',
       after() {
-        hud.toast(t('Docked alongside! Press E to take control of its broken wing.', 'You caught it! Press E to fix the broken wing.'), { kind: 'good', ms: 4200 });
+        hud.toast(t('Docked alongside! Press E to take control of its broken wing.', 'You caught it! Press E to fix the broken wing.'), { kind: 'good' });
       },
     },
     {
       id: 'a1_satellite_fix', act: 1,
       title: 'Fix the dead wing',
-      objective: t('Press E. Both panels swing: hold ← (or A) to catch the top one and → (or D) the bottom one while each faces the Sun.', 'Press E. Hold ← and → to catch both wings when they face the Sun.'),
+      objective: t('Press E. Both panels swing: turn left to catch the top one and right to catch the bottom one while each faces the Sun.', 'Press E. Turn left and right to catch both wings when they face the Sun.'),
       // After a reload straight into this step the docking thrusters creep
       // her back alongside (and the model is rebuilt) before E does anything.
       enter(ctx) {
@@ -261,7 +261,7 @@ export function act1Steps(game) {
       markers: ['moon'],
       async enter() {
         await lessonOnce(LESSON_4F, { bus: game.bus });
-        hud.toast(t('Now for real: point along your path and wait for the green BURN NOW sign.', 'Now you try! Wait for the green BURN NOW sign.'), { kind: 'good', ms: 4500 });
+        hud.toast(t('Now for real: point along your path and wait for the green BURN NOW sign.', 'Now you try! Wait for the green BURN NOW sign.'), { kind: 'good' });
       },
     },
     {
@@ -279,7 +279,7 @@ export function act1Steps(game) {
         return game.ship.soi === 'moon' || (!!c && c.body === 'moon' && c.dist < BODIES.moon.soi * 0.6);
       },
       beat: 'beforeMoonBurn',
-      after() { hud.toast(t('Your path reaches the Moon! Coast there. Use time warp (1 to 4) when you are far from Earth.', 'Your path reaches the Moon! Now wait. Keys 1 to 4 make time go fast.'), { kind: 'good', ms: 4500 }); },
+      after() { hud.toast(t('Your path reaches the Moon! Coast there. Use time warp when you are far from Earth.', 'Your path reaches the Moon! Now wait. Time warp makes time go fast.'), { kind: 'good' }); },
     },
     {
       id: 'a1_coast', act: 1,
