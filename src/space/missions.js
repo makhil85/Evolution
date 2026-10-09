@@ -42,7 +42,7 @@ import { ch6Steps } from './ch6/steps.js';
 import { CH7_ACT_TITLES } from './ch7/start.js';
 import { ch7Steps } from './ch7/steps.js';
 import { phasesNow, restorePhases } from './ch5/lineup.js';
-import { inModalTurn } from './hud/modalQueue.js';
+import { inModalTurn, resetModalTurns } from './hud/modalQueue.js';
 import { orbitElements } from './physics.js';
 
 const ACT_TITLES_CH4 = {
@@ -152,6 +152,7 @@ export function createMissions(game) {
   save.stepIndex = index;
   let entered = false;   // enter() has settled for the current step
   let busy = false;      // completing (question / after) - don't re-check
+  let gen = 0;           // bumped by jump(): a step still in flight from before it must not move the chain on
   let stepTime = 0;
   // Several waits can run at once (a Ceres visit's pause while the step's own
   // pause runs), so each is a list entry, not one slot a second call would
@@ -325,6 +326,7 @@ export function createMissions(game) {
   }
 
   async function enterStep() {
+    const my = gen;
     entered = false;
     stepTime = 0;
     const step = steps[index];
@@ -355,10 +357,11 @@ export function createMissions(game) {
     game.escapeStep = !!step.escape;
     announceGoal(step);
     try { await step.enter?.(game); } catch (e) { console.error('mission enter', step.id, e); }
-    entered = true;
+    if (my === gen) entered = true; // a step jumped away from while its enter ran is not "entered"
   }
 
   async function complete() {
+    const my = gen;
     busy = true;
     const step = steps[index];
     try {
@@ -378,6 +381,7 @@ export function createMissions(game) {
     } catch (e) {
       console.error('mission complete', step.id, e);
     }
+    if (my !== gen) return; // jumped away while this step was completing: the jump owns the chain now
     index = Math.min(index + 1, steps.length - 1);
     persist();
     // Just answered a question: a stable place to come back to (Retry).
@@ -467,7 +471,15 @@ export function createMissions(game) {
     /** Debug: jump to a step by id (window.__space.missions.jump('a1_raise')). */
     jump(id) {
       const i = steps.findIndex((s) => s.id === id);
-      if (i >= 0) { index = i; enterStep(); }
+      if (!(i >= 0)) return;
+      // Lead 2026-10-09: an unanswered card (the flight-mode picker, a question)
+      // held the card queue, so the new step's dialogue waited behind it for good.
+      // The jump abandons the queue and the old step's flow (gen), then starts.
+      gen++;
+      busy = false;
+      resetModalTurns();
+      index = i;
+      enterStep();
     },
     /** The steps, for the grown-up Jump panel: [{ id, label, group }]. */
     parts() {
