@@ -60,8 +60,8 @@ export const CH7E_QUESTIONS = {
 /** The Level 1 overlay (2nd grade): same ids, the same numbers said simply. */
 export const CH7E_LEVEL1 = {
   c7_push_speed: {
-    difficulty: 'Level 1 • counting by tens',
-    prompt: 'Starting from standing still, the speed goes up by 10 metres per second, every second. After 5 seconds, how fast is the ship going?',
+    title: 'Speeding up', subject: 'Counting by tens', difficulty: 'Level 1 • counting by tens',
+    prompt: 'Starting from standing still, the speed goes up by about 10 metres per second, every second. After 5 seconds, how fast is the ship going?',
     choices: [
       { text: `${MINUTE_SPEED_STORY / 60} metres per second` },
       { text: `${FIVE_SECOND_SPEED} metres per second`, correct: true },
@@ -73,7 +73,7 @@ export const CH7E_LEVEL1 = {
     success: `Yes! ${FIVE_SECOND_SPEED} metres per second. Every second, the ship speeds up by 10 more.`,
   },
   c7_clock_gap: {
-    difficulty: 'Level 1 • taking away',
+    title: 'Two timers', subject: 'Two lots', difficulty: 'Level 1 • two lots',
     prompt: `The ship's clock counts ${SHIP_YEARS_STORY} years. Earth's clocks count ${EARTH_RATIO} years for every 1 on the ship. How many years pass on Earth? (Type a number.)`,
     answers: [String(EARTH_YEARS_STORY), `${EARTH_YEARS_STORY} years`],
     hint: 'Count the ship’s years twice, and add the two lots together.',

@@ -256,12 +256,23 @@ ok('Level 4 numbers: 2 oxygen molecules from 4 water; 12 oxygen atoms in 6 CO2; 
   assert.equal(h, 7);
   assert.equal(6 * (L.BONES.lossTenths[0] / 10), 6);
 });
-ok('Level 1 numbers: 2 from 4 water; 4 oxygen atoms in 2 CO2; 4 after 2 hours; 3% over 3 months', () => {
+ok('Level 1 numbers: 2 from 4 water; 4 oxygen atoms in 2 CO2; 4 after 2 hours; 4 blocks left after 3 months with no bike', () => {
   const b = bankAt(1);
   assert.deepEqual(b.c7_split_oxygen.answers.slice(0, 1), ['2']);
   assert.deepEqual(b.c7_plants_oxygen_atoms.answers.slice(0, 1), ['4']);
   assert.deepEqual(b.c7_microbes_hours.answers.slice(0, 1), ['4']);
-  assert.deepEqual(b.c7_bones_percent.answers.slice(0, 1), ['3']);
+  assert.deepEqual(b.c7_bones_percent.answers.slice(0, 1), ['4']); // 10 blocks, minus 2 a month for 3 months
+});
+ok('bones: Level 4 says the loss is with no exercise (the no-exercise rate); Level 1 uses the bike game’s blocks, not percent', () => {
+  const q4 = bankAt(4).c7_bones_percent;
+  assert.match(q4.prompt, /with no exercise/);
+  assert.doesNotMatch(q4.prompt, /some exercise/);
+  const q1 = bankAt(1).c7_bones_percent;
+  assert.doesNotMatch(q1.prompt, /%|percent/);
+  assert.match(q1.prompt, /blocks/);
+  assert.match(q1.prompt, new RegExp(`${L.BONES.blocks.start} bone blocks`));
+  assert.match(q1.prompt, new RegExp(`lose ${L.BONES.blocks.lossBlocks[0]} blocks each month`));
+  assert.deepEqual(q1.answers.slice(0, 1), [String(L.blocksLeft([0, 0, 0]))]);
 });
 ok('no hint gives its answer as a number (the parent hint may)', () => {
   for (const level of [4, 1]) {
@@ -271,6 +282,46 @@ ok('no hint gives its answer as a number (the parent hint may)', () => {
       }
     }
   }
+});
+
+console.log('Level 1 cards (all of Chapter 7)');
+const QPARTS = await Promise.all(['A', 'B', 'C', 'D', 'E'].map((x) => import(`../src/space/ch7/questions.part${x}.js`)));
+const { ch7Bank } = await import('../src/space/ch7/questions.ch7.js');
+const words4 = (s) => s.toLowerCase().split(/[^a-z]+/).filter((w) => w.length >= 4);
+ok('every Chapter 7 question has a Level 1 overlay with its own title and subject', () => {
+  const l4 = ch7Bank(4);
+  const overlays = Object.assign({}, ...QPARTS.map((p) => Object.fromEntries(Object.entries(p).filter(([k]) => k.endsWith('_LEVEL1')).flatMap(([, v]) => Object.entries(v)))));
+  for (const id of Object.keys(l4)) assert.ok(overlays[id], `${id} has no Level 1 overlay`);
+  for (const [id, o] of Object.entries(overlays)) {
+    assert.ok(o.title && o.subject, `${id}: Level 1 title and subject`);
+    assert.ok(l4[id], `${id} has no Level 4 question`);
+  }
+});
+ok('no Level 1 title equals its own Level 4 title (every Chapter 7 question)', () => {
+  const l4 = ch7Bank(4);
+  for (const p of QPARTS) {
+    for (const [name, level1] of Object.entries(p).filter(([k]) => k.endsWith('_LEVEL1'))) {
+      for (const [id, o] of Object.entries(level1)) {
+        assert.notEqual(o.title.toLowerCase(), l4[id].title.toLowerCase(), `${name} ${id}: Level 1 title is the Level 4 title`);
+      }
+    }
+  }
+});
+ok('no Level 1 card shows a Level 4 subject word: Level 1 subjects share no word with any Level 4 subject', () => {
+  const l4Subjects = Object.values(ch7Bank(4)).map((q) => q.subject);
+  const l4Words = new Set(l4Subjects.flatMap(words4));
+  for (const p of QPARTS) {
+    for (const [name, level1] of Object.entries(p).filter(([k]) => k.endsWith('_LEVEL1'))) {
+      for (const [id, o] of Object.entries(level1)) {
+        assert.ok(!l4Subjects.includes(o.subject), `${name} ${id}: "${o.subject}" is a Level 4 subject`);
+        const shared = words4(o.subject).filter((w) => l4Words.has(w));
+        assert.deepEqual(shared, [], `${id}: Level 1 subject "${o.subject}" shares ${shared} with a Level 4 subject`);
+      }
+    }
+  }
+  // The Level 1 card for the same question reads its own subject.
+  assert.equal(ch7Bank(1).c7_bones_percent.subject, 'Counting months');
+  assert.equal(ch7Bank(1).c7b_full_drop.subject, 'Sharing');
 });
 
 console.log('lessons 7B and 7C');
@@ -333,12 +384,28 @@ const vite = await createServer({ server: { middlewareMode: true, hmr: false }, 
 try {
   const { partCSteps } = await vite.ssrLoadModule('/src/space/ch7/partC.js');
   const { ch7Steps } = await vite.ssrLoadModule('/src/space/ch7/steps.js');
+  const { LEVEL } = await vite.ssrLoadModule('/src/space/level.js');
   const game = { hud: new Proxy({}, { get: () => () => Promise.resolve() }), bus: { on() {}, emit() {} }, missions: {} };
   ok('partC: four steps in order, ids start c7_, act 3, each with a title and an objective', () => {
     const steps = partCSteps(game);
     assert.deepEqual(steps.map((s) => s.id), ['c7_atoms', 'c7_chem_tasks', 'c7_tiny_life', 'c7_bio_tasks']);
     for (const s of steps) { assert.equal(s.act, 3); assert.ok(s.title && s.objective, s.id); assert.equal(typeof s.enter, 'function'); }
   });
+  // Two wrong tries restart the act at c7_atoms (missions.restartAct). The task save
+  // must go with it, or the chemistry and biology walks (and their questions) are skipped.
+  const doneKey = `rocket_village_ch7_tasks_L${LEVEL}`;
+  const store = new Map([[doneKey, '["split","plants"]']]);
+  globalThis.localStorage = {
+    getItem: (k) => (store.has(k) ? store.get(k) : null),
+    setItem: (k, v) => store.set(k, String(v)),
+    removeItem: (k) => store.delete(k),
+  };
+  const atomsStart = partCSteps(game)[0].enter(); // clears the key before its first await
+  ok('the act’s start (c7_atoms) clears the done tasks, so a restart walks and asks them again', () => {
+    assert.equal(store.has(doneKey), false);
+  });
+  atomsStart.catch(() => { /* the lesson needs a page; only the clear is checked here */ });
+  delete globalThis.localStorage;
   ok('the chapter chain still starts Part C after Part B and before Part D', () => {
     const ids = ch7Steps(game).map((s) => s.id);
     const at = (id) => ids.indexOf(id);

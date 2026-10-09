@@ -42,7 +42,7 @@ export function partESteps(game) {
     {
       id: 'c7_end', act: ACT_E,
       title: t('Chapter 7 complete', 'Chapter 7 done!'),
-      objective: '',
+      objective: t('The ship is on its way to Tau Ceti.', 'The ship flies on to Tau Ceti!'),
       markers: [],
       async enter() {
         markSaveComplete(game);

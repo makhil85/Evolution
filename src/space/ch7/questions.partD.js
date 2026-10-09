@@ -78,7 +78,7 @@ export const CH7D_QUESTIONS = {
 
 export const CH7D_LEVEL1 = {
   c7_quasar_far: {
-    difficulty: 'Level 1 • far away',
+    title: 'Old light', subject: 'Long ago', difficulty: 'Level 1 • far away',
     prompt: 'The quasar is very far away. Its light has been coming for 2.4 billion years. Did the light leave before there were any dinosaurs?',
     choices: [
       { text: 'Yes, it left long before the dinosaurs', correct: true },
@@ -90,7 +90,7 @@ export const CH7D_LEVEL1 = {
     success: 'Yes! The light left long before the dinosaurs. It has been on its way for a very, very long time.',
   },
   c7_lens_real: {
-    difficulty: 'Level 1 • bent light',
+    title: 'Find the star', subject: 'Pushed out', difficulty: 'Level 1 • bent light',
     prompt: 'The black hole bends light. A star looks far from the hole. Where is the real star?',
     choices: [
       { text: 'Closer to the hole', correct: true },
@@ -102,7 +102,7 @@ export const CH7D_LEVEL1 = {
     success: 'Yes! The real star is closer to the hole. The light bent, so it looks pushed out.',
   },
   c7_lens_wrong: {
-    difficulty: 'Level 1 • bent light',
+    title: 'Looks odd', subject: 'Gravity pulls', difficulty: 'Level 1 • bent light',
     prompt: 'Why does a star behind a black hole look like it is in the wrong place?',
     choices: [
       { text: 'Its light bends round the hole', correct: true },
