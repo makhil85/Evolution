@@ -10,7 +10,7 @@
 //      length. The Sun alone gives nothing for free.
 //   2. Steal from a moving planet: the 3-4-5 swing round Jupiter, first
 //      riding along with Jupiter (17 in, 17 out, just turned), then seen
-//      from the Sun (22 in, 30 out: Jupiter's 13 + 17). Jupiter drifts back
+//      from the Sun (21 in, 30 out: the most is Jupiter's 13 + 17). Jupiter drifts back
 //      a tiny bit (drawn hugely bigger); momentum bars.
 //   3. Bigger and closer steals more: Jupiter vs Uranus at the same pass
 //      distance (sharp bend vs almost straight), then Jupiter passed far vs
@@ -249,6 +249,10 @@ function drawFromJupiter(ctx, T, opts) {
 const U = 18; // Jupiter's speed on screen, px a second (13 km/s)
 const REL2 = 24; // the ship's speed across Jupiter, px a second (17 km/s)
 const NUDGE = 22; // Jupiter's drift back, hugely exaggerated
+// The ship's speed seen from the Sun before the swing: it comes in at right
+// angles to Jupiter's 13 km/s, so the two add like the sides of a right
+// triangle: sqrt(13^2 + 17^2) = 21.4, shown as 21. (Behind Jupiter it would be 4.)
+const IN_SPEED = Math.hypot(13, 17);
 
 function drawFromSun(ctx, T, opts) {
   nightSky(ctx, 83);
@@ -278,8 +282,8 @@ function drawFromSun(ctx, T, opts) {
   const p = relAt(tauAt(T, t0, REL2));
   const dx = REL2 * Math.cos(p.ang) + U; const dy = REL2 * Math.sin(p.ang);
   ship(ctx, jxFree + p.x, jy + p.y, Math.atan2(dy, dx));
-  // Speeds seen from the Sun: 22 in, 30 out. Momentum: Jupiter lost what the ship gained.
-  const sp = lerp(22, 30, span(T, 6, 12));
+  // Speeds seen from the Sun: 21 in, 30 out. Momentum: Jupiter lost what the ship gained.
+  const sp = lerp(IN_SPEED, 30, span(T, 6, 12));
   bar(ctx, 540, 60, 220, sp, 34, '#7fd3ff', say(opts, [`Ship’s speed: ${Math.round(sp)} km/s`, `Ship: ${Math.round(sp)} km/s`]));
   if (T > 12) {
     label(ctx, say(opts, ['Momentum', 'Push']), 650, 120, { size: 16, color: '#fff', halo: HALO });
@@ -437,7 +441,7 @@ function drawSunBurn(ctx, T, opts) {
   bar(ctx, 560, 132, 210, gold, 150, '#ffd27a', say(opts, [`Fired closest: ${Math.round(gold)} km/s`, `Closest: ${Math.round(gold)} km/s`]));
   // Sunlight goes as 1 / r^2; the white mark keeps the peak once it has passed.
   const heatNow = Math.min(1, (RP4 / ship4(T, 'gold').r) ** 2);
-  bar(ctx, 560, 196, 210, heatNow, 1, '#ff7a3d', say(opts, ['Heat on the rock shield', 'Heat on the shield']), T > PERI4 + 0.5 ? 1 : null);
+  bar(ctx, 560, 196, 210, heatNow, 1, '#ff7a3d', say(opts, ['Heat on the front shield', 'Heat on the shield']), T > PERI4 + 0.5 ? 1 : null);
   if (T > PERI4 + 5) {
     label(ctx, say(opts, ['Closer = more speed,', 'Closer = faster,']), 665, 262, { size: 16, color: '#ffd27a', halo: HALO });
     label(ctx, say(opts, ['but hotter!', 'but hotter!']), 665, 286, { size: 16, color: '#ff9a6a', halo: HALO });
@@ -453,7 +457,7 @@ export const LESSON_6B = {
     {
       title: ['Fall in, climb out', 'Fall in, climb out'],
       beats: [
-        { dur: 2.5, cap: ['Our rock ship starts in the asteroid belt. Let it fall toward the Sun.', 'We start in the rock belt. Let the ship fall to the Sun.'] },
+        { dur: 2.5, cap: ['Our starship starts in the asteroid belt. Let it fall toward the Sun.', 'We start in the rock belt. Let the ship fall to the Sun.'] },
         { dur: 5, cap: ['Falling in, it speeds up: height energy turns into speed.', 'It falls and goes faster and faster.'] },
         { dur: 5, cap: ['Climbing back out, it slows down by exactly as much.', 'It climbs out and slows down.'], predict: true },
         { dur: 4.5, cap: ['Back at the belt it has just the speed it started with. The total never changed: the Sun alone gives nothing for free.', 'Back at the belt: same speed as before. No free speed!'] },
@@ -478,15 +482,15 @@ export const LESSON_6B = {
         { dur: 4.5, cap: ['Jupiter’s pull swings the ship round behind it.', 'Jupiter’s pull swings the ship round.'] },
         { dur: 4.5, cap: ['Seen from Jupiter: in at 17 km/s, out at 17 km/s. Just a new direction.', 'Same speed out. It just turned.'] },
         { dur: 3, cap: ['Now watch the same swing from the Sun. Jupiter races along at 13 km/s.', 'Now look from the Sun. Jupiter is moving.'] },
-        { dur: 4, cap: ['The ship comes in behind Jupiter at 22 km/s...', 'The ship comes in behind Jupiter...'], predict: true },
+        { dur: 4, cap: ['The ship comes in from the side, at 21 km/s...', 'The ship comes in from the side...'], predict: true },
         { dur: 5, cap: ['...and Jupiter drags it along. It leaves at 30 km/s, and Jupiter slows by a tiny, tiny bit.', '...and Jupiter pulls it along. Faster! Jupiter slows a tiny bit.'] },
       ],
       draw: drawSteal,
       question: {
         prompt: ['Seen from the Sun, where did the ship’s extra speed come from?', 'Where did the extra speed come from?'],
         choices: [
-          { text: ['From the Sun’s pull', 'From the Sun'] },
-          { text: ['From the ship’s engine', 'From the engine'] },
+          { text: ['From the Sun’s pull, which holds the ship in orbit', 'From the Sun'] },
+          { text: ['From the ship’s own engine, burning its fuel', 'From the engine'] },
           { text: ['From Jupiter: it slowed down by a tiny bit', 'From Jupiter'], correct: true },
         ],
         hint: ['Watch Jupiter and its ghost. Which way did Jupiter drift?', 'Watch Jupiter. Did it move back?'],
@@ -522,18 +526,18 @@ export const LESSON_6B = {
         { dur: 2.5, cap: ['Two ships, the same fuel. Blue fires it out at the belt...', 'Two ships, same fuel. Blue fires far out...'] },
         { dur: 6.5, cap: ['...gold falls toward the Sun first, and fires at the closest point, where it is fastest.', '...gold falls to the Sun and fires when it is fastest.'], predict: true },
         { dur: 5, cap: ['Same push, but fired fast it counts far more: 135 km/s against 39!', 'Same push. Gold goes much, much faster!'] },
-        { dur: 4.5, cap: ['The catch: close to the Sun is very hot. The rock shield takes the heat, but how close is safe?', 'But near the Sun it is very hot. The rock shield helps.'] },
+        { dur: 4.5, cap: ['The catch: close to the Sun is very hot. The front shield takes the heat, but how close is safe?', 'But near the Sun it is very hot. The front shield helps.'] },
       ],
       draw: drawSunBurn,
       question: {
         prompt: ['With the same fuel, where should we fire it to leave the solar system fastest?', 'Where should we fire the engine?'],
         choices: [
-          { text: ['Out at the belt, right away', 'Far from the Sun'] },
-          { text: ['It makes no difference where', 'It does not matter'] },
-          { text: ['At the closest point to the Sun', 'Closest to the Sun'], correct: true },
+          { text: ['Far out at the belt, right away, where it is slow', 'Far from the Sun'] },
+          { text: ['It makes no difference where we fire it at all', 'It does not matter'] },
+          { text: ['At the closest point to the Sun, where it is fast', 'Closest to the Sun'], correct: true },
         ],
         hint: ['Compare the blue and gold speed bars.', 'Which ship went faster?'],
-        why: ['Each bit of push adds the most energy when you are moving fastest: at the closest point to the Sun. With 100 t of fuel that is about 135 km/s instead of 39. The price is heat on the shield.', 'Fire closest to the Sun! But it is hot there.'],
+        why: ['Each bit of push adds the most energy when you are moving fastest: at the closest point to the Sun. With 100 t of fuel that is about 135 km/s instead of 39. The price is heat on the front shield.', 'Fire closest to the Sun! But it is hot there.'],
       },
       clue: [null, 'Fire closest to the Sun.'],
     },

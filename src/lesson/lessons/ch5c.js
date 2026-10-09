@@ -295,7 +295,7 @@ function drawCoalSun(ctx, T) {
       ctx.fillStyle = '#2b2b2b'; ctx.beginPath(); ctx.moveTo(x - 11, y); ctx.lineTo(x, y - 14); ctx.lineTo(x + 11, y); ctx.closePath(); ctx.fill();
     }
     if (T > 18) label(ctx, 'about 10 million kg of coal', 530, 380, { size: 20, color: '#fff', halo: 'rgba(0,0,0,0.7)' });
-    if (T > 19.5) label(ctx, 'That is the engine our rock ship needs.', 400, 420, { size: 20, color: '#ffd27a', halo: 'rgba(0,0,0,0.7)' });
+    if (T > 19.5) label(ctx, 'That is the engine our starship needs.', 400, 420, { size: 20, color: '#ffd27a', halo: 'rgba(0,0,0,0.7)' });
   });
 }
 
@@ -354,7 +354,7 @@ export const LESSON_5C = {
         { dur: 3.5, cap: ['In the middle: protons (plus charge) and neutrons, packed tight.', 'In the middle: protons and neutrons.'] },
         { dur: 3, cap: ['Round the outside, tiny electrons (minus charge) whizz about.', 'Electrons go round the outside.'] },
         { dur: 4, cap: ['Hydrogen, helium, carbon, oxygen, iron: the same three pieces, just different numbers.', 'All atoms: the same 3 pieces!'] },
-        { dur: 4, cap: ['You, the ice, the Sun, the rock ship: all made of protons, neutrons and electrons.', 'Everything is made of these 3 pieces.'] },
+        { dur: 4, cap: ['You, the ice, the Sun, the starship: all made of protons, neutrons and electrons.', 'Everything is made of these 3 pieces.'] },
       ],
       draw: drawInsideAtom,
       watchOnly: true, // breaks the run of questions (films 1-2, then 4-5); the answer is the last caption

@@ -111,7 +111,7 @@ export const CHAPTERS = [
   {
     n: 6,
     title: 'The Long Trip',
-    blurb: 'Back in the asteroid belt: build a ship inside a rock, meet the crew, make it a tiny Earth, then find the fastest way out towards the stars.',
+    blurb: 'Back in the asteroid belt: drill a rock into a starship, meet the crew, make it a tiny Earth, then find the fastest way out towards the stars.',
     href: 'chapter6.html',
     store: { 1: 'level6_long_trip_v1_L1', 4: 'level6_long_trip_v1' },
     isDone: (s) => s?.complete === true,

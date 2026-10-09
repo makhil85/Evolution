@@ -47,11 +47,11 @@ const PLANET_PASS = [6, 3, 1.6, 1.1];
 export const SUN_PASS = Object.freeze([60, 30, 10, 4]);
 
 export const STOPS = Object.freeze({
-  jupiter: { name: ['Jupiter', 'Jupiter'], color: '#e0a878', au: 5.2, mu: 1.267e8, r: 71492, danger: ['Skimming Jupiter means strong radiation: the rock shield takes it.', 'Very close to Jupiter has lots of bad rays!'] },
+  jupiter: { name: ['Jupiter', 'Jupiter'], color: '#e0a878', au: 5.2, mu: 1.267e8, r: 71492, danger: ['Skimming Jupiter means strong radiation: the front shield takes it.', 'Very close to Jupiter has lots of bad rays!'] },
   saturn: { name: ['Saturn', 'Saturn'], color: '#e8c98a', au: 9.54, mu: 3.793e7, r: 60268, danger: ['Skimming Saturn passes inside the rings: dodge the ice!', 'Very close to Saturn means flying past the rings!'] },
   uranus: { name: ['Uranus', 'Uranus'], color: '#9fe3e8', au: 19.2, mu: 5.794e6, r: 25559, danger: null },
   neptune: { name: ['Neptune', 'Neptune'], color: '#5b7cff', au: 30.1, mu: 6.837e6, r: 24764, danger: null },
-  sun: { name: ['the Sun', 'the Sun'], color: '#ffd27a', au: 0, danger: ['4 Sun-widths from the Sun: only our thick rock shield could take that heat.', 'Very close to the Sun is very hot! The rock keeps us safe.'] },
+  sun: { name: ['the Sun', 'the Sun'], color: '#ffd27a', au: 0, danger: ['4 Sun-widths from the Sun: the front shield has to take the heat.', 'Very close to the Sun is very hot! The front shield keeps us safe.'] },
 });
 
 /** The five routes. `fall` = Jupiter throws her inward (no closeness choice there). */
