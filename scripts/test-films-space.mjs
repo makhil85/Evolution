@@ -85,6 +85,8 @@ async function main() {
   const handlers = [];
   globalThis.document = { createElement: (tag) => makeEl(tag), head: makeEl('head'), body: makeEl('body') };
   globalThis.window = {
+    innerWidth: 1280,
+    innerHeight: 720,
     addEventListener: (type, fn) => handlers.push({ type, fn }),
     removeEventListener: (type, fn) => { const i = handlers.findIndex((h) => h.type === type && h.fn === fn); if (i >= 0) handlers.splice(i, 1); },
   };
@@ -206,6 +208,7 @@ async function main() {
       let frames = 0;
       while (game.cinematic && frames < 60 * 150) {
         game.cinematic.apply(DT, camera, STATES);
+        camera.updateMatrixWorld(); // what the render does after each frame: the next frame projects with it
         clock += DT;
         frames += 1;
         fireTimers();
@@ -226,21 +229,23 @@ async function main() {
       assert.ok(frames < 60 * 150, 'the film ended within 150 s');
       await finished;
       assert.ok(settled, 'the film promise resolved');
-      return { runs, toasts, cont, start, end: clock, frames };
+      return { runs, toasts, cont, start, end: clock, frames, camera };
     };
 
-    // Each text run must stay up at least its reading time.
+    // A card, caption or label must stay up its reading time plus the fade in (cardSeconds).
+    const reading = (text) => readMs(text) / 1000 + CIN.CARD_FADE_S;
+    // Each text run must stay up at least its reading time plus the fade.
     const checkRuns = (name, runs, texts) => {
       const text = runs.filter((r) => !r.meter);
       assert.equal(text.length, texts, `${name}: ${text.length} text runs on screen, expected ${texts}: ${text.map((r) => `"${r.label}"`).join(', ')}`);
       for (const r of text) {
         assert.ok(r.label.length > 0, `${name}: a card with no words`);
-        const need = readMs(r.label) / 1000;
+        const need = reading(r.label);
         const dur = r.end - r.start;
         assert.ok(dur + 1e-6 >= need, `${name}: "${r.label}" is up ${dur.toFixed(2)} s, its reading time is ${need.toFixed(2)} s`);
       }
       for (const r of runs.filter((x) => x.meter)) {
-        const need = readMs(r.label) / 1000;
+        const need = reading(r.label);
         const dur = r.end - r.start;
         assert.ok(dur + 1e-6 >= need, `${name}: meter "${r.label}" is up ${dur.toFixed(2)} s, needs ${need.toFixed(2)} s`);
       }
@@ -267,7 +272,7 @@ async function main() {
     for (const f of FILMS) {
       const r = await playFilm(f.play);
       const text = checkRuns(f.id, r.runs, f.texts);
-      const shortest = Math.min(...text.map((x) => (x.end - x.start) - readMs(x.label) / 1000));
+      const shortest = Math.min(...text.map((x) => (x.end - x.start) - reading(x.label)));
       ok(`${f.id}: ${text.length} text(s) on screen, each for at least its reading time (least spare ${shortest.toFixed(2)} s)`);
       for (const t of r.toasts) {
         assert.ok(t.ms >= readMs(t.text), `${f.id}: toast "${t.text}" ${t.ms} ms, needs ${readMs(t.text)} ms`);
@@ -296,8 +301,8 @@ async function main() {
       assert.equal(changes[1].text, H.CAPTIONS.quasar);
       const loadS = changes[1].at - changes[0].at;
       const quasarS = now - changes[1].at;
-      assert.ok(loadS + 1e-6 >= readMs(H.CAPTIONS.load) / 1000, `loading words up ${loadS.toFixed(2)} s, reading time ${(readMs(H.CAPTIONS.load) / 1000).toFixed(2)} s`);
-      assert.ok(quasarS + 1e-6 >= readMs(H.CAPTIONS.quasar) / 1000, `quasar words up ${quasarS.toFixed(2)} s, reading time ${(readMs(H.CAPTIONS.quasar) / 1000).toFixed(2)} s`);
+      assert.ok(loadS + 1e-6 >= reading(H.CAPTIONS.load), `loading words up ${loadS.toFixed(2)} s, needs ${reading(H.CAPTIONS.load).toFixed(2)} s`);
+      assert.ok(quasarS + 1e-6 >= reading(H.CAPTIONS.quasar), `quasar words up ${quasarS.toFixed(2)} s, needs ${reading(H.CAPTIONS.quasar).toFixed(2)} s`);
       ok(`holodeck: loading words up ${loadS.toFixed(1)} s, quasar words up ${quasarS.toFixed(1)} s (each at least its reading time)`);
     }
 
@@ -312,9 +317,23 @@ async function main() {
       const capAt = cap.start - r.start;
       assert.ok(capAt > 23.9 && capAt < 24.1, `the caption comes at 24 s (it came at ${capAt.toFixed(2)} s)`);
       assert.ok(r.cont.shownAt !== null, 'a Continue button is shown after the caption');
-      const readFor = readMs(caption) / 1000;
+      const readFor = readMs(caption) / 1000 + CIN.CARD_FADE_S;
       assert.ok(r.cont.shownAt - cap.start + 1e-6 >= readFor, `Continue waits until the caption has had ${readFor.toFixed(1)} s (it appeared after ${(r.cont.shownAt - cap.start).toFixed(2)} s)`);
       assert.ok(r.cont.answeredAt !== null, 'the film waited for the click');
+      // The star labels follow their stars: the camera is still at the hold, so each label sits
+      // where its star projects (within a pixel), or is hidden when the star is behind the camera.
+      r.camera.updateMatrixWorld();
+      const starLabels = created.filter((el) => el.className === 'c7-star-label').slice(-STAR.NEIGHBOURS.length);
+      assert.equal(starLabels.length, STAR.NEIGHBOURS.length, 'a label for each star');
+      starLabels.forEach((el, i) => {
+        const v = new THREE.Vector3(...STAR.starPlace(STAR.NEIGHBOURS[i])).project(r.camera);
+        if (v.z > 1) { assert.equal(el.style.display, 'none', `${STAR.NEIGHBOURS[i].name[0]} hidden behind the camera`); return; }
+        const m = /translate\((-?\d+)px, (-?\d+)px\)/.exec(el.style.transform || '');
+        assert.ok(m, `${STAR.NEIGHBOURS[i].name[0]} has a position`);
+        const ex = Math.round((v.x * 0.5 + 0.5) * innerWidth + 14); const ey = Math.round((-v.y * 0.5 + 0.5) * innerHeight - 30);
+        assert.ok(Math.abs(Number(m[1]) - ex) <= 1 && Math.abs(Number(m[2]) - ey) <= 1, `${STAR.NEIGHBOURS[i].name[0]} label at (${m[1]}, ${m[2]}), its star is at (${ex}, ${ey})`);
+      });
+      ok(`the five star-map labels sit on their stars at the hold (within 1 px)`);
       assert.ok(r.end - r.cont.answeredAt <= 3, `the film ends within 3 s of Continue (${(r.end - r.cont.answeredAt).toFixed(2)} s)`);
       assert.ok(cap.end + 1e-6 >= r.cont.answeredAt, 'the caption stays up until Continue');
       ok(`caption at ${capAt.toFixed(1)} s, up ${(cap.end - cap.start).toFixed(1)} s (its reading time is ${readFor.toFixed(1)} s), then Continue; the film ends ${(r.end - r.cont.answeredAt).toFixed(1)} s after it`);

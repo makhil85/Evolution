@@ -22,7 +22,7 @@
 // gets a slower camera and no flying in (she is already at the origin).
 import * as THREE from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
-import { buildOverlay, blendCamera, waitForSkip, ease } from '../cinematics.js';
+import { buildOverlay, blendCamera, waitForSkip, ease, cardSeconds } from '../cinematics.js';
 import { buildRockShip } from '../ch5/ending.js';
 import { ROCK_B_R } from './opening.js';
 import { BELT } from '../contracts.js';
@@ -58,11 +58,14 @@ const CERES_DIST = 800;
 const CAM_POS = [[0, [-64, 24, 70]], [7, [-30, 16, 36]], [14, [-14, 12, -40]], [19, [-22, 12, -6]], [ARRIVAL_DURATION, [-7, 3, 1]]];
 const CAM_LOOK = [[0, [-14, 0, 14]], [7, [-4, 0, 6]], [14, ROCK_B_AT], [19, [2, 0, -8]], [ARRIVAL_DURATION, [0, 0, 0]]];
 
-// Captions, [Level 4, Level 1]: each on screen for its window (seconds). A window is
-// the reading time of its longer (Level 4) text (5-10 s, readMs) plus the fade in.
+// Captions, [Level 4, Level 1]. Each one stays up for the longer of its two texts' reading
+// time (cardSeconds: readMs plus the fade), so it holds at either Level.
+function arrivalCaption(from, text) {
+  return { from, to: from + Math.max(...text.map((x) => cardSeconds(x))), text };
+}
 export const ARRIVAL_CAPTIONS = [
-  { from: 3.5, to: 11, text: ['The Sun is small and far away. Ceres, a dwarf planet, is out here too.', 'The Sun is far away. Ceres is out here too.'] },
-  { from: 11.2, to: 20.7, text: ['Everything we need for a starship is here: ice for water and fuel, metal for the ship, rock for a shield.', 'Here we have all we need for a ship. Ice for water and fuel. Metal for the ship. Rock for a shield.'] },
+  arrivalCaption(3.5, ['The Sun is small and far away. Ceres, a dwarf planet, is out here too.', 'The Sun is far away. Ceres is out here too.']),
+  arrivalCaption(11.2, ['Everything we need for a starship is here: ice for water and fuel, metal for the ship, rock for a shield.', 'Here we have all we need for a ship. Ice for water and fuel. Metal for the ship. Rock for a shield.']),
 ];
 export const ARRIVAL_TITLE = { eyebrow: ['Chapter 6 · The Long Trip', 'Chapter 6 · The Long Trip'], title: ['Back in the belt', 'Back in the belt'], sub: ['Rock, ice and metal all around', 'Rock, ice and metal!'] };
 

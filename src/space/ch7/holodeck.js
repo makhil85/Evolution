@@ -39,7 +39,7 @@ export const CAPTIONS = Object.freeze({
   load: t('Holodeck: loading a quasar, 2.4 billion light-years away...', 'The holodeck: loading a quasar. It is very, very far away...'),
   quasar: t('A quasar like 3C 273. Its light has been on its way for 2.4 billion years.', 'A quasar! Its light has been coming for a very long time.'),
 });
-const LOAD_CAPTION_S = readMs(CAPTIONS.load) / 1000 + 1;
+const LOAD_CAPTION_S = readMs(CAPTIONS.load) / 1000 + 1 + 1 / 30; // the reading time, the fade, and a frame of margin
 const SKIP_AFTER = 1.5;                                 // the Continue button shows after this (cutscene rule)
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));

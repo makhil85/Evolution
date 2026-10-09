@@ -22,7 +22,7 @@
 // purpose: the calm is the point. The drive is pretend (no drive we can build
 // today could do this). The flight ship is put back beside her at the end.
 import * as THREE from 'three';
-import { buildOverlay, blendCamera, waitForSkip, ease } from '../cinematics.js';
+import { buildOverlay, blendCamera, waitForSkip, ease, CARD_FADE_S } from '../cinematics.js';
 import { createStarship, FLIGHT_LENGTH } from '../ch6/starship.js';
 import { showStarship } from '../ch6/opening.js';
 import { readMs } from '../../play/readTime.js';
@@ -34,9 +34,9 @@ const T_CUT = 16.5; // the Sun has shrunk to a star: the picture fades
 const T_SWITCH = 17.9; // the screen is black: the flight scene goes, the map comes
 const T_MAP = 18; // the map fades in
 const CAPTION_AT = 24; // all five stars are in (the reveal ends at 24 s): the caption comes
-// The caption stays up for its reading time (readMs; this one is long, so 10 s), then the
-// film waits at the star map for her Continue. After Continue, a 2 s fade to the end.
-const T_HOLD = CAPTION_AT + readMs(STAR_MAP_CAPTION) / 1000;
+// The caption fades in over CARD_FADE_S, then stays up for its reading time (readMs; this one
+// is long, so 10 s). Then the film waits at the star map for her Continue. After Continue, a 2 s fade to the end.
+const T_HOLD = CAPTION_AT + readMs(STAR_MAP_CAPTION) / 1000 + CARD_FADE_S;
 const DURATION = T_HOLD + 2;
 const SUN_R = 260; // the Sun's radius at the start, scene units
 const SUN_D0 = 2000; // how far behind she starts (the Sun shrinks as this grows)
