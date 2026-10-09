@@ -248,7 +248,7 @@ export function createNewtonTree({ scene, at, heightAt, level, storeKey, getAvat
     if (right) getAvatar()?.play?.('cheer');
     show({
       who: right ? 'Correct!' : 'Here is the answer',
-      text: `${why}${first ? ' You earned +1 Science! 🔬' : ''} Try jumping with Space: gravity pulls YOU back down too.`,
+      text: `${why}${first ? ' You earned +1 Science! 🔬' : ''} Gravity pulls YOU back down too.`,
       choices: [next('Thanks, Newton!', close)],
     });
   }

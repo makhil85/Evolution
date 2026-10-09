@@ -14,9 +14,6 @@
 //             any movement key ends it.
 import { CLIPS } from '../character/clips.js';
 
-/** Set once she has used a fun move (the hint then stops). Not game state. */
-const FUN_USED_KEY = 'rocket_village_fun_moves_used';
-
 export const EMOTE_KEYS = {
   KeyH: 'handstand', KeyJ: 'jumpingJacks', KeyK: 'dance', KeyL: 'roll', KeyU: 'moonwalk',
   KeyI: 'splits', KeyB: 'backWalkover',
@@ -44,9 +41,8 @@ const typing = (e) => {
  * @param {() => object|null} deps.getTarget  the player object (rotation.y = facing)
  * @param {() => boolean} deps.isBlocked      a question / card is open
  * @param {number} deps.height                her height in world units
- * @param {(text:string) => void} [deps.hint] shows the one-time key hint
  */
-export function createEmotes({ getAvatar, getTarget, isBlocked, height, hint }) {
+export function createEmotes({ getAvatar, getTarget, isBlocked, height }) {
   // The move that is driving her right now (roll or moonwalk), else null:
   // { name, t, dur, yaw, from?, to? }
   let drive = null;
@@ -56,7 +52,6 @@ export function createEmotes({ getAvatar, getTarget, isBlocked, height, hint }) 
     const target = getTarget();
     if (!avatar || !target || drive || isBlocked()) return false;
     const hold = duration(name) * (LOOPS[name] || 1);
-    try { localStorage.setItem(FUN_USED_KEY, '1'); } catch { /* private mode */ }
     // Moving moves end in THIS module (the avatar would stop them the moment
     // the glide counts as walking); the rest give way when she walks.
     const moves = name === 'roll' || name === 'moonwalk';
@@ -81,12 +76,6 @@ export function createEmotes({ getAvatar, getTarget, isBlocked, height, hint }) 
     trigger(name);
   };
   addEventListener('keydown', onKey);
-
-  // The key hint is for a child who hasn't found the moves yet: once she has
-  // used one, it stops coming back on every visit.
-  let used = false;
-  try { used = localStorage.getItem(FUN_USED_KEY) === '1'; } catch { /* private mode */ }
-  if (hint && !used) setTimeout(() => { if (!isBlocked()) hint('Fun moves: try the H, J, K, L, U, I and B keys!'); }, 9000);
 
   const still = { forward: 0, strafe: 0, run: false, jump: false };
 

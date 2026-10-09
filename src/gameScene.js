@@ -467,7 +467,6 @@ async function main() {
   emotes = createEmotes({
     getAvatar: () => avatar, getTarget: () => player, height: AVATAR_HEIGHT,
     isBlocked: () => !!(hud && hud.isModalOpen()) || playBlocked() || !!(launch && launch.active),
-    hint: (m) => hud.toast(m, 'info'),
   });
 
   effects = createEffectRunner({
@@ -759,7 +758,6 @@ async function main() {
     ROCKET_VILLAGE.playerStart.z
   );
   say(`spawn: ${ROCKET_VILLAGE.playerStart.x}, ${ROCKET_VILLAGE.playerStart.z}`);
-  say('WASD move | Shift run | Space jump | E use | drag to turn');
   hud.update(engine);
   hud.setInventory(engine.state.inventory);
 

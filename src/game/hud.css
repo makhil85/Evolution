@@ -921,6 +921,23 @@
   outline-offset: 2px;
 }
 
+/* --- the read-it card: a long message waits for an OK click (hud.js) ----- */
+
+.rv-hud .rv-read__text {
+  font-size: 19px;
+  line-height: 1.5;
+}
+
+.rv-hud .rv-read .rv-modal__actions {
+  justify-content: center;
+}
+
+.rv-hud .rv-read .rv-btn {
+  min-width: 120px;
+  padding: 12px 26px;
+  font-size: 18px;
+}
+
 /* --- animations --------------------------------------------------------- */
 
 @keyframes rv-pulse {

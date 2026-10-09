@@ -17,10 +17,9 @@ const MAX_CHIPS = 64;
 const GRAVITY = 9;
 
 /**
- * @param {{ scene?: object, color?: number, hint?: boolean }} [deps]
+ * @param {{ scene?: object, color?: number }} [deps]
  *   scene: a THREE.Scene to draw the ring and chips into (omit for none)
  *   color: default chip colour (0xRRGGBB)
- *   hint:  show the "Keep pressing E!" line on the first presses (default true)
  * @returns {{
  *   hit: (key: string|number, hitsNeeded: number, worldPos?: {x:number,y:number,z:number}, opts?: {color?: number}) => { done: boolean, progress: number, hits: number },
  *   progressOf: (key: string|number) => number,
@@ -149,36 +148,6 @@ export function createMiner(deps = {}) {
     if (chipMesh.instanceColor) chipMesh.instanceColor.needsUpdate = true;
   }
 
-  // --- the "Keep pressing E!" hint ---------------------------------------------------
-  let hintEl = null;
-  let hintTimer = 0;
-  let hintsShown = 0;
-  const hintWanted = deps.hint !== false && typeof document !== 'undefined';
-
-  function showHint() {
-    if (!hintWanted || hintsShown >= 3) return;
-    hintsShown += 1;
-    ensurePlayStyles();
-    if (!hintEl) {
-      hintEl = document.createElement('div');
-      hintEl.className = 'pl-hint';
-      hintEl.setAttribute('role', 'status');
-      const key = document.createElement('span');
-      key.className = 'pl-key';
-      key.textContent = 'E';
-      hintEl.append('Keep pressing ', key, '!');
-      document.body.appendChild(hintEl);
-    }
-    void hintEl.offsetWidth;
-    hintEl.classList.add('is-in');
-    clearTimeout(hintTimer);
-    hintTimer = setTimeout(hideHint, 2400);
-  }
-  function hideHint() {
-    clearTimeout(hintTimer);
-    hintEl?.classList.remove('is-in');
-  }
-
   // --- the public API ------------------------------------------------------------------
   const lastPos = new Map();
 
@@ -205,8 +174,7 @@ export function createMiner(deps = {}) {
           drawRing(r);
         }
       }
-      if (done) { hideHint(); lastPos.delete(key); }
-      else if (n === 1 && need > 1) showHint();
+      if (done) lastPos.delete(key);
       return done
         ? { done: true, progress: 1, hits: n }
         : { done: false, progress: n / need, hits: n };
@@ -243,9 +211,6 @@ export function createMiner(deps = {}) {
       for (const key of [...rings.keys()]) killRing(key);
       if (chipMesh) { scene.remove(chipMesh); chipMesh.geometry.dispose(); chipMesh.material.dispose(); chipMesh.dispose?.(); chipMesh = null; }
       chips.length = 0;
-      clearTimeout(hintTimer);
-      hintEl?.remove();
-      hintEl = null;
     },
   };
 }

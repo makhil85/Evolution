@@ -143,9 +143,6 @@ export function choosePlayMode({ level = 4, current = savedPlayModeId() || 'easy
       row.appendChild(b);
     }
     card.appendChild(row);
-    const foot = el('div', 'pl-foot');
-    foot.append('Use ', el('span', 'pl-key', '←'), ' ', el('span', 'pl-key', '→'), ' to look, ', el('span', 'pl-key', 'Enter'), ' to choose.');
-    card.appendChild(foot);
 
     const focusAt = (i) => {
       const n = (i + buttons.length) % buttons.length;

@@ -10,6 +10,8 @@ import { createHunt, createKeyBlockMesh } from '../src/play/hunt.js';
 import { lockPlayInput, unlockPlayInput, isPlayModalOpen } from '../src/play/ui.js';
 import { createNavArrow } from '../src/play/navArrow.js';
 import { createHeldKeys, REPEAT_QUIET_MS } from '../src/game/heldKeys.js';
+import { readMs, needsClick } from '../src/play/readTime.js';
+import { register } from 'node:module';
 
 let passed = 0;
 const failures = [];
@@ -330,6 +332,217 @@ ok(!isPlayModalOpen(), 'input lock is a no-op in node');
   ok(!k.has('KeyW'), 'a hidden tab lets go of every key');
   k.dispose();
   globalThis.addEventListener = prevAdd; globalThis.removeEventListener = prevRemove; globalThis.document = prevDoc;
+}
+
+// ---------------------------------------------------------------------------
+// The HUD's messages (src/game/hud.js), on a small fake DOM and a fake clock.
+// Each message stays up readMs(text); a long one (needsClick) is an OK card that
+// pauses the game until she clicks, Enter or Space; messages wait in line; and
+// the HUD builds no key legend at startup.
+// ---------------------------------------------------------------------------
+{
+  const realPerf = globalThis.performance;
+  const realSet = globalThis.setTimeout, realClear = globalThis.clearTimeout;
+  const realAdd = globalThis.addEventListener, realRemove = globalThis.removeEventListener;
+  const realDoc = globalThis.document, realWin = globalThis.window;
+  const realStore = globalThis.localStorage, realRaf = globalThis.requestAnimationFrame, realLoc = globalThis.location;
+
+  // hud.js imports its stylesheet: node gets an empty module for any .css file.
+  register('data:text/javascript,' + encodeURIComponent("export async function load(url, context, nextLoad) { if (url.endsWith('.css')) return { format: 'module', source: 'export default {};', shortCircuit: true }; return nextLoad(url, context); }"));
+
+  // A fake clock: setTimeout queues, advance(ms) runs what is due in order.
+  let clock = 0;
+  const timers = new Map();
+  let nextTimer = 1;
+  globalThis.performance = { now: () => clock };
+  globalThis.setTimeout = (fn, ms = 0) => { const id = nextTimer; nextTimer += 1; timers.set(id, { at: clock + Math.max(0, Number(ms) || 0), fn }); return id; };
+  globalThis.clearTimeout = (id) => { timers.delete(id); };
+  const advance = (ms) => {
+    const end = clock + ms;
+    for (;;) {
+      let due = null;
+      for (const [id, t] of timers) if (t.at <= end && (!due || t.at < due.t.at || (t.at === due.t.at && id < due.id))) due = { id, t };
+      if (!due) break;
+      clock = due.t.at;
+      timers.delete(due.id);
+      due.t.fn();
+    }
+    clock = end;
+  };
+
+  // Window listeners (keys), kept in a list so a test can press a key.
+  const winListeners = [];
+  globalThis.addEventListener = (type, fn) => { winListeners.push({ type, fn }); };
+  globalThis.removeEventListener = (type, fn) => {
+    const i = winListeners.findIndex((l) => l.type === type && l.fn === fn);
+    if (i >= 0) winListeners.splice(i, 1);
+  };
+  const pressKey = (key) => {
+    for (const l of [...winListeners]) {
+      if (l.type === 'keydown') l.fn({ key, code: key === ' ' ? 'Space' : key, repeat: false, target: globalThis.document.body, preventDefault() {}, stopPropagation() {} });
+    }
+  };
+  globalThis.requestAnimationFrame = (fn) => { fn(); return 0; };
+  globalThis.location = { search: '', origin: 'http://test' };
+  globalThis.localStorage = memStore();
+  globalThis.window = globalThis;
+
+  // The few DOM calls the HUD makes: elements with classes, text, children,
+  // listeners, and a class-or-tag querySelector.
+  class FakeNode {
+    constructor(tag) {
+      this.tagName = String(tag).toUpperCase();
+      this.children = [];
+      this.parentNode = null;
+      this.attrs = {};
+      this.classes = new Set();
+      this.style = {};
+      this.dataset = {};
+      this.listeners = {};
+      this.hidden = false;
+      this.disabled = false;
+      this.value = '';
+      this.offsetWidth = 0;
+      this._text = '';
+      const node = this;
+      this.classList = {
+        add: (...c) => c.forEach((x) => node.classes.add(x)),
+        remove: (...c) => c.forEach((x) => node.classes.delete(x)),
+        toggle: (c, on) => { const want = on === undefined ? !node.classes.has(c) : !!on; if (want) node.classes.add(c); else node.classes.delete(c); return want; },
+        contains: (c) => node.classes.has(c),
+      };
+    }
+    get parentElement() { return this.parentNode; }
+    get className() { return [...this.classes].join(' '); }
+    set className(v) { this.classes = new Set(String(v).split(/\s+/).filter(Boolean)); }
+    get textContent() { return this._text + this.children.map((c) => c.textContent).join(''); }
+    set textContent(v) {
+      for (const c of this.children) c.parentNode = null;
+      this.children = [];
+      this._text = String(v);
+    }
+    appendChild(c) { c.parentNode = this; this.children.push(c); return c; }
+    removeChild(c) { this.children = this.children.filter((x) => x !== c); c.parentNode = null; return c; }
+    remove() { if (this.parentNode) this.parentNode.removeChild(this); }
+    setAttribute(k, v) { this.attrs[k] = String(v); }
+    getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; }
+    addEventListener(type, fn) { (this.listeners[type] ||= []).push(fn); }
+    removeEventListener(type, fn) { this.listeners[type] = (this.listeners[type] || []).filter((f) => f !== fn); }
+    dispatch(type, ev = {}) { for (const fn of [...(this.listeners[type] || [])]) fn({ preventDefault() {}, stopPropagation() {}, ...ev }); }
+    focus() {}
+    select() {}
+    querySelectorAll(sel) {
+      const out = [];
+      const walk = (n) => { for (const c of n.children) { if (sel.startsWith('.') ? c.classes.has(sel.slice(1)) : c.tagName === sel.toUpperCase()) out.push(c); walk(c); } };
+      walk(this);
+      return out;
+    }
+    querySelector(sel) { return this.querySelectorAll(sel)[0] || null; }
+  }
+  const body = new FakeNode('body');
+  globalThis.document = { body, head: new FakeNode('head'), createElement: (t) => new FakeNode(t), getElementById: () => null, addEventListener() {}, removeEventListener() {} };
+
+  const { Hud } = await import('../src/game/hud.js');
+
+  // The two Level texts: Level 1 short and Level 4 longer, both under 10 s.
+  const L1 = 'Walk closer to something to use it.';
+  const L4 = 'Move closer to a resource, board, lab, locked room, or foundation.';
+  // A message far too long to read in 10 s: it becomes the OK card.
+  const LONG = 'The Golden Core is in one of the homes in this village. Read each clue carefully, walk to each place, and stand at its front door. When you are sure, press the button and check it. Searching a wrong home costs nothing at all, so take your time and try again.';
+  const settle = () => advance(12000);   // every toast and gap is gone after this
+
+  const hud = new Hud({ mount: body, title: 'Test chapter' });
+  advance(600);   // the onboard cue's start delay
+
+  // --- no controls legend at startup -------------------------------------
+  const startText = hud.root.textContent;
+  ok(!/WASD|Arrow|Shift|Space|handstand|\(M\)|Press /i.test(startText), 'no controls legend in the HUD at startup');
+  ok(!/WASD|Arrow keys/.test(body.textContent), 'no WASD or arrow-key text anywhere on the page');
+
+  // --- readMs: both Levels stay up for readMs(text) ------------------------
+  for (const [label, text] of [['Level 1', L1], ['Level 4', L4]]) {
+    settle();
+    ok(readMs(text) >= 5000 && readMs(text) <= 10000, `${label}: readMs is 5-10 s`);
+    ok(!needsClick(text), `${label}: a short line is a toast, not a card`);
+    hud.toast(text, 'info');
+    ok(hud._toasts.length === 1 && hud._toasts[0].message === text, `${label}: the toast is on screen`);
+    advance(readMs(text) - 1);
+    ok(hud._toasts.length === 1, `${label}: still up just before readMs (${readMs(text)} ms)`);
+    advance(1);
+    ok(hud._toasts.length === 0, `${label}: gone at readMs`);
+  }
+
+  // --- the goal line is a toast too ----------------------------------------
+  settle();
+  hud.setProgress(30, '30% — Walk to the Science Center');
+  settle();
+  hud.setProgress(40, '40% — Build the rocket');
+  ok(hud._toasts.length === 1 && hud._toasts[0].message === 'Next goal: Build the rocket', 'the next goal shows as a toast');
+  advance(readMs('Next goal: Build the rocket') - 1);
+  ok(hud._toasts.length === 1, 'the goal line stays up its readMs');
+  advance(1);
+  ok(hud._toasts.length === 0, 'and then goes');
+
+  // --- toasts queue, never overwrite each other early ------------------------
+  settle();
+  hud.toast('Alpha one.', 'info');
+  hud.toast('Beta two.', 'info');
+  hud.toast('Gamma three.', 'info');
+  advance(1600);
+  ok(hud._toasts.map((e) => e.message).join('|') === 'Alpha one.|Beta two.', 'two toasts on screen, the third waits in line');
+  ok(hud._toastQueue.length === 1 && hud._toastQueue[0].message === 'Gamma three.', 'the third is queued');
+  advance(readMs('Alpha one.') - 1600 - 1);
+  ok(hud._toasts.some((e) => e.message === 'Alpha one.'), 'the first is not pushed off before its readMs');
+  advance(2);
+  ok(hud._toasts.map((e) => e.message).join('|') === 'Beta two.|Gamma three.', 'when the first goes, the next in line comes up');
+
+  // --- a long message is an OK card that pauses the game ------------------------
+  settle();
+  ok(needsClick(LONG) && readMs(LONG) === 10000, 'a long line needs a click');
+  hud.toast(LONG, 'info');
+  ok(hud._read !== null && hud._read.message === LONG, 'a long message opens the read card');
+  ok(!hud._readBackdrop.hidden && hud._readText.textContent === LONG, 'the card shows the whole text');
+  ok(body.dataset.playModal === '1', 'the game is paused under the card');
+  ok(hud._toasts.length === 0, 'the long message is not a toast');
+  hud.toast('Waits behind the card.', 'info');
+  advance(3000);
+  ok(hud._toasts.length === 0, 'nothing comes up while the card is open');
+  hud._readOk.dispatch('click');
+  ok(hud._read === null && hud._readBackdrop.hidden, 'OK closes the card');
+  ok(body.dataset.playModal === undefined, 'OK lets the game run again');
+  advance(1600);
+  ok(hud._toasts.length === 1 && hud._toasts[0].message === 'Waits behind the card.', 'the waiting message comes up after the card');
+
+  // Enter and Space close the card too, from anywhere on the page.
+  settle();
+  hud.toast(`${LONG} Enter closes it.`, 'info');
+  ok(hud._read !== null, 'a second long message opens the card');
+  pressKey('Enter');
+  ok(hud._read === null && body.dataset.playModal === undefined, 'Enter closes the card');
+  advance(1600);   // the 1.5 s gap between messages
+  hud.toast(`${LONG} Space closes it.`, 'info');
+  pressKey(' ');
+  ok(hud._read === null && body.dataset.playModal === undefined, 'Space closes the card');
+  settle();
+
+  // A long message waits its turn behind a short one on screen (no overlap).
+  hud.toast('A short one first.', 'good');
+  advance(100);
+  hud.toast(`${LONG} After the short one.`, 'info');
+  ok(hud._read === null, 'the card waits while a toast is on screen');
+  advance(readMs('A short one first.'));
+  ok(hud._read !== null, 'and opens once the screen is clear');
+  hud._readOk.dispatch('click');
+
+  // --- the HUD is torn down cleanly ----------------------------------------------
+  hud.destroy();
+  ok(body.dataset.playModal === undefined, 'destroy leaves no input lock behind');
+
+  globalThis.performance = realPerf;
+  globalThis.setTimeout = realSet; globalThis.clearTimeout = realClear;
+  globalThis.addEventListener = realAdd; globalThis.removeEventListener = realRemove;
+  globalThis.document = realDoc; globalThis.window = realWin;
+  globalThis.localStorage = realStore; globalThis.requestAnimationFrame = realRaf; globalThis.location = realLoc;
 }
 
 console.log(`test-play: ${passed} passed, ${failures.length} failed`);

@@ -382,7 +382,7 @@ async function main() {
   };
   emotes = createEmotes({
     getAvatar: () => avatar, getTarget: () => player, height: 1.4,
-    isBlocked: playBlocked, hint: (m) => hud.toast(m, 'info'),
+    isBlocked: playBlocked,
   });
   hud.setParentHints(Object.values(QUESTIONS).map((q) => ({ id: q.id, title: q.title, parentHint: q.hint })));
   // Play modes: arrow, mining, the treasure hunt and the "Help" chip.
