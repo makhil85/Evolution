@@ -22,6 +22,7 @@ import { createMiner } from '../play/mining.js';
 import { createToolHands, flyToSupplies } from '../play/tools.js';
 import { createHunt } from '../play/hunt.js';
 import { PLAY_MODES, choosePlayMode, createModeChip, loadPlayMode, savedPlayModeId } from '../play/modes.js';
+import { install, whenIdle } from '../play/readGate.js';
 import { buildScienceWorld } from './world.js';
 import { huntFor } from './hunt.js';
 import { createScienceRules } from './rules.js';
@@ -53,6 +54,7 @@ const camera = new THREE.PerspectiveCamera(52, mount.clientWidth / mount.clientH
 
 // --- input ------------------------------------------------------------------
 const keys = createHeldKeys(); // also lets go on blur / a lost keyup
+install(); // the read gate: any key, click or touch is "she is playing" (src/play/readGate.js)
 const typingInField = (e) => {
   const t = e.target;
   return !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
@@ -60,7 +62,8 @@ const typingInField = (e) => {
 addEventListener('keydown', (e) => {
   if (typingInField(e)) return;
   if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'ShiftLeft'].includes(e.code)) e.preventDefault();
-  keys.add(e.code, e.repeat);
+  // A key pressed while the game is paused (a card, a reading pause) is not kept: nothing walks after it.
+  if (!playBlocked()) keys.add(e.code, e.repeat);
   if ((e.code === 'KeyE' || e.code === 'Enter') && !e.repeat && !playBlocked()) interact();
 });
 addEventListener('keyup', (e) => keys.delete(e.code));
@@ -309,7 +312,7 @@ function interact() {
     const lesson = LESSON_BEFORE[n.id];
     if (lesson && !lessonSeen(lesson.id)) {
       // The lesson first; when it closes, E again opens the real lab.
-      lessonOnce(lesson).then(() => interact());
+      lessonOnce(lesson).then(() => whenIdle()).then(() => interact());
       return;
     }
     const q = QUESTIONS[n.id];
@@ -332,7 +335,7 @@ function interact() {
     // 1B (Eratosthenes) plays once, when she can really build: then the
     // Science Center rises straight after "Now you try!".
     if (!rules.state.built && rules.buildCheck().ok && !lessonSeen(LESSON_1B.id)) {
-      lessonOnce(LESSON_1B).then(() => interact());
+      lessonOnce(LESSON_1B).then(() => whenIdle()).then(() => interact());
       return;
     }
     const res = rules.startBuild();
@@ -459,6 +462,7 @@ async function main() {
   });
   // First time in a village chapter: ask how much help she wants (saved, shared by Chapters 1-3).
   if (savedPlayModeId() === null) {
+    await whenIdle(); // a card she did not ask for opens only once she has stopped playing
     choosing = true;
     try { await choosePlayMode({ level: LEVEL }); } finally { choosing = false; }
   }
@@ -521,19 +525,22 @@ let elapsed = 0;
 let lastNear = '';
 function tick(dt) {
   elapsed += dt;
+  // A reading pause (a line on screen, the OK card) freezes her walk and the game's own
+  // timers (nav, mining, the tools); the ambient world and camera keep dt.
+  const gdt = hud && hud.isReadPaused() ? 0 : dt;
   let motion = null;
   if (controller) {
-    motion = controller.step(dt, emotes ? emotes.input(readInput(), dt) : readInput());
+    motion = controller.step(gdt, emotes ? emotes.input(readInput(), gdt) : readInput());
     if (!story?.update(dt)) updateCamera(dt);
   }
   if (avatar) avatar.update(dt, motion);
   if (nav && world && rules) {
-    navTimer -= dt;
+    navTimer -= gdt;
     if (navTimer <= 0) { navTimer = 0.2; nav.setTarget(currentTarget()); }
-    nav.update(dt, player.position);
+    nav.update(gdt, player.position);
   }
-  if (miner) miner.update(dt);
-  if (tools) tools.update(dt);
+  if (miner) miner.update(gdt);
+  if (tools) tools.update(gdt);
   if (world) {
     world.update(dt, elapsed, player.position, camera.position);
     const n = rules && nearestUsable(player.position.x, player.position.z);

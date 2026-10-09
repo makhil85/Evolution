@@ -30,6 +30,7 @@ import { toonRamp } from './toonPipeline.js';
 import { ROCKET_VILLAGE } from './rocketVillageLayout.js';
 import { SEEN_PREFIX } from '../launcher/profile.js';
 import { readMs } from '../play/readTime.js';
+import { lockPlayInput, unlockPlayInput } from '../play/ui.js';
 
 // ---------------------------------------------------------------------------
 // Shot lists. Durations are seconds of game time. The opening runs about 27 s
@@ -188,8 +189,8 @@ function makeCaption() {
 /** Hide the game's HUD and stop walking, as chapterStory's begin() does. */
 function cinematicOn() {
   const body = document.body;
-  const h = { prev: body.dataset.playModal, bars: el('div', 'cs-bars') };
-  body.dataset.playModal = '1';
+  const h = { bars: el('div', 'cs-bars'), locked: true };
+  lockPlayInput(); // the shared counter: nothing else's lock is lost when the film ends
   body.classList.add('cs-cinematic');
   body.appendChild(h.bars);
   setTimeout(() => h.bars.classList.add('is-on'), 30);
@@ -197,8 +198,7 @@ function cinematicOn() {
 }
 function cinematicOff(h) {
   const body = document.body;
-  if (h.prev === undefined) delete body.dataset.playModal;
-  else body.dataset.playModal = h.prev;
+  if (h.locked) { h.locked = false; unlockPlayInput(); }
   body.classList.remove('cs-cinematic');
   h.bars.classList.remove('is-on');
   setTimeout(() => h.bars.remove(), 900);
