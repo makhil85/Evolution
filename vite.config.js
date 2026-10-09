@@ -88,6 +88,7 @@ export default defineConfig({
         chapter4: resolve(process.cwd(), 'chapter4.html'),
         chapter5: resolve(process.cwd(), 'chapter5.html'),
         chapter6: resolve(process.cwd(), 'chapter6.html'),
+        chapter7: resolve(process.cwd(), 'chapter7.html'),
       },
     },
   },

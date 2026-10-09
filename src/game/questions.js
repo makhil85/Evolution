@@ -136,7 +136,7 @@ const LEVEL4_QUESTIONS = {
     success:
       'Correct. 30 × 50 = 1500 cm, which is 15 metres — as tall as a four-storey building. The blueprint is signed.',
     doneMessage:
-      'Blueprint complete. The hologram rocket over the pad now shows its real size, and the Materials Forge lights its furnace.',
+      'Blueprint complete. The hologram rocket over the pad now shows its real size, and the Materials Lab lights its furnace.',
     reward: { xp: 25, resources: { gems: 1 }, part: 'Blueprint' }
   },
 
@@ -163,7 +163,7 @@ const LEVEL4_QUESTIONS = {
     success:
       'Correct. Aluminium alloy is strong enough to hold the rocket together and light enough to fly. Real rockets use it for the same reason.',
     doneMessage:
-      'The Forge fires up and builds itself piece by piece. You are now a Junior Engineer — the Build Menu is unlocked and iron ore has appeared around the village.',
+      'The Lab fires up and builds itself piece by piece. You are now a Junior Engineer — the Build Menu is unlocked and iron ore has appeared around the town.',
     reward: { xp: 25, resources: { iron: 6 }, part: 'Frame', rank: 'Junior Engineer' }
   },
 
@@ -461,7 +461,7 @@ const LEVEL4_QUESTIONS = {
       'This is the idea behind density, without needing the word: same volume, but very different mass, because iron packs far more matter into the same space than foam does. A good question to ask: "which one would be harder to lift?"',
     success:
       'Correct. Iron packs much more matter into the same space than foam does, so the iron block is far heavier even though it is exactly the same size. That is exactly why rocket engineers pick materials so carefully — a part can be small and still add a lot of weight.',
-    doneMessage: 'A curious visitor at the Forge nods at the explanation and leaves a few iron ingots by the furnace.',
+    doneMessage: 'A curious visitor at the Lab nods at the explanation and leaves a few iron ingots by the furnace.',
     reward: { xp: 15, resources: { iron: 3 }, bonus: true }
   },
 
@@ -650,7 +650,7 @@ const LEVEL4_QUESTIONS = {
       { text: 'Pointing left, like 9 o’clock' },
       { text: 'Still pointing up, like 12 o’clock' }
     ],
-    hint: 'A quarter turn is one-fourth of a full circle — the same as going from 12 to 3 on a clock face.',
+    hint: 'A quarter turn is one-fourth of a full circle. Picture a clock hand at 12 and turn it clockwise.',
     parentHint:
       'Same idea as the guidance tower compass question, from a new angle: a full turn is 360°, a quarter turn is 90°. Clockwise from 12 lands on 3.',
     success:
@@ -892,11 +892,11 @@ export function parentHintsFor(reachedQuestionIds) {
  */
 export function wrongAnswerMessage(question, attemptCount = 1) {
   const q = typeof question === 'string' ? getQuestion(question) : question;
-  const hint = q && q.hint ? q.hint : 'Have another go — nothing is lost.';
+  // Lead 2026-10-09: no hints for the child, at any Level (q.hint stays for the Parent Hints panel).
   const n = Number.isFinite(attemptCount) ? attemptCount : 1;
   return n >= 2
-    ? `Not quite. ${hint} — a grown-up can open the Parent Hints panel for a bigger clue.`
-    : `Not quite. ${hint}`;
+    ? 'Not quite. Have another go — a grown-up can open the Parent Hints panel.'
+    : 'Not quite. Have another go — nothing is lost.';
 }
 
 export default QUESTIONS;

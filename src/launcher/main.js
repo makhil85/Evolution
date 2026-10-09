@@ -68,7 +68,7 @@ function render() {
   const level = difficulty();
   $('difficulty').textContent = `· ${level.label}`;
   renderLevels(level);
-  $('greeting').textContent = profile.name ? `${profile.name}'s Adventures` : 'Rocket Village';
+  $('greeting').textContent = profile.name ? `${profile.name}'s Adventures` : 'Evolution';
   $('lede').textContent = status.every((c) => c.done)
     ? 'Every chapter finished. Replay any of them whenever you like.'
     : `Chapter ${next.n} is next. Finish a chapter to open the one after it.`;

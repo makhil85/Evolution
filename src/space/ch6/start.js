@@ -6,9 +6,9 @@
 
 /** The act labels the mission panel shows (missions.js). */
 export const CH6_ACT_TITLES = {
-  0: 'Build the rock ship',
+  0: 'Build the starship',
   1: 'Part A: The crew arrives',
-  2: 'Part B: Build the living half',
+  2: 'Part B: Fit out the ring',
   3: 'Part C: A tiny Earth',
   6: 'Part E: The fastest way out',
 };

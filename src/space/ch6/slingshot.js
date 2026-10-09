@@ -21,6 +21,12 @@ import { t } from '../level.js';
 import { nightSky, label, circle, rect, line, arrow, STAGE_W, STAGE_H } from '../../lesson/draw.js';
 import { STOPS, routeById, planTotals, windowFor, keptFraction, flightResult } from './routes.js';
 import { skipButton } from '../../play/grownUp.js';
+import { FLIGHT_MODE_KEY } from '../contracts.js';
+
+/** The flying mode she chose (space main.js saves it under FLIGHT_MODE_KEY); Medium if none. */
+function flyingMode() {
+  try { return localStorage.getItem(FLIGHT_MODE_KEY) || 'medium'; } catch { return 'medium'; }
+}
 
 const TAU = Math.PI * 2;
 const pick = (pair) => (Array.isArray(pair) ? t(pair[0], pair[1]) : pair);
@@ -89,7 +95,7 @@ function planet(ctx, id, x, y, r) {
  * @param {{bus?:any, plan:{route:string, close:number[]}}} opts
  * @returns {Promise<{route:string, legs:object[], kept:number, speed:number}>}
  */
-export function playSlingshots({ bus = null, plan }) {
+export function playSlingshots({ bus = null, plan, mode = flyingMode() }) {
   injectStyles();
   const route = routeById(plan.route);
   const planned = planTotals(plan);
@@ -129,7 +135,7 @@ export function playSlingshots({ bus = null, plan }) {
   pressBtn.addEventListener('click', () => press());
 
   const isSun = () => legs[ix].id === 'sun';
-  const hw = () => windowFor(legs[ix].close);
+  const hw = () => windowFor(legs[ix].close, mode);
 
   function startLeg(i) {
     ix = i; L = 0; pressedAt = null;

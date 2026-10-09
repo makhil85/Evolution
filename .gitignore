@@ -4,7 +4,7 @@ dist/
 *.log
 
 # Untouched original textures, kept out of public/ so they never ship.
-# Restore with: cp asset-originals/medieval/*.png public/assets/models/medieval/
+# (The medieval kit was removed 2026-10-09: no chapter used it after Chapter 3 went modern.)
 asset-originals/
 dist-hosted/
 dist/artifact-page.html

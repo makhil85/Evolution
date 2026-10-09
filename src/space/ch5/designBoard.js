@@ -1,11 +1,13 @@
-// Design the rock ship (Chapter 5, Part D): five questions, and with each
-// right answer the blueprint on the left gains a part. By the end she has
-// "invented" the ship herself: a thick rock shield, hollowed out to live in,
-// the fusion engine behind, the rock itself giving water, fuel and metal,
-// and the fuel sum that says why hollowing it out matters.
+// Design the starship (Chapter 6, act 0; the file keeps its Chapter 5 name):
+// five questions, and with each right answer the blueprint on the left gains
+// a part. By the end she has "invented" the ship herself: a thick cap of rock
+// and ice at the front (the shield), the crew's ring behind it, the fusion
+// engine at the back, the rock giving water, fuel and metal, and the fuel sum
+// (1 t of fuel for every 100 t of ship, as the route planner uses).
 //
-// The rock ship is presented as a real plan (scientists have proposed
-// hollowed-out asteroids as starships), not a fantasy.
+// Lead 2026-10-08: the rock is drilled, not hollowed. Only a front cap stays.
+// The starship is presented as a real plan (scientists have proposed mining
+// asteroids for ships), not a fantasy.
 //
 // Opens in the play-mode modal layer like the lesson card; pauses the space
 // game through the bus's 'ui-modal'. Test hook while open:
@@ -38,7 +40,7 @@ export function drawBlueprint(ctx, n, grow, T = 0) {
   ctx.strokeStyle = 'rgba(160,200,255,0.12)'; ctx.lineWidth = 1;
   for (let x = 0; x <= STAGE_W; x += 25) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, STAGE_H); ctx.stroke(); }
   for (let y = 0; y <= STAGE_H; y += 25) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(STAGE_W, y); ctx.stroke(); }
-  label(ctx, t('ROCK SHIP · DESIGN', 'ROCK SHIP'), 120, 28, { size: 16, color: INK, halo: null });
+  label(ctx, t('STARSHIP · DESIGN', 'STARSHIP'), 120, 28, { size: 16, color: INK, halo: null });
   const cx = 440; const cy = 220; const rx = 250; const ry = 150;
   const a = (k) => (n > k ? 1 : n === k ? grow : 0);
   // 0. Nothing yet: a dashed outline waiting for the first answer.
@@ -49,25 +51,26 @@ export function drawBlueprint(ctx, n, grow, T = 0) {
     label(ctx, t('Each answer adds a part', 'Each answer adds a part'), cx, cy + ry + 34, { size: 16, color: INK, halo: null });
     ctx.restore();
   }
-  // 1. The thick rock shield.
+  // 1. The thick cap of rock and ice at the front (the way we fly is right).
   if (a(1) > 0) {
     ctx.save(); ctx.globalAlpha = a(1);
-    rockPath(ctx, cx, cy, rx, ry); ctx.fillStyle = '#6b5a4a'; ctx.fill();
+    const capX = cx + 170;
+    rockPath(ctx, capX, cy, 85, 130); ctx.fillStyle = '#6b5a4a'; ctx.fill();
     ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.stroke();
-    label(ctx, t('thick rock: stops radiation', 'thick rock shield'), cx, cy - ry - 22, { size: 16, color: INK, halo: null });
+    label(ctx, t('rock and ice at the front: stops rays', 'front shield'), capX, cy - 130 - 22, { size: 16, color: INK, halo: null });
     ctx.restore();
   }
-  // 2. Hollowed out: rooms inside a thick shell.
+  // 2. Behind the cap, the crew's ring: a home with three decks, on a truss.
   if (a(2) > 0) {
     ctx.save(); ctx.globalAlpha = a(2);
-    rockPath(ctx, cx, cy, rx * 0.72, ry * 0.62); ctx.fillStyle = '#1b3d63'; ctx.fill();
+    const x0 = cx - 220; const w = 280; const h = 140; const y0 = cy - h / 2;
+    stadium(ctx, x0, y0, w, h); ctx.fillStyle = '#1b3d63'; ctx.fill();
     ctx.strokeStyle = INK; ctx.setLineDash([6, 4]); ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]);
-    for (const dy of [-35, 0, 35]) { ctx.strokeStyle = 'rgba(207,232,255,0.6)'; ctx.beginPath(); ctx.moveTo(cx - 140, cy + dy); ctx.lineTo(cx + 140, cy + dy); ctx.stroke(); }
-    for (const dx of [-70, 10, 90]) rect(ctx, cx + dx - 14, cy - 28, 28, 22, 'rgba(255,210,122,0.5)', 3);
-    label(ctx, t('hollow: home inside', 'hollow inside: rooms'), cx, cy + 62, { size: 15, color: INK, halo: null });
-    // the shell's thickness
-    arrow(ctx, cx + rx * 0.72 + 4, cy, cx + rx - 6, cy, '#ffd27a', 3);
-    arrow(ctx, cx + rx - 6, cy, cx + rx * 0.72 + 4, cy, '#ffd27a', 3);
+    for (const dy of [-35, 0, 35]) { ctx.strokeStyle = 'rgba(207,232,255,0.6)'; ctx.beginPath(); ctx.moveTo(x0 + 40, cy + dy); ctx.lineTo(x0 + w - 40, cy + dy); ctx.stroke(); }
+    for (const dx of [-150, -70, 10]) rect(ctx, cx + dx - 14, cy - 28, 28, 22, 'rgba(255,210,122,0.5)', 3);
+    // the truss from the ring to the cap, with a small gap that keeps the hits off the ring
+    ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx + 60, cy); ctx.lineTo(cx + 85, cy); ctx.stroke();
+    label(ctx, t('ring behind: the crew lives here', 'home ring'), cx - 90, cy + 96, { size: 15, color: INK, halo: null });
     ctx.restore();
   }
   // 3. The engine behind, pushing gas out the back.
@@ -95,20 +98,32 @@ export function drawBlueprint(ctx, n, grow, T = 0) {
       label(ctx, icon, x, y, { size: 20, color: '#fff', halo: null });
       label(ctx, name, x, y + 34, { size: 13, color: INK, halo: null });
     });
-    arrow(ctx, cx + 60, cy + ry - 8, 600, 365, '#ffd27a', 3);
+    arrow(ctx, cx + 120, cy + 120, 600, 372, '#ffd27a', 3);
     ctx.restore();
   }
-  // 5. The fuel sum: hollow ship vs solid rock.
+  // 5. The fuel sum (the planner's numbers): 1,000 t of ship burns 10 t of fuel;
+  // each extra 100 t of rock costs 1 t more on every burn.
   if (a(5) > 0) {
     ctx.save(); ctx.globalAlpha = a(5);
     rect(ctx, 26, 330, 250, 100, 'rgba(6,16,30,0.75)', 10);
-    label(ctx, t('fuel for each step faster', 'fuel each time'), 151, 348, { size: 14, color: INK, halo: null });
-    rect(ctx, 40, 366, 60 * 0.6, 18, '#9fe8a8', 3);
-    label(ctx, t('hollow: 600 t', 'hollow: 600'), 160, 375, { size: 14, color: '#9fe8a8', halo: null, align: 'left' });
-    rect(ctx, 40, 396, Math.min(220, 60 * 3), 18, '#ff8a8a', 3);
-    label(ctx, t('solid: 3,000 t', 'solid: 3,000'), 230, 415, { size: 14, color: '#ff8a8a', halo: null, align: 'left' });
+    label(ctx, t('fuel for each burn', 'fuel each time'), 151, 348, { size: 14, color: INK, halo: null });
+    rect(ctx, 40, 366, 10 * 8, 18, '#9fe8a8', 3);
+    label(ctx, t('ship 1,000 t: 10 t', 'ship: 10 t'), 130, 375, { size: 14, color: '#9fe8a8', halo: null, align: 'left' });
+    rect(ctx, 40, 396, 1 * 8, 18, '#ff8a8a', 3);
+    label(ctx, t('+100 t of rock: +1 t', '+100 t: +1 t'), 130, 405, { size: 14, color: '#ff8a8a', halo: null, align: 'left' });
     ctx.restore();
   }
+}
+
+/** A stadium (a ring seen from the side): a rectangle with round ends. */
+function stadium(ctx, x, y, w, h) {
+  const r = h / 2;
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y);
+  ctx.arc(x + w - r, y + r, r, -Math.PI / 2, Math.PI / 2);
+  ctx.lineTo(x + r, y + h);
+  ctx.arc(x + r, y + r, r, Math.PI / 2, Math.PI * 1.5);
+  ctx.closePath();
 }
 
 /** The five questions, one per part. */
@@ -116,20 +131,20 @@ export const DESIGN_STEPS = [
   {
     prompt: ['Between the stars, radiation (tiny fast particles) hits the ship all the time, for years. What protects the crew best?', 'Space has bad rays. What keeps the crew safe?'],
     choices: [
-      { text: ['A very thick layer of rock all round them', 'Lots of thick rock all round'], correct: true },
-      { text: ['A thin sheet of shiny metal foil', 'Thin shiny foil'] },
-      { text: ['Nothing: space is empty, so there is nothing to stop', 'Nothing'] },
+      { text: ['A thick cap of rock and ice at the front', 'Thick rock and ice in front'], correct: true },
+      { text: ['A thin sheet of shiny metal foil', 'A thin shiny foil, like a sweet wrapper'] },
+      { text: ['Nothing: space is empty, so there is nothing to stop', 'Nothing, space is empty'] },
     ],
-    why: ['Metres of rock soak up radiation, like the ground over a cave. A rock ship carries its shield with it.', 'Thick rock stops the bad rays!'],
+    why: ['Metres of rock soak up radiation, like the ground over a cave. The starship carries its shield at the front.', 'Thick rock in front stops the bad rays!'],
   },
   {
     prompt: ['A solid rock that big would be far too heavy to push. What should we do with it?', 'A big rock is very heavy. What can we do?'],
     choices: [
-      { text: ['Make it smaller: use a pebble-sized rock', 'Use a tiny rock'] },
-      { text: ['Hollow it out: keep a thick shell and live inside', 'Make it hollow and live inside'], correct: true },
-      { text: ['Push harder: heavy does not matter in space', 'Push harder'] },
+      { text: ['Make it smaller: use a pebble-sized rock with little ice', 'Use a tiny rock, just a little one'] },
+      { text: ['Drill it out: keep a cap at the front and build a ring behind', 'Drill it out and build behind the cap'], correct: true },
+      { text: ['Push harder: heavy does not matter once we are in space', 'Push harder, heavy does not matter out here'] },
     ],
-    why: ['Hollow it out! The thick shell still shields you, the inside becomes your home, and the ship is far lighter to push.', 'Hollow it out and live inside!'],
+    why: ['Drill it! The ice and metal become fuel, water and parts. The cap still shields us, and the ring behind it is home: far lighter to push.', 'Drill it out, and live behind the cap!'],
   },
   {
     prompt: ['Remember the momentum lesson. Where does the fusion engine go?', 'Where does the engine go?'],
@@ -151,10 +166,10 @@ export const DESIGN_STEPS = [
   },
   {
     type: 'text',
-    prompt: ['To speed up one step, the engine needs 1 tonne of fuel for every 1,000 tonnes of ship. Our hollowed ship weighs 600,000 tonnes. How many tonnes of fuel for one step? (Type a number.)', 'The ship weighs 600,000 tonnes. It needs 1 tonne of fuel for every 1,000 tonnes. How much fuel?'],
-    answers: ['600', '600 t', '600 tonnes'],
-    hint: ['How many thousands are in 600,000?', 'How many 1,000s in 600,000?'],
-    why: ['600,000 ÷ 1,000 = 600 tonnes. Left solid, the rock would weigh 3,000,000 tonnes and need 3,000: hollowing it saves 4 of every 5 tonnes of fuel.', '600 tonnes! A solid rock would need 3,000.'],
+    prompt: ['For one burn, the engine needs 1 tonne of fuel for every 100 tonnes of ship. Our ship weighs 1,000 tonnes. How many tonnes of fuel for one burn? (Type a number.)', 'The ship weighs 1,000 tonnes. It needs 1 tonne of fuel for every 100 tonnes. How much fuel?'],
+    answers: ['10', '10 t', '10 tonnes'],
+    hint: ['How many 100s are in 1,000?', 'How many 100s make 1,000?'],
+    why: ['1,000 ÷ 100 = 10 tonnes. Every extra 100 tonnes of ship needs 1 more tonne of fuel on every burn, so the front shield is kept as light as it can be.', '10 tonnes! Every 100 tonnes of ship needs 1 tonne of fuel.'],
   },
 ];
 
@@ -166,7 +181,7 @@ export function playDesignBoard({ bus = null } = {}) {
   const card = el('div', 'pl-card ls-card is-asking');
   card.dataset.game = 'design-ship';
   const eyebrow = el('div', 'pl-eyebrow', t('Design the ship', 'Make the ship'));
-  const title = el('h2', 'pl-title', t('A ship made of rock', 'A rock ship'));
+  const title = el('h2', 'pl-title', t('A starship from a rock', 'A starship'));
   const stage = el('div', 'ls-stage');
   const view = el('div', 'ls-view');
   const canvas = el('canvas', 'ls-canvas');
@@ -228,7 +243,7 @@ export function playDesignBoard({ bus = null } = {}) {
     const q = DESIGN_STEPS[ix];
     if (!right && tries < 2) {
       btn.classList?.add('is-wrong'); if (btn.tagName === 'BUTTON' && btn.classList.contains('ls-choice')) btn.disabled = true;
-      fb.className = 'ls-feedback is-warn'; fb.textContent = q.hint ? pick(q.hint) : t('Not quite. Think again!', 'Try again!'); fb.hidden = false;
+      fb.className = 'ls-feedback is-warn'; fb.textContent = t('Not quite. Think again!', 'Try again!'); fb.hidden = false;
       return;
     }
     done = true; triesLog.push(tries);

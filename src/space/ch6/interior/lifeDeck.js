@@ -27,8 +27,11 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { toonRamp } from '../../../game/toonPipeline.js';
 import { PALETTE } from './kit.js';
+import { roofAt } from './walkmap.js';
 
 // The kit pieces this deck uses (models.js names; loaded before the deck is built).
+// Inlays, decals and plates lie a few mm to 15 cm above the floor: this offset makes them win the depth test there (no flicker).
+const FLUSH = { polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 };
 export const MODELS = [
   'walls/WallAstra_Straight', 'walls/WallAstra_Straight_Window', 'walls/WallWindow_Straight',
   'walls/TopPlastic_Straight', 'walls/BottomMetal_Straight',
@@ -125,7 +128,7 @@ export function buildDeck(kit) {
     if (!tints.has(key)) {
       const m = mat.clone();
       if (mat.name === 'M_Black') m.color.set(c); else m.color.multiply(new THREE.Color(c)); // a multiply cannot lighten a black
-      tints.set(key, kit.own(m));
+      tints.set(key, kit.own(Object.assign(m, FLUSH)));
     }
     return tints.get(key);
   };
@@ -294,6 +297,8 @@ export function buildDeck(kit) {
   ringSolid(HYD.r0 - 1.2, HYD.r0 + 0.05, hydA0, hydA1);
 
   floors.push(corr, labShape, hydShape);
+  // The roof over each: the corridor and the lab at CEIL, the farm bay at its own height (the deck's 3.2 is the rest).
+  const roofs = [{ shape: corr, h: CEIL }, { shape: labShape, h: CEIL }, { shape: hydShape, h: HYD.h }];
   kit.floor(b, corr); kit.floor(b, labShape, { mat: M.floor }); kit.floor(b, hydShape, { mat: M.floor });
   kit.ceiling(b, corr, CEIL); kit.ceiling(b, labShape, CEIL); kit.ceiling(b, hydShape, HYD.h);
   // Code seams across the ceilings, about every 2 m (thin trims between the light bands).
@@ -519,7 +524,7 @@ export function buildDeck(kit) {
     { name: 'corridor', pos: up(pol(Math.PI - 0.12, 38.2), 1.6), look: up(pol(Math.PI - 0.7, 38.2), 1.4) },
     { name: 'lab', pos: up(lab.at(0, -2.2), 1.7), look: up(lab.at(0, -9.5), 1.3) },
     { name: 'tanks', pos: up(lab.at(0.5, -5.6), 1.5), look: up(lab.at(0, -9.4), 1.3) },
-    { name: 'farm', pos: up(hyd.at(0.3, -1.2), 2.2), look: up(hyd.at(0, -15), 1.3) },
+    { name: 'farm', pos: up(hyd.at(0.3, -2.6), 2.2), look: up(hyd.at(0, -15), 1.3) }, // 1.4 m in from the door (the lab view had a dark slab top left, by the door)
     { name: 'farmback', pos: up(hyd.at(0.2, -13.2), 1.6), look: up(hyd.at(0, -1), 1.4) },
     // From the corridor, looking into each room through its door.
     { name: 'bayDoor', pos: up(pol(HYD.a, 38.4), 1.9), look: up(pol(HYD.a, 36.8), 2.7) },
@@ -536,7 +541,7 @@ export function buildDeck(kit) {
 
   const _m = new THREE.Matrix4(); const _p = new THREE.Vector3(); const _q = new THREE.Quaternion(); const _s = new THREE.Vector3();
   return {
-    group, floors, solids, ceiling: 3.2, stations, crewSpots, views,
+    group, floors, solids, ceiling: 3.2, ceilingAt: (x, z) => roofAt(roofs, x, z, 3.2), stations, crewSpots, views,
     update(dt, t, ctx) {
       for (const d of doors) d.update(dt, ctx.herX, ctx.herZ);
       for (const w of wins) w.update(t);

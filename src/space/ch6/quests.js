@@ -30,7 +30,7 @@ const CSS = `
 .qz-badge { min-width: 10em; min-height: 46px; padding: 8px 12px; border-radius: 12px; border: 2px solid rgba(255,255,255,.18); background: #1a2540; color: inherit; font: inherit; font-weight: 800; cursor: pointer; text-align: left; }
 .qz-badge.is-scanned { border-color: #7fd3ff; background: rgba(127,211,255,.14); }
 .qz-badge:disabled { cursor: default; }
-.qz-step { min-width: 40px; min-height: 40px; padding: 0 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,.25); background: transparent; color: inherit; font: inherit; font-weight: 900; cursor: pointer; }
+.qz-step { min-width: 40px; min-height: 40px; padding: 0 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,.25); background: transparent; color: inherit; font: inherit; font-weight: 900; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .qz-step:disabled { opacity: .35; cursor: default; }
 .qz-big { min-width: 4.5em; text-align: center; font-size: 18px; font-weight: 900; }
 .qz-bar { position: relative; height: 18px; border-radius: 9px; background: rgba(255,255,255,.12); overflow: hidden; flex: 1 1 220px; }
@@ -72,6 +72,24 @@ function injectCss() {
   const s = document.createElement('style'); s.id = CSS_ID; s.textContent = CSS; document.head.appendChild(s);
 }
 
+/**
+ * A +/- button that steps once per press and keeps stepping while it is held
+ * (after a short wait, then steadily). A keyboard click steps once.
+ */
+function stepper(btn, step) {
+  let wait = 0; let again = 0;
+  const stop = () => { clearTimeout(wait); clearInterval(again); };
+  btn.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || btn.disabled) return;
+    stop(); // a second finger on the same button must not leave a timer behind
+    step();
+    wait = setTimeout(() => { again = setInterval(() => { if (!btn.isConnected || btn.disabled) stop(); else step(); }, 110); }, 200);
+  });
+  for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) btn.addEventListener(ev, stop);
+  // A mouse or touch click was stepped on pointerdown (detail > 0); a keyboard click has detail 0.
+  btn.addEventListener('click', (e) => { if (e.detail === 0) step(); });
+}
+
 /** A bar of `v` out of `max`, with a mark at `markAt`. */
 function bar() {
   const b = el('div', 'qz-bar'); const fill = el('i'); const mark = el('s');
@@ -102,8 +120,8 @@ function medbayBody(changed) {
   const less = el('button', 'qz-step', '−'); less.type = 'button';
   const more = el('button', 'qz-step', '+'); more.type = 'button';
   const bikeN = el('div', 'qz-big');
-  less.addEventListener('click', () => { s.bike = Math.max(0, s.bike - BONES.bikeStep); changed(); });
-  more.addEventListener('click', () => { s.bike = Math.min(BONES.bikeMax, s.bike + BONES.bikeStep); changed(); });
+  stepper(less, () => { s.bike = Math.max(0, s.bike - BONES.bikeStep); changed(); });
+  stepper(more, () => { s.bike = Math.min(BONES.bikeMax, s.bike + BONES.bikeStep); changed(); });
   const bikeRow = el('div', 'qz-row');
   bikeRow.append(el('span', 'qz-num', t('Exercise bike, minutes', 'Bike minutes')), less, bikeN, more);
   const totalN = el('div', 'qz-num'); const totalBar = bar();
@@ -130,7 +148,7 @@ function medbayBody(changed) {
     el: wrap, ok: () => medbayTotals(s).ok,
     solve() { Object.assign(s, medbayAnswer()); changed(); },
     state: () => ({ scanned: [...s.scanned], bike: s.bike }), refresh,
-    tip: t('In this game, each metre of rock halves the rays, so the ship keeps us behind the rock. Scan every badge, then set the bike. In spin gravity our bones need exercise every day.', 'Scan each badge. Exercise keeps our bones strong.'),
+    tip: t('Each metre of rock halves the rays. The front shield keeps the ring behind it safe, so scan every badge, then set the bike. In spin gravity our bones need exercise every day.', 'Scan each badge. Exercise keeps our bones strong.'),
   };
 }
 
@@ -216,8 +234,8 @@ function messageBody(changed) {
   const readout = el('div', 'qz-num');
   const row = el('div', 'qz-row'); row.append(left, readout, right);
   const note = el('div', 'qz-note');
-  left.addEventListener('click', () => { deg = dishTurn(deg, -1); changed(); });
-  right.addEventListener('click', () => { deg = dishTurn(deg, 1); changed(); });
+  stepper(left, () => { deg = dishTurn(deg, -1); changed(); });
+  stepper(right, () => { deg = dishTurn(deg, 1); changed(); });
   wrap.append(cv, row, note);
   function refresh() {
     drawSky(ctx, deg);
@@ -258,7 +276,7 @@ function pollenBody(changed) {
     }
     count.textContent = `${t('Strawberries', 'Strawberries')}: ${st.fruit.length} / ${PAIRS}`;
     note.className = `qz-note${problem ? ' qz-warn' : ''}`;
-    note.textContent = problem === 'order' ? t('In this game the pollen goes first: tap a flower with yellow dust, then the bud it works with.', 'Yellow dust first, then its bud.')
+    note.textContent = problem === 'order' ? t('The pollen goes first: tap a flower with yellow dust, then the bud it works with.', 'Yellow dust first, then its bud.')
       : problem === 'partner' ? t('Not that one: each yellow-dust flower only works with its own bud. Try the other bud.', 'Not that bud. Try the other one.')
         : pollinated(st) ? t(`Every bud has a strawberry now. Count them: ${PAIRS}!`, `All ${PAIRS} have a strawberry!`)
           : st.holding ? t('Now tap the bud that goes with it.', 'Now tap its bud.')
@@ -268,7 +286,7 @@ function pollenBody(changed) {
     el: wrap, ok: () => pollinated(st),
     solve() { st = runPollen(pollenAnswer()).state; problem = null; changed(); },
     state: () => ({ holding: st.holding, fruit: [...st.fruit] }), refresh,
-    tip: t('In this game each bud takes pollen from its partner flower. Real strawberries need lots of pollen grains, carried by bees on Earth. Out here we do the bees’ job with a soft brush.', 'Each bud takes pollen from its partner flower. We do the bees’ job with a brush.'),
+    tip: t('Each bud takes pollen from its partner flower. Real strawberries need lots of pollen grains, carried by bees on Earth. Out here we do the bees’ job with a soft brush.', 'Each bud takes pollen from its partner flower. We do the bees’ job with a brush.'),
   };
 }
 

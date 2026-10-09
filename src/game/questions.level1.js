@@ -66,7 +66,7 @@ export const LEVEL1_QUESTIONS = {
       + 'once from each end — so the answer is 2 + 4 − 1 = 5. Drawing it settles it instantly.',
     success:
       'Yes — 5. Adding 2 and 4 gives 6, but that counts Zara\'s rocket twice, once from each end.',
-    doneMessage: 'The plan is done! The rocket picture shows its real size. The Forge lights its fire.',
+    doneMessage: 'The plan is done! The rocket picture shows its real size. The Lab lights its fire.',
   },
 
   rocket_materials: {
@@ -87,7 +87,7 @@ export const LEVEL1_QUESTIONS = {
       'The point is that the SAME object did two different things, so the cause must be the '
       + 'change — the sand — not anything permanent about the tin.',
     success: 'Correct. The tin itself never changed, so it had to be what was inside it.',
-    doneMessage: 'The Forge builds itself! You are a Junior Engineer now. The Build Menu is open. Iron is around the village.',
+    doneMessage: 'The Lab builds itself! You are a Junior Engineer now. The Build Menu is open. Iron is around the town.',
   },
 
   rocket_flow: {
@@ -291,7 +291,7 @@ export const LEVEL1_QUESTIONS = {
       'Chained comparison — if red > blue and blue > green, the order is forced. Lining up three '
       + 'objects by hand is the way in at this age.',
     success: 'Correct — red, then blue, then green. Green is at the light end.',
-    doneMessage: 'A man at the Forge nods and leaves some iron by the fire.',
+    doneMessage: 'A man at the Lab nods and leaves some iron by the fire.',
   },
 
   bonus_volume: {

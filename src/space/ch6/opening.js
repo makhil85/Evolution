@@ -50,12 +50,18 @@ const CAM = [
 ];
 
 /** Where Rock B hangs, relative to her ship: off to the side, a little away from the Sun. */
+/** Rock B's radius in the flight scene (lead 2026-10-09: smaller than Ceres, whose radius is 7). */
+export const ROCK_B_R = 5.4;
+const ROCK_NATIVE_R = 36; // buildRockShip's rock radius in its own units (ch5/ending.js R)
+const ROCK_K = ROCK_B_R / ROCK_NATIVE_R;
+
 function rockOffset(game) {
   const S = new THREE.Vector3(-(game.ship?.x ?? 1), 0, -(game.ship?.z ?? 0));
   if (S.lengthSq() < 1e-6) S.set(-1, 0, 0);
   S.normalize();
   const P = new THREE.Vector3(-S.z, 0, S.x);
-  return { S, P, at: P.clone().multiplyScalar(150).addScaledVector(S, -60).add(new THREE.Vector3(0, 6, 0)) };
+  // Beside her at the same scale as the rock (it was 150 u out at full size, ~6x Ceres).
+  return { S, P, at: P.clone().multiplyScalar(150 * ROCK_K).addScaledVector(S, -60 * ROCK_K).add(new THREE.Vector3(0, 6 * ROCK_K, 0)) };
 }
 
 /**
@@ -67,6 +73,7 @@ export function showRockB(game) {
   const { scene } = game;
   const rock = buildRockShip();
   rock.setRings(1);
+  rock.group.scale.setScalar(ROCK_K);
   const { S, at } = rockOffset(game);
   rock.group.position.copy(at);
   rock.group.lookAt(at.clone().multiplyScalar(2)); // hangar door (local -Z) towards her
@@ -229,13 +236,14 @@ function makePuffs(parent) {
     pool.push({ mesh, mat, life: 0, max: 1, vel: new THREE.Vector3() });
   }
   let next = 0;
+  const rnd = new THREE.Vector3(); // reused for every puff's kick (no allocation per puff)
   return {
     emit(at, dir) {
       const p = pool[next];
       next = (next + 1) % pool.length;
       p.max = p.life = 0.9;
       p.mesh.position.copy(at);
-      p.vel.copy(dir).multiplyScalar(3 + Math.random() * 2).add(new THREE.Vector3().randomDirection().multiplyScalar(0.6));
+      p.vel.copy(dir).multiplyScalar(3 + Math.random() * 2).add(rnd.randomDirection().multiplyScalar(0.6));
       p.mesh.visible = true;
     },
     update(dt) {
@@ -292,6 +300,8 @@ export function playCh6Opening(game) {
   star.group.add(supply.group);
   const puffs = makePuffs(star.group);
   const nose = new THREE.Vector3(0, 0, SUPPLY_NOSE).applyEuler(supply.group.rotation); // the probe tip, from the supply's centre
+  const noseDir = nose.clone().normalize(); // the puffs' push (emit copies it), and a scratch point for each puff
+  const puffAt = new THREE.Vector3();
   const path = makePath(APPROACH);
   const camPos = new THREE.CatmullRomCurve3(CAM.map(([p]) => new THREE.Vector3(...p)), false, 'centripetal');
   const camLook = new THREE.CatmullRomCurve3(CAM.map(([, l]) => new THREE.Vector3(...l)), false, 'centripetal');
@@ -323,7 +333,7 @@ export function playCh6Opening(game) {
         puffAcc += dt * 9;
         while (puffAcc >= 1) {
           puffAcc -= 1;
-          puffs.emit(pos.clone().add(nose), nose.clone().normalize());
+          puffs.emit(puffAt.copy(pos).add(nose), noseDir);
         }
       }
       puffs.update(dt);

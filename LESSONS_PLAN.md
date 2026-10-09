@@ -233,15 +233,15 @@ Lead's rule: Chapters 5-6 may have 3-4 lessons. All four play on the lesson card
 |---|---|
 | Up close: the rings are billions of ice pieces | "What are Saturn's rings made of?" |
 | Little moons: inner pieces lap the outer ones | "Which pieces of the rings go round Saturn fastest?" |
-| How a ring is born: a moon too close is pulled apart | "Why is there a ring there, and not one big moon?" |
+| How a ring is born: a moon too close is pulled apart (watch only: the answer is the last caption, a breather after two questions) | none |
 
 ### 5AA. Bumps in the rings: momentum (step c5_lesson_momentum, after the ring run)
 
 | Film | Question |
 |---|---|
 | Same size, one still (predict pause) | "A moving chunk hits a still chunk the same size, head on. What happens?" |
-| Small and big, both ways (momentum bars) | "A big chunk crashes into a small still chunk. What happens to the small one?" |
-| Catching up and sticking | "A fast chunk catches a slow one and they stick together. How fast do they go?" |
+| Small and big, both ways (momentum bars; watch only, a breather) | none |
+| Catching up and sticking (two same-size chunks: speed 3 catches speed 1) | "Fast orange (speed 3) catches slow blue (speed 1) and they stick. What speed do they go at now?" 4 / 2 (right) / 1, as numbers; L1 "Speed 4 / Speed 2 / Speed 1" |
 | Lots of pieces (watch only: the total stays the same) | none |
 | Pushing on nothing: a rocket throws gas back | "In empty space there is nothing to push against. How does a rocket speed up?" |
 
@@ -251,7 +251,7 @@ Lead's rule: Chapters 5-6 may have 3-4 lessons. All four play on the lesson card
 |---|---|
 | How big? (Earths side by side) | "About how many Earths would fit side by side across Neptune?" (about 4) |
 | Heavy, but not crushing (17 x the mass, about Earth's pull at the cloud tops) | "How heavy would you feel on its cloud tops?" |
-| So cold the atoms crawl | "What does 'cold' mean for the tiny atoms inside something?" |
+| So cold the atoms crawl (watch only: a breather; the answer is in the captions) | none |
 
 ### 5C. Atoms and fusion (step c5_lesson_fusion, before designing the ship)
 
@@ -259,9 +259,11 @@ Lead's rule: Chapters 5-6 may have 3-4 lessons. All four play on the lesson card
 |---|---|
 | Zoom into you (hand, cell, DNA, atoms) | "Zoom into your hand far enough and what do you find in the end?" |
 | Zoom into ice (crystal, molecule, H2O) | "What is one water molecule made of?" |
-| Inside an atom (protons, neutrons, electrons) | "What are all atoms made of?" |
+| Inside an atom (protons, neutrons, electrons; watch only, a breather) | none |
 | Protons smash together (fusion) | "Where does the energy from fusion come from?" |
 | The Sun against a coal Sun (a few thousand years) | "If the Sun were a giant lump of burning coal, about how long would it shine?" |
+
+Chapter 5 rule (2026-10-08): never three questions in a row; Level 1 has its own bank (9 questions) and every right answer is never the uniquely longest choice.
 
 Chapter 6 (planned): 6A tiny-Earth loop, 6B slingshot, 6C light speed.
 

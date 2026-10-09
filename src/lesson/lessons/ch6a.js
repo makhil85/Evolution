@@ -180,8 +180,8 @@ export const LESSON_6A = {
         prompt: ['Where does the crew’s fresh oxygen come from, out between the stars?', 'Where does our air come from?'],
         choices: [
           { text: ['The algae, breathing in the air we breathe out', 'The algae plants'], correct: true },
-          { text: ['A big tank of air brought from Earth', 'A tank from Earth'] },
-          { text: ['Space, through the windows', 'Space'] },
+          { text: ['A big tank of air brought all the way from Earth', 'A tank from Earth'] },
+          { text: ['Space, through the windows that let in the starlight', 'Space'] },
         ],
         hint: ['Follow the blue dots in the film.', 'Look where the blue dots come from.'],
         why: ['The algae take in the air we breathe out and give oxygen back, round and round, as the plants on Earth do.', 'The algae make our air!'],
@@ -194,15 +194,15 @@ export const LESSON_6A = {
         { dur: 3, cap: ['Space is full of tiny fast rays and specks of dust.', 'Space has tiny fast rays.'] },
         { dur: 4, cap: ['A thin metal wall: they go straight through, and through us.', 'A thin wall: they go right through.'] },
         { dur: 4, cap: ['Six metres of rock: each metre stops half of what is left.', 'Thick rock: each metre stops half.'] },
-        { dur: 4, cap: ['Hardly any get through. That is why our ship is inside a rock.', 'Thick rock keeps us safe!'] },
+        { dur: 4, cap: ['Hardly any get through. That is why the front of our ship is a thick cap of rock and ice.', 'Thick rock keeps us safe!'] },
       ],
       draw: drawShield,
       question: {
-        prompt: ['Why is the crew’s home inside a big hollow rock?', 'Why do we live inside a rock?'],
+        prompt: ['Why does the front of our ship have a thick cap of rock?', 'Why is there thick rock at the front?'],
         choices: [
-          { text: ['Metres of rock stop the rays that a thin wall lets through', 'Thick rock stops the rays'], correct: true },
-          { text: ['Rock is lighter than metal', 'Rock is light'] },
-          { text: ['It keeps the ship warm from the Sun', 'It is warm'] },
+          { text: ['Metres of rock stop the rays a thin wall lets through', 'Thick rock stops the rays'], correct: true },
+          { text: ['Rock is light, so it makes the ship go much faster', 'Rock is light'] },
+          { text: ['It keeps the ship warm from the heat of the Sun, all day long', 'It is warm'] },
         ],
         hint: ['Which wall stopped the red rays?', 'Which wall stopped the rays?'],
         why: ['Each metre of rock halves the rays; six metres lets in fewer than 2 in 100. A thin wall stops almost none.', 'Thick rock stops the rays!'],
@@ -222,9 +222,9 @@ export const LESSON_6A = {
       question: {
         prompt: ['In the ship’s loop, what happens if one part breaks, like the lamps?', 'What if one part breaks?'],
         choices: [
-          { text: ['The other parts soon run down too: no lamps, no algae, less air', 'The other parts stop too'], correct: true },
+          { text: ['The other parts soon run down too, with less air', 'The other parts stop too'], correct: true },
           { text: ['Nothing: the other parts carry on as before', 'Nothing happens'] },
-          { text: ['The ship goes faster', 'The ship goes faster'] },
+          { text: ['The ship speeds up, and everything else keeps going', 'The ship goes faster'] },
         ],
         hint: ['Watch the air bar after the cable snaps.', 'Look at the air bar.'],
         why: ['The parts make a loop, so a break in one starves the next: lamps feed the algae, the algae feed the air.', 'Every part needs the others!'],

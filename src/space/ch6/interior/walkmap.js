@@ -38,6 +38,17 @@ const inShape = (s, x, z) => {
   return false;
 };
 
+/**
+ * The roof above a point: `roofs` is a list of { shape, h } (h a number, or a function of (x, z)
+ * for a curved roof); the first shape the point is in gives it, else `dflt`. A deck's ceilingAt().
+ */
+export function roofAt(roofs, x, z, dflt) {
+  for (const r of roofs) {
+    if (inShape(r.shape, x, z)) return typeof r.h === 'function' ? r.h(x, z) : r.h;
+  }
+  return dflt;
+}
+
 /** The box round a shape (for the grid's extent). */
 const bounds = (s) => {
   if (s.rect) { const [cx, cz, w, d] = s.rect; const h = s.rot ? Math.hypot(w, d) / 2 : 0; return [cx - (h || w / 2), cz - (h || d / 2), cx + (h || w / 2), cz + (h || d / 2)]; }

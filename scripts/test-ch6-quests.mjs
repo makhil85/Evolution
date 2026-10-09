@@ -192,8 +192,11 @@ try {
   const L4 = P.partQuestsBank(4);
   const L1 = P.partQuestsBank(1);
   ok('Level 4 numbers re-derived from the quest rules, and the tempting wrong answers rejected', () => {
-    assert.ok(checkSpaceAnswer(L4.c6_dose_half, String(64 / 2 ** 3)));
-    assert.ok(!checkSpaceAnswer(L4.c6_dose_half, String(64 / 3)), 'a third, not halving');
+    // 64 -> 32 (still over the limit of 20) -> 16 (under): two metres of rock
+    assert.ok(Q.doseThrough(Q.OUTSIDE_DOSE, 1) > Q.DAY_LIMIT && Q.doseThrough(Q.OUTSIDE_DOSE, 2) <= Q.DAY_LIMIT);
+    assert.ok(checkSpaceAnswer(L4.c6_dose_half, '2'));
+    assert.ok(!checkSpaceAnswer(L4.c6_dose_half, '1'), 'one metre is still over the limit');
+    assert.ok(!checkSpaceAnswer(L4.c6_dose_half, '3'), 'three metres: more than needed');
     assert.ok(checkSpaceAnswer(L4.c6_leak_minutes, String(Q.COOLANT.tankLitres / Q.COOLANT.leakPerMin)));
     assert.ok(!checkSpaceAnswer(L4.c6_leak_minutes, String(Q.COOLANT.tankLitres * Q.COOLANT.leakPerMin)), 'multiplied, not divided');
     assert.ok(checkSpaceAnswer(L4.c6_light_delay, String((400 * 55) / 1000)));
@@ -203,8 +206,9 @@ try {
     assert.ok(checkSpaceAnswer(L4.c6_berries_each, String((60 * 12) / 5)));
     assert.ok(!checkSpaceAnswer(L4.c6_berries_each, String(60 * 12)), 'the whole farm, not each');
   });
-  ok('Level 1 numbers: halving 8, counting by twos to 10, 5 minutes per 100 million km, 10 times 2', () => {
-    assert.ok(checkSpaceAnswer(L1.c6_dose_half, String(8 / 2)));
+  ok('Level 1 numbers: halving 8 twice, counting by twos to 10, 5 minutes per 100 million km, 10 times 2', () => {
+    assert.ok(checkSpaceAnswer(L1.c6_dose_half, String(8 / 2 / 2)));
+    assert.ok(!checkSpaceAnswer(L1.c6_dose_half, String(8 / 2)), 'one metre gives 4, not the answer');
     assert.ok(checkSpaceAnswer(L1.c6_leak_minutes, String(10 / 2)));
     assert.ok(checkSpaceAnswer(L1.c6_light_delay, String(4 * 5))); // about 5 minutes per 100 million km
     assert.ok(checkSpaceAnswer(L1.c6_berries_each, String(10 * 2)));

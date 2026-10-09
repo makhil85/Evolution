@@ -395,10 +395,10 @@ export function createScienceRules({ level, storage } = {}) {
     blocked: 'Blocked. Some areas need a key or another path.',
     focusMath: 'Purple boards are in the village square. Stand near a board and press Space.',
     focusIron: L('The locked iron room is in the north-east. Look for the golden-lock door and solve the hard key puzzle there to open it.', 'The iron room is at the top right. Find the door with the gold lock. Solve the hard puzzle there.'),
-    /** The old wrong-answer toast: math boards point at the parent hints, labs show the hint. */
+    /** The wrong-answer toast: math boards point at the parent hints; no hint for the child (lead 2026-10-09). */
     wrongAnswer: (q) => (MATH_QUESTS.includes(q) || q === 'key'
       ? L('Not quite. Try again, or ask a parent to open the Math Hints tab at the bottom.', 'Not quite. Try again! A grown-up can open Math Hints at the bottom.')
-      : `Not quite. ${bank[q]?.hint || ''}`.trim()),
+      : L('Not quite. Try again.', 'Not quite. Try again!')),
   };
 
   return {

@@ -22,7 +22,7 @@ async function playRingRun(game) {
     const pick = await hud.choose({
       eyebrow: t('Ring run', 'Ring run'),
       title: t('How thick is the ice?', 'How much ice?'),
-      body: t('Arrows or WASD steer, Space fires. Blast white ice for water and grey rock for metal and stone. Big rocks take a few hits.', 'Arrows to steer. Space to shoot. Shoot white ice and grey rock.'),
+      body: t('Arrows or WASD steer, Space fires. Line up on white ice (water) and grey rock (metal and stone). A bump jams your gun for a moment, and big rocks need a true aim.', 'Arrows to steer. Space to shoot. Line up on the ice and rock. A bump jams your gun.'),
       options: Object.values(LEVELS).map((L) => ({
         id: L.id, label: L.label, tag: L.id === level ? t('Suggested', 'Try this') : '',
         blurb: `${L.blurb} ${t(`Goal: ${L.goal.ice} ice, ${L.goal.rock} rock.`, `Get ${L.goal.ice} ice, ${L.goal.rock} rock.`)}`,
@@ -36,9 +36,11 @@ async function playRingRun(game) {
     st.ringRun = { ...(st.ringRun || {}), [level]: Math.max(res.water, st.ringRun?.[level] || 0) };
     game.missions?.save();
     if (!res.met) {
+      // An easier level exists only below the one she just played.
+      const easier = Object.keys(LEVELS).indexOf(level) > 0;
       await hud.showFact({
         title: t('Not enough yet!', 'Not enough yet!'),
-        body: t(`You got ${res.ice} of ${res.goal.ice} ice and ${res.rock} of ${res.goal.rock} rock. Fly the ring again: line up on a chunk before you fire. You can pick an easier level too.`,
+        body: t(`You got ${res.ice} of ${res.goal.ice} ice and ${res.rock} of ${res.goal.rock} rock. Fly the ring again: line up on a chunk before you fire.${easier ? ' You can pick an easier level too.' : ''}`,
           `You got ${res.ice} of ${res.goal.ice} ice and ${res.rock} of ${res.goal.rock} rock. Try again!`),
       });
       continue;
@@ -141,6 +143,9 @@ export function partASteps(game) {
       },
       async after() {
         hud.toast(t('Saturn has you! Enjoy a lap: look at those rings.', 'You’re going around Saturn! Look at the rings!'), { kind: 'good', ms: 4200 });
+        // The capture is done (ticked off), so the card stops saying "brake"
+        // during the lap (game-experience review: a stale objective).
+        game.missions?.showObjective?.(t('Captured! Look round Saturn while you orbit.', 'You did it! Look at Saturn.'), { done: true });
         // A calm lap before the pole (lead 2026-10-08): 20 s of orbit, or
         // one whole lap if that is quicker.
         await orbitFor(game, 20);
