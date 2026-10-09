@@ -10,6 +10,7 @@
 // a 7x7 board of individual clones cost.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { bakeParts, outlineMaterial, addGroundDetail, toonRamp } from './toonPipeline.js';
 import { packScaleFor, asset } from './contracts.js';
 
@@ -253,6 +254,278 @@ async function instanceAsset(group, path, placements, {
   return made;
 }
 
+/**
+ * Cells for baking: a grid of `nx` by `nz` over `bounds`. Anything past the rim
+ * (the edge forest stands on it) clamps into the nearest border cell, so every
+ * placement lands in exactly one cell.
+ */
+export function gridCellOf(bounds, nx, nz) {
+  const sx = (bounds.maxX - bounds.minX) / nx;
+  const sz = (bounds.maxZ - bounds.minZ) / nz;
+  return (p) => {
+    const i = Math.min(nx - 1, Math.max(0, Math.floor((p.x - bounds.minX) / sx)));
+    const j = Math.min(nz - 1, Math.max(0, Math.floor((p.z - bounds.minZ) / sz)));
+    return j * nx + i;
+  };
+}
+
+/** Cells for a ring: `n` equal arcs round the centre (cx, cz). */
+export function sectorCellOf(cx, cz, n) {
+  return (p) => Math.min(n - 1, Math.floor(((Math.atan2(p.z - cz, p.x - cx) + Math.PI) / (2 * Math.PI)) * n));
+}
+
+/**
+ * One prototype part at one placement, as its own geometry in world space, ready
+ * to merge. Every piece in a bucket gets the same attributes, so the merge holds.
+ */
+function placedPiece(src, m, { uv, color, colour }) {
+  const n = src.attributes.position.count;
+  const pos = src.attributes.position;
+  const p = new Float32Array(n * 3);
+  const v = new THREE.Vector3();
+  for (let i = 0; i < n; i++) {
+    v.fromBufferAttribute(pos, i).applyMatrix4(m);
+    p[i * 3] = v.x; p[i * 3 + 1] = v.y; p[i * 3 + 2] = v.z;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(p, 3));
+
+  const nrm = src.attributes.normal;
+  if (nrm) {
+    // Uniform scale and rotation only, so the normal matrix is the matrix's
+    // own 3x3 once normalised.
+    const nm = new THREE.Matrix3().getNormalMatrix(m);
+    const q = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      v.fromBufferAttribute(nrm, i).applyMatrix3(nm).normalize();
+      q[i * 3] = v.x; q[i * 3 + 1] = v.y; q[i * 3 + 2] = v.z;
+    }
+    g.setAttribute('normal', new THREE.BufferAttribute(q, 3));
+  }
+  if (uv) {
+    g.setAttribute('uv', src.attributes.uv ? new THREE.BufferAttribute(new Float32Array(src.attributes.uv.array), 2)
+      : new THREE.BufferAttribute(new Float32Array(n * 2), 2));
+  }
+  if (color) {
+    // The part's own vertex colour (or white) times its colour: the bucket's
+    // material is white and vertex-coloured, so this IS the tint.
+    const c = new Float32Array(n * 3);
+    const src3 = src.attributes.color;
+    for (let i = 0; i < n; i++) {
+      c[i * 3] = (src3 ? src3.getX(i) : 1) * colour.r;
+      c[i * 3 + 1] = (src3 ? src3.getY(i) : 1) * colour.g;
+      c[i * 3 + 2] = (src3 ? src3.getZ(i) : 1) * colour.b;
+    }
+    g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+  }
+  if (src.index) {
+    g.setIndex(new THREE.BufferAttribute(Uint32Array.from(src.index.array), 1));
+  } else {
+    const idx = new Uint32Array(n);
+    for (let i = 0; i < n; i++) idx[i] = i;
+    g.setIndex(new THREE.BufferAttribute(idx, 1));
+  }
+  if (!nrm) g.computeVertexNormals();
+  return g;
+}
+
+/**
+ * A stable key for a texture's content. Two glTF loads of the same image are
+ * two objects, so the key comes from the pixels (once per image; cached). Falls
+ * back to the texture's own id where there is no image to read (node tests).
+ */
+const _textureKeys = new WeakMap();
+function textureKey(map) {
+  const img = map.image;
+  if (!img || !img.width || !img.height) return `uuid:${map.uuid}`;
+  if (_textureKeys.has(img)) return _textureKeys.get(img);
+  let key = `uuid:${map.uuid}`;
+  try {
+    const c = document.createElement('canvas');
+    c.width = img.width;
+    c.height = img.height;
+    const g = c.getContext('2d');
+    g.drawImage(img, 0, 0);
+    const d = g.getImageData(0, 0, c.width, c.height).data;
+    let h = 2166136261;
+    for (let i = 0; i < d.length; i++) h = Math.imul(h ^ d[i], 16777619);
+    key = `img:${img.width}x${img.height}:${h >>> 0}`;
+  } catch {
+    // A tainted or unreadable image keeps its own identity: no merge, no harm.
+  }
+  _textureKeys.set(img, key);
+  return key;
+}
+
+/**
+ * Normals as signed bytes and colours as unsigned bytes, both normalised: a
+ * quarter of the floats they replace, read by the shader as the same values to
+ * within 1/127 and 1/255. Positions and UVs stay float.
+ */
+function compactAttributes(geometry) {
+  const nrm = geometry.attributes.normal;
+  if (nrm) {
+    const a = new Int8Array(nrm.count * 3);
+    for (let i = 0; i < a.length; i++) a[i] = Math.round(nrm.array[i] * 127);
+    geometry.setAttribute('normal', new THREE.BufferAttribute(a, 3, true));
+  }
+  const col = geometry.attributes.color;
+  if (col) {
+    const a = new Uint8Array(col.count * 3);
+    for (let i = 0; i < a.length; i++) a[i] = Math.round(Math.min(1, Math.max(0, col.array[i])) * 255);
+    geometry.setAttribute('color', new THREE.BufferAttribute(a, 3, true));
+  }
+}
+
+/**
+ * The baked form of instanceAsset(): every placed part is written into world
+ * space and merged into ONE static mesh per (cell, material kind), so a cell
+ * costs a draw call and a frustum test rather than one draw per prototype.
+ *
+ * Kinds: untextured parts (every tinted part, and mountains) share one
+ * vertex-coloured material, so the whole rock range and the whole tree belt
+ * merge across their species; a textured part keeps its own material. Outline
+ * hulls, when a part is small enough for one, bake the same way.
+ *
+ * PURE given `entries`, so the node test can bake boxes.
+ *
+ * @param {THREE.Object3D} group
+ * @param {Array<{parts: Array<{geometry, material, triangles, tint?: number}>,
+ *   placements: Array<{x:number,z:number,y?:number,rotY?:number,scale?:number}>,
+ *   fit?: number, base?: number, outline?: boolean, outlineScale?: number,
+ *   castShadow?: boolean, receiveShadow?: boolean}>} entries
+ * @param {{cellOf: (p: object) => (string|number)}} opts
+ * @returns {THREE.Mesh[]}
+ */
+export function bakeInstances(group, entries, { cellOf }) {
+  const buckets = new Map();
+  const bucket = (key, make) => {
+    let b = buckets.get(key);
+    if (!b) { b = { ...make(), pieces: [] }; buckets.set(key, b); }
+    return b;
+  };
+
+  for (const e of entries) {
+    const fit = e.fit ?? 1;
+    const base = e.base ?? 0;
+    const cast = e.castShadow ?? true;
+    const recv = e.receiveShadow ?? true;
+    for (const part of e.parts) {
+      const src = part.geometry;
+      const m = part.material;
+      const untextured = part.tint !== undefined || !m.map;
+      const colour = part.tint !== undefined ? new THREE.Color(part.tint) : m.color.clone();
+      const hull = !!e.outline && part.triangles <= 600;
+
+      for (const p of e.placements) {
+        const cell = cellOf(p);
+        const s = (p.scale ?? 1) * fit;
+        _pos.set(p.x, p.y ?? 0, p.z);
+        _q.setFromAxisAngle(_up, p.rotY ?? 0);
+        _pos.y -= base * s;
+        _scl.setScalar(s);
+        _m.compose(_pos, _q, _scl);
+
+        let b;
+        if (untextured) {
+          b = bucket(`vc|${cell}|${cast}|${recv}|${m.side}|${m.transparent}|${m.opacity}|${m.alphaTest}`, () => ({
+            material: vertexColouredToon(m), cell, cast, recv, uv: false, color: true,
+          }));
+          b.pieces.push(placedPiece(src, _m, { uv: false, color: true, colour }));
+        } else {
+          // Three Bark, three Leaves_NormalTree and two Flowers materials carry
+          // identical images, so they share a draw; the key is everything that
+          // decides how the bucket looks, not the material object.
+          const tk = [textureKey(m.map), m.color.getHexString(), m.side, m.transparent, m.opacity,
+            m.alphaTest, m.vertexColors, m.map.colorSpace, m.map.flipY, m.map.wrapS, m.map.wrapT,
+            !!src.attributes.uv, !!src.attributes.color].join('|');
+          b = bucket(`tex|${cell}|${cast}|${recv}|${tk}`, () => ({
+            material: m, cell, cast, recv, uv: !!src.attributes.uv, color: !!src.attributes.color,
+          }));
+          b.pieces.push(placedPiece(src, _m, { uv: b.uv, color: b.color, colour }));
+        }
+
+        if (hull) {
+          _scl.setScalar(s * (e.outlineScale ?? 1.045));
+          _m.compose(_pos, _q, _scl);
+          const h = bucket(`hull|${cell}`, () => ({ material: outlineMaterial, cell, cast: false, recv: false, uv: false, color: false, name: 'outline' }));
+          h.pieces.push(placedPiece(src, _m, { uv: false, color: false, colour }));
+        }
+      }
+    }
+  }
+
+  const made = [];
+  for (const b of buckets.values()) {
+    const geometry = mergeGeometries(b.pieces, false);
+    if (!geometry) { console.warn('[board] a batch would not merge; left out'); continue; }
+    compactAttributes(geometry);
+    geometry.computeBoundingSphere();
+    const mesh = new THREE.Mesh(geometry, b.material);
+    mesh.name = b.name || 'props';
+    mesh.userData.cell = b.cell;
+    mesh.castShadow = b.cast;
+    mesh.receiveShadow = b.recv;
+    // Culling stays on: the sphere is the merged cell's own, so it holds every
+    // instance in the cell and a cell off screen is not drawn.
+    group.add(mesh);
+    made.push(mesh);
+  }
+  return made;
+}
+
+/** Untextured props: white, vertex-coloured, so each piece carries its tint. */
+function vertexColouredToon(source) {
+  const mat = new THREE.MeshToonMaterial({
+    color: 0xffffff,
+    gradientMap: toonRamp,
+    vertexColors: true,
+    side: source.side,
+    transparent: source.transparent,
+    opacity: source.opacity,
+    alphaTest: source.alphaTest,
+  });
+  mat.name = 'toon:props';
+  return mat;
+}
+
+/**
+ * Bake scatter families (the same fields as addProps) into merged cell meshes.
+ * Each family's model is loaded once and its tints, pack scale and ground
+ * alignment are resolved exactly as instanceAsset() resolves them.
+ *
+ * @param {THREE.Object3D} group
+ * @param {Array<{path: string, placements: object[], tint?: number|null,
+ *   partTints?: object|null, packScale?: boolean, groundAlign?: boolean,
+ *   outline?: boolean, outlineScale?: number, castShadow?: boolean,
+ *   receiveShadow?: boolean}>} families
+ * @param {{cellOf: (p: object) => (string|number)}} opts
+ */
+export async function bakeScatter(group, families, { cellOf }) {
+  const entries = [];
+  for (const f of families) {
+    if (!f.placements || !f.placements.length) continue;
+    const parts = await partsFor(f.path, f.tint ?? null);
+    if (!parts.length) continue;
+    entries.push({
+      parts: parts.map((part, partIndex) => ({
+        geometry: part.geometry,
+        material: part.material,
+        triangles: part.triangles,
+        tint: tintForPart(f.partTints ?? null, part.material, partIndex),
+      })),
+      placements: f.placements,
+      fit: f.packScale === false ? 1 : packScaleFor(f.path),
+      base: f.groundAlign === false ? 0 : baseOffsetFor(f.path, parts),
+      outline: !!f.outline,
+      outlineScale: f.outlineScale,
+      castShadow: f.castShadow ?? true,
+      receiveShadow: f.receiveShadow ?? true,
+    });
+  }
+  return bakeInstances(group, entries, { cellOf });
+}
+
 /** Everything below this is solid rock; tile blocks extend down to it. */
 export const LOWEST_GROUND = -4;
 
@@ -474,13 +747,22 @@ export class TileBoard {
     });
   }
 
+  /**
+   * Bake scatter families into merged, culled cell meshes (see bakeScatter).
+   * Chapter 3 uses this; addProps stays for the other chapters.
+   */
+  async bakeProps(families, { cellOf }) {
+    return bakeScatter(this.group, families, { cellOf });
+  }
+
   /** Rough draw-call accounting, so the budget stays honest. */
   stats() {
-    let instanced = 0, instances = 0;
+    let instanced = 0, instances = 0, merged = 0;
     this.group.traverse((o) => {
       if (o.isInstancedMesh) { instanced += 1; instances += o.count; }
+      else if (o.isMesh && o.name === 'props') merged += 1;
     });
-    return { instancedMeshes: instanced, totalInstances: instances };
+    return { instancedMeshes: instanced, totalInstances: instances, mergedMeshes: merged };
   }
 }
 

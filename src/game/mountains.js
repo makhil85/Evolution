@@ -4,10 +4,14 @@
 // last tile. A ring of cliff blocks turns "the map stops here" into "the valley
 // is surrounded", which needs no explanation.
 //
-// Built from kenney_nature's 56 cliff pieces, instanced per piece type so the
-// whole ring costs a handful of draw calls rather than one per rock.
+// Built from kenney_nature's 56 cliff pieces, merged into a few arcs of the ring
+// (board.js bakeScatter) so the whole range costs a handful of draw calls rather
+// than one per rock, and an arc behind the camera is culled as one.
 import * as THREE from 'three';
-import { instanceAsset, KN } from './board.js';
+import { bakeScatter, sectorCellOf, KN } from './board.js';
+
+/** The ring is baked into this many arcs (see buildMountainRing). */
+const MOUNTAIN_ARCS = 12;
 
 /** Cliff pieces that read well as mountain mass, biggest first. */
 const PIECES = [
@@ -160,26 +164,31 @@ export async function buildMountainRing(parent, bounds, { rings = 4, spacing = 4
 
   const { byPiece } = mountainRingLayout(bounds, { rings, spacing });
 
-  let made = 0;
-  for (const [piece, placements] of Object.entries(byPiece)) {
-    // Kenney cliffs ship near-white, which at distance reads as pale cardboard
-    // rather than rock. Tint per band: nearer stone warm and solid, far ranges
-    // cooler and lighter, which is the aerial perspective that sells depth.
-    const meshes = await instanceAsset(group, KN(piece), placements, {
-      tint: 0x7d8a76,
-      // Sized to the skyline by hand; the pack scale is for village props.
-      packScale: false,
-      // These are deliberately sunk below ground so only their upper mass
-      // shows. Standing them on their own base would float the whole range.
-      groundAlign: false,
-      // Distant mass: no outlines (they would fringe the skyline) and no
-      // shadow casting (nothing is behind them to receive it).
-      outline: false,
-      castShadow: false,
-      receiveShadow: false,
-    });
-    made += meshes.length;
-  }
+  // Kenney cliffs ship near-white, which at distance reads as pale cardboard
+  // rather than rock. Tint per band: nearer stone warm and solid, far ranges
+  // cooler and lighter, which is the aerial perspective that sells depth.
+  const families = Object.entries(byPiece).map(([piece, placements]) => ({
+    path: KN(piece),
+    placements,
+    tint: 0x7d8a76,
+    // Sized to the skyline by hand; the pack scale is for village props.
+    packScale: false,
+    // These are deliberately sunk below ground so only their upper mass
+    // shows. Standing them on their own base would float the whole range.
+    groundAlign: false,
+    // Distant mass: no outlines (they would fringe the skyline) and no
+    // shadow casting (nothing is behind them to receive it).
+    outline: false,
+    castShadow: false,
+    receiveShadow: false,
+  }));
 
-  return { group, meshCount: made, pieceTypes: Object.keys(byPiece).length };
+  // Baked into merged arcs of the ring: a far arc behind the camera costs one
+  // culled draw, and the whole range is at most one draw per arc rather than one
+  // per cliff piece.
+  const cx = (bounds.minX + bounds.maxX) / 2;
+  const cz = (bounds.minZ + bounds.maxZ) / 2;
+  const meshes = await bakeScatter(group, families, { cellOf: sectorCellOf(cx, cz, MOUNTAIN_ARCS) });
+
+  return { group, meshCount: meshes.length, pieceTypes: Object.keys(byPiece).length };
 }
