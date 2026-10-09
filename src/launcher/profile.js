@@ -78,7 +78,7 @@ export const CHAPTERS = [
   },
   {
     n: 2,
-    title: 'City Engineering',
+    title: 'Forces and Machines',
     blurb: 'Build the bridge, then raise the Engineering Workshop.',
     href: 'chapter2.html', // the 3-D version (CHAPTER2_PLAN.md); the old one stays in docs/legacy-chapters/
     store: { 1: 'level2_city_engineering_v5_three_side_moat_route', 4: 'level2_city_engineering_grade3_olympiad_v2_science' },
@@ -86,7 +86,7 @@ export const CHAPTERS = [
   },
   {
     n: 3,
-    title: 'Rocket Village',
+    title: 'Ready for Lift-off',
     blurb: 'Answer the science questions, build the rocket stage by stage, and launch it.',
     href: 'chapter3.html',
     store: { 1: 'level3_rocket_village_v2_L1', 4: 'level3_rocket_village_v2' },
@@ -111,9 +111,17 @@ export const CHAPTERS = [
   {
     n: 6,
     title: 'The Long Trip',
-    blurb: 'Back in the asteroid belt: build a ship inside a rock, meet the crew, make it a tiny Earth, then find the fastest way out towards the stars.',
+    blurb: 'Back in the asteroid belt: drill a rock into a starship, meet the crew, make it a tiny Earth, then find the fastest way out towards the stars.',
     href: 'chapter6.html',
     store: { 1: 'level6_long_trip_v1_L1', 4: 'level6_long_trip_v1' },
+    isDone: (s) => s?.complete === true,
+  },
+  {
+    n: 7,
+    title: 'Toward Tau Ceti',
+    blurb: 'Leave the Sun behind at full power: feel the push, float in zero-g, do chemistry and biology on board, visit a quasar in the holodeck, and race on towards Tau Ceti.',
+    href: 'chapter7.html',
+    store: { 1: 'level7_tau_ceti_v1_L1', 4: 'level7_tau_ceti_v1' },
     isDone: (s) => s?.complete === true,
   },
 ];
@@ -259,6 +267,8 @@ export function resetEverything() {
     // Chapter 6: the stations done and the route planned (ch6/partB.js, ch6/partE.js).
     'rocket_village_ch6_stations_L1', 'rocket_village_ch6_stations_L4',
     'rocket_village_ch6_route_L1', 'rocket_village_ch6_route_L4',
+    // Chapter 7: which room tasks are done (ch7/partC.js).
+    'rocket_village_ch7_tasks_L1', 'rocket_village_ch7_tasks_L4',
   ]);
   for (const c of CHAPTERS) {
     const stores = typeof c.store === 'string' ? [c.store] : Object.values(c.store);

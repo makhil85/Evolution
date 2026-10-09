@@ -24,8 +24,9 @@
 
 import { checkAnswer as checkChapter3Answer } from '../game/questions.js';
 import { heroQuestion } from '../launcher/hero.js';
-import { IS_CH5, IS_CH6 } from './chapter.js';
-import { CH5_QUESTIONS } from './ch5/questions.ch5.js';
+import { IS_CH5, IS_CH6, IS_CH7 } from './chapter.js';
+import { ch7Bank } from './ch7/questions.ch7.js';
+import { ch5Bank } from './ch5/questions.ch5.js';
 import { partEBank } from './ch6/questions.partE.js';
 import { partBBank } from './ch6/questions.partB.js';
 import { partQuestsBank } from './ch6/questions.partQuests.js';
@@ -493,7 +494,7 @@ const LEVEL4_SPACE_QUESTIONS = {
     parentHint:
       'The belt holds millions of rocks, but spread through an enormous volume. NASA probes have crossed it many times without special dodging. (We squeezed ours closer so you have something to mine!)',
     success:
-      'Correct. The real belt is mostly empty space. We squeezed the rocks in this game much closer together so you have something to mine.',
+      'Correct. The real belt is mostly empty space. We squeezed the rocks much closer together so you have something to mine.',
     doneMessage: 'Use your claw (E) to mine. Stony rocks give silicon, metal rocks give metal, and icy rocks give ice.',
     reward: { science: 15 },
   },
@@ -1130,7 +1131,7 @@ export const LEVEL1_SPACE_QUESTIONS = {
     ],
     hint: 'The rocks are very far apart. So how many would be next to her window?',
     parentHint: 'The real belt is mostly empty; probes fly through without dodging. We packed the game’s rocks closer so there is something to mine.',
-    success: 'Correct! The real belt is mostly empty. We squeezed the rocks in this game closer together so you can mine them.',
+    success: 'Correct! The real belt is mostly empty. We squeezed the rocks closer together so you can mine them.',
     doneMessage: 'Fly close to rocks and press E to grab them.',
   },
 
@@ -1431,11 +1432,13 @@ function difficultyLevel() {
 }
 
 function selectBank() {
-  // Chapter 5 has its own bank (Level 4 only so far: Level 1 comes later).
-  if (IS_CH5) return CH5_QUESTIONS;
+  // Chapter 5 has its own bank, Level 1 overlay included (ch5/questions.ch5.js).
+  if (IS_CH5) return ch5Bank(difficultyLevel());
   // Chapter 6: the station questions (Part B), the life-on-board questions and Part E's, Level 1 overlays merged.
   // (The engine build moved here from Chapter 5, with its question.)
-  if (IS_CH6) return { c5_deuterium: CH5_QUESTIONS.c5_deuterium, ...partBBank(difficultyLevel()), ...partQuestsBank(difficultyLevel()), ...partEBank(difficultyLevel()) };
+  // Chapter 7: one bank merged from each part's file (ch7/questions.ch7.js), at the child's Level.
+  if (IS_CH7) return ch7Bank(difficultyLevel());
+  if (IS_CH6) return { c5_deuterium: ch5Bank(difficultyLevel()).c5_deuterium, ...partBBank(difficultyLevel()), ...partQuestsBank(difficultyLevel()), ...partEBank(difficultyLevel()) };
   if (difficultyLevel() !== 1) return LEVEL4_SPACE_QUESTIONS;
   const out = {};
   for (const [id, base] of Object.entries(LEVEL4_SPACE_QUESTIONS)) {

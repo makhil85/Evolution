@@ -183,6 +183,8 @@ function buildKid(id) {
     dispose() {
       mixer.stopAllAction();
       rig.geometry?.dispose?.();
+      // The outline's own geometry, when it is not the body's (girl.js drops the flagged faces).
+      if (rig.hull && rig.hull.geometry !== rig.geometry) rig.hull.geometry?.dispose?.();
       rig.hull?.material?.dispose?.();
       mat.dispose();
       badge.geometry.dispose(); badgeMat.dispose();

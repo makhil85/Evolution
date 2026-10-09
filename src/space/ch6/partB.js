@@ -9,9 +9,9 @@ import { t, LEVEL } from '../level.js';
 import { createInteriorScene, preloadInterior } from './interior/ship.js';
 import { playStation } from './stations.js';
 import { STATION_BEAT } from './questions.partB.js';
-import { CALM_S } from '../contracts.js';
 import { who } from './crewInfo.js';
 
+const WALK_CALM_S = 1.5; // the pause before a question asked on foot (flights keep CALM_S)
 const KEY = `rocket_village_ch6_stations_L${LEVEL}`;
 const loadDone = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; } };
 const saveDone = (ids) => { try { localStorage.setItem(KEY, JSON.stringify(ids)); } catch { /* private mode */ } };
@@ -23,12 +23,12 @@ export function partBSteps(game) {
   return [
     {
       id: 'c6_habitat', act: 2,
-      title: t('Build the living half', 'Make the ship a home'),
+      title: t('Fit out the ring', 'Make the ship a home'),
       objective: t('Walk the ship’s decks (the lift joins them) and visit all six stations with the crew: shield, air, water, farm, power and the store.', 'Walk round the ship. Visit all 6 stations with the crew.'),
       markers: [],
       async enter() {
         await hud.showDialogue([
-          { who: who('builder'), text: t('The engine half is done. Now the living half: everything that keeps five people alive between the stars.', 'The engine works. Now we make the ship a home!') },
+          { who: who('builder'), text: t('The engine works. Now we fit out the ring: everything that keeps five people alive between the stars.', 'The engine works. Now we make the ship a home!') },
           { who: who('biologist'), text: t('Air, water, food. Out there nothing comes from outside, so the ship has to make it all, like a tiny Earth.', 'We need air, water and food. The ship must make them all.') },
           { who: 'girl', text: t('Then let’s build it. Show me round!', 'Let’s build it! Show me!') },
         ]);
@@ -40,12 +40,14 @@ export function partBSteps(game) {
           async onStation(id) {
             await playStation(id, { bus: game.bus });
             // The question first, then the station counts as done: two missed
-            // tries restart the act, and then she redoes this station too.
-            await game.missions.ask(STATION_BEAT[id], { calm: CALM_S });
+            // tries restart the act, and then she redoes this station too. On
+            // foot a short pause with a toast, so she knows it is coming.
+            hud.toast(t('Mission Control has a question...', 'A question is coming!'), { kind: 'info', ms: 1400 });
+            await game.missions.ask(STATION_BEAT[id], { calm: WALK_CALM_S });
             done.add(id); saveDone([...done]);
           },
         }));
-        hud.toast(t('The living half is built! Our ship is a home now.', 'The ship is a home now!'), { kind: 'good', ms: 4200 });
+        hud.toast(t('The crew ring is built! Our ship is a home now.', 'The ship is a home now!'), { kind: 'good', ms: 4200 });
       },
     },
   ];

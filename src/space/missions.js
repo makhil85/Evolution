@@ -34,12 +34,16 @@ import { t } from './level.js';
 import { bodyState } from './orbits.js';
 import { questionForBeat, getSpaceQuestion } from './questions.space.js';
 import { heroName } from './hud/hud.js';
-import { IS_CH5, IS_CH6, OUTER } from './chapter.js';
+import { IS_CH5, IS_CH6, IS_CH7, OUTER } from './chapter.js';
 import { CH5_ACT_TITLES } from './ch5/start.js';
 import { ch5Steps } from './ch5/steps.js';
 import { CH6_ACT_TITLES } from './ch6/start.js';
 import { ch6Steps } from './ch6/steps.js';
+import { CH7_ACT_TITLES } from './ch7/start.js';
+import { ch7Steps } from './ch7/steps.js';
 import { phasesNow, restorePhases } from './ch5/lineup.js';
+import { inModalTurn, resetModalTurns } from './hud/modalQueue.js';
+import { orbitElements } from './physics.js';
 
 const ACT_TITLES_CH4 = {
   1: 'Act 1: Earth orbit',
@@ -48,7 +52,7 @@ const ACT_TITLES_CH4 = {
   4: 'Act 4: Jupiter',
   5: 'Finale: Europa',
 };
-const ACT_TITLES = IS_CH6 ? CH6_ACT_TITLES : IS_CH5 ? CH5_ACT_TITLES : ACT_TITLES_CH4;
+const ACT_TITLES = IS_CH7 ? CH7_ACT_TITLES : IS_CH6 ? CH6_ACT_TITLES : IS_CH5 ? CH5_ACT_TITLES : ACT_TITLES_CH4;
 
 // --- helpers ----------------------------------------------------------------
 
@@ -98,7 +102,7 @@ import { act5Steps } from './acts/act5.js';
 // --- the steps ----------------------------------------------------------------
 
 function buildSteps(game) {
-  const steps = IS_CH6 ? ch6Steps(game) : IS_CH5 ? ch5Steps(game) : [
+  const steps = IS_CH7 ? ch7Steps(game) : IS_CH6 ? ch6Steps(game) : IS_CH5 ? ch5Steps(game) : [
     ...act1Steps(game),
     ...act2Steps(game),
     ...act3Steps(game),
@@ -148,10 +152,14 @@ export function createMissions(game) {
   save.stepIndex = index;
   let entered = false;   // enter() has settled for the current step
   let busy = false;      // completing (question / after) - don't re-check
+  let gen = 0;           // bumped by jump(): a step still in flight from before it must not move the chain on
   let stepTime = 0;
-  let calm = null; // { left, resolve } while a calm pause runs
+  // Several waits can run at once (a Ceres visit's pause while the step's own
+  // pause runs), so each is a list entry, not one slot a second call would
+  // overwrite (the first promise would then never settle).
+  let calms = []; // [{ left, resolve }] calm pauses, counted down in game seconds
   let quiet = 0; // seconds since she last steered by hand (main.js sets game.kidSteering)
-  let quietWait = null; // { resolve } while a question waits for hands-off flying
+  let quietWaits = []; // [resolve] questions waiting for hands-off flying
   const deferred = new Set(save.deferred || []);
   const answered = new Set(save.answered || []);
 
@@ -190,13 +198,13 @@ export function createMissions(game) {
 
   /** The mission card; `doneNow` ticks the current step off already (it is
    *  finished, a calm moment before its question). */
-  function showStep(doneNow = false) {
+  function showStep(doneNow = false, objective = null) {
     const step = steps[index];
     const actSteps = steps.filter((s) => s.act === step.act);
     hud.setMission({
       act: ACT_TITLES[step.act] || '',
       title: step.title,
-      objective: doneNow ? `Done: ${step.title}!` : step.objective,
+      objective: objective || (doneNow ? `Done: ${step.title}!` : step.objective),
       steps: actSteps.map((s) => ({ text: s.title, done: steps.indexOf(s) < index || (doneNow && s === step) || !!s.doneEarly?.() })),
     });
   }
@@ -205,13 +213,33 @@ export function createMissions(game) {
   /** Wait `sec` of unpaused game time (missions.update counts it down). */
   function calmFor(sec) {
     if (!(sec > 0)) return Promise.resolve();
-    return new Promise((resolve) => { calm = { left: sec, resolve }; });
+    return new Promise((resolve) => { calms.push({ left: sec, resolve }); });
   }
 
   /** Hands-off flying before a question (QUIET_S): none needed on foot or in a mini-scene. */
   function untilQuiet() {
     if (game.activeScene || quiet >= QUIET_S) return Promise.resolve();
-    return new Promise((resolve) => { quietWait = { resolve }; });
+    return new Promise((resolve) => { quietWaits.push(resolve); });
+  }
+
+  /** Does this step send her out of the system she is in? An escape does, and so does a
+   *  transfer to another body (Earth's orbit to the Moon, Jupiter's to Europa counts too).
+   *  The belt is a custom target (act3's customTargets, parent the Sun): it counts; a
+   *  rendezvous with a custom target in her own system (Act 1's satellite) does not. */
+  function departs(step) {
+    if (!step) return false;
+    if (step.escape) return true;
+    if (!step.transfer) return false;
+    if (BODIES[step.transfer]) return step.transfer !== game.ship.soi;
+    const custom = game.customTargets?.[step.transfer];
+    return !!custom && custom.parent !== game.ship.soi;
+  }
+
+  /** A closed loop that clears the surface: a stable orbit to leave from. */
+  function inClosedOrbit() {
+    const oe = orbitElements(game.ship);
+    const body = BODIES[game.ship.soi];
+    return !!body && oe.bound && oe.periapsis > body.radius * 1.08;
   }
 
   /**
@@ -243,12 +271,22 @@ export function createMissions(game) {
       const onKey = (e) => { if (e.code === 'Enter' && !document.querySelector('.sp-modal.is-open')) go(); };
       btn.addEventListener('click', () => { btn.blur(); go(); });
       addEventListener('keydown', onKey);
-      // The autopilot flies on by itself after a short look.
+      // The autopilot flies on by itself after a short look (never under a card).
       let apFor = 0;
-      auto = setInterval(() => { apFor = game.autopilot?.on ? apFor + 0.5 : 0; if (apFor >= 8) go(); }, 500);
+      auto = setInterval(() => {
+        // Burned away without pressing it: she is on her way, so the step goes on.
+        if (!inClosedOrbit()) { go(); return; }
+        // Her map card, a fact, a question: the button stays out of the way.
+        const card = hud.isModalOpen();
+        btn.style.display = card ? 'none' : '';
+        apFor = game.autopilot?.on && !card ? apFor + 0.5 : 0;
+        if (apFor >= 8) go();
+      }, 500);
     });
   }
 
+  /** Ask a beat's question once she has let go of the controls. hud.askQuestion
+   *  takes the card's turn (modalQueue.js), so questions never replace each other. */
   async function ask(beat) {
     const q = questionForBeat(beat);
     if (!q) return;
@@ -288,14 +326,15 @@ export function createMissions(game) {
   }
 
   async function enterStep() {
+    const my = gen;
     entered = false;
     stepTime = 0;
     const step = steps[index];
-    // Leaving an orbit (round a planet or moon; not from the ground, nor
-    // straight on from a liftoff that is still climbing): her call.
-    if (step.escape && !steps[index - 1]?.escape && game.ship.soi !== 'sun' && !game.ship.landedOn) {
+    // Leaving a stable orbit (round a planet or moon; not from the ground, nor
+    // straight on from a departure that is still under way): her call.
+    if (departs(step) && !departs(steps[index - 1]) && game.ship.soi !== 'sun' && !game.ship.landedOn && inClosedOrbit()) {
       game.escapeStep = false; game.aimHint = null; game.transferTarget = null; game.captureTarget = null;
-      await readyToLeave();
+      await inModalTurn(readyToLeave); // in the card queue: no card opens under the button
     }
     showStep();
     // First step of an act: remember the save as it is now, the place the
@@ -318,10 +357,11 @@ export function createMissions(game) {
     game.escapeStep = !!step.escape;
     announceGoal(step);
     try { await step.enter?.(game); } catch (e) { console.error('mission enter', step.id, e); }
-    entered = true;
+    if (my === gen) entered = true; // a step jumped away from while its enter ran is not "entered"
   }
 
   async function complete() {
+    const my = gen;
     busy = true;
     const step = steps[index];
     try {
@@ -341,6 +381,7 @@ export function createMissions(game) {
     } catch (e) {
       console.error('mission complete', step.id, e);
     }
+    if (my !== gen) return; // jumped away while this step was completing: the jump owns the chain now
     index = Math.min(index + 1, steps.length - 1);
     persist();
     // Just answered a question: a stable place to come back to (Retry).
@@ -357,6 +398,12 @@ export function createMissions(game) {
     saved: save,
     /** Redraw the mission card (a step ticked off early, act3's Ceres visit). */
     refresh() { showStep(); },
+    /** Show a calm line on the card for the current step (a wait with nothing to do:
+     *  an orbit lap). `done` ticks the step off too (its goal is met). */
+    showObjective(text, { done = false } = {}) { showStep(done, text); },
+    /** Hands-off flying first (QUIET_S): for questions asked outside the step engine
+     *  (acts/util.js askBeat, the belt's beats). Resolves at once on foot. */
+    untilQuiet,
     /** Save now (main.js calls this every few seconds while flying). */
     save() { persist(); },
     /** Ask a beat's question the way a step's own beat is asked: counted as
@@ -393,10 +440,17 @@ export function createMissions(game) {
     /** Count down a calm pause (also called while a walk scene runs). */
     tickCalm(dt, paused) {
       if (!paused) quiet = game.kidSteering ? 0 : quiet + dt;
-      if (quietWait && (game.activeScene || quiet >= QUIET_S)) { const r = quietWait.resolve; quietWait = null; r(); }
-      if (!calm || paused) return;
-      calm.left -= dt;
-      if (calm.left <= 0) { const r = calm.resolve; calm = null; r(); }
+      if (quietWaits.length && (game.activeScene || quiet >= QUIET_S)) {
+        const rs = quietWaits; quietWaits = [];
+        for (const r of rs) r();
+      }
+      if (!calms.length || paused) return;
+      // In place (no new list each frame): finish the ones that are due.
+      for (let i = calms.length - 1; i >= 0; i--) {
+        const c = calms[i];
+        c.left -= dt;
+        if (c.left <= 0) { calms.splice(i, 1); c.resolve(); }
+      }
     },
     update(dt, states, paused) {
       this.tickCalm(dt, paused);
@@ -417,7 +471,15 @@ export function createMissions(game) {
     /** Debug: jump to a step by id (window.__space.missions.jump('a1_raise')). */
     jump(id) {
       const i = steps.findIndex((s) => s.id === id);
-      if (i >= 0) { index = i; enterStep(); }
+      if (!(i >= 0)) return;
+      // Lead 2026-10-09: an unanswered card (the flight-mode picker, a question)
+      // held the card queue, so the new step's dialogue waited behind it for good.
+      // The jump abandons the queue and the old step's flow (gen), then starts.
+      gen++;
+      busy = false;
+      resetModalTurns();
+      index = i;
+      enterStep();
     },
     /** The steps, for the grown-up Jump panel: [{ id, label, group }]. */
     parts() {

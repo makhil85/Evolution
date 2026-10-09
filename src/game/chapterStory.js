@@ -16,8 +16,13 @@
 //   tick(dt):  if (!story.update(dt)) updateCamera(dt);
 //   blocked:   story.active (it also sets body[data-play-modal], which every
 //              chapter already treats as "no walking, no E")
-//   await story.intro({ title, line, lookAt });
-//   await story.outro({ title, line, focus, next });
+//   await story.intro({ title, line, lookAt, scene });
+//   await story.outro({ title, line, focus, next, scene });
+// `scene` (optional, the full version only) is an async film played before
+// the title card / before the complete card: `async (run) => { await run(secs,
+// (t, k) => { ...move the camera and props... }); }`. See run() below.
+// A scene may also be an object { duration, step(t, say), dispose() } (Chapter
+// 1's style): it is wrapped into a film, say(text) shows a bottom caption.
 import * as THREE from 'three';
 import { loadProfile, SEEN_PREFIX } from '../launcher/profile.js';
 import { keepUnlock } from '../launcher/profile.js';
@@ -43,7 +48,12 @@ function injectCss() {
 .cs-bars::before { top: 0; transform: translateY(-100%); }
 .cs-bars::after { bottom: 0; transform: translateY(100%); }
 .cs-bars.is-on::before, .cs-bars.is-on::after { transform: none; }
-body.cs-cinematic .rv-hud { opacity: 0; transition: opacity .5s; pointer-events: none; }
+body.cs-cinematic .rv-hud, body.cs-cinematic .pl-back, body.cs-cinematic .pl-chip, body.cs-cinematic .play-nav-text,
+body.cs-cinematic .pl-hint, body.cs-cinematic .pl-cluebtn, body.cs-cinematic #rvBackToChapters { opacity: 0; transition: opacity .5s; pointer-events: none; }
+.cs-caption { position: fixed; left: 50%; bottom: calc(11vh + 14px); z-index: 9000; width: min(92vw, 820px); transform: translate(-50%, 8px);
+  text-align: center; color: #fff; font: 600 clamp(16px, 2.3vw, 22px)/1.35 'Segoe UI', 'Trebuchet MS', system-ui, Arial, Helvetica, sans-serif;
+  text-shadow: 0 2px 12px rgba(0,0,0,.8); opacity: 0; transition: opacity .6s, transform .6s; pointer-events: none; }
+.cs-caption.is-on { opacity: 1; transform: translate(-50%, 0); }
 .cs-title { position: fixed; left: 50%; top: 30%; transform: translate(-50%, 12px); z-index: 9001;
   text-align: center; color: #fff; opacity: 0; transition: opacity .8s, transform .8s; pointer-events: none;
   font-family: 'Segoe UI', 'Trebuchet MS', system-ui, Arial, Helvetica, sans-serif; text-shadow: 0 2px 18px rgba(0,0,0,.55); width: min(92vw, 760px); }
@@ -75,7 +85,7 @@ body.cs-cinematic .rv-hud { opacity: 0; transition: opacity .5s; pointer-events:
 .cs-btn--stay { background: #eef1f7; color: #2a3347; }
 .cs-btn:focus-visible { outline: 3px solid #ffb347; outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
-  .cs-bars::before, .cs-bars::after, .cs-title, .cs-card, .cs-card__stars span { transition: none; }
+  .cs-bars::before, .cs-bars::after, .cs-title, .cs-card, .cs-card__stars span, .cs-caption { transition: none; }
 }`;
   document.head.appendChild(s);
 }
@@ -143,12 +153,46 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
   let active = false;
   let prevModal;
   const nodes = [];
+  // A film's timed camera move: step(t, k) runs for `secs` (k goes 0 -> 1 and
+  // the last call is step(secs, 1)). A skip ends the film: later runs return at once.
+  let filmStop = null;
+  let filmOver = false;
+  const run = (secs, step) => new Promise((resolve) => {
+    if (filmOver) { resolve(); return; }
+    filmStop = resolve;
+    shot = {
+      t: 0,
+      step(t) {
+        if (t < secs) { step(t, t / secs); return; }
+        shot = null;
+        filmStop = null;
+        step(secs, 1);
+        resolve();
+      },
+    };
+  });
+  const endRun = () => { filmOver = true; shot = null; filmStop?.(); filmStop = null; };
+
+  // A caption line under the picture (Chapter 1's scenes use it).
+  let capEl = null;
+  function say(text) {
+    if (!text && !capEl) return;
+    // end() removes the nodes after a film, so a later film (the ending) makes a fresh caption.
+    if (!capEl || !capEl.isConnected) { capEl = el('div', 'cs-caption'); document.body.appendChild(capEl); nodes.push(capEl); }
+    if (capEl.textContent !== (text || '')) capEl.textContent = text || '';
+    capEl.classList.toggle('is-on', !!text);
+  }
+  /** A scene object { duration, step(t, say), dispose() } as a film. */
+  const asFilm = (scene) => (!scene || typeof scene === 'function' ? scene : async (play) => {
+    try { await play(scene.duration, (t) => scene.step(t, say)); } finally { say(null); scene.dispose?.(); }
+  });
 
   const bars = el('div', 'cs-bars');
   document.body.appendChild(bars);
 
   function begin() {
     active = true;
+    filmOver = false;     // a new film (the opening, then the ending) plays in full
     prevModal = document.body.dataset.playModal;
     document.body.dataset.playModal = '1';
     document.body.classList.add('cs-cinematic');
@@ -181,10 +225,17 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
 
     /**
      * The opening. `lookAt` is the middle of the map (the sweep starts
-     * looking at it). Resolves when it ends or is skipped.
+     * looking at it). `scene` is a film played first (see the header).
+     * Resolves when it ends or is skipped.
      */
-    intro({ eyebrow, title, line, lookAt }) {
+    intro({ eyebrow, title, line, lookAt, scene = null }) {
+      const raw = scene;
+      scene = asFilm(scene);
       const full = !this.seen();
+      const filmFirst = full && !!scene;   // the film, then the card (no sweep)
+      // A scene object builds its set when it is made: a returning child never
+      // sees it, so take it down now (it hid the village's scenery until then).
+      if (!filmFirst && raw && typeof raw !== 'function') raw.dispose?.();
       begin();
       const card = el('div', 'cs-title');
       card.append(el('div', 'cs-title__eyebrow', eyebrow), el('div', 'cs-title__name', title), el('div', 'cs-title__line', line));
@@ -192,10 +243,12 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
       document.body.append(card, skip);
       nodes.push(card, skip);
       // A timer, not requestAnimationFrame: rAF never fires in a hidden tab.
-      setTimeout(() => { card.classList.add('is-on'); if (full) skip.classList.add('is-on'); }, 30);
+      const showCard = () => setTimeout(() => card.classList.add('is-on'), 30);
+      setTimeout(() => { if (full) skip.classList.add('is-on'); }, 30);
+      if (!filmFirst) showCard();
 
       return new Promise((resolve) => {
-        const DUR = full ? 6.2 : 2.6;
+        const DUR = filmFirst ? 3.6 : full ? 6.2 : 2.6;
         let waved = false;
         let finished = false;
         const finish = () => {
@@ -204,43 +257,60 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
           removeEventListener('keydown', onSkip, true);
           removeEventListener('pointerdown', onSkip, true);
           try { localStorage.setItem(seenKey, '1'); } catch { /* private mode */ }
+          endRun();
           end();
           resolve();
         };
-        const onSkip = (e) => { e.stopPropagation(); if (e.type === 'keydown') e.preventDefault(); finish(); };
+        // Any key or click skips, once the first second has passed.
+        let armed = false;
+        setTimeout(() => { armed = true; }, 1000);
+        const onSkip = (e) => { if (!armed) return; e.stopPropagation(); if (e.type === 'keydown') e.preventDefault(); finish(); };
         addEventListener('keydown', onSkip, true);
         addEventListener('pointerdown', onSkip, true);
 
-        // Start: high over the map on the far side, looking at its middle;
-        // end: exactly where the chase camera wants to be.
-        const p0 = getPlayerPos().clone();
-        const home = chasePose();
-        const endA = Math.atan2(home.pos.x - p0.x, home.pos.z - p0.z);
-        const endR = Math.hypot(home.pos.x - p0.x, home.pos.z - p0.z);
-        const endH = home.pos.y - p0.y;
-        const center = lookAt ? lookAt.clone() : p0.clone();
-        shot = {
-          t: 0,
-          step(t) {
-            if (full) {
-              const e = easeInOut(t / (DUR - 0.8));
-              const a = endA + 2.3 * (1 - e);
-              const r = endR + 44 * (1 - e);
-              const h = endH + 30 * (1 - e) * (1 - e * 0.35);
-              _pos.set(p0.x + Math.sin(a) * r, p0.y + h, p0.z + Math.cos(a) * r);
-              _look.copy(center).lerp(home.look, smooth(t / (DUR - 1.2)));
-              camera.position.copy(_pos);
-              camera.lookAt(_look);
-            } else {
-              const hp = chasePose();
-              camera.position.lerp(hp.pos, 0.2);
-              camera.lookAt(hp.look);
-            }
-            if (!waved && t > DUR - 2.2) { waved = true; getAvatar()?.play?.('wave', { hold: 2 }); }
-            if (t > DUR - 0.9) card.classList.remove('is-on');
-            if (t >= DUR) finish();
-          },
+        // The card's camera: a sweep (full, no film), or a short hold on the chase camera.
+        const startCard = () => {
+          // Start: high over the map on the far side, looking at its middle;
+          // end: exactly where the chase camera wants to be.
+          const sweep = full && !filmFirst;
+          const p0 = getPlayerPos().clone();
+          const home = chasePose();
+          const endA = Math.atan2(home.pos.x - p0.x, home.pos.z - p0.z);
+          const endR = Math.hypot(home.pos.x - p0.x, home.pos.z - p0.z);
+          const endH = home.pos.y - p0.y;
+          const center = lookAt ? lookAt.clone() : p0.clone();
+          showCard();
+          shot = {
+            t: 0,
+            step(t) {
+              if (sweep) {
+                const e = easeInOut(t / (DUR - 0.8));
+                const a = endA + 2.3 * (1 - e);
+                const r = endR + 44 * (1 - e);
+                const h = endH + 30 * (1 - e) * (1 - e * 0.35);
+                _pos.set(p0.x + Math.sin(a) * r, p0.y + h, p0.z + Math.cos(a) * r);
+                _look.copy(center).lerp(home.look, smooth(t / (DUR - 1.2)));
+                camera.position.copy(_pos);
+                camera.lookAt(_look);
+              } else {
+                const hp = chasePose();
+                camera.position.lerp(hp.pos, 0.2);
+                camera.lookAt(hp.look);
+              }
+              if (!waved && t > DUR - 2.2) { waved = true; getAvatar()?.play?.('wave', { hold: 2 }); }
+              if (t > DUR - 0.9) card.classList.remove('is-on');
+              if (t >= DUR) finish();
+            },
+          };
         };
+        if (filmFirst) {
+          (async () => {
+            try { await scene(run); } catch (err) { console.error('[story] opening film failed:', err); }
+            if (!finished) startCard();
+          })();
+        } else {
+          startCard();
+        }
       });
     },
 
@@ -250,66 +320,85 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
      * `next` = { href, label } for the next chapter.
      * @returns {Promise<'next'|'stay'>}
      */
-    outro({ title, line, focus = null, next = null }) {
+    outro({ title, line, focus = null, next = null, scene = null }) {
+      scene = asFilm(scene);
       begin();
-      getAvatar()?.play?.('cheer', { hold: 4 });
-      setTimeout(() => confetti(), 400);
-      const c0 = camera.position.clone();
-      const f = focus ? focus.clone() : null;
-      const startA = f ? Math.atan2(c0.x - f.x, c0.z - f.z) : 0;
-      if (f) {
-        const _lk = new THREE.Vector3();
-        shot = {
-          t: 0,
-          step(t) {
-            // Ease in from where the camera was, then keep circling slowly.
-            const k = smooth(t / 1.6);
-            const a = startA + 0.28 * t;
-            _pos.set(f.x + Math.sin(a) * 17, f.y + 9, f.z + Math.cos(a) * 17);
-            camera.position.copy(c0).lerp(_pos, k);
-            _lk.set(f.x, f.y + 2.5, f.z);
-            camera.lookAt(_lk);
-          },
-        };
-      }
-
-      return new Promise((resolve) => {
-        const card = el('div', 'cs-card');
-        card.setAttribute('role', 'dialog');
-        card.setAttribute('aria-label', title);
-        const stars = el('div', 'cs-card__stars');
-        for (let i = 0; i < 3; i++) stars.appendChild(el('span', null, '★'));
-        const actions = el('div', 'cs-card__actions');
-        card.append(stars, el('div', 'cs-card__eyebrow', `Chapter ${chapter} complete`), el('div', 'cs-card__title', title), el('p', 'cs-card__line', line), actions);
-        let goBtn = null;
-        if (next) {
-          goBtn = el('button', 'cs-btn cs-btn--go', `${next.label} ▶`);
-          goBtn.type = 'button';
-          actions.appendChild(goBtn);
+      const after = () => {
+        getAvatar()?.play?.('cheer', { hold: 4 });
+        setTimeout(() => confetti(), 400);
+        const c0 = camera.position.clone();
+        const f = focus ? focus.clone() : null;
+        const startA = f ? Math.atan2(c0.x - f.x, c0.z - f.z) : 0;
+        if (f) {
+          const _lk = new THREE.Vector3();
+          shot = {
+            t: 0,
+            step(t) {
+              // Ease in from where the camera was, then keep circling slowly.
+              const k = smooth(t / 1.6);
+              const a = startA + 0.28 * t;
+              _pos.set(f.x + Math.sin(a) * 17, f.y + 9, f.z + Math.cos(a) * 17);
+              camera.position.copy(c0).lerp(_pos, k);
+              _lk.set(f.x, f.y + 2.5, f.z);
+              camera.lookAt(_lk);
+            },
+          };
         }
-        const stayBtn = el('button', 'cs-btn cs-btn--stay', 'Keep exploring');
-        stayBtn.type = 'button';
-        actions.appendChild(stayBtn);
-        const done = (how) => {
-          removeEventListener('keydown', onKey, true);
-          end();
-          if (how === 'next' && next) location.href = keepUnlock(next.href);
-          resolve(how);
-        };
-        const onKey = (e) => {
-          if (!card.isConnected || !card.classList.contains('is-on')) return;
-          if (e.key === 'Enter' && goBtn) { e.preventDefault(); e.stopPropagation(); done('next'); }
-          else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done('stay'); }
-        };
-        goBtn?.addEventListener('click', () => done('next'));
-        stayBtn.addEventListener('click', () => done('stay'));
-        addEventListener('keydown', onKey, true);
-        setTimeout(() => {
-          document.body.appendChild(card);
-          nodes.push(card);
-          setTimeout(() => { card.classList.add('is-on'); (goBtn || stayBtn).focus(); }, 30);
-        }, 3200);
-      });
+
+        return new Promise((resolve) => {
+          const card = el('div', 'cs-card');
+          card.setAttribute('role', 'dialog');
+          card.setAttribute('aria-label', title);
+          const stars = el('div', 'cs-card__stars');
+          for (let i = 0; i < 3; i++) stars.appendChild(el('span', null, '★'));
+          const actions = el('div', 'cs-card__actions');
+          card.append(stars, el('div', 'cs-card__eyebrow', `Chapter ${chapter} complete`), el('div', 'cs-card__title', title), el('p', 'cs-card__line', line), actions);
+          let goBtn = null;
+          if (next) {
+            goBtn = el('button', 'cs-btn cs-btn--go', `${next.label} ▶`);
+            goBtn.type = 'button';
+            actions.appendChild(goBtn);
+          }
+          const stayBtn = el('button', 'cs-btn cs-btn--stay', 'Keep exploring');
+          stayBtn.type = 'button';
+          actions.appendChild(stayBtn);
+          const done = (how) => {
+            removeEventListener('keydown', onKey, true);
+            end();
+            if (how === 'next' && next) location.href = keepUnlock(next.href);
+            resolve(how);
+          };
+          const onKey = (e) => {
+            if (!card.isConnected || !card.classList.contains('is-on')) return;
+            if (e.key === 'Enter' && goBtn) { e.preventDefault(); e.stopPropagation(); done('next'); }
+            else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done('stay'); }
+          };
+          goBtn?.addEventListener('click', () => done('next'));
+          stayBtn.addEventListener('click', () => done('stay'));
+          addEventListener('keydown', onKey, true);
+          setTimeout(() => {
+            document.body.appendChild(card);
+            nodes.push(card);
+            setTimeout(() => { card.classList.add('is-on'); (goBtn || stayBtn).focus(); }, 30);
+          }, 3200);
+        });
+      };
+      if (!scene) return after();
+      // The film first: any key or click ends the film (the card still comes).
+      const hint = el('div', 'cs-skip is-on', 'Press any key to skip');
+      document.body.appendChild(hint);
+      let armed = false;
+      setTimeout(() => { armed = true; }, 1000);
+      const skipFilm = (e) => { if (!armed) return; e.stopPropagation(); if (e.type === 'keydown') e.preventDefault(); endRun(); };
+      addEventListener('keydown', skipFilm, true);
+      addEventListener('pointerdown', skipFilm, true);
+      return (async () => {
+        try { await scene(run); } catch (err) { console.error('[story] ending film failed:', err); }
+        removeEventListener('keydown', skipFilm, true);
+        removeEventListener('pointerdown', skipFilm, true);
+        hint.remove();
+        return after();
+      })();
     },
   };
 }

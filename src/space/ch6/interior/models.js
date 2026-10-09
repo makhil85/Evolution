@@ -1,12 +1,9 @@
-// Chapter 6 interior: the sci-fi model kits (lead 2026-10-08: real models for
-// the decks, like the villages' Kenney / Quaternius pieces, mixed with our own
-// code-built parts). Both kits are CC0, imported by scripts/import-scifi.py
-// into public/assets/models/scifi/:
-//   megakit/<set>/<Name>.gltf   Quaternius Modular SciFi MegaKit: walls, platforms
-//                               (floors, doors, stairs, rails, windows), columns, props, decals
-//   kenney/<name>.glb           Kenney Space Kit: desks, chairs, computers, machines, pipes
+// Chapter 6 interior: the sci-fi model kit (lead 2026-10-08: real models for
+// the decks, mixed with our own code-built parts). The kit is CC0, imported by
+// scripts/import-scifi.py into public/assets/models/scifi/megakit/<set>/<Name>.gltf:
+// Quaternius Modular SciFi MegaKit (walls, platforms, columns, props, decals).
 //
-//   const lib = await loadModels(['walls/WallAstra_Straight', 'kenney/desk_chair', ...]);
+//   const lib = await loadModels(['walls/WallAstra_Straight', 'props/Prop_Computer', ...]);
 //   lib.size('walls/WallAstra_Straight')        -> THREE.Vector3 (metres, as modelled)
 //   lib.add(batch, name, x, y, z, ry, scale)    merge into a kit batch (static, few draw calls)
 //   lib.object(name)                            a fresh Object3D (for parts that move)
@@ -23,11 +20,11 @@ import { asset } from '../../../game/contracts.js';
 import { toonRamp } from '../../../game/toonPipeline.js';
 
 const ROOT = 'assets/models/scifi/';
-const pathOf = (name) => (name.startsWith('kenney/') ? `${ROOT}${name}.glb` : `${ROOT}megakit/${name}.gltf`);
+const pathOf = (name) => `${ROOT}megakit/${name}.gltf`;
 
 /**
  * Load the named pieces (each once; repeat calls share the cache).
- * @param {string[]} names e.g. 'walls/WallAstra_Straight', 'props/Prop_Computer', 'kenney/desk_chair'
+ * @param {string[]} names e.g. 'walls/WallAstra_Straight', 'props/Prop_Computer'
  * @param {{ style?: 'toon'|'pbr' }} [opts]
  */
 export async function loadModels(names, { style = 'toon' } = {}) {
@@ -113,5 +110,5 @@ export async function loadModels(names, { style = 'toon' } = {}) {
 
 /** Every piece the import brought in (for the lab's contact sheet). */
 export const MODEL_SETS = Object.freeze({
-  walls: 'walls', platforms: 'platforms', columns: 'columns', props: 'props', decals: 'decals', kenney: 'kenney',
+  walls: 'walls', platforms: 'platforms', columns: 'columns', props: 'props', decals: 'decals',
 });

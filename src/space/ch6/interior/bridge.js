@@ -20,8 +20,11 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { PALETTE } from './kit.js';
 import { toonRamp } from '../../../game/toonPipeline.js';
+import { roofAt } from './walkmap.js';
 
 // The kit pieces this deck uses (models.js names; loaded before the deck is built).
+// Inlays, decals and plates lie a few mm to 15 cm above the floor: this offset makes them win the depth test there (no flicker).
+const FLUSH = { polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 };
 export const MODELS = [
   'walls/WallAstra_Straight', 'walls/WallBand_Straight', 'walls/TopPlastic_Straight', 'walls/BottomMetal_Straight',
   'columns/Column_Round',
@@ -41,6 +44,9 @@ const BAY_W = 2.6;            // science bays: half-width, and their far wall at
 const BAY_X = 15;
 const GAP_BAY = Math.asin(BAY_W / R);
 const GAP_DOOR = Math.asin(1.7 / R);
+// The dome: a shallow sphere cap from the rim (RIM) up to the apex; its radius, and the roof at r from the hub.
+const DOME_RS = (R * R + (APEX - RIM) ** 2) / (2 * (APEX - RIM));
+const domeAt = (r) => APEX - DOME_RS + Math.sqrt(Math.max(0, DOME_RS * DOME_RS - r * r));
 const FACET = 2 * Math.atan(2 / A); // the angle one 4 m panel spans on the wall
 const CORR = 40;              // the corridor bends on a circle of this radius
 const A_LIFT = -Math.PI / 2;  // the lift's line (z = 0) ...
@@ -101,13 +107,13 @@ export function buildDeck(kit) {
   const { mats } = kit;
   const M = kit.models; // null when the kit did not load: the same layout in code
   const group = new THREE.Group();
-  const floors = []; const solids = [];
+  const floors = []; const solids = []; const roofs = [];
   const toon = (color, extra = {}) => kit.own(new THREE.MeshToonMaterial({ color, gradientMap: toonRamp, ...extra }));
   const wood = toon(0xb07a4a);
   const glowBlue = kit.glow(PALETTE.blue, 1.3);
   const glowCool = kit.glow(0xcfe6ff, 1.8);
   const teal = toon(PALETTE.teal);
-  const inlay = toon(0x6f5f8c);
+  const inlay = toon(0x6f5f8c, FLUSH);
   // Ceilings are seen from below, where the cool sky light never reaches; this lighter stuff reads better.
   const ceilMat = toon(0xd9d2c6, { emissive: 0x3a3630 });
   // The dome: cooler and brighter than the warm ceilings, so it reads as a dome.
@@ -138,7 +144,7 @@ export function buildDeck(kit) {
   const tinted = (mat, c) => {
     if (!c) return mat;
     const key = `${mat.uuid}|${c}`;
-    if (!tints.has(key)) { const m = mat.clone(); m.color.multiply(new THREE.Color(c)); tints.set(key, kit.own(m)); }
+    if (!tints.has(key)) { const m = mat.clone(); m.color.multiply(new THREE.Color(c)); tints.set(key, kit.own(Object.assign(m, FLUSH))); }
     return tints.get(key);
   };
   /** A free piece, its middle (x, z) on the floor at (x, z) with its foot at y, turned ry. Without the kit, a proxy box [w, h, d, mat]. */
@@ -179,6 +185,7 @@ export function buildDeck(kit) {
   const cb = kit.batch();
   const corr = { ring: [CORR, 0, 38.3, 41.95], from: A_LIFT, to: A_END };
   floors.push(kit.floor(cb, corr));
+  roofs.push({ shape: corr, h: 3.6 }, { shape: shapeToDeck({ disc: [0, 0, R] }), h: (x, z) => domeAt(Math.hypot(x - HUB[0], z - HUB[1])) });
   band(cb, 38.3, 41.95, A_LIFT, A_END, ceilMat, { x: CORR, y: 3.6, down: true });
   if (M) {
     // Two 4 m panels a side (the arc is 7.4 m), each with a cornice on top (the kit's cap, squashed to fit
@@ -235,7 +242,7 @@ export function buildDeck(kit) {
     for (let q = 0; q < 4; q++) {
       const ry = (q * Math.PI) / 2;
       const c = [2 * (Math.cos(ry) + Math.sin(ry)), 2 * (Math.cos(ry) - Math.sin(ry))];
-      for (const { g, mat } of partsOf('platforms/Platform_Metal_Curve')) bb.add(g, mat, -c[0], 0.004, -c[1], ry);
+      for (const { g, mat } of partsOf('platforms/Platform_Metal_Curve')) bb.add(g, tinted(mat, 0xffffff), -c[0], 0.004, -c[1], ry); // white: a copy with FLUSH
     }
   }
 
@@ -398,6 +405,7 @@ export function buildDeck(kit) {
     solids.push(shapeToDeck({ rect: [xf, 0, 0.35, 2 * BAY_W + 0.25], rot: 0 }));
     const bay = { rect: [(x0 + xf) / 2, 0, len, 2 * BAY_W] };
     floors.push(shapeToDeck(kit.floor(bb, bay)));
+    roofs.push({ shape: shapeToDeck(bay), h: RIM });
     bb.add(new THREE.PlaneGeometry(len, 2 * BAY_W).rotateX(Math.PI / 2), ceilMat, (x0 + xf) / 2, RIM, 0);
     for (const zz of [-1.2, 1.2]) bb.box(len * 0.8, 0.03, 0.16, mats.coveCool, (x0 + xf) / 2, RIM - 0.02, zz);
     // Stores on the floor by the entrance.
@@ -433,7 +441,7 @@ export function buildDeck(kit) {
   dishConsole.add(dishPost, dishHead, dishLamp, dishSign);
 
   // The dome: a shallow sphere cap from the rim up to the apex, with two light rings.
-  const RS = (R * R + (APEX - RIM) ** 2) / (2 * (APEX - RIM));
+  const RS = DOME_RS;
   const dome = new THREE.SphereGeometry(RS, 48, 6, 0, Math.PI * 2, 0, Math.asin(R / RS));
   bb.add(inward(dome), domeMat, 0, APEX - RS, 0);
   const domeY = (r) => APEX - RS + Math.sqrt(RS * RS - r * r);
@@ -465,7 +473,7 @@ export function buildDeck(kit) {
     { name: 'screen', pos: at(0, 2.3, -2.4), look: at(0, 1.7, 9) },
     { name: 'back', pos: at(0, 1.6, 7.6), look: at(0, 1.1, -7) },
     { name: 'shield', pos: at(-0.9, 1.9, -3.4), look: at(SHIELD_AT[0], 1.0, SHIELD_AT[1]) }, // from the side: the beacon stands on the spot
-    { name: 'bay', pos: at(3.0, 1.6, -3.0), look: at(14, 1.4, 0.5) },
+    { name: 'bay', pos: at(3.1, 1.6, -4.7), look: at(14, 1.4, 0.5) }, // off the dish (it stands 1.2 m from the old spot)
     { name: 'ring', pos: at(6.0, 2.3, -5.6), look: at(-3, 1.0, 3) },
     { name: 'walk', pos: at(-1.0, 1.6, -5.8), look: at(0.5, 1.4, 9) }, // her eye level, on the way in
     { name: 'dish', pos: at(1.2, 1.6, -1.0), look: at(DISH_AT[0], 1.1, DISH_AT[1]) },
@@ -475,7 +483,7 @@ export function buildDeck(kit) {
     group,
     floors,
     solids,
-    ceiling: APEX,
+    ceiling: APEX, ceilingAt: (x, z) => roofAt(roofs, x, z, APEX),
     stations: {
       shield: { x: shieldSpot[0], z: shieldSpot[1], face: faceAt(shieldSpot, shieldProp), lamp, y: 2.2 },
       // Quest: message

@@ -243,9 +243,9 @@ export const LESSON_5A = {
       question: {
         prompt: ['What are Saturn’s rings made of?', 'What are the rings made of?'],
         choices: [
-          { text: ['One huge flat disc of solid rock', 'One big flat rock'] },
+          { text: ['One huge flat disc made of solid rock', 'One big flat rock, very solid'] },
           { text: ['Billions of separate pieces of ice', 'Lots of pieces of ice'], correct: true },
-          { text: ['Thin coloured gas, like a cloud', 'Coloured gas'] },
+          { text: ['Thin coloured gas, like a cloud over a planet', 'Coloured gas, like a cloud'] },
         ],
         hint: ['What did you see when we flew right into the ring?', 'What did you see up close?'],
         why: ['Up close the rings are billions of ice chunks, each floating on its own, from tiny grains to house-sized lumps.', 'The rings are lots of pieces of ice!'],
@@ -264,9 +264,9 @@ export const LESSON_5A = {
       question: {
         prompt: ['Which pieces of the rings go round Saturn fastest?', 'Which pieces go round fastest?'],
         choices: [
-          { text: ['The ones closest to Saturn', 'The close ones'], correct: true },
-          { text: ['The ones furthest from Saturn', 'The far ones'] },
-          { text: ['They all go round at the same speed', 'All the same'] },
+          { text: ['The ones closest to Saturn', 'The close ones go fastest'], correct: true },
+          { text: ['The ones furthest from Saturn', 'The far ones go slower'] },
+          { text: ['They all go round at the same speed', 'They all go round at the same speed'] },
         ],
         hint: ['Which piece had more laps on its counter?', 'Which one had more laps?'],
         why: ['Saturn pulls hardest on the closest pieces, so they must go fastest to stay in orbit: the inner piece lapped the outer one.', 'The close pieces go fastest!'],
@@ -279,20 +279,10 @@ export const LESSON_5A = {
         { dur: 3, cap: ['Long ago a small icy moon may have drifted too close to Saturn.', 'Long ago an icy moon came too close to Saturn.'] },
         { dur: 3, cap: ['Saturn pulls the near side of the moon harder than the far side.', 'Saturn pulls the near side harder.'] },
         { dur: 3, cap: ['The moon is stretched like an egg... until it cracks.', 'The moon stretches... and cracks!'] },
-        { dur: 4, cap: ['The pieces spread all the way round Saturn: a ring is born!', 'The pieces go all the way round. A ring!'] },
+        { dur: 4, cap: ['So a moon this close is torn apart, and its pieces spread all the way round: a ring!', 'Too close, so it is torn apart: a ring!'] },
       ],
       draw: drawTornMoon,
-      question: {
-        prompt: ['Why is there a ring there, and not one big moon?', 'Why is there a ring and not a moon?'],
-        choices: [
-          { text: ['Saturn pulls the near side harder, so a moon that close is torn apart', 'Saturn pulls a close moon apart'], correct: true },
-          { text: ['The ice there is too cold to stick together into a ball', 'It is too cold'] },
-          { text: ['The Sun’s heat melted the moon and it froze in a circle', 'The Sun melted it'] },
-        ],
-        hint: ['Look at the two orange arrows on the moon. Which was bigger?', 'Look at the arrows. Which one is bigger?'],
-        why: ['So close to Saturn its pull is much stronger on the near side than the far side. That stretch tears a moon apart, and the pieces spread into a ring.', 'Saturn pulls the close side harder. The moon breaks into a ring.'],
-      },
-      clue: [null, 'Saturn pulls a moon that comes too close apart.'],
+      watchOnly: true, // a breather after two questions in a row
     },
   ],
 };
@@ -538,9 +528,9 @@ export const LESSON_5AA = {
       question: {
         prompt: ['A moving chunk hits a still chunk the same size, head on. What happens?', 'A moving chunk hits a still one the same size. What happens?'],
         choices: [
-          { text: ['They both stop', 'Both stop'] },
+          { text: ['They both stop dead, and the bump is soaked up by the ice around them', 'They both stop, and nothing moves at all'] },
           { text: ['The moving one stops; the still one moves off at the same speed', 'The moving one stops. The other one goes.'], correct: true },
-          { text: ['They both bounce backwards', 'Both bounce back'] },
+          { text: ['They both bounce backwards, each at half of its old speed', 'They both bounce backwards, away from each other'] },
         ],
         hint: ['Watch the white Total arrow. Did it change?', 'Look at the arrows after the bump.'],
         why: ['The total momentum must stay the same. With equal masses, all of it moves over to the still chunk, so the moving one stops.', 'The moving one stops, and the other one goes.'],
@@ -557,38 +547,28 @@ export const LESSON_5AA = {
         { dur: 6.4, cap: ['Big only slows down, and small shoots off fast! 6 before, 3 + 3 = 6 after.', 'Big slows down. Small shoots off fast!'] },
       ],
       draw: drawBigSmall,
-      question: {
-        prompt: ['A big chunk crashes into a small still chunk. What happens to the small one?', 'Big hits small. What does small do?'],
-        choices: [
-          { text: ['It stays where it is', 'It stays still'] },
-          { text: ['It moves off slower than the big one was going', 'It goes slowly'] },
-          { text: ['It shoots off faster than the big one was going', 'It shoots off fast'], correct: true },
-        ],
-        hint: ['Look at the small chunk’s speed after the second crash.', 'How fast did small go?'],
-        why: ['Big hands on some of its momentum. Small has little mass, so to carry that momentum it must go fast: speed 3, faster than big’s 2.', 'Small shoots off fast!'],
-      },
-      clue: [null, 'The small one shoots off fast.'],
+      watchOnly: true, // breaks the run of three questions (films 1-3); the small-one lesson stays in the captions
     },
     {
       title: ['Catching up', 'Catch up'],
       beats: [
-        { dur: 4, cap: ['Both go the same way: fast orange (speed 3) behind slow blue (speed 1).', 'Fast orange is behind slow blue.'] },
+        { dur: 4, cap: ['Both go the same way: two same-size chunks, fast orange (speed 3) behind slow blue (speed 1).', 'Same-size chunks: fast orange is behind slow blue.'] },
         { dur: 5, predict: true, cap: ['Ice is sticky. When orange catches up they stick. How fast then? Press ▶.', 'They will stick. How fast then? Press ▶.'] },
         { dur: 4, cap: ['They stick... and go on together at speed 2.', 'They stick and go on together.'] },
         { dur: 5, cap: ['The rule: 3 + 1 = 4 before, 2 + 2 = 4 after. A bump never changes the total momentum.', 'The rule: a bump never changes the total.'] },
       ],
       draw: drawCatchUp,
       question: {
-        prompt: ['A fast chunk catches a slow one and they stick together. How fast do they go?', 'Fast catches slow and they stick. How fast?'],
+        prompt: ['Fast orange (speed 3) catches slow blue (speed 1) and they stick. What speed do they go at now?', 'Fast catches slow and they stick. What speed now?'],
         choices: [
-          { text: ['As fast as the fast one was', 'Fast'] },
-          { text: ['Somewhere in between the two speeds', 'In between'], correct: true },
-          { text: ['They stop', 'They stop'] },
+          { text: ['4', 'Speed 4'] },
+          { text: ['2', 'Speed 2'], correct: true },
+          { text: ['1', 'Speed 1'] },
         ],
-        hint: ['Their speeds were 3 and 1. What speed did the pair have?', 'Look at the speed after they stick.'],
-        why: ['The total momentum (4) is now shared by twice the mass, so the pair goes at 2: in between 3 and 1.', 'In between! Not as fast, not stopped.'],
+        hint: ['Add the two speeds: the total is 4. Now share that total between the two chunks that stuck.', 'The total is 4. Share it between two.'],
+        why: ['The total momentum (3 + 1 = 4) stays the same, and now it is shared by twice the mass: 4 ÷ 2 = 2. Not 4, and not 1.', 'The total is 4, shared by two: speed 2!'],
       },
-      clue: [null, 'Their speed is in between.'],
+      clue: [null, 'They go at speed 2.'],
     },
     {
       title: ['Lots of pieces', 'Lots of pieces'],
@@ -614,9 +594,9 @@ export const LESSON_5AA = {
       question: {
         prompt: ['In empty space there is nothing to push against. How does a rocket speed up?', 'In space, how does a rocket go faster?'],
         choices: [
-          { text: ['It pushes on the air in space', 'It pushes on air'] },
-          { text: ['The stars pull it along', 'Stars pull it'] },
-          { text: ['It throws gas out the back, and the gas pushes it forward', 'It throws gas out the back'], correct: true },
+          { text: ['It pushes on the thin air that drifts out in space', 'It pushes on the air out in space'] },
+          { text: ['The stars and the planets all pull it along, faster and faster', 'The stars pull it along, faster and faster and faster'] },
+          { text: ['It throws gas out the back, and the gas pushes it forward', 'It throws gas out the back, so it goes forward'], correct: true },
         ],
         hint: ['What did the ship throw out, and which way did each go?', 'What came out the back?'],
         why: ['Space has no air to push on. The rocket pushes gas backwards, so the gas pushes the rocket forwards: the total momentum stays 0.', 'It throws gas back, so it goes forward.'],

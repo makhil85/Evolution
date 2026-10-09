@@ -20,7 +20,7 @@ export const STATIONS = [
   { id: 'mine', kind: 'hold', secs: 3, title: ['1. Mine the rock', '1. Dig'], tip: ['Hold the button (or Space) to drill. Out come ice and metal.', 'Hold the button to dig.'], btn: ['Hold to drill', 'Hold to dig'] },
   { id: 'fuel', kind: 'hold', secs: 3, title: ['2. Make fusion fuel', '2. Make fuel'], tip: ['Melt the ice and sort the water: about 1 hydrogen in 6,400 is heavy hydrogen, the fusion fuel. Hold to spin the sorter.', 'Hold to make fuel from the ice.'], btn: ['Hold to sort', 'Hold'] },
   { id: 'parts', kind: 'press', count: 4, title: ['3. Print the magnet rings', '3. Make parts'], tip: ['The metal becomes four giant magnet rings. They hold the fuel, hotter than the Sun, without touching it.', 'Press to make 4 rings from the metal.'], btn: ['Print a ring', 'Make a ring'] },
-  { id: 'fit', kind: 'press', count: 4, title: ['4. Fit the drive', '4. Fit the engine'], tip: ['Fit each ring onto the engine at the back of the rock.', 'Press to fit each ring.'], btn: ['Fit next ring', 'Fit a ring'] },
+  { id: 'fit', kind: 'press', count: 4, title: ['4. Fit the drive', '4. Fit the engine'], tip: ['Fit each ring onto the engine at the back of the ship.', 'Press to fit each ring.'], btn: ['Fit next ring', 'Fit a ring'] },
   { id: 'fire', kind: 'press', count: 1, title: ['5. Test fire!', '5. Test it!'], tip: ['Everyone clear? Fire the engine for a few seconds.', 'Fire the engine!'], btn: ['🔥 Fire!', '🔥 Fire!'] },
 ];
 

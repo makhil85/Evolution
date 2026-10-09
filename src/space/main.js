@@ -47,9 +47,10 @@ import { createFreezeButton } from './freeze.js';
 import { createAimDial } from './hud/aimDial.js';
 import { playIntro } from './cinematics.js';
 import { addJumpPanel } from '../play/grownUp.js';
-import { IS_CH5, IS_CH6, OUTER } from './chapter.js';
+import { IS_CH5, IS_CH6, IS_CH7, OUTER } from './chapter.js';
 import { CH5_START, CH5_UPGRADES } from './ch5/start.js';
 import { CH6_START } from './ch6/start.js';
+import { CH7_START } from './ch7/start.js';
 import { setMoonPulls } from './gravity.js';
 import { playCh5Opening } from './ch5/opening.js';
 import { t, IS_LEVEL1, LEVEL } from './level.js';
@@ -123,13 +124,13 @@ const sky = createSky({ scene, renderer });
 const belt = createBelt({ scene, renderer });
 // Chapter 5 starts out past Jupiter and never goes back: the asteroid belt
 // (a bright band across the sky out there) only got in the way (lead, 2026-10-06).
-if (IS_CH5) belt.group.visible = false;
+if (IS_CH5 || IS_CH7) belt.group.visible = false;
 // Chapter 5: the Kuiper belt past Neptune (points; it rides the floating origin too).
 // No Kuiper-belt ring in flight (lead 2026-10-07): at the edge it sat on the
 // horizon the whole time, burning and coasting, and only distracted. The
 // edge cutscene (ch5/edge.js) still shows the Kuiper belt and Oort cloud.
 // Chapter 6's slingshots: the Sun and one planet only (lead, 2026-10-05).
-if (IS_CH6) setMoonPulls(false);
+if (IS_CH6 || IS_CH7) setMoonPulls(false);
 const dust = createDust({ scene });
 const trajectory = createTrajectoryView({ scene });
 // The PLANNED path (Easy/Medium, transfer steps): where the coming burn will
@@ -197,7 +198,9 @@ function circularOrbitState(bodyId, radius, phaseAngle, t = 0) {
 // the lit Earth under her with the night side's city lights rolling up ahead.
 // (Earth sits at +X of the Sun at t=0, so the day side faces angle PI.)
 // Chapter 5 starts where Chapter 4 ended: in orbit round Jupiter.
-const ship = createShipState(IS_CH6
+const ship = createShipState(IS_CH7
+  ? circularOrbitState(CH7_START.body, CH7_START.radius, CH7_START.phase)
+  : IS_CH6
   ? circularOrbitState(CH6_START.body, CH6_START.radius, CH6_START.phase)
   : IS_CH5
   ? circularOrbitState(CH5_START.body, CH5_START.radius, CH5_START.phase)
@@ -292,11 +295,17 @@ let modalOpen = false;
 bus.on('ui-modal', (open) => { modalOpen = !!open; });
 // One past the top level is the autopilot's cruise warp (AUTOPILOT_WARP,
 // physics.js decides where it applies); keys and buttons stop at the top.
-bus.on('warp-request', (i) => { game.warpIndex = Math.max(0, Math.min(WARP_LEVELS.length - 1, i)); game.warpBoost = i >= WARP_LEVELS.length; });
+// On foot (a walk scene) the number keys are not flight: picking Deck 3 in the
+// lift must not leave her at x16 when she gets back aboard (lead review, 2026-10-08).
+bus.on('warp-request', (i) => {
+  if (game.activeScene) return;
+  game.warpIndex = Math.max(0, Math.min(WARP_LEVELS.length - 1, i)); game.warpBoost = i >= WARP_LEVELS.length;
+});
 // The Slow / Fast buttons while the autopilot flies: the most warp it may ask
 // for (autopilot.js holds its warp to this).
 bus.on('autopilot-warp-limit', (i) => { game.autopilotWarpMax = Math.max(0, Math.min(WARP_LEVELS.length, i)); });
 bus.on('camera-cycle', () => {
+  if (game.activeScene) return; // C is for the flight camera only
   const m = flightCam.cycle();
   hud.toast(m === 'chase' ? 'Camera: behind the ship' : m === 'orbit' ? 'Camera: free look (drag to spin)' : 'Camera: top view: best for reading your path', { ms: 2200 });
 });
@@ -1799,6 +1808,10 @@ game.runScene = async (sceneObj) => {
   } finally {
     activeScene = null;
     game.activeScene = null;
+    // Back at the controls at real time after a WALK (the lift, the decks, the
+    // Moon's surface): a walk never leaves the ship at a fast warp. Cabin and
+    // panel scenes keep the warp she chose.
+    if (sceneObj.onFoot) { game.warpIndex = 0; game.warpBoost = false; }
     renderPass.scene = scene;
     renderPass.camera = camera;
     document.body.classList.remove('in-scene');
@@ -1841,7 +1854,7 @@ Promise.all([bodies.ready, sky.ready, belt.ready])
       : hud.chooseFlightMode({ modes: MODES, current: 'easy', first: true }).then((id) => id || 'easy');
     pickMode
       .then((id) => applyMode(id, { fresh: fresh && !resumed }))
-      .then(() => (fresh ? (IS_CH6 ? null : IS_CH5 ? playCh5Opening(game) : playIntro(game)) : null))
+      .then(() => (fresh ? (IS_CH6 || IS_CH7 ? null : IS_CH5 ? playCh5Opening(game) : playIntro(game)) : null))
       .then(() => missions.start())
       // Dev only: resume a lab run after a dev-server reload (lab/labrun.js).
       .then(() => { try { const m = import.meta.env.DEV && localStorage.getItem('lab_autorun'); if (m) import(/* @vite-ignore */ `/src/space/lab/${m}.js`).then((x) => x.autorun?.()); } catch { /* no storage */ } });

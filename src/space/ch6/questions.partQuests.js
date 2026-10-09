@@ -8,15 +8,18 @@ import { CREW_SIZE } from './stationsLogic.js';
 
 const ACT_Q = 2;
 
+/** Metres of rock until a badge's dose is at the limit or under (each metre halves it). */
+const metresToLimit = () => { let m = 0; while (doseThrough(OUTSIDE_DOSE, m) > DAY_LIMIT) m++; return m; };
+
 export const CH6Q_QUESTIONS = {
   c6_dose_half: {
     id: 'c6_dose_half', type: 'text', act: ACT_Q, beat: 'c6Medbay',
-    title: 'Behind the rock', subject: 'Halving', difficulty: 'Level 4',
-    prompt: `In this game, each metre of rock halves the rays. Outside the shield a badge would get ${OUTSIDE_DOSE} units a day. How many units a day would a badge get through 3 metres of rock? (Type a number.)`,
-    answers: [String(doseThrough(OUTSIDE_DOSE, 3))],
-    hint: `Halve it once for each metre: ${OUTSIDE_DOSE} → ${OUTSIDE_DOSE / 2} → ...`,
-    parentHint: `${OUTSIDE_DOSE} / 2 / 2 / 2 = ${doseThrough(OUTSIDE_DOSE, 3)}. Three halvings are the same as dividing by 8.`,
-    success: `Yes! ${doseThrough(OUTSIDE_DOSE, 3)} units a day, well under the limit of ${DAY_LIMIT}. The rock does its job.`,
+    title: 'Behind the shield', subject: 'Halving', difficulty: 'Level 4',
+    prompt: `Outside the shield a badge would get ${OUTSIDE_DOSE} units a day, and the limit is ${DAY_LIMIT}. Each metre of rock halves the rays. How many metres of rock bring a badge to the limit or under? (Type a number.)`,
+    answers: [String(metresToLimit())],
+    hint: `Halve ${OUTSIDE_DOSE}: that is ${OUTSIDE_DOSE / 2}. Is that ${DAY_LIMIT} or less? If not, halve again.`,
+    parentHint: `${OUTSIDE_DOSE} / 2 = ${OUTSIDE_DOSE / 2} (still over ${DAY_LIMIT}); / 2 again = ${OUTSIDE_DOSE / 4} (under). So ${metresToLimit()} metres.`,
+    success: `Yes! ${metresToLimit()} metres: ${doseThrough(OUTSIDE_DOSE, metresToLimit())} units a day, under the limit of ${DAY_LIMIT}. Bolt on the hull has just that much rock.`,
     doneMessage: 'Everyone is checked. Theo is happy!',
     reward: { science: 10 },
   },
@@ -58,11 +61,11 @@ export const CH6Q_QUESTIONS = {
 export const CH6Q_LEVEL1 = {
   c6_dose_half: {
     difficulty: 'Level 1 • halves',
-    prompt: 'In this game, each metre of rock halves the rays. A badge gets 8 units a day outside the rock. How many get through 1 metre? (Type a number.)',
-    answers: ['4', 'four'],
-    hint: 'Half of 8 is...',
-    parentHint: 'Half of 8 is 4. (Two metres would let 2 through.)',
-    success: 'Yes! Half of 8 is 4.',
+    prompt: 'A badge gets 8 units a day outside the shield. Each metre of rock halves the rays. How many units get through 2 metres? (Type a number.)',
+    answers: ['2', 'two'],
+    hint: 'Half of 8 is 4. Half of 4 is...',
+    parentHint: '8 / 2 = 4, then 4 / 2 = 2. (Metre 1 lets 4 through, metre 2 lets 2 through.)',
+    success: 'Yes! Half of 8 is 4, and half of 4 is 2.',
   },
   c6_leak_minutes: {
     difficulty: 'Level 1 • counting by twos',

@@ -1,16 +1,21 @@
-// Floating name signs over Chapter 3's buildings, in the same style as
-// Chapters 1 and 2 (city/worldKit.js makeLabel): a dark rounded board with
-// the building's name and icon, above the roof. They make the village
-// readable at a glance - which dome is the Science Center - and they fade
-// with distance, and when the camera is right on top of one, so they never
-// crowd the screen.
+// Floating name signs over Chapter 3's buildings: a rounded board with the
+// building's name and icon, above the roof. They make the village readable at
+// a glance - which dome is the Science Center - and they fade with distance,
+// and when the camera is right on top of one, so they never crowd the screen.
+//
+// Lead 2026-10-09: Chapter 3 is the space-age town, so its signs are a white
+// board with navy letters (Chapters 1 and 2 keep city/worldKit.js makeLabel's
+// dark board). Same sprite, same fading, same sizes.
 import * as THREE from 'three';
-import { makeLabel } from '../city/worldKit.js';
+
+const FONT = '"Segoe UI", system-ui, -apple-system, sans-serif';
+const EMOJI = '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
+const INK = '#1d3557';
 
 /** What each site is called on its sign (the recipes' labels carry "P1 -"). */
 const NAMES = {
   missionSchool: ['Mission School', '🏫'],
-  materialsForge: ['Materials Forge', '🔨'],
+  materialsForge: ['Materials Lab', '🧪'],
   waterLab: ['River Flow Lab', '💧'],
   windTunnel: ['Wind Tunnel', '🌬'],
   scienceCenter: ['Science Center', '🔬'],
@@ -21,6 +26,64 @@ const NAMES = {
 
 /** A site's name as its sign spells it (for the navigation arrow's label). */
 export function siteName(id) { return (NAMES[id] || [id])[0]; }
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+/**
+ * A white sign board with navy letters, one sprite (the same shape and API as
+ * worldKit's makeLabel, so the fading code below does not change).
+ */
+function makeSiteLabel(text, { icon = '', height = 0.72, accent = '#3f7fc4' } = {}) {
+  const H = 88;
+  const pad = 26;
+  const fontPx = 44;
+  const meas = document.createElement('canvas').getContext('2d');
+  meas.font = `700 ${fontPx}px ${FONT}`;
+  const tw = Math.ceil(meas.measureText(text).width);
+  const iconW = icon ? fontPx + 14 : 0;
+  const W = tw + iconW + pad * 2;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  roundRect(ctx, 3, 3, W - 6, H - 6, 26);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+  ctx.fill();
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = accent;
+  ctx.stroke();
+  ctx.textBaseline = 'middle';
+  let x = pad;
+  if (icon) {
+    ctx.font = `${fontPx - 4}px ${EMOJI}`;
+    ctx.fillStyle = INK;
+    ctx.fillText(icon, x, H / 2 + 3);
+    x += iconW;
+  }
+  ctx.font = `700 ${fontPx}px ${FONT}`;
+  ctx.fillStyle = INK;
+  ctx.fillText(text, x, H / 2 + 2);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false, fog: false });
+  const sprite = new THREE.Sprite(mat);
+  sprite.center.set(0.5, 0);
+  sprite.scale.set(height * (W / H), height, 1);
+  sprite.renderOrder = 30;
+  sprite.userData.isLabel = true;
+  return sprite;
+}
 
 /**
  * @param {THREE.Scene} scene
@@ -46,7 +109,7 @@ export function createNameSigns(scene, { structures, placements, pad = null, hei
       box.setFromObject(s.group);
       if (!box.isEmpty()) top = box.max.y - heightAt(p.x, p.z);
     }
-    const sprite = makeLabel(name, { icon, height: 0.72, accent: p.optional ? '#b197fc' : '#ffd43b' });
+    const sprite = makeSiteLabel(name, { icon, height: 0.72, accent: p.optional ? '#8e7ce6' : '#3f7fc4' });
     // On the building's face, three quarters up, rather than over the roof:
     // the chase camera looks down on her, so anything above the roofline
     // lands at the very top of the screen, behind the HUD's progress bar.
@@ -56,7 +119,7 @@ export function createNameSigns(scene, { structures, placements, pad = null, hei
     signs.push(sprite);
   }
   if (pad) {
-    const sprite = makeLabel('Launch Pad', { icon: '🚀', height: 0.8 });
+    const sprite = makeSiteLabel('Launch Pad', { icon: '🚀', height: 0.8, accent: '#f2b84b' });
     sprite.position.set(pad.x, heightAt(pad.x, pad.z) + 1.2, pad.z);
     sprite.userData.base = sprite.scale.clone();
     root.add(sprite);

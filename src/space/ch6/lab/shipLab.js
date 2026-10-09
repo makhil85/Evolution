@@ -6,7 +6,7 @@
 //   ?view=ship[&detail=far]      the starship model (starship.js), drag to orbit
 //   ?view=crew                   the crew and robots in a row
 //   ?view=models&set=walls[&style=pbr][&page=0]   a contact sheet of a model kit
-//                                (walls | platforms | columns | props | decals | kenney),
+//                                (walls | platforms | columns | props | decals: the kept pieces),
 //                                24 pieces a page with their names and sizes
 //
 // window.__shipLab:
@@ -174,7 +174,7 @@ async function setupModels() {
   const set = params.get('set') || 'walls';
   const page = Number(params.get('page') || 0);
   const man = await (await fetch('assets/models/scifi/manifest.json')).json();
-  const names = (man[set] || []).slice(page * 24, page * 24 + 24).map((n) => `${set === 'kenney' ? 'kenney' : set}/${n}`);
+  const names = (man[set] || []).slice(page * 24, page * 24 + 24).map((n) => `${set}/${n}`);
   const { loadModels } = await import('../interior/models.js');
   const lib = await loadModels(names, { style: params.get('style') || 'toon' });
   const COLS = 6; const GAP = 5.5;
