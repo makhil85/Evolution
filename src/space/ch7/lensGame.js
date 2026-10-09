@@ -28,6 +28,20 @@ const UNIT = 95;              // pixels per Einstein radius
 const SHADOW_PX = SHADOW_SHARE * UNIT;
 const MODES = ['easy', 'medium', 'hard'];
 
+const CSS_ID = 'ch7-lens-css';
+// Lead 2026-10-09: every button must be on screen at 1280x720, 1280x600 and 1024x640.
+// The picture takes the height the text and the buttons leave (the 340 px, measured in
+// the browser), at 16:9 and at most 640 px wide. The card still scrolls if a window is shorter.
+const CSS = `
+.lens-card .ls-line { min-height: 1.45em; margin: 4px 0 0; font-size: 15px; }
+.lens-card .lens-canvas { display: block; width: min(100%, 640px, max(320px, calc((100vh - 340px) * 16 / 9))); height: auto; margin: 8px auto 0; border-radius: 12px; background: #05060c; touch-action: none; cursor: crosshair; }
+.lens-card .ls-actions { margin-top: 10px; }
+`;
+function injectCss() {
+  if (document.getElementById(CSS_ID)) return;
+  const s = document.createElement('style'); s.id = CSS_ID; s.textContent = CSS; document.head.appendChild(s);
+}
+
 /** The flying mode she chose (Medium if none), like the Chapter 6 cards. */
 function flyingMode() {
   try { const m = localStorage.getItem(FLIGHT_MODE_KEY); return MODES.includes(m) ? m : 'medium'; } catch { return 'medium'; }
@@ -130,8 +144,8 @@ function paint(c, g, field, mode, fb, now) {
  * @param {{ bus?: object, mode?: string, rnd?: () => number }} opts
  */
 export function playLens({ bus = null, mode = flyingMode(), rnd = Math.random } = {}) {
-  injectStyles();
-  const card = el('div', 'pl-card ls-card');
+  injectStyles(); injectCss();
+  const card = el('div', 'pl-card ls-card lens-card');
   card.dataset.game = 'lens';
   const eyebrow = el('div', 'pl-eyebrow', t('Holodeck · Echo the robot', 'Holodeck · Echo'));
   const title = el('h2', 'pl-title', t('Where is it really?', 'Where is it really?'));
@@ -141,7 +155,6 @@ export function playLens({ bus = null, mode = flyingMode(), rnd = Math.random } 
   ));
   const canvas = el('canvas', 'lens-canvas');
   canvas.width = W; canvas.height = H;
-  canvas.style.cssText = 'display:block;width:100%;max-width:640px;height:auto;margin:10px auto 0;border-radius:12px;background:#05060c;touch-action:none;cursor:crosshair';
   const status = el('p', 'ls-line');
   const msg = el('p', 'ls-line');
   const actions = el('div', 'ls-actions');
