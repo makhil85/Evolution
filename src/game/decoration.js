@@ -5,9 +5,23 @@
 // and benches on the plaza, lanterns marking the road, fences along the field
 // edges, carts and crates left where someone was working.
 //
-// Everything comes from the Kenney fantasy town kit already in the project, and
-// everything is instanced per prop type, so the whole dressing pass costs a
-// couple of dozen draw calls rather than one per object.
+// Lead 2026-10-09 (Chapter 3, "a civilizational jump"): the same places now
+// hold the town of a space-age science campus. Lamp posts are street lights,
+// fences are low modern railings, carts are electric rovers and vans, stalls
+// are kiosks and a food truck, the fountain is a basin with a column, the
+// windmill and the watermill are a wind turbine (it turns) and a small hydro
+// station (its wheel turns), the fingerpost is a digital sign, and the space
+// kit adds a solar farm and a few masts with dishes.
+//
+// PLACEMENT AND COLLIDERS ARE UNCHANGED. Every bucket key below still names
+// the same place and the same collider as before; only what is drawn at each
+// placement has changed. The solar farm and masts are the one addition, and
+// they sit where no path, building, station or home is.
+//
+// Drawn props are built in code, in the kit's own units, and scaled by the
+// kit's pack scale (contracts.js PACK_SCALE.kit) like the kit was, so each one
+// stands inside the footprint its collider was measured from. Each kind is one
+// merged, vertex-coloured InstancedMesh: one draw call per kind.
 import { instanceAsset, loadShared } from './board.js';
 import { ROCKET_VILLAGE, VILLAGE_PATHS } from './rocketVillageLayout.js';
 import { packScaleFor, asset } from './contracts.js';
@@ -17,6 +31,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { toonRamp } from './toonPipeline.js';
 
 const KIT = (n) => asset(`assets/models/kit/${n}.glb`);
+const SP = (n) => asset(`assets/models/space/${n}.gltf`);
 
 function makeRng(seed = 99) {
   let s = seed >>> 0;
@@ -61,19 +76,20 @@ function* alongPath(points, spacing, offset = 0) {
  * @param {THREE.Object3D} parent
  */
 
-/** Warm painted timber, matching the signposts the quest uses. */
-const WAYPOST = { post: 0x8a5f34, arm: 0xc9a227, far: 0xb46a3a };
+/** Painted metal and screen, matching the quest's signposts. */
+const WAYPOST = { post: 0x6d7883, arm: 0x2bb3a6, far: 0xf2b84b, screen: 0x9be7ff };
 
 /**
- * A two-armed fingerpost at the player's start.
+ * A two-armed digital sign post at the player's start.
  *
  * Built rather than kitted, for the same reason the bridge is: the kits have
- * no fingerpost, and a repeated tile would read as furniture. One merged,
+ * no sign post, and a repeated tile would read as furniture. One merged,
  * vertex-coloured mesh, so it is a single draw call.
  *
  * The arms point ALONG the road she is facing. The near one is the village,
  * the far one is the launch pad she cannot see yet - which is the part a road
- * alone cannot tell her.
+ * alone cannot tell her. Each arm is an LED panel, so the words read as
+ * screens rather than painted boards.
  */
 function buildWaypost(parent, start, ground) {
   const geoms = [];
@@ -101,6 +117,9 @@ function buildWaypost(parent, start, ground) {
   // Arms point down the road (-z), offset so both read from behind her.
   box(1.7, 0.30, 0.09, px - 0.75, base + 2.05, pz, WAYPOST.arm, -0.18);
   box(1.5, 0.26, 0.09, px - 0.68, base + 1.58, pz, WAYPOST.far, -0.18);
+  // The LED faces, a shade lighter, set just proud of each frame.
+  box(1.5, 0.18, 0.1, px - 0.75, base + 2.05, pz, WAYPOST.screen, -0.18);
+  box(1.3, 0.14, 0.1, px - 0.68, base + 1.58, pz, WAYPOST.screen, -0.18);
   // A cap, so the post does not end in a raw cut.
   box(0.26, 0.12, 0.26, px, base + 2.42, pz, WAYPOST.post);
 
@@ -115,6 +134,279 @@ function buildWaypost(parent, start, ground) {
   mesh.receiveShadow = true;
   parent.add(mesh);
   return mesh;
+}
+
+// --- the modern town's props, built in code ---------------------------------
+//
+// Every drawn kind is listed in MODELS below, in the kit's own units: a lamp
+// post is 1.56 tall, a railing 1.0 long, a kiosk 0.6 to 0.9 across. They are
+// scaled by FIT (the kit's pack scale, 1.5) times each placement's own scale,
+// exactly as the kit was, so a model stands inside its collider's footprint.
+
+const FIT = packScaleFor(KIT('lantern'));
+
+const PALETTE = {
+  steel: 0x7d8792, concrete: 0xdfe4ea, white: 0xf6f8fa, teal: 0x2bb3a6,
+  amber: 0xf2b84b, orange: 0xf2703e, lamp: 0xffe7a0, screen: 0x9be7ff,
+  glass: 0x9fdcff, dark: 0x2d333b, solar: 0x2a4f8a, water: 0x4cc3f0,
+  greenA: 0x4fae5a, greenB: 0x66c46b, wood: 0x3fa7a0,
+};
+const P = PALETTE;
+
+/** One shared toon material for every drawn kind: colour lives on the vertices. */
+const PROP_MAT = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: toonRamp });
+
+/**
+ * Paint a primitive, bake its transform in, and keep only the attributes every
+ * primitive shares, so the pieces of one kind can be merged into one mesh.
+ */
+function painted(geo, hex, { x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, ax = 0, az = 0, sx = 1, sy = 1, sz = 1 } = {}) {
+  if (sx !== 1 || sy !== 1 || sz !== 1) geo.scale(sx, sy, sz);
+  // rx/ry/rz turn the piece about its own centre, then it moves to (x, y, z).
+  if (rx) geo.rotateX(rx);
+  if (ry) geo.rotateY(ry);
+  if (rz) geo.rotateZ(rz);
+  geo.translate(x, y, z);
+  // ax/az swing the moved piece about the ORIGIN: a blade or paddle set out
+  // from a hub, one per angle, without each one landing on the same spot.
+  if (ax) geo.rotateX(ax);
+  if (az) geo.rotateZ(az);
+  const c = new THREE.Color(hex);
+  const n = geo.attributes.position.count;
+  const col = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  for (const name of Object.keys(geo.attributes)) {
+    if (name !== 'position' && name !== 'normal' && name !== 'color') geo.deleteAttribute(name);
+  }
+  // mergeGeometries needs every piece indexed or none; none is simpler.
+  return geo.index ? geo.toNonIndexed() : geo;
+}
+const box = (w, h, d, hex, at) => painted(new THREE.BoxGeometry(w, h, d), hex, at);
+const cyl = (rt, rb, h, hex, at, seg = 14) => painted(new THREE.CylinderGeometry(rt, rb, h, seg), hex, at);
+const ball = (r, hex, at) => painted(new THREE.IcosahedronGeometry(r, 1), hex, at);
+const merge = (list) => {
+  const merged = mergeGeometries(list, false);
+  list.forEach((g) => g.dispose());
+  return merged;
+};
+
+/** A four-wheeled rover body, wheels on the corners. */
+const wheels = (x, z, r = 0.14) => [
+  -1, 1,
+].flatMap((sx) => [-1, 1].map((sz) => cyl(r, r, 0.1, P.dark, { x: sx * x, y: r, z: sz * z, rz: Math.PI / 2 }, 12)));
+
+/** A small serving kiosk: a white cabin, a menu screen, a coloured canopy. */
+const kiosk = (w, d, accent) => [
+  box(w, 0.46, d, P.white, { y: 0.23 }),
+  box(w * 0.8, 0.2, 0.03, P.screen, { y: 0.6, z: d / 2 + 0.01 }),
+  box(w + 0.1, 0.05, d + 0.1, accent, { y: 0.95 }),
+  box(0.04, 0.9, 0.04, P.steel, { x: -w / 2 + 0.04, y: 0.45, z: d / 2 - 0.04 }),
+  box(0.04, 0.9, 0.04, P.steel, { x: w / 2 - 0.04, y: 0.45, z: d / 2 - 0.04 }),
+];
+
+/**
+ * Every drawn kind, keyed by the bucket name decorateVillage() places it under.
+ * Each returns the list of pieces that make it, base on y = 0.
+ */
+const MODELS = {
+  // Street light: a thin steel pole, an arm reaching over the road, an LED head.
+  lantern: () => [
+    cyl(0.10, 0.12, 0.08, P.steel, { y: 0.04 }),
+    cyl(0.035, 0.045, 1.5, P.steel, { y: 0.83 }),
+    box(0.04, 0.04, 0.34, P.steel, { x: -0.17, y: 1.5 }),
+    box(0.30, 0.05, 0.14, P.white, { x: -0.36, y: 1.52 }),
+    box(0.26, 0.02, 0.10, P.lamp, { x: -0.36, y: 1.49 }),
+  ],
+  // Low modern railing: a concrete kerb, steel posts, two teal rails.
+  fence: () => [
+    box(0.26, 0.10, 1.0, P.concrete, { y: 0.05 }),
+    ...[-0.46, 0, 0.46].map((z) => box(0.07, 0.62, 0.07, P.steel, { y: 0.41, z })),
+    box(0.05, 0.07, 1.0, P.teal, { y: 0.62 }),
+    box(0.05, 0.05, 1.0, P.teal, { y: 0.34 }),
+  ],
+  // A gap in the railing, marked by amber bollards.
+  'fence-broken': () => [
+    box(0.26, 0.10, 1.0, P.concrete, { y: 0.05 }),
+    ...[-0.4, 0, 0.4].map((z) => cyl(0.09, 0.09, 0.5, P.amber, { y: 0.35, z }, 12)),
+  ],
+  // The plaza fountain: a round basin of water, a column, and a top bowl.
+  'fountain-round-detail': () => [
+    cyl(1.30, 1.36, 0.36, P.concrete, { y: 0.18 }, 28),
+    cyl(1.12, 1.12, 0.04, P.water, { y: 0.33 }, 28),
+    cyl(0.16, 0.20, 0.9, P.concrete, { y: 0.8 }),
+    cyl(0.58, 0.34, 0.18, P.concrete, { y: 1.35 }, 20),
+    cyl(0.52, 0.52, 0.03, P.water, { y: 1.45 }, 20),
+  ],
+  // Kiosks: the two smaller stalls, and a food truck on the widest ring spot.
+  stall: () => kiosk(0.6, 0.9, P.teal),
+  'stall-green': () => kiosk(0.9, 0.9, P.greenB),
+  'stall-red': () => [
+    box(0.92, 0.6, 0.86, P.white, { y: 0.5 }),
+    box(0.66, 0.28, 0.03, P.dark, { y: 0.52, z: 0.44 }),
+    box(0.7, 0.05, 0.2, P.orange, { y: 0.36, z: 0.54 }),
+    box(0.98, 0.05, 0.34, P.orange, { y: 0.82, z: 0.56 }),
+    box(0.5, 0.12, 0.04, P.screen, { y: 0.92, z: 0.3 }),
+    ...wheels(0.4, 0.3),
+  ],
+  // A bench with a teal seat and a back, on steel legs.
+  'stall-bench': () => [
+    box(0.28, 0.05, 0.9, P.wood, { y: 0.36 }),
+    box(0.28, 0.32, 0.04, P.wood, { y: 0.6, z: -0.44 }),
+    ...[-0.11, 0.11].flatMap((x) => [-0.36, 0.36].map((z) => box(0.04, 0.36, 0.04, P.steel, { x, y: 0.18, z }))),
+  ],
+  // An electric rover: a low white body, a glass cab and a solar roof.
+  cart: () => [
+    box(0.84, 0.2, 1.2, P.white, { y: 0.27 }),
+    box(0.7, 0.26, 0.44, P.glass, { y: 0.5, z: -0.3 }),
+    box(0.8, 0.03, 0.9, P.solar, { y: 0.67, z: 0.1 }),
+    box(0.5, 0.05, 0.04, P.lamp, { y: 0.3, z: 0.6 }),
+    ...wheels(0.46, 0.42),
+  ],
+  // A delivery van: a tall white box, a teal cab and a solar roof.
+  'cart-high': () => [
+    box(0.86, 0.72, 1.0, P.white, { y: 0.56, z: -0.12 }),
+    box(0.84, 0.46, 0.36, P.teal, { y: 0.33, z: 0.52 }),
+    box(0.7, 0.2, 0.02, P.glass, { y: 0.45, z: 0.71 }),
+    box(0.8, 0.03, 0.9, P.solar, { y: 0.95, z: -0.12 }),
+    ...wheels(0.44, 0.42),
+  ],
+  // An EV charging pillar, as wide as its collider (radius 0.2).
+  poles: () => [
+    cyl(0.2, 0.2, 0.82, P.teal, { y: 0.41 }, 16),
+    cyl(0.205, 0.205, 0.14, P.screen, { y: 0.89 }, 16),
+    cyl(0.22, 0.22, 0.05, P.steel, { y: 0.98 }, 16),
+  ],
+  // A planter box with three clipped shrubs.
+  hedge: () => [
+    box(0.46, 0.34, 0.94, P.concrete, { y: 0.17 }),
+    ball(0.17, P.greenA, { y: 0.44, z: -0.28 }),
+    ball(0.19, P.greenB, { y: 0.46 }),
+    ball(0.17, P.greenA, { y: 0.44, z: 0.28 }),
+  ],
+  // A round planter with a domed shrub.
+  'hedge-curved': () => [
+    cyl(0.46, 0.46, 0.34, P.concrete, { y: 0.17 }, 24),
+    ball(0.36, P.greenB, { y: 0.42, sy: 0.7 }),
+  ],
+  // Event banners, now digital: a steel pole and an LED screen in a coloured frame.
+  'banner-green': () => banner(P.teal),
+  'banner-red': () => banner(P.orange),
+};
+
+function banner(frame) {
+  return [
+    cyl(0.2, 0.22, 0.12, P.concrete, { y: 0.06 }),
+    cyl(0.035, 0.035, 2.2, P.steel, { y: 1.1 }),
+    box(0.62, 0.44, 0.05, frame, { y: 2.05 }),
+    box(0.52, 0.34, 0.07, P.screen, { y: 2.05, z: 0.01 }),
+  ];
+}
+
+/** Instance one merged model at every placement, on the kit's scale. */
+function instanceModel(parent, geometry, placements, fit = FIT) {
+  const mesh = new THREE.InstancedMesh(geometry, PROP_MAT, placements.length);
+  placements.forEach((p, i) => {
+    _pos.set(p.x, p.y ?? 0, p.z);
+    _q.setFromAxisAngle(_up, p.rotY ?? 0);
+    _scl.setScalar((p.scale ?? 1) * fit);
+    _m.compose(_pos, _q, _scl);
+    mesh.setMatrixAt(i, _m);
+  });
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.castShadow = false;
+  mesh.receiveShadow = true;
+  mesh.frustumCulled = false;
+  parent.add(mesh);
+  return mesh;
+}
+
+const _pos = new THREE.Vector3();
+const _q = new THREE.Quaternion();
+const _scl = new THREE.Vector3();
+const _m = new THREE.Matrix4();
+const _up = new THREE.Vector3(0, 1, 0);
+
+/**
+ * A wind turbine on a concrete plinth, in world units (it is not a kit scatter).
+ *
+ * The tower and cabin are one static mesh; the rotor is its own group, turning
+ * slowly about the nacelle's axis. It turns through village.animators, which
+ * village.update() runs every frame - no per-frame allocations.
+ */
+function buildTurbine(parent, x, y, z, rotY, animators) {
+  const group = new THREE.Group();
+  group.name = 'windmill';
+  group.position.set(x, y, z);
+  group.rotation.y = rotY;
+
+  group.add(new THREE.Mesh(merge([
+    cyl(3.6, 3.7, 0.8, P.concrete, { y: -0.1 }, 28),
+    box(1.6, 1.1, 1.2, P.white, { x: -1.8, y: 0.85 }),
+    box(1.8, 0.1, 1.4, P.teal, { x: -1.8, y: 1.45 }),
+    cyl(0.18, 0.34, 6.6, P.white, { y: 3.3 }, 16),
+    box(0.7, 0.7, 1.6, P.white, { y: 6.8 }),
+  ]), PROP_MAT));
+
+  // The rotor: a hub on the nose of the nacelle and three blades, in the
+  // plane of the tower's front. rotation.z turns it about the nacelle axis.
+  const rotor = new THREE.Group();
+  rotor.position.set(0, 6.8, 0.9);
+  const blades = [cyl(0.22, 0.22, 0.3, P.steel, { rx: Math.PI / 2 }, 12)];
+  for (let k = 0; k < 3; k++) {
+    blades.push(box(0.22, 2.7, 0.06, P.white, { y: 1.35, az: (k * Math.PI * 2) / 3 }));
+  }
+  rotor.add(new THREE.Mesh(merge(blades), PROP_MAT));
+  group.add(rotor);
+
+  parent.add(group);
+  animators?.push((t) => { rotor.rotation.z = t * 0.45; });
+  return group;
+}
+
+/**
+ * A small hydro station on the north bank: a concrete intake house and a
+ * paddle wheel at its river edge, turning about the bank's own axis.
+ */
+function buildHydro(parent, x, y, z, rotY, animators) {
+  const group = new THREE.Group();
+  group.name = 'watermill';
+  group.position.set(x, y, z);
+  group.rotation.y = rotY;
+
+  group.add(new THREE.Mesh(merge([
+    cyl(3.0, 3.1, 0.5, P.concrete, { y: -0.05 }, 24),
+    box(3.0, 2.0, 2.2, P.white, { y: 1.0, z: 0.6 }),
+    box(3.2, 0.2, 2.4, P.teal, { y: 2.1, z: 0.6 }),
+    box(1.0, 1.0, 0.8, P.glass, { x: 0, y: 1.2, z: -0.5 }),
+  ]), PROP_MAT));
+
+  // The wheel: six steel paddles on a hub, its axis along x (the bank).
+  const wheel = new THREE.Group();
+  wheel.position.set(0, 1.5, -1.1);
+  const paddles = [cyl(0.22, 0.22, 0.9, P.steel, { rz: Math.PI / 2 }, 12)];
+  for (let k = 0; k < 6; k++) {
+    paddles.push(box(0.7, 1.2, 0.14, P.steel, { y: 0.7, ax: (k * Math.PI * 2) / 6 }));
+  }
+  wheel.add(new THREE.Mesh(merge(paddles), PROP_MAT));
+  group.add(wheel);
+
+  parent.add(group);
+  animators?.push((t) => { wheel.rotation.x = t * 0.8; });
+  return group;
+}
+
+/**
+ * A telecoms mast on a steel lattice tower, drawn in world units.
+ * Its placements are instanced with `fit` 1; a dish or an antenna sits on top.
+ */
+function mastGeometry() {
+  return merge([
+    cyl(0.12, 0.3, 4.6, P.steel, { y: 2.3 }, 8),
+    cyl(0.4, 0.4, 0.12, P.steel, { y: 4.6 }, 12),
+    box(0.6, 0.05, 0.05, P.steel, { y: 1.2 }),
+    box(0.05, 0.05, 0.6, P.steel, { y: 2.8 }),
+  ]);
 }
 
 export async function decorateVillage(village, parent) {
@@ -350,12 +642,9 @@ export async function decorateVillage(village, parent) {
   // neighbour with no gap.
   const SOLID_ROUND = {
     'fountain-round-detail': 1.35, lantern: 0.14, windmill: 1.8, watermill: 1.5,
-    // poles.glb is not present in public/assets/models/kit (only under
-    // asset-originals/unshipped) - loadShared() warns and instanceAsset()
-    // silently renders nothing for it. This entry still exists so a fixed
-    // asset would get a collider for free, but today it means any 'poles'
-    // clutter placement is an invisible wall. Not fixed here: it needs an
-    // asset file added or removed, not a physics/decoration code change.
+    // Drawn now as an EV charging pillar, exactly as wide as this radius (the
+    // pillar's own radius is 0.2 native). It used to be an invisible wall: the
+    // kit has no poles.glb, so the old placement drew nothing at all.
     poles: 0.2,
   };
   // [halfX, halfZ], native units.
@@ -388,21 +677,98 @@ export async function decorateVillage(village, parent) {
     }
   }
 
-  await Promise.all(Object.keys(buckets).map((a) => loadShared(KIT(a))));
-
+  // The wind turbine and the hydro station move, so each is built on its own;
+  // everything else is one merged model per kind, instanced at every spot.
+  const animators = village.animators ?? null;
   let batches = 0;
   let props = 0;
   for (const [asset, placements] of Object.entries(buckets)) {
-    const meshes = await instanceAsset(parent, KIT(asset), placements, {
-      // Outlines cost a second InstancedMesh per sub-mesh - 31 extra draw
-      // calls for the dressing alone. On props this small they do not read,
-      // so the budget is better spent on having MORE props.
-      outline: false,
-      castShadow: false,   // dozens of small casters are not worth a shadow pass
-      receiveShadow: true,
+    props += placements.length;
+    if (asset === 'windmill') {
+      for (const p of placements) buildTurbine(parent, p.x, p.y, p.z, p.rotY, animators);
+      batches += 2 * placements.length;
+      continue;
+    }
+    if (asset === 'watermill') {
+      for (const p of placements) buildHydro(parent, p.x, p.y, p.z, p.rotY, animators);
+      batches += 2 * placements.length;
+      continue;
+    }
+    const model = MODELS[asset];
+    if (!model) { console.warn(`[decoration] no drawn model for "${asset}"`); continue; }
+    instanceModel(parent, merge(model()), placements);
+    batches += 1;
+  }
+
+  // --- the space kit: a solar farm, and masts with dishes and antennas --------
+  //
+  // Lead 2026-10-09: "a few antennas and radar dishes and a solar farm where
+  // there is free space". These sit on open ground, clear of every path,
+  // building, quest station and home (checked in scripts/test-ch3-streets.mjs).
+  // Their colliders are appended after the kit's, so every existing one is the
+  // same. Scale is fitted to a measured size, not guessed: each Quaternius
+  // piece is a different size from the next.
+  const spaceSolids = [];
+  const [panel, dish, antenna] = await Promise.all([
+    loadShared(SP('SolarPanel_Ground')),
+    loadShared(SP('Roof_Radar')),
+    loadShared(SP('Roof_Antenna')),
+  ]);
+  const sizeOf = (src) => {
+    const box = new THREE.Box3().setFromObject(src);
+    return { size: box.getSize(new THREE.Vector3()), centre: box.getCenter(new THREE.Vector3()) };
+  };
+
+  // The farm: six panels in two rows, each about 1.9 units along its long side.
+  const FARM = [[12, -8], [14, -8], [16, -8], [12, -6], [14, -6], [16, -6]];
+  if (panel) {
+    const { size, centre } = sizeOf(panel);
+    const k = 1.9 / Math.max(size.x, size.z);
+    const placements = FARM.map(([x, z]) => ({ x, z, y: ground(x, z), rotY: 0, scale: k }));
+    await instanceAsset(parent, SP('SolarPanel_Ground'), placements, {
+      packScale: false, tint: 0x3d6fb8, outline: false, castShadow: false, receiveShadow: true,
     });
-    batches += meshes.length;
+    batches += 2;
+    props += placements.length;
+    for (const [x, z] of FARM) {
+      spaceSolids.push({
+        x: x + centre.x * k, z: z + centre.z * k,
+        halfX: (size.x * k) / 2, halfZ: (size.z * k) / 2, rotation: 0,
+      });
+    }
+  }
+
+  // Four masts. Each carries a radar dish or an antenna on its top.
+  const MASTS = [
+    { x: -10, z: -8, top: 'dish' },
+    { x: -16, z: 52, top: 'dish' },
+    { x: 10, z: -30, top: 'antenna' },
+    { x: 22, z: 52, top: 'antenna' },
+  ];
+  instanceModel(parent, mastGeometry(), MASTS.map((m) => ({ x: m.x, y: ground(m.x, m.z), z: m.z, rotY: 0.3 })), 1);
+  batches += 1;
+  props += MASTS.length;
+  for (const m of MASTS) spaceSolids.push({ x: m.x, z: m.z, radius: 0.3 });
+
+  const dishes = MASTS.filter((m) => m.top === 'dish');
+  if (dish && dishes.length) {
+    const { size } = sizeOf(dish);
+    const k = 2.2 / Math.max(size.x, size.z);
+    const placements = dishes.map((m) => ({ x: m.x, y: ground(m.x, m.z) + 4.7, z: m.z, rotY: 0.6, scale: k }));
+    await instanceAsset(parent, SP('Roof_Radar'), placements, { packScale: false, tint: 0xf4f7fa, outline: false, castShadow: false });
+    batches += 2;
     props += placements.length;
   }
-  return { props, batches, kinds: Object.keys(buckets).length, solids };
+  const antennas = MASTS.filter((m) => m.top === 'antenna');
+  if (antenna && antennas.length) {
+    const { size } = sizeOf(antenna);
+    // Fitted to 2.4 tall: the kit's base is a wide saucer, and taller reads as a UFO.
+    const k = 2.4 / size.y;
+    const placements = antennas.map((m) => ({ x: m.x, y: ground(m.x, m.z) + 4.7, z: m.z, rotY: 0, scale: k }));
+    await instanceAsset(parent, SP('Roof_Antenna'), placements, { packScale: false, tint: P.teal, outline: false, castShadow: false });
+    batches += 2;
+    props += placements.length;
+  }
+
+  return { props, batches, kinds: Object.keys(buckets).length, solids: [...solids, ...spaceSolids] };
 }
