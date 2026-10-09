@@ -640,9 +640,24 @@ lines are in place but not tuned.
   (`rocket_fuel`). Lessons list: `ch3_energy`.
 ## Sharing the game as one zip
 
-`npm run package` builds the game and makes `release/RocketVillage.zip`
+`npm run package` builds the game and makes `release/Evolution.zip`
 (about 12.5 MB): the built game plus `PLAY.bat` (Windows), `play.command`
 (Mac/Linux), `play-server.mjs` (a tiny local web server, no installs) and
 `HOW-TO-PLAY.txt`. The player unzips and double-clicks; it needs Node.js
 (or Python as a fallback). The zip holds whatever is checked out, so pull
 `main` first. Close the game before `npm run package` / `npm ci` on Windows.
+
+## Session 2026-10-09: deep check, Chapter 7, films, Evolution rename
+
+- **Deep-check fixes** (#28-#33): the modal queue (`hud/modalQueue.js`, every
+  card waits its turn), Level 1/4 wording, flicker and lighting fixes.
+- **Chapter 7, Toward Tau Ceti** (#34 scaffold; parts #35 D holodeck, #36 A+E
+  voyage, #37 B push and zero-g, #38 C chemistry and life). Plan and numbers:
+  `CHAPTER7_PLAN.md`. Tests: `test-ch7*.mjs`. `missions.jump()` now bumps a
+  generation and resets the modal queue, so stale steps can't finish late.
+- **Films and rename** (#39): every chapter has an opening and an ending film
+  through `src/game/chapterStory.js`; the game is "Evolution", Ch2 "Forces and
+  Machines", Ch3 "Ready for Lift-off" (save keys unchanged). Ch3 is a modern
+  town (Materials Lab, hydro station, antenna masts); the medieval kit is gone.
+- Merge order: #22-#27, #28-#33, #34, #35-#38, #39. Each PR is stacked on the
+  one before; retarget a child when its parent merges.

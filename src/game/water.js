@@ -150,8 +150,10 @@ export function createRiverSurface(river, bounds, { segments = 220, across = 6, 
   const material = new THREE.ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
-      uDeep: { value: new THREE.Color(0x18649f) },
-      uShallow: { value: new THREE.Color(0x6ec6e8) },
+      // Lead 2026-10-09 (Chapter 3): a cleaner, bluer river that reads as
+      // engineered water, not a brown-edged stream.
+      uDeep: { value: new THREE.Color(0x1b6fae) },
+      uShallow: { value: new THREE.Color(0x6fdcef) },
       uFoam: { value: new THREE.Color(0xdff1ff) },
     },
     vertexShader: vertex,

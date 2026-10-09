@@ -6,6 +6,7 @@
 // (river at z~3 as the golden-lock moat, pad and tower on the far bank).
 import * as THREE from 'three';
 import { TileBoard, KN, loadShared } from './board.js';
+import { toonRamp } from './toonPipeline.js';
 import { SCALE, packScaleFor, asset } from './contracts.js';
 import { ROCKET_VILLAGE, VILLAGE_PATHS } from './rocketVillageLayout.js';
 import { createRiverSurface } from './water.js';
@@ -117,19 +118,23 @@ export const CROSSINGS = [
 /**
  * ground_grass ships as #73eddd (teal). Everything here is an explicit tint,
  * which is why toonPipeline supports one.
+ *
+ * Lead 2026-10-09 (Chapter 3, "a civilizational jump"): the dirt roads are
+ * paved now. The tile colours below sit UNDER the paving that
+ * buildStreetSurface() lays on top, so they only show at the seams - they are
+ * kept close to the paving so no dirt-brown edge shows through.
  */
 const TINT = {
   grassA: 0x6fb659,
   grassB: 0x65ac51,
   grassC: 0x5a9e49,
-  path: 0xc9a465,
-  plaza: 0xa8a49b,
-  // Worn dirt/gravel where the paving frays into grass - a third surface so
-  // the plaza's edge reads as a transition, not a line between two tiles.
-  plazaEdge: 0x9c9578,
-  waterDeep: 0x2f7fd0,
-  waterShallow: 0x51a8e8,
-  bank: 0xcdb98a,
+  path: 0x7f858d,
+  plaza: 0xa9a79f,
+  // The grout between the plaza's paving slabs.
+  plazaEdge: 0xb4b1a8,
+  waterDeep: 0x1f74b8,
+  waterShallow: 0x5fd0ea,
+  bank: 0xd7d1bf,
 };
 
 /**
@@ -308,6 +313,186 @@ function* pathTiles(points, width) {
   }
 }
 
+/**
+ * Paving, kerbs and lane markings, laid over the tile ground.
+ *
+ * Lead 2026-10-09: Chapter 3 is a modern town around the launch complex, so
+ * the dirt roads become tarmac and paved footpaths, and the square becomes a
+ * paved plaza. The tiles cannot carry that - one colour per 1-unit tile blurs
+ * into stripes - so this is a separate flat mesh of crisp bands, built from
+ * the SAME paths and the same heightAt() as the ground, so it sits exactly on
+ * it. It is ONE draw call.
+ *
+ * Only the look changes. The walk map, heights and colliders are untouched:
+ * this mesh has no collider, and it stops where the bridge deck, the plaza and
+ * the buildings already are, so nothing new is laid over water or a doorway.
+ *
+ * Layers (y lift above the ground, so nothing z-fights):
+ *   pavement 0.02  <  kerbs and plaza ring 0.04  <  lane lines 0.055
+ */
+const STREET = {
+  asphalt: 0x4a5058, footA: 0xdcd8cf, footB: 0xcfcbc1, kerb: 0xeef0f2,
+  lane: 0xfbf8ec, slabA: 0xe8e5de, slabB: 0xd9d5cb, ring: 0xf2f1ec,
+};
+const PAVE = 0.02, KERB = 0.04, MARK = 0.055;
+
+/** Plaza edge radius at angle `a`: the same wobble paint() frays the paving with. */
+function plazaEdgeAt(a) {
+  const wobble =
+    Math.sin(a * 3.1 + 0.7) * 0.55 +
+    Math.sin(a * 5.3 - 1.4) * 0.35 +
+    Math.sin(a * 8.7 + 2.9) * 0.22;
+  return 8.5 + wobble;
+}
+
+/**
+ * Vertices and normals for the street mesh, built as flat triangles.
+ * Exported for scripts/test-ch3-streets.mjs, which checks where it lands.
+ */
+export function streetGeometry(village) {
+  const pos = [];
+  const nrm = [];
+  const col = [];
+  const c = new THREE.Color();
+
+  const vert = (x, z, lift, hex) => {
+    pos.push(x, village.heightAt(x, z) + lift, z);
+    nrm.push(0, 1, 0);
+    c.setHex(hex);
+    col.push(c.r, c.g, c.b);
+  };
+  const tri = (ax, az, bx, bz, cx, cz, hex, lift) => {
+    vert(ax, az, lift, hex); vert(bx, bz, lift, hex); vert(cx, cz, lift, hex);
+  };
+
+  // A band across a straight run from A to B, between offsets lo..hi from its
+  // centreline. `keep(x, z, s)` decides each short piece (s = distance along
+  // the run), so dashes and exclusions cost nothing extra.
+  const band = (ax, az, bx, bz, lo, hi, hex, lift, keep = () => true) => {
+    const len = Math.hypot(bx - ax, bz - az);
+    if (len < 1e-4) return;
+    const ux = (bx - ax) / len, uz = (bz - az) / len;
+    const nx = -uz, nz = ux;
+    const steps = Math.max(1, Math.ceil(len / 0.5));
+    for (let i = 0; i < steps; i++) {
+      const s0 = (len * i) / steps, s1 = (len * (i + 1)) / steps;
+      const sm = (s0 + s1) / 2;
+      const p0x = ax + ux * s0, p0z = az + uz * s0;
+      const p1x = ax + ux * s1, p1z = az + uz * s1;
+      // Two triangles for the piece: lo-side and hi-side corners.
+      const aL = [p0x + nx * lo, p0z + nz * lo], bL = [p1x + nx * lo, p1z + nz * lo];
+      const aH = [p0x + nx * hi, p0z + nz * hi], bH = [p1x + nx * hi, p1z + nz * hi];
+      // A piece is kept only if EVERY corner is allowed. Testing the midpoint
+      // alone let the wide side of a road reach into the water or a wall.
+      const mx = ax + ux * sm, mz = az + uz * sm;
+      if (!keep(mx, mz, sm) || !keep(aL[0], aL[1], sm) || !keep(bL[0], bL[1], sm)
+        || !keep(aH[0], aH[1], sm) || !keep(bH[0], bH[1], sm)) continue;
+      tri(aL[0], aL[1], bL[0], bL[1], bH[0], bH[1], hex, lift);
+      tri(aL[0], aL[1], bH[0], bH[1], aH[0], aH[1], hex, lift);
+    }
+  };
+
+  // A round cap, so two bands meeting at a bend leave no wedge of grass.
+  const disc = (cx, cz, r, hex, lift, keep) => {
+    const n = 14;
+    for (let k = 0; k < n; k++) {
+      const a0 = (k / n) * Math.PI * 2, a1 = ((k + 1) / n) * Math.PI * 2;
+      const bx = cx + Math.cos(a0) * r, bz = cz + Math.sin(a0) * r;
+      const dx = cx + Math.cos(a1) * r, dz = cz + Math.sin(a1) * r;
+      if (!keep(bx, bz, 0) || !keep(dx, dz, 0)) continue;
+      tri(cx, cz, bx, bz, dx, dz, hex, lift);
+    }
+  };
+
+  const hub = ROCKET_VILLAGE.hub;
+  // Inside the plaza's outer ring: the road begins where the ring ends.
+  const onPlaza = (x, z) => {
+    const dx = x - hub.x, dz = z - hub.z;
+    return Math.hypot(dx, dz) < plazaEdgeAt(Math.atan2(dz, dx)) - 0.5;
+  };
+  const inRiver = (x, z) => Math.abs(RIVER.offsetAt(x, z)) < RIVER.widthAt(x) + 2.6;
+  // Walls are about 2.0 from a building's centre; a road stops just short of them.
+  const inBuilding = (x, z) => ROCKET_VILLAGE.buildings.some((b) => Math.hypot(x - b.x, z - b.z) < 2.4);
+  // The road stops where the bridge deck takes over, the plaza begins, or a
+  // building's walls are - never laid over water, a wall or the square.
+  const roadKeep = (x, z) => !inRiver(x, z) && !onPlaza(x, z) && !inBuilding(x, z);
+
+  // --- roads -----------------------------------------------------------------
+  VILLAGE_PATHS.forEach((path, idx) => {
+    const main = idx < 2;
+    const w = path.width / 2;
+    const surface = main ? STREET.asphalt : STREET.footA;
+    const pts = path.points;
+    for (let n = 0; n < pts.length - 1; n++) {
+      const [ax, az] = pts[n];
+      const [bx, bz] = pts[n + 1];
+      // The paving: asphalt on the main roads, two-tone paving on the footpaths.
+      if (main) {
+        band(ax, az, bx, bz, -(w - 0.2), w - 0.2, surface, PAVE, roadKeep);
+      } else {
+        band(ax, az, bx, bz, -(w - 0.15), w - 0.15, STREET.footA, PAVE, roadKeep);
+        // Paving joints: a slab every 1.5 units, the odd ones a shade darker.
+        const len = Math.hypot(bx - ax, bz - az);
+        const ux = (bx - ax) / len, uz = (bz - az) / len;
+        for (let s = 1.5; s < len; s += 1.5) {
+          const jx = ax + ux * s, jz = az + uz * s;
+          if (!roadKeep(jx, jz)) continue;
+          const hw = w - 0.15;
+          band(jx - ux * 0.04, jz - uz * 0.04, jx + ux * 0.04, jz + uz * 0.04, -hw, hw, STREET.footB, PAVE + 0.008, roadKeep);
+        }
+      }
+      // Kerbs: a light edge each side, so the road reads as built, not painted.
+      band(ax, az, bx, bz, w - 0.36, w, STREET.kerb, KERB, roadKeep);
+      band(ax, az, bx, bz, -w, -(w - 0.36), STREET.kerb, KERB, roadKeep);
+      if (main) {
+        // Lane lines: a solid edge on both sides, a dashed centre.
+        band(ax, az, bx, bz, w - 0.62, w - 0.5, STREET.lane, MARK, roadKeep);
+        band(ax, az, bx, bz, -(w - 0.5), -(w - 0.62), STREET.lane, MARK, roadKeep);
+        band(ax, az, bx, bz, -0.07, 0.07, STREET.lane, MARK,
+          (x, z, s) => roadKeep(x, z) && (s % 3.2) < 1.7);
+      }
+    }
+    // Corners: fill the wedge a bend leaves between two bands.
+    for (let n = 1; n < pts.length - 1; n++) {
+      const [cx, cz] = pts[n];
+      if (!roadKeep(cx, cz)) continue;
+      disc(cx, cz, w - 0.15, surface, PAVE, roadKeep);
+    }
+  });
+
+  // --- the plaza: slabs in two tones, inside a light ring --------------------
+  // A grid of 1.5-unit slabs, anchored on the hub so the joints run true. The
+  // ring is drawn last at a higher lift, so it covers the edge slabs cleanly.
+  for (let i = -10; i <= 10; i++) {
+    for (let j = -10; j <= 10; j++) {
+      const cx = hub.x + i * 1.5, cz = hub.z + j * 1.5;
+      const dx = cx - hub.x, dz = cz - hub.z;
+      const d = Math.hypot(dx, dz);
+      if (d > plazaEdgeAt(Math.atan2(dz, dx)) - 2.2) continue;
+      const hex = (i + j) & 1 ? STREET.slabB : STREET.slabA;
+      const h = 0.7;
+      tri(cx - h, cz - h, cx + h, cz - h, cx + h, cz + h, hex, PAVE);
+      tri(cx - h, cz - h, cx + h, cz + h, cx - h, cz + h, hex, PAVE);
+    }
+  }
+  const RING = 96;
+  for (let k = 0; k < RING; k++) {
+    const a0 = (k / RING) * Math.PI * 2, a1 = ((k + 1) / RING) * Math.PI * 2;
+    const e0 = plazaEdgeAt(a0), e1 = plazaEdgeAt(a1);
+    const r0 = e0 - 1.0, r1 = e0 - 0.5, q0 = e1 - 1.0, q1 = e1 - 0.5;
+    const p = (r, a) => [hub.x + Math.cos(a) * r, hub.z + Math.sin(a) * r];
+    const A = p(r0, a0), B = p(r1, a0), C = p(q1, a1), D = p(q0, a1);
+    tri(A[0], A[1], B[0], B[1], C[0], C[1], STREET.ring, KERB);
+    tri(A[0], A[1], C[0], C[1], D[0], D[1], STREET.ring, KERB);
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  return geo;
+}
+
 export class Village {
   constructor() {
     this.width = BOUNDS.maxX - BOUNDS.minX + 1;
@@ -331,6 +516,11 @@ export class Village {
     this.solids = [];
     /** tile key -> ground height. See heightAt(). */
     this._heightCache = new Map();
+    /**
+     * Per-frame hooks for things that move (wind turbines, the hydro wheel).
+     * decoration.js adds to this; update() calls each with the elapsed time.
+     */
+    this.animators = [];
   }
 
   /**
@@ -576,7 +766,10 @@ export class Village {
   }
 
   /** Drive the water. Called once per frame. */
-  update(t) { this.water?.update(t); }
+  update(t) {
+    this.water?.update(t);
+    for (const step of this.animators) step(t);
+  }
 
   /** Somewhere a prop must not go: on a path, a plaza, the river, or a site. */
   /**
@@ -757,6 +950,23 @@ export class Village {
     // The board samples this while displacing the ground mesh.
     this.board.sampleHeight = (x, z) => this.heightAt(x, z);
     await this.board.build();
+
+    // The paved roads, kerbs, lane lines and plaza slabs, on the same heights.
+    // One flat mesh with its own material: polygonOffset keeps it above the
+    // ground where the two meet, and the lifts keep each layer above the last.
+    const streetMat = new THREE.MeshToonMaterial({
+      vertexColors: true,
+      gradientMap: toonRamp,
+      side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    });
+    const streets = new THREE.Mesh(streetGeometry(this), streetMat);
+    streets.name = 'streets';
+    streets.receiveShadow = true;
+    streets.castShadow = false;
+    this.group.add(streets);
 
     const rng = makeRng(20260911);
     const NA = (n) => asset(`assets/models/nature/${n}.gltf`);

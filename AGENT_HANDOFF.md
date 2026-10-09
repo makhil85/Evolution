@@ -1,4 +1,8 @@
-# Rocket Village: handoff for a new AI agent
+# Evolution (formerly Rocket Village): handoff for a new AI agent
+
+The game is called **Evolution** (lead, 2026-10-09): from a village's first
+science to the stars, and later the evolution of life itself. Save keys and
+file names keep `rocket_village` so no progress is lost.
 
 Written 2026-10-08 at `main` after PR #16; updated 2026-10-08 (late) for the
 open PRs #22-#34 and Chapter 7. Read this first (section 11 lists the
@@ -50,7 +54,7 @@ npm ci                 # once (close the game first on Windows, or EPERM)
 npm run dev            # http://localhost:5173/   (chapters: /chapter1.html ... /chapter6.html)
 npm test               # every suite (15 now); must pass before every commit
 npm run build          # must pass too
-npm run package        # build + release/RocketVillage.zip (double-click PLAY.bat to play)
+npm run package        # build + release/Evolution.zip (double-click PLAY.bat to play)
 ```
 
 - **Grown-up mode**: add `?unlock=all` to any page (`?unlock=off` undoes it).
@@ -74,8 +78,8 @@ any lesson; "Start everything over".
 | Ch | Page / code | What |
 |---|---|---|
 | 1 Science Village | `chapter1.html` -> `src/science/` | Gather resources, solve maths boards and science labs, build the Science Center; key-gate puzzle; lessons 1A (round Earth) and 1B (Eratosthenes) |
-| 2 City Engineering | `chapter2.html` -> `src/city/` | Bridge, gears, power, tiles puzzles; build the workshop; Newton's apple tree; lessons 2A (truss bridges, with a green->red strain animation) and 2B (Archimedes) |
-| 3 Rocket Village | `chapter3.html` -> `src/gameScene.js`, `src/game/` | A quest chain of questions and builds (QUEST_CHAIN in `src/game/quests.js`), build the rocket in 5 stages, Launch Tuner, launch; lessons 3A (push back, go forward), 3B (heavy rockets), 3C (energy never disappears, added 10-07) |
+| 2 Forces and Machines (was City Engineering) | `chapter2.html` -> `src/city/` | Bridge, gears, power, tiles puzzles; build the workshop; Newton's apple tree; lessons 2A (truss bridges, with a green->red strain animation) and 2B (Archimedes) |
+| 3 Ready for Lift-off (was Rocket Village) | `chapter3.html` -> `src/gameScene.js`, `src/game/` | A quest chain of questions and builds (QUEST_CHAIN in `src/game/quests.js`), build the rocket in 5 stages, Launch Tuner, launch; lessons 3A (push back, go forward), 3B (heavy rockets), 3C (energy never disappears, added 10-07) |
 
 Shared: play modes (`src/play/`: Easy arrow+glow, Medium/Hard mining by E,
 Hard treasure hunt), fun moves (H J K L U I B; `src/game/emotes.js`),
@@ -239,7 +243,7 @@ Ch1-3 keys in each `contracts.js` / `quests.js`.
   (subscribe) and keep them conflict-free (several PRs append to
   `HANDOFF.md`: merge `main` in and keep both sections).
 - Subagents (lead, 10-08): `subagent_type: "haiku-high"` makers AND critics,
-  **5 at a time**, the coordinator (main session) writes the plan and the
+  **up to 10 at a time** (lead 10-09), the coordinator (main session) writes the plan and the
   metric. Loop: maker -> critic (checks against the plan's metrics) -> one fix
   round (send it back to the same maker with SendMessage) -> coordinator
   commits and opens the PR. Give each agent only its task, the files it owns
@@ -281,7 +285,35 @@ hint. Mostly inside the ship.
   `-push`, `-science`, `-holodeck`), each maker -> critic -> one fix round.
   Merge order: #22-#33 (fixes), #34, then the four.
 
-After Chapter 7, from the lead and `PLAN.md`, roughly in order:
+**Also now (lead 2026-10-09): chapter cutscenes.** Every chapter gets a story
+opening and ending scene that fits its content (Chapters 1-3 only had the
+generic camera sweep, title card and confetti; Chapter 6 had no opening):
+Ch1 opening and ending, Ch2 opening and ending, Ch3 opening (its ending is the
+launch, plus a short arrival in orbit), Ch6 opening (back in the asteroid
+belt). Chapter 2 is renamed **Forces and Machines** (was City Engineering),
+Chapter 3 **Ready for Lift-off** (was Rocket Village), and the game
+**Evolution**.
+
+**Later: a city chapter between the city and the rocket** (lead 2026-10-09).
+Chapter 2 "Forces and Machines" may get real city model structures (a model
+kit for city buildings, like the sci-fi kit for the ship), and a new chapter
+can sit between it and Chapter 3 "Ready for Lift-off", so the civilizational
+jump happens in steps: village -> city -> (new: e.g. the age of engines and
+electricity, the first flights) -> the space-age rocket town. Chapter numbers
+and save keys will need care when it is inserted (launcher CHAPTERS, page
+names, `rocket_village_seen_ch<n>` flags).
+
+**Later: genetics and evolution** (lead 2026-10-09; the game's name). Chapters
+after Tau Ceti about life itself, built on Chapter 4's lesson 4G (cells, DNA,
+proteins) and Chapter 7's tiny-life lesson: genes and inheritance (why
+children look like their parents; Mendel's peas: counting traits), mutation
+and variation, natural selection (who survives and has young; a game where a
+population changes over generations), how all life on Earth shares one
+family tree (fossils, common ancestors), and what alien life on a Tau Ceti
+planet might share with us or not. Plan it like Chapter 7 (CHAPTERx_PLAN.md
+with the numbers, a chain, work packages and metrics) when the lead says go.
+
+After that, from the lead and `PLAN.md`, roughly in order:
 1. **A child plays every chapter**: watch where they get stuck.
 2. **Real-screen pass** of everything built since 10-06 (none of it was seen
    on a real screen by an agent): Ch6 deck frame rates (ship-lab info())  and cutscenes, the
@@ -322,6 +354,14 @@ After Chapter 7, from the lead and `PLAN.md`, roughly in order:
 - `npm run package` needs Node (or Python) on the player's PC to serve the
   game; double-clicking `index.html` cannot work (browser file rules).
 - Touch pad (Ch4-6) is simulated-only; AIM/JUMP now holds Q.
+- **Chapter 3 town is heavy**: about 420k triangles and up to 148 draw calls
+  in any view. Most of it is `board.js` (236k, instanced batches with
+  `frustumCulled = false`, lines ~207 and ~453), the avatar (82k, skinned,
+  culling off in `avatar.js`) and mountains (33k). Decorations and villagers
+  are culled now. Target: <= 120 calls, well under 300k.
+- **Not yet seen on screen** (2026-10-09): the Ch7 float game, the low-g walk,
+  the Part C cards at Level 1, the holodeck frames and the Ch7 opening camera.
+  The node tests and the critics' card checks pass; a play-through is owed.
 
 ## 10. Lessons learned (read before you start)
 

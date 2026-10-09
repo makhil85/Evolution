@@ -136,7 +136,7 @@ const LEVEL4_QUESTIONS = {
     success:
       'Correct. 30 × 50 = 1500 cm, which is 15 metres — as tall as a four-storey building. The blueprint is signed.',
     doneMessage:
-      'Blueprint complete. The hologram rocket over the pad now shows its real size, and the Materials Forge lights its furnace.',
+      'Blueprint complete. The hologram rocket over the pad now shows its real size, and the Materials Lab lights its furnace.',
     reward: { xp: 25, resources: { gems: 1 }, part: 'Blueprint' }
   },
 
@@ -163,7 +163,7 @@ const LEVEL4_QUESTIONS = {
     success:
       'Correct. Aluminium alloy is strong enough to hold the rocket together and light enough to fly. Real rockets use it for the same reason.',
     doneMessage:
-      'The Forge fires up and builds itself piece by piece. You are now a Junior Engineer — the Build Menu is unlocked and iron ore has appeared around the village.',
+      'The Lab fires up and builds itself piece by piece. You are now a Junior Engineer — the Build Menu is unlocked and iron ore has appeared around the town.',
     reward: { xp: 25, resources: { iron: 6 }, part: 'Frame', rank: 'Junior Engineer' }
   },
 
@@ -461,7 +461,7 @@ const LEVEL4_QUESTIONS = {
       'This is the idea behind density, without needing the word: same volume, but very different mass, because iron packs far more matter into the same space than foam does. A good question to ask: "which one would be harder to lift?"',
     success:
       'Correct. Iron packs much more matter into the same space than foam does, so the iron block is far heavier even though it is exactly the same size. That is exactly why rocket engineers pick materials so carefully — a part can be small and still add a lot of weight.',
-    doneMessage: 'A curious visitor at the Forge nods at the explanation and leaves a few iron ingots by the furnace.',
+    doneMessage: 'A curious visitor at the Lab nods at the explanation and leaves a few iron ingots by the furnace.',
     reward: { xp: 15, resources: { iron: 3 }, bonus: true }
   },
 

@@ -3,23 +3,24 @@
 // The engine that tracks clues and saves progress is src/play/hunt.js; this
 // file is Chapter 3's DATA - the clues per Level - and the launch rule.
 // Everything here is world coordinates and must be solvable from what is
-// really standing in the village (see the FACTS block). North is -z, up the
+// really standing in the town (see the FACTS block). North is -z, up the
 // map: she starts in the far south (z 55) and walks NORTH up the road to the
 // river (z about 3); east is +x, on her right when she faces north.
 //
 // FACTS the clues lean on (rocketVillageLayout.js, decoration.js, homes):
 //   * Name signs float over every building site from the start, even the ones
-//     not built yet: Mission School (-24, 31), Materials Forge (24, 31),
+//     not built yet: Mission School (-24, 31), Materials Lab (24, 31),
 //     River Flow Lab (-25, 12), Wind Tunnel (25, 12). Only "River Flow Lab"
 //     has three words.
 //   * The fountain is at the centre of the market square (0, 25). Eight stalls
 //     stand in a ring round it: 3 with a green roof, 2 with a red roof, 3
 //     with no roof cloth.
-//   * The Mission School is due WEST of the Materials Forge (same z), and the
+//   * The Mission School is due WEST of the Materials Lab (same z), and the
 //     River Flow Lab is due WEST of the Wind Tunnel (same z), 50 units apart.
 //     The River Flow Lab is due NORTH of the Mission School (19 units).
-//   * The watermill stands on the near bank of the river at (16, 11), east of
-//     the bridge road, its wheel in the water.
+//   * The hydro station (decoration.js, the "watermill" placement) stands on the
+//     near bank of the river at (16, 11), east of the bridge road, its big
+//     wheel dipping into the water.
 //   * Four homes (homesLayout.js) with numbers 6, 9, 14, 17 on their signs,
 //     in the meadows either side of the road near where she starts.
 //   All four clue places are on the near (south) bank, so the hunt can be
@@ -57,7 +58,7 @@ function decoysFor(level, finalId) {
 const LEVEL_1 = {
   title: 'The Hidden Guidance Crystal',
   itemName: ITEM_NAME,
-  intro: 'The rocket needs a Guidance Crystal to steer. It is hidden inside one of the homes in this village. Read each clue and find the place. When you get there, stand close and press E.',
+  intro: 'The rocket needs a Guidance Crystal to steer. It is hidden inside one of the homes in this town. Read each clue and find the place. When you get there, stand close and press E.',
   steps: [
     {
       id: 'fountain',
@@ -74,8 +75,8 @@ const LEVEL_1 = {
     {
       id: 'mill',
       at: { x: 16, z: 14.6 }, radius: 4.6,
-      clue: 'Clue 3: Turn so the river is in front of you. Now walk far to your RIGHT along the river. Find a mill with a big wheel in the water.',
-      found: 'The water wheel is turning. You found the mill!',
+      clue: 'Clue 3: Turn so the river is in front of you. Now walk far to your RIGHT along the river. Find the little power station with a big wheel in the water.',
+      found: 'The water wheel is turning. You found the power station!',
     },
     {
       id: 'home',
@@ -96,7 +97,7 @@ const LEVEL_1 = {
 const LEVEL_4 = {
   title: 'The Hidden Guidance Crystal',
   itemName: ITEM_NAME,
-  intro: 'The rocket\'s guidance computer needs a Guidance Crystal, and it is hidden inside one of the homes in this village. These clues never name a place, so you have to work each one out. North is the way you face when you walk up the main road toward the river. Stand close to each place and press E.',
+  intro: 'The rocket\'s guidance computer needs a Guidance Crystal, and it is hidden inside one of the homes in this town. These clues never name a place, so you have to work each one out. North is the way you face when you walk up the main road toward the river. Stand close to each place and press E.',
   steps: [
     {
       id: 'midpoint',

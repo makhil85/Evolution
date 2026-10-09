@@ -20,15 +20,15 @@ export const STEP_TEXT_L1 = {
     statusText: 'Finish the plan upstairs',
   },
   step_frame: {
-    lockedMessage: 'The Forge is cold. Finish the plan at the Mission School first.',
-    missionText: 'Go to the Forge on the right. Pick the metal for the rocket.',
-    statusText: 'Pick the metal at the Forge',
-    done: { materialsForge: 'The Forge is built! The Build Menu is open.' },
+    lockedMessage: 'The Lab is cold. Finish the plan at the Mission School first.',
+    missionText: 'Go to the Lab on the right. Pick the metal for the rocket.',
+    statusText: 'Pick the metal at the Lab',
+    done: { materialsForge: 'The Lab is built! The Build Menu is open.' },
   },
   build_foundation: {
     label: 'Base',
     title: 'Build Stage 1 — Base + Frame',
-    lockedMessage: 'Pick the metal at the Forge first. Then bring 6 wood and 6 stone to the pad.',
+    lockedMessage: 'Pick the metal at the Lab first. Then bring 6 wood and 6 stone to the pad.',
     missionText: 'Get 6 wood and 6 stone. Then build the rocket base at the pad.',
     statusText: 'Build the rocket base at the pad',
     done: { 'rocket.stage.foundation': 'Stage 1 is up! The frame stands on the pad.' },
@@ -117,8 +117,8 @@ export const STEP_TEXT_L1 = {
     statusText: 'Extra: which balloon was higher',
   },
   bonus_mass: {
-    lockedMessage: 'The smith is busy. Pick the metal first.',
-    missionText: `★ The smith has an iron block and a foam block. Which is heavier? ${EXTRA}`,
+    lockedMessage: 'The engineer is busy. Pick the metal first.',
+    missionText: `★ The engineer has an iron block and a foam block. Which is heavier? ${EXTRA}`,
     statusText: 'Extra: the two blocks',
   },
   bonus_volume: {

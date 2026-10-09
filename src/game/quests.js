@@ -534,9 +534,9 @@ const RAW_CHAIN = [
     effects: [
       // No `pieces` count on a building: the structure knows how many it has,
       // and a number written here has to be kept in step with a recipe in
-      // another file forever. It was not - adding walls to the Forge would
+      // another file forever. It was not - adding walls to the Lab would
       // have left it built to four pieces out of seven, permanently roofless.
-      { kind: 'build', targetId: 'materialsForge', doneMessage: 'Materials Forge complete. The Build Menu is unlocked!' },
+      { kind: 'build', targetId: 'materialsForge', doneMessage: 'Materials Lab complete. The Build Menu is unlocked!' },
       { kind: 'reveal', targetId: 'materialsForge.console', visible: false },
       // 10 nodes, not the spec's 8: at 8 the level fails its own 2× supply
       // invariant for iron (see validateChain).
@@ -546,9 +546,9 @@ const RAW_CHAIN = [
       { kind: 'unlock', targetId: 'buildMenu' },
       { kind: 'unlock', targetId: 'rank:Junior Engineer', rank: 'Junior Engineer' }
     ],
-    lockedMessage: 'The Forge is cold. Finish the blueprint at the Mission School first — the smith needs to know how big the rocket is.',
-    missionText: 'Cross to the Materials Forge on the right side of the village and choose the metal for the rocket frame.',
-    statusText: 'Choose the frame metal at the Forge'
+    lockedMessage: 'The Lab is cold. Finish the blueprint at the Mission School first — the engineers need to know how big the rocket is.',
+    missionText: 'Cross to the Materials Lab on the right side of the town and choose the metal for the rocket frame.',
+    statusText: 'Choose the frame metal at the Lab'
   },
 
   {
@@ -563,7 +563,7 @@ const RAW_CHAIN = [
       { kind: 'unlock', targetId: 'waterLab' },
       { kind: 'unlock', targetId: 'windTunnel' }
     ],
-    lockedMessage: 'Choose the frame metal at the Materials Forge first, then bring 6 wood and 6 stone to the pad.',
+    lockedMessage: 'Choose the frame metal at the Materials Lab first, then bring 6 wood and 6 stone to the pad.',
     missionText: 'Collect 6 wood and 6 stone, then build the rocket foundation at the pad. You can build it from this side of the river.',
     statusText: 'Build the rocket foundation at the pad'
   },
@@ -608,7 +608,7 @@ const RAW_CHAIN = [
     },
     effects: [
       { kind: 'build', targetId: 'rocket.stage.body', pieces: 3 },
-      { kind: 'build', targetId: 'bridge', pieces: 5, doneMessage: 'The bridge is finished! The engineering side of the village is open.' },
+      { kind: 'build', targetId: 'bridge', pieces: 5, doneMessage: 'The bridge is finished! The engineering side of the town is open.' },
       { kind: 'unlock', targetId: 'river.crossing' },
       { kind: 'reveal', targetId: 'village.south' },
       { kind: 'unlock', targetId: 'rank:Flight Engineer', rank: 'Flight Engineer' }
@@ -806,8 +806,8 @@ const RAW_CHAIN = [
     // No world effects: the reward is the supplies, which the engine banks
     // straight from the question. A bonus puzzle must not move the main chain.
     effects: [],
-    lockedMessage: 'The smith is busy with the frame metal. Choose that first.',
-    missionText: '★ The smith has two blocks the same size, one iron and one foam. Work out which is heavier. You never need it to launch.',
+    lockedMessage: 'The engineer is busy with the frame metal. Choose that first.',
+    missionText: '★ The engineer has two blocks the same size, one iron and one foam. Work out which is heavier. You never need it to launch.',
     statusText: 'Optional: weigh up the two blocks'
   },
 
