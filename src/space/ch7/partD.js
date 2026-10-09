@@ -30,13 +30,13 @@ export function partDSteps(game) {
     {
       id: 'c7_holodeck_walk', act: ACT_D,
       title: t('The holodeck', 'The holodeck'),
-      objective: t('Walk to the holodeck door on the bridge and ask the computer for a quasar far away.', 'Go to the holodeck and ask for a quasar!'),
+      objective: t('Walk to the holodeck door and ask the computer for a far-away quasar.', 'Go to the holodeck and ask for a quasar!'),
       markers: [],
       async enter() {
         await hud.showDialogue([
           { who: who('signal'), text: t('The holodeck can make a place for us. Shall I ask the computer for a quasar?', 'The holodeck can take us anywhere. Let me ask for a quasar!') },
           { who: 'girl', text: t('A quasar? What is that?', 'What is a quasar?') },
-          { who: who('signal'), text: t('A black hole that is eating gas, and shining brighter than a whole galaxy. It is billions of light-years away, so the holodeck brings it to us.', 'A black hole eating gas, shining brighter than a whole galaxy. It is very far away, so the holodeck brings it to us!') },
+          { who: who('signal'), text: t('A black hole eating gas, shining brighter than a whole galaxy. It is billions of light-years away. The holodeck brings it to us.', 'A black hole eats gas. It shines brighter than a galaxy. It is far away!') },
         ]);
         const models = await preloadInterior();
         await game.runScene(createInteriorScene(game, {
@@ -54,7 +54,7 @@ export function partDSteps(game) {
     {
       id: 'c7_black_hole_lesson', act: ACT_D,
       title: t('Black holes and quasars', 'Black holes'),
-      objective: t('Watch the lesson on black holes and quasars, and answer a question after each film.', 'Watch the lesson about black holes.'),
+      objective: t('Watch the lesson on black holes and quasars. Answer a question after each film.', 'Watch the lesson about black holes.'),
       markers: [],
       async enter() {
         await hud.showDialogue([

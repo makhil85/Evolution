@@ -40,9 +40,7 @@ async function walkTasks(game, ids) {
     done: [...done].filter((id) => ids.includes(id)),
     async onStation(id) {
       await playTask(id, { bus: game.bus });
-      // The question first, then the task counts as done. On foot a short pause
-      // with a toast, so she knows it is coming.
-      game.hud.toast(t('Mission Control has a question...', 'A question is coming!'), { kind: 'info', ms: 1400 });
+      // The question first, then the task counts as done.
       // ask() resolves only once the question is answered right: two wrong tries
       // reload the act from its start (hud.askQuestion never resolves), so a task
       // is never saved as done on a miss.
@@ -58,7 +56,7 @@ export function partCSteps(game) {
     {
       id: 'c7_atoms', act: 3,
       title: t('Atoms: the building blocks', 'Tiny building blocks'),
-      objective: t('Find out what everything is made of, then split water and make the plants’ air.', 'Learn about atoms first.'),
+      objective: t('Find what everything is made of. Then split water and make air.', 'Learn about atoms first.'),
       markers: [],
       async enter() {
         clearDone(); // a fresh start of the act: no task is done yet
@@ -72,13 +70,13 @@ export function partCSteps(game) {
     {
       id: 'c7_chem_tasks', act: 3,
       title: t('Split the water, and make the air', 'Chemistry in the lab and farm'),
-      objective: t('Go to the water lab and the farm. Use every atom, and balance the air the plants make.', 'Go to the water lab, then the farm.'),
+      objective: t('Go to the water lab and the farm. Balance the air the plants make.', 'Go to the water lab, then the farm.'),
       markers: [],
       async enter() {
         await hud.showDialogue([
           { who: who('builder'), text: t('The lab first. Electricity can split water into its atoms, then we build them back up.', 'The lab first! Electricity splits water.') },
           { who: 'girl', text: t('And then the farm?', 'And then the farm?') },
-          { who: who('biologist'), text: t('Yes. We breathe oxygen in and breathe carbon dioxide out. Plants do it the other way round: carbon dioxide and water go in, oxygen comes out.', 'The plants give back the oxygen we breathe.') },
+          { who: who('biologist'), text: t('Yes. We breathe oxygen in and carbon dioxide out. Plants swap that: carbon dioxide and water go in, oxygen comes out.', 'The plants give back the oxygen we breathe.') },
         ]);
         await walkTasks(game, CHEMISTRY);
         hud.toast(t('The lab and the farm are done!', 'Chemistry done!'), { kind: 'good', ms: 3600 });

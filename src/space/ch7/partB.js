@@ -31,7 +31,7 @@ export function partBSteps(game) {
     {
       id: 'c7_push_gentle', act: 2,
       title: t('Gentle push', 'Gentle push'),
-      objective: t('The drive is on, at a gentle push. Walk with Bolt to the cargo bay and drop the ball.', 'Walk to the cargo bay. Drop the ball!'),
+      objective: t('Gentle push on. Walk with Bolt to the cargo bay and drop the ball.', 'Walk to the cargo bay. Drop the ball!'),
       markers: [],
       async enter() {
         await hud.showDialogue([
@@ -45,7 +45,6 @@ export function partBSteps(game) {
           models, gait: 'lope', spots: [DROP_GENTLE],
           async onStation() {
             await playDropTest('gentle', { bus: game.bus });
-            hud.toast(t('Mission Control has a question...', 'A question is coming!'), { kind: 'info', ms: 1400 });
             await game.missions.ask(BEAT.gentle, { calm: WALK_CALM_S });
           },
         }));
@@ -76,8 +75,8 @@ export function partBSteps(game) {
           { who: who('builder'), text: t('Engine check! The drive goes OFF. No push, so we just drift on in a straight line.', 'Engine check! The drive goes OFF. We drift!') },
           { who: who('builder'), text: t('Magnetic boots keep our feet on the floor, so we can still walk to the engine.', 'Magnetic boots: our feet stay on the floor.') },
           { who: 'girl', text: t('Then how do we move?', 'How do we move?') },
-          { who: who('signal'), text: t('Remember the two ice chunks in Saturn’s rings? The small one shot off fast, and the big one moved slowly. You are the big one now, and the wrench is the small one.', 'Remember Saturn’s ice? The small chunk shot off fast. You are the big one, and the wrench is the small one!') },
-          { who: who('builder'), text: t('A rocket does the same with its gas: the gas goes out the back, and the rocket goes forwards. Throw the wrench one way, and you float the other way.', 'Throw one way, and you float the other way!') },
+          { who: who('signal'), text: t('Remember the two ice chunks? The small one shot off fast. You are the big one, and the wrench is the small one.', 'The small chunk shot off fast. You are the big one. The wrench is small!') },
+          { who: who('builder'), text: t('A rocket does the same with gas out the back. Throw the wrench one way, and you float the other way.', 'Throw one way, and you float the other way!') },
           { who: who('signal'), text: t('Remember the balloon in Chapter 3? Air goes back, and the balloon goes forward. Your wrench is the air.', 'Remember the balloon? Air goes back, the balloon goes forward!') },
         ]);
         const models = await preloadInterior();
@@ -85,7 +84,6 @@ export function partBSteps(game) {
           models, spots: [ENGINE],
           async onStation() {
             await playFloatGame({ bus: game.bus });
-            hud.toast(t('Mission Control has a question...', 'A question is coming!'), { kind: 'info', ms: 1400 });
             await game.missions.ask(BEAT.float, { calm: WALK_CALM_S });
             // The sum of the throw (the callout's numbers), asked after the direction.
             await game.missions.ask(BEAT.sum);
@@ -97,7 +95,7 @@ export function partBSteps(game) {
     {
       id: 'c7_full_push', act: 2,
       title: t('Full push', 'Full push'),
-      objective: t('Full push: 1 g, like Earth. Walk back to the cargo bay and drop the ball again.', 'Full push! Drop the ball again.'),
+      objective: t('Full push: 1 g, like Earth. Walk back and drop the ball again.', 'Full push! Drop the ball again.'),
       markers: [],
       async enter() {
         await hud.showDialogue([
@@ -110,7 +108,6 @@ export function partBSteps(game) {
           models, spots: [DROP_FULL],
           async onStation() {
             await playDropTest('full', { bus: game.bus });
-            hud.toast(t('Mission Control has a question...', 'A question is coming!'), { kind: 'info', ms: 1400 });
             await game.missions.ask(BEAT.full, { calm: WALK_CALM_S });
           },
         }));

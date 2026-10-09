@@ -141,14 +141,14 @@ function medbayBody(changed) {
     totalBar.set(m.total, m.goal * 1.4, m.goal, !m.short);
     note.className = `qz-note${m.ok ? '' : ' qz-warn'}`;
     note.textContent = m.missing.length ? t(`Scan all four badges. Each one shows what the rays did to that person today (the limit is ${DAY_LIMIT} units).`, 'Scan all four badges.')
-      : m.short ? t(`Bones need ${BONES.each} minutes of exercise a day each: ${m.goal} minutes for the five of us. Walking round the ring gives ${BONES.walk}. Ride the bike for the rest.`, `Bones need exercise! ${m.goal} minutes for us all. Ride the bike.`)
+      : m.short ? t(`Each of us needs ${BONES.each} minutes of exercise a day. Walking the ring gives ${BONES.walk}. Ride the bike for the rest.`, `Bones need exercise! ${m.goal} minutes for us all. Ride the bike.`)
         : t('Everyone is checked, and the exercise is enough for strong bones!', 'All checked. Strong bones!');
   }
   return {
     el: wrap, ok: () => medbayTotals(s).ok,
     solve() { Object.assign(s, medbayAnswer()); changed(); },
     state: () => ({ scanned: [...s.scanned], bike: s.bike }), refresh,
-    tip: t('Each metre of rock halves the rays. The front shield keeps the ring behind it safe, so scan every badge, then set the bike. In spin gravity our bones need exercise every day.', 'Scan each badge. Exercise keeps our bones strong.'),
+    tip: t('Each metre of rock halves the rays. Scan every badge, then set the bike. Bones need exercise every day.', 'Scan each badge. Exercise keeps our bones strong.'),
   };
 }
 
@@ -171,7 +171,7 @@ function coolantBody(changed) {
     }
   }
   const msg = el('div', 'qz-note');
-  const legend = el('div', 'qz-note', t('Tap a valve to open it (blue) or shut it. Coolant runs from the tank (left) to the core (right), through open valves only. Wet (light blue) cells are where the coolant reaches.', 'Tap a valve to open or shut it. Light blue: the coolant reaches it.'));
+  const legend = el('div', 'qz-note', t('Tap a valve to open or shut it. Coolant runs from the tank (left) to the core (right). Light blue cells get it.', 'Tap a valve to open or shut it. Light blue: the coolant reaches it.'));
   wrap.append(grid, legend, msg);
   function refresh() {
     const flow = coolantFlow(open);
@@ -198,7 +198,7 @@ function coolantBody(changed) {
     el: wrap, ok: () => coolantProblem(open) === null,
     solve() { open.clear(); for (const k of COOLANT_ANSWER) open.add(k); changed(); },
     state: () => ({ open: [...open].sort() }), refresh,
-    tip: t('Coolant keeps the fusion core from getting too hot. A pipe has cracked: the coolant must reach the core, but it must not reach the crack.', 'Coolant cools the core. Get it to the core, and keep it out of the crack.'),
+    tip: t('Coolant keeps the fusion core cool. A pipe has cracked: get coolant to the core, but keep it out of the crack.', 'Get coolant to the core. Keep it out of the crack.'),
   };
 }
 
@@ -286,7 +286,7 @@ function pollenBody(changed) {
     el: wrap, ok: () => pollinated(st),
     solve() { st = runPollen(pollenAnswer()).state; problem = null; changed(); },
     state: () => ({ holding: st.holding, fruit: [...st.fruit] }), refresh,
-    tip: t('Each bud takes pollen from its partner flower. Real strawberries need lots of pollen grains, carried by bees on Earth. Out here we do the bees’ job with a soft brush.', 'Each bud takes pollen from its partner flower. We do the bees’ job with a brush.'),
+    tip: t('Each bud takes pollen from its partner flower. Bees do this on Earth. Out here, a soft brush does the job.', 'Each bud takes pollen from its partner flower. We use a brush.'),
   };
 }
 

@@ -27,7 +27,7 @@ export function partASteps(game) {
     {
       id: 'c7_opening', act: ACT_A,
       title: t('Leaving the Sun', 'Bye bye, Sun'),
-      objective: t('Full power! Watch the ship leave the Sun behind, and see the next star: Tau Ceti.', 'Full power! Watch the ship go!'),
+      objective: t('Full power! Watch the ship leave for the next star, Tau Ceti.', 'Full power! Watch the ship go!'),
       markers: [],
       async enter() {
         await playCh7Opening(game); // the drive, the Sun shrinking, the star map and the caption
@@ -53,7 +53,6 @@ export function partASteps(game) {
           async onStation() {
             await playStarMap({ bus: game.bus });
             // The map first, then its two questions: two missed tries restart the act.
-            hud.toast(t('Mission Control has a question...', 'A question is coming!'), { kind: 'info', ms: 1400 });
             await game.missions.ask('c7StarMap', { calm: WALK_CALM_S });
             await game.missions.ask('c7Nearest');
           },

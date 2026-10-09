@@ -7,7 +7,8 @@
 // only) passes Easy but not Medium or Hard, a steering bot takes 15 to 40 s,
 // big rocks take 2 / 3 / 5 shots and need a true aim, a bump jams the gun,
 // shots kick her back (but never out of the picture), and a level plays the
-// same each go.
+// same each go. Shots and burst parts (ringRun.js createFx) are pooled: no material
+// or geometry per shot, and every look stays under the bloom threshold.
 // Space pool (poolLogic.js): every level can be won with good shots, bumps
 // keep the total momentum, and a bad shot doesn't win.
 // Part D (designBoard.js, rockHunt.js, workshop.js): each design question has
@@ -18,6 +19,9 @@ import { DESIGN_STEPS } from '../src/space/ch5/designBoard.js';
 import { CHECKS, ROCKS, failures } from '../src/space/ch5/rockHunt.js';
 import { STATIONS } from '../src/space/ch5/workshop.js';
 import { POOL_LEVELS, createPool, shoot, stepPool, runShot, bestShot, momentum } from '../src/space/ch5/poolLogic.js';
+import { createFx, BOLT_GAIN, PART_COLOURS } from '../src/space/ch5/ringRun.js';
+import { RENDER } from '../src/space/contracts.js';
+import * as THREE from 'three';
 
 let passed = 0;
 const ok = (name, fn) => { fn(); passed += 1; console.log(`  ok  ${name}`); };
@@ -169,6 +173,83 @@ ok('the grown-up skip ends the run with the goal met', () => {
   skipRun(run);
   assert.ok(run.over && result(run).met);
   assert.equal(stepRun(run, 1 / 60, idle()).length, 0);
+});
+
+// The shots and burst parts (ringRun.js createFx) don't flicker: they are pooled, so a
+// shot or a hit makes no material or geometry (a new material compiles its shader the
+// first time it draws, and disposing the last one of a program frees it: the next hit
+// compiled it again). Their looks stay under the bloom threshold: a bright shot blooms
+// across the whole screen.
+// Rec. 709 luma of a linear colour: the weights the bloom pass tests against its threshold.
+const luma = (c) => 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+ok('a loop of shots and hits creates no material or geometry, and disposes none', () => {
+  const scene = new THREE.Scene();
+  const fx = createFx(scene);
+  const looks = [];
+  scene.traverse((o) => { if (o.material) looks.push(o.material); if (o.geometry) looks.push(o.geometry); });
+  const disposed = [];
+  for (const x of looks) x.addEventListener('dispose', () => disposed.push(x));
+  // Ids are counted for every material and geometry three.js makes: a probe made before and
+  // after the loop shows how many were made in between.
+  const matsBefore = new THREE.MeshBasicMaterial().id;
+  const geosBefore = new THREE.BufferGeometry().id;
+  const colours = [PART_COLOURS.ice, PART_COLOURS.rock, PART_COLOURS.crack, PART_COLOURS.bump, PART_COLOURS.goal];
+  for (let shot = 0; shot < 300; shot++) {
+    // A shot: up to six bolts in flight, a blast of ice or rock, and the odd crack.
+    const bolts = Array.from({ length: 1 + (shot % 6) }, (_, i) => ({ x: i, y: 0, z: -shot * 0.3 - i * 3, life: 1 }));
+    fx.setBolts(bolts);
+    fx.burst(0, 0, -20, shot % 3 === 0 ? 16 : 10, colours[shot % colours.length]);
+    if (shot % 4 === 0) fx.burst(1, 1, -12, 5, PART_COLOURS.crack);
+    for (let f = 0; f < 5; f++) fx.step(1 / 60, 38);
+  }
+  assert.equal(new THREE.MeshBasicMaterial().id - matsBefore - 1, 0, 'a material was made during the shots');
+  assert.equal(new THREE.BufferGeometry().id - geosBefore - 1, 0, 'a geometry was made during the shots');
+  assert.deepEqual(disposed, [], 'a material or geometry was disposed during the shots');
+  // The scene holds one group (the run's two meshes) and two looks.
+  assert.equal(scene.children.length, 1);
+  const materials = new Set(); const geometries = new Set();
+  scene.traverse((o) => { if (o.material) materials.add(o.material); if (o.geometry) geometries.add(o.geometry); });
+  assert.equal(materials.size, 2, `materials in the scene: ${materials.size}`);
+  assert.equal(geometries.size, 2, `geometries in the scene: ${geometries.size}`);
+});
+ok('the shot shaders compile before the first shot, for the run\'s lights and nothing else', () => {
+  const scene = new THREE.Scene();
+  const fx = createFx(scene);
+  const calls = [];
+  const camera = new THREE.PerspectiveCamera();
+  fx.warm({ compile: (obj, cam, target) => calls.push({ obj, cam, target }) }, camera);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].cam, camera);
+  assert.equal(calls[0].target, scene, 'lights come from the run\'s scene');
+  const meshes = []; calls[0].obj.traverse((o) => { if (o.isInstancedMesh) meshes.push(o); });
+  assert.equal(meshes.length, 2, 'only the shot and part meshes are compiled');
+  fx.warm(undefined, camera); // no renderer (tests, lab): nothing to compile
+});
+ok('a part lives its life and then is gone; a burst only takes free parts', () => {
+  const scene = new THREE.Scene();
+  const fx = createFx(scene);
+  fx.burst(0, 0, -20, 16, PART_COLOURS.ice);
+  assert.equal(fx.alive(), 16);
+  for (let i = 0; i < 40; i++) fx.step(1 / 60, 38); // 0.67 s: still going
+  assert.equal(fx.alive(), 16);
+  for (let i = 0; i < 30; i++) fx.step(1 / 60, 38); // past 0.9 s
+  assert.equal(fx.alive(), 0);
+  // A flood of hits fills the pool and then stops, without growing it.
+  for (let i = 0; i < 40; i++) fx.burst(0, 0, -20, 16, PART_COLOURS.rock);
+  assert.ok(fx.alive() <= 256 && fx.alive() > 200, `alive ${fx.alive()}`);
+  fx.dispose();
+  assert.equal(scene.children.length, 0);
+});
+ok('the shot is bright but under the bloom threshold (a shot blooming the whole screen was the flicker)', () => {
+  const bolt = new THREE.Color(0x7ff3ff).multiplyScalar(BOLT_GAIN);
+  assert.ok(luma(bolt) < RENDER.bloom.threshold, `bolt luma ${luma(bolt).toFixed(3)}`);
+  assert.ok(luma(bolt) > 0.8, `bolt too dim to see: ${luma(bolt).toFixed(3)}`);
+});
+ok('every burst colour stays under the bloom threshold', () => {
+  for (const [name, hex] of Object.entries(PART_COLOURS)) {
+    const l = luma(new THREE.Color(hex));
+    assert.ok(l < RENDER.bloom.threshold, `${name} luma ${l.toFixed(3)}`);
+  }
 });
 
 console.log('space pool');

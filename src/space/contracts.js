@@ -366,7 +366,7 @@ export const FLIGHT_MODES = Object.freeze({
     // still points itself the right way and lands itself, so the flying is
     // hers at her own pace, and the Autopilot button (P) is there the moment
     // she wants a leg flown for her.
-    blurb: OUTER ? 'The ship points itself the right way, so you just hold Space when the banner says. A bigger tank, and the Autopilot button (P) flies a leg for you whenever you want.' : 'The ship points itself the right way and lands itself, so you just hold Space when the banner says. A bigger tank, every rock marked, and the Autopilot button (P) flies a leg for you whenever you want.',
+    blurb: OUTER ? 'The ship points itself the right way. Hold Space when the banner says. A bigger tank, and the Autopilot button (P) flies a leg.' : 'The ship points and lands itself. Hold Space when the banner says. Every rock is marked. Autopilot (P) flies a leg.',
     pathScale: 2, showGhost: true, autoAim: true, aimArrow: true,
     // Landings: lead playtest (Oct 2): "hard to stay in the green" - a
     // touchdown up to 2.5x the base speed is safe (was 2x).
@@ -375,7 +375,7 @@ export const FLIGHT_MODES = Object.freeze({
   }),
   medium: Object.freeze({
     id: 'medium', label: 'Medium', rank: 'Pilot',
-    blurb: 'You do the flying: an arrow shows which way to point, burns go into slow motion, and landings steer themselves (just hold Space). Rocks show up on your scanner when you get close.',
+    blurb: 'An arrow shows which way to point. Burns go in slow motion, and landings steer themselves: just hold Space. Rocks show on your scanner.',
     pathScale: 1, showGhost: true, autoAim: false, aimArrow: true,
     fuelScale: 1, landingScale: 1.35, captureScale: 1, // landings a bit gentler (was 1)
     rockMarkers: 'scanner', scannerRange: 260, samplesPerKind: 1, warpSafeScale: 1,
@@ -399,7 +399,7 @@ export const FLIGHT_MODES = Object.freeze({
 export const FLIGHT_MODES_L1 = Object.freeze({
   easy: Object.freeze({
     id: 'easy', label: 'Easy', rank: 'Rookie',
-    blurb: OUTER ? 'The ship turns itself the right way. You just hold Space when it says. A huge fuel tank, and an Autopilot button (P) that flies for you.' : 'The ship turns itself the right way and lands itself. You just hold Space when it says. A huge fuel tank, every rock marked, and an Autopilot button (P) that flies for you.',
+    blurb: OUTER ? 'Ship turns itself. Hold Space when it says. Huge fuel tank. Autopilot (P).' : 'Ship turns and lands itself. Hold Space when it says. Every rock marked. Autopilot (P).',
     pathScale: 3, showGhost: true, autoAim: true, aimArrow: true,
     // 2x Easy's fuel as RANGE, not tank mass: a tank twice as heavy would
     // make the ship sluggish and Moon landings much harder (fuel has mass).

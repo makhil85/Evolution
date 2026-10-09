@@ -26,7 +26,7 @@ export function createRadiationGuard(game) {
           game.hud.toast(t('Radiation Shield built! You can fly in safely now.', 'Radiation Shield built! Now you are safe.'), { kind: 'good' });
         }
       } else {
-        game.hud.toast(t('You need more metal and ice for a Radiation Shield. Head back to the belt to mine some.', 'You need more metal and ice for a Radiation Shield. Go back to the belt and grab some.'), { kind: 'warn' });
+        game.hud.toast(t('You need more metal and ice for a Radiation Shield. Head back to the belt to mine some.', 'You need more metal and ice for a Radiation Shield. Go back and mine.'), { kind: 'warn' });
       }
     } finally {
       offering = false;

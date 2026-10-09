@@ -44,27 +44,27 @@ const EAST = home(24, 24);
 const L1 = {
   title: 'The Hidden Golden Core',
   itemName: 'Golden Core',
-  intro: 'A shiny Golden Core is hiding in one of the houses! It will power the Science Center. Read each clue, walk to the place, and press E there. Wrong house? Just try another one.',
+  intro: 'Find the Golden Core in one of the houses. Wrong house? Try another.',
   steps: [
     {
       id: 'well', at: at(9, 20), radius: 2.6,
-      clue: 'Find the place where people get water. It has a little red roof and a bucket. Stand next to it and press E.',
+      clue: 'Find the well with a red roof and bucket. Press E next to it.',
       found: 'Splash! You found the well.',
     },
     {
       id: 'board3', at: at(12, 20), radius: 1.7,
-      clue: 'Count the teal science labs in the village. Add 1. Now find the purple Puzzle Board with that number. Stand in front of it and press E.',
+      clue: 'Count the teal labs and add 1. Find that numbered Puzzle. Press E.',
       found: 'Puzzle 3! Two labs and one more makes three. Nice adding!',
     },
     {
       id: 'blacksmith', at: doorOf('blacksmith', 12, 17), radius: 1.7,
-      clue: 'Look at the buildings close by. Find the one with a tall grey chimney and glowing orange fire. Stand at its front door and press E.',
+      clue: 'Find the tall grey chimney with fire. Press E at its door.',
       found: 'Clang, clang! The blacksmith makes things from hot iron.',
     },
     {
       id: 'townHouse', at: TOWN.at, radius: 2.0,
-      clue: 'The Golden Core is in a house. There are 3 houses in the village. Find the house that is CLOSEST to the blacksmith. Stand at its front door and press E.',
-      found: 'You found the Golden Core! It is glowing in your hands. Now the Science Center can be built!',
+      clue: 'Find the house closest to the blacksmith. Press E at its door.',
+      found: 'You found the Golden Core! The Science Center can be built now.',
     },
   ],
   decoys: [
@@ -76,7 +76,7 @@ const L1 = {
 const L4 = {
   title: 'The Hidden Golden Core',
   itemName: 'Golden Core',
-  intro: 'The Golden Core, the power source of the Science Center, is locked away in one of the village homes. Each clue leads to the next place. Stand at the place and press E to check it. Searching a wrong home costs nothing.',
+  intro: 'The Golden Core is hidden in a home. Each clue leads to the next place. Press E at each place. Wrong homes cost nothing.',
   steps: [
     {
       id: 'timesBoard', at: at(9, 20), radius: 1.8,
@@ -85,17 +85,17 @@ const L4 = {
     },
     {
       id: 'eastLab', at: at(19, 23), radius: 1.9,
-      clue: 'There are two teal labs, both south of the main road. The Sun sets in the west, so go to the lab that is FARTHEST from where the Sun sets. Stand at its door and press E.',
+      clue: 'The Sun sets in the west. Go to the teal lab farthest from the sunset. Stand at its door and press E.',
       found: 'The Chemical Energy Lab, the eastern one. The trail turns north.',
     },
     {
       id: 'goldenLock', at: at(24, 14), radius: 1.9,
-      clue: 'Walk north, across the main road, to the walled yard in the north-east of the village. Find the golden lock on its door, in the wall that faces south. Stand just outside the door and press E.',
+      clue: 'Walk north across the main road to the walled yard in the north-east. Stand outside its golden-lock door and press E.',
       found: 'The golden lock! Now it is time to think about the homes.',
     },
     {
       id: 'townHouse', at: TOWN.at, radius: 2.0,
-      clue: 'The Golden Core is in a HOME. Look at the buildings NORTH of the long east-west road and number them 1, 2, 3, ... starting from the WEST. Count all the purple boards and all the teal labs together, then subtract 2. That is your building\'s number. Stand at its front door and press E.',
+      clue: 'Count purple boards and teal labs, minus 2. North of the long road, count the buildings from the west. Press E at that number.',
       found: 'You found the Golden Core! It glows in your hands. The Science Center can be built now.',
     },
   ],

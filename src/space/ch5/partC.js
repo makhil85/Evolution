@@ -11,7 +11,7 @@ export function partCSteps(game) {
     {
       id: 'c5_lesson_fusion', act: 3,
       title: t('What makes a star shine?', 'How does the Sun shine?'),
-      objective: t('Watch Mission Control’s lesson on atoms and the Sun, and answer a question after each film.', 'Watch the lesson about atoms and the Sun.'),
+      objective: t('Watch the lesson on atoms and the Sun. Answer a question after each film.', 'Watch the lesson about atoms and the Sun.'),
       markers: [],
       async enter() {
         await hud.showDialogue([

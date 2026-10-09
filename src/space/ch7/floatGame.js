@@ -172,7 +172,7 @@ export function playFloatGame({ mode = LEVEL === 1 ? 'easy' : 'medium', seed = n
   const eyebrow = el('div', 'pl-eyebrow', `${t('Engine room, drive off', 'Engine room')} · ${crew.name}`);
   eyebrow.style.color = crew.color;
   const title = el('h2', 'pl-title', t('Zero g: float to the hatch', 'Float to the hatch'));
-  const tip = el('p', 'ls-line', t('The drive is off, so nothing pulls or pushes us. We drift in a straight line. Collect the 3 parts, then reach the hatch on the right.', 'Collect the 3 parts, then reach the hatch on the right.'));
+  const tip = el('p', 'ls-line', t('The drive is off, so we drift in a straight line. Collect the 3 parts, then reach the hatch on the right.', 'Collect the 3 parts, then reach the hatch on the right.'));
   // The modes and the tools share one row, so the card is one row shorter (it must fit the window).
   const btnRow = el('div', 'fg-row');
   const modeBtns = Object.values(MODES).map((m) => {

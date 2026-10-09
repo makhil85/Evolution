@@ -34,6 +34,97 @@ function iceGeometry(seed, r, big) {
   return geo;
 }
 
+// Shots and burst parts, pooled: two InstancedMeshes (one draw call each) and
+// one shared material each, made once per run. A shot or a hit creates no
+// material or geometry. That matters for the look: a new material compiles its
+// shader on the GPU the first time it draws, and a program is freed when its
+// last material is disposed, so every burst that died used to make the next hit
+// compile the shader again (the flicker on a shot). The looks stay under the
+// bloom threshold (RENDER.bloom.threshold, linear), so a shot can't bloom across
+// the screen.
+export const BOLT_GAIN = 1.4; // the bolt's cyan, lit for the eye and not for bloom (3 blooms the whole screen)
+export const PART_COLOURS = Object.freeze({ ice: 0xd8f4ff, rock: 0xc8b49a, crack: 0xffb060, bump: 0xb0a8a0, goal: 0xbff5a0 });
+const BOLT_MAX = 8; // a shot lives 1.3 s and the gun fires every 0.22 s: six at most
+const PART_MAX = 256; // burst parts alive at once (16 per big blast, 10 per small one)
+const PART_LIFE = 0.9;
+
+const _m = new THREE.Matrix4();
+const _p = new THREE.Vector3();
+const _s = new THREE.Vector3();
+const _v = new THREE.Vector3();
+const _q = new THREE.Quaternion();
+const _c = new THREE.Color();
+
+/**
+ * @returns {{burst(x,y,z,n,hex), step(dt,speed), setBolts(list), alive(), dispose()}}
+ */
+export function createFx(scene) {
+  const boltGeo = new THREE.CylinderGeometry(0.12, 0.12, 2.6, 6).rotateX(Math.PI / 2);
+  const boltMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0x7ff3ff).multiplyScalar(BOLT_GAIN) });
+  const bolts = new THREE.InstancedMesh(boltGeo, boltMat, BOLT_MAX);
+  const partGeo = new THREE.IcosahedronGeometry(0.25, 0);
+  const partMat = new THREE.MeshBasicMaterial({ color: 0xffffff }); // each part's colour is its instance colour
+  const parts = new THREE.InstancedMesh(partGeo, partMat, PART_MAX);
+  // Colour and matrix for every instance now, so the program has both from the start.
+  for (let i = 0; i < PART_MAX; i++) parts.setColorAt(i, _c.setHex(0xffffff));
+  for (const mesh of [bolts, parts]) { mesh.frustumCulled = false; mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); }
+  const root = new THREE.Group(); // its own group, so warm() compiles these two and nothing else
+  root.add(bolts, parts);
+  scene.add(root);
+  const pts = Array.from({ length: PART_MAX }, () => ({ life: 0, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0 }));
+  const hide = (mesh, i) => { _p.set(0, 0, 0); _s.setScalar(0); _m.compose(_p, _q, _s); mesh.setMatrixAt(i, _m); };
+  for (let i = 0; i < BOLT_MAX; i++) hide(bolts, i);
+  for (let i = 0; i < PART_MAX; i++) hide(parts, i);
+
+  return {
+    burst(x, y, z, n, hex) {
+      _c.setHex(hex);
+      let made = 0;
+      for (let i = 0; i < PART_MAX && made < n; i++) {
+        const p = pts[i];
+        if (p.life > 0) continue;
+        _v.randomDirection().multiplyScalar(6 + Math.random() * 10);
+        Object.assign(p, { life: PART_LIFE, x, y, z, vx: _v.x, vy: _v.y, vz: _v.z });
+        parts.setColorAt(i, _c);
+        made++;
+      }
+      if (made) parts.instanceColor.needsUpdate = true;
+    },
+    step(dt, speed) {
+      for (let i = 0; i < PART_MAX; i++) {
+        const p = pts[i];
+        if (p.life > 0) {
+          p.life -= dt;
+          p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt + speed * dt;
+          // Shrinks to nothing over its life (no alpha: an opaque material per look, so no transparent sort or new material).
+          _p.set(p.x, p.y, p.z); _s.setScalar(Math.max(0, p.life / PART_LIFE));
+          _m.compose(_p, _q, _s); parts.setMatrixAt(i, _m);
+        } else hide(parts, i);
+      }
+      parts.instanceMatrix.needsUpdate = true;
+    },
+    /** The live shots; a slot past the list is hidden. */
+    setBolts(list) {
+      for (let i = 0; i < BOLT_MAX; i++) {
+        const b = list[i];
+        if (!b) { hide(bolts, i); continue; }
+        _p.set(b.x, b.y, b.z); _s.setScalar(1);
+        _m.compose(_p, _q, _s); bolts.setMatrixAt(i, _m);
+      }
+      bolts.instanceMatrix.needsUpdate = true;
+    },
+    /** Compile the shots' and parts' shaders now (lights from the run's scene), not on the first shot. */
+    warm(renderer, camera) { renderer?.compile(root, camera, scene); },
+    /** Parts still flying (for tests). */
+    alive: () => pts.reduce((n, p) => n + (p.life > 0 ? 1 : 0), 0),
+    dispose() {
+      scene.remove(root);
+      bolts.dispose(); parts.dispose();
+      [boltGeo, boltMat, partGeo, partMat].forEach((x) => x.dispose());
+    },
+  };
+}
+
 /**
  * A small HUD for the run: ice and rock against the goal, time, bumps, the
  * count-in and the tip. It uses the Chapter 4/5 HUD look (.sp-hud, .sp-panel,
@@ -154,11 +245,7 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
   // Big rocks: one material per crack count, glowing hotter with each hit.
   const bigMats = Array.from({ length: 6 }, (_, k) => new THREE.MeshStandardMaterial({ color: 0x6f6b68, roughness: 0.95, flatShading: true, emissive: 0xff7a2a, emissiveIntensity: k * 0.35 }));
   const meshes = new Map();
-  const boltGeo = new THREE.CylinderGeometry(0.12, 0.12, 2.6, 6).rotateX(Math.PI / 2);
-  const boltMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0x7ff3ff).multiplyScalar(3) });
-  const boltMeshes = [];
-  const bursts = [];
-  const burstGeo = new THREE.IcosahedronGeometry(0.25, 0);
+  const fx = createFx(scene);
 
   const run = createRun(level, seed);
   const panel = buildPanel(run.level.goal, () => skipRun(run));
@@ -176,31 +263,20 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
     return [(tmp.x * 0.5 + 0.5) * innerWidth, (-tmp.y * 0.5 + 0.5) * innerHeight];
   }
 
-  function burst(x, y, z, n, color) {
-    for (let i = 0; i < n; i++) {
-      const m = new THREE.Mesh(burstGeo, new THREE.MeshBasicMaterial({ color, transparent: true }));
-      m.position.set(x, y, z);
-      m.userData.v = new THREE.Vector3().randomDirection().multiplyScalar(6 + Math.random() * 10);
-      m.userData.life = 0.9;
-      scene.add(m);
-      bursts.push(m);
-    }
-  }
-
   function onEvents(ev) {
     for (const e of ev) {
       debug.events.push(e.type);
       if (e.type === 'blast') {
         const rock = e.kind === 'rock';
-        burst(e.x, e.y, e.z, e.big ? 16 : 10, rock ? 0xc8b49a : 0xd8f4ff);
+        fx.burst(e.x, e.y, e.z, e.big ? 16 : 10, rock ? PART_COLOURS.rock : PART_COLOURS.ice);
         const [sx, sy] = screenOf(e.x, e.y, e.z);
         panel.pop(sx, sy, rock ? `+${e.rock} 🪨` : '+1 🧊', rock ? '#e8d2b0' : '#9fe8ff');
       } else if (e.type === 'crack') {
-        burst(e.x, e.y, e.z, 5, 0xffb060);
+        fx.burst(e.x, e.y, e.z, 5, PART_COLOURS.crack);
         const [sx, sy] = screenOf(e.x, e.y, e.z);
         panel.pop(sx, sy, lvl(`Crack! ${e.left} more`, `${e.left} more!`), '#ffd27a');
       } else if (e.type === 'bump') {
-        burst(e.x, e.y, e.z, 8, e.big ? 0xb0a8a0 : 0xd8f4ff);
+        fx.burst(e.x, e.y, e.z, 8, e.big ? PART_COLOURS.bump : PART_COLOURS.ice);
         // The gun jams for a moment after a bump (level.stun): say why she can't fire.
         const [sx, sy] = screenOf(e.x, e.y, e.z);
         panel.pop(sx, sy, lvl('Ouch! Gun jammed', 'Ouch! Wait'), 'var(--sp-bad)');
@@ -234,21 +310,9 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
       m.rotation.set(c.spin, c.spin * 0.7, 0);
     }
     for (const [id, m] of meshes) if (!live.has(id)) { scene.remove(m); m.geometry.dispose(); meshes.delete(id); }
-    // Shots.
-    while (boltMeshes.length < run.bolts.length) { const m = new THREE.Mesh(boltGeo, boltMat); scene.add(m); boltMeshes.push(m); }
-    boltMeshes.forEach((m, i) => {
-      const b = run.bolts[i];
-      m.visible = !!b;
-      if (b) m.position.set(b.x, b.y, b.z * 1);
-    });
-    for (let i = bursts.length - 1; i >= 0; i--) {
-      const m = bursts[i];
-      m.userData.life -= dt;
-      m.position.addScaledVector(m.userData.v, dt);
-      m.position.z += run.level.speed * dt;
-      m.material.opacity = Math.max(0, m.userData.life / 0.9);
-      if (m.userData.life <= 0) { scene.remove(m); m.material.dispose(); bursts.splice(i, 1); }
-    }
+    // Shots and burst parts (pooled, see createFx).
+    fx.setBolts(run.bolts);
+    fx.step(dt, run.level.speed);
     // Chase camera: behind and a little above, leaning with her.
     camera.position.set(s.x * 0.7, s.y * 0.7 + 3.6, 12.5 + s.z * 0.8);
     camera.up.set(-s.vx * 0.004, 1, 0).normalize();
@@ -280,7 +344,7 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
         phase = 'done'; clock = 0;
         panel.hideSkip(); // the run is over: no more skipping
         // Goal met ends the run early: a clear moment with a burst of sparkles.
-        if (goalMet(run)) { panel.big(lvl('Goal reached!', 'You did it!'), 'var(--sp-good)'); burst(run.ship.x, run.ship.y, run.ship.z - 6, 24, 0xbff5a0); }
+        if (goalMet(run)) { panel.big(lvl('Goal reached!', 'You did it!'), 'var(--sp-good)'); fx.burst(run.ship.x, run.ship.y, run.ship.z - 6, 24, PART_COLOURS.goal); }
         else panel.big(lvl('Time up!', 'Time up!'), 'var(--sp-amber)');
       }
     } else if (phase === 'done' && clock > (goalMet(run) ? 2.4 : 1.6)) {
@@ -301,6 +365,9 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
       // Stays up for its reading time (lead 2026-10-09), not a fixed 4 s.
       panel.tip(tip);
       setTimeout(() => panel.tip(''), readMs(tip));
+      // Compile the shot and burst shaders now, so the first shot or hit doesn't
+      // stall a frame on the GPU's shader compile.
+      fx.warm(game.renderer, camera);
       return done;
     },
     tick,
@@ -313,8 +380,8 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
       shipView.setThrottle(0);
       shipView.setTurn(0);
       for (const m of meshes.values()) m.geometry.dispose();
-      for (const m of bursts) m.material.dispose();
-      [iceMatSmall, rockMat, ...bigMats, boltGeo, boltMat, burstGeo, satMat, ringTex].forEach((x) => x.dispose());
+      fx.dispose();
+      [iceMatSmall, rockMat, ...bigMats, satMat, ringTex].forEach((x) => x.dispose());
       rings.dispose?.();
     },
   };

@@ -33,6 +33,7 @@ import * as THREE from 'three';
 import { loadProfile, SEEN_PREFIX } from '../launcher/profile.js';
 import { keepUnlock } from '../launcher/profile.js';
 import { readMs } from '../play/readTime.js';
+import { lockPlayInput, unlockPlayInput } from '../play/ui.js';
 
 const smooth = (x) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c); };
 const easeInOut = (x) => { const c = Math.min(1, Math.max(0, x)); return c < 0.5 ? 4 * c * c * c : 1 - (-2 * c + 2) ** 3 / 2; };
@@ -158,7 +159,7 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
   const seenKey = `${SEEN_PREFIX}ch${chapter}_L${level}`;
   let shot = null;       // the camera move running now
   let active = false;
-  let prevModal;
+  let filmLocked = false; // this film holds one count of the shared play lock
   const nodes = [];
   // A film's timed camera move: step(t, k) runs for `secs` (k goes 0 -> 1 and
   // the last call is step(secs, 1)). A skip ends the film: later runs return at once.
@@ -248,8 +249,9 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
   function begin() {
     active = true;
     filmOver = false;     // a new film (the opening, then the ending) plays in full
-    prevModal = document.body.dataset.playModal;
-    document.body.dataset.playModal = '1';
+    // The shared lock counter (play/ui.js), not a saved flag: a reading pause or a
+    // card that ends during the film cannot leave the game locked after it.
+    if (!filmLocked) { lockPlayInput(); filmLocked = true; }
     document.body.classList.add('cs-cinematic');
     bars.classList.add('is-on');
   }
@@ -259,8 +261,7 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
     capShown = null;
     capNext = undefined;
     capUntil = capClock;
-    if (prevModal === undefined) delete document.body.dataset.playModal;
-    else document.body.dataset.playModal = prevModal;
+    if (filmLocked) { unlockPlayInput(); filmLocked = false; }
     document.body.classList.remove('cs-cinematic');
     bars.classList.remove('is-on');
     for (const n of nodes.splice(0)) { n.classList.remove('is-on'); setTimeout(() => n.remove(), 900); }

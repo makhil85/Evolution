@@ -5,7 +5,7 @@
 // invented, because docs/QUEST_SPEC.md's unlock ladder is written against them
 // (river at z~3 as the golden-lock moat, pad and tower on the far bank).
 import * as THREE from 'three';
-import { TileBoard, KN, loadShared } from './board.js';
+import { TileBoard, KN, loadShared, gridCellOf } from './board.js';
 import { toonRamp } from './toonPipeline.js';
 import { SCALE, packScaleFor, asset } from './contracts.js';
 import { ROCKET_VILLAGE, VILLAGE_PATHS } from './rocketVillageLayout.js';
@@ -16,6 +16,15 @@ import { mountainTreeAnchors } from './mountains.js';
 
 /** Board extent in world units. Tiles are 1 unit. */
 export const BOUNDS = { minX: -34, maxX: 34, minZ: -52, maxZ: 62 };
+
+/**
+ * The scatter (trees, rocks, bushes) is baked into merged cell meshes, one per
+ * cell and material kind. A coarser grid means fewer draw calls but more
+ * triangles drawn for a given view, so this grid is a trade-off between the two.
+ * scripts/test-ch3-streets.mjs checks the baking itself (triangles conserved,
+ * one draw per cell and kind, each cell's bounds holding its instances).
+ */
+const PROP_CELLS = { nx: 4, nz: 6 };
 
 /**
  * The river is the level's moat: crossable only at a bridge.
@@ -502,6 +511,8 @@ export class Village {
     this.board.originX = -BOUNDS.minX;
     this.board.originZ = -BOUNDS.minZ;
     this.group = this.board.group;
+    /** Scatter families waiting to be baked into the board in build(). */
+    this.propFamilies = [];
     /** Tiles the player must not walk on (the river, away from the bridge). */
     this.blocked = new Set();
     /** Bridge deck tiles: blocked until the quest lays the planks. */
@@ -909,8 +920,9 @@ export class Village {
     let planted = 0;
     for (const [asset, placements] of Object.entries(buckets)) {
       if (!placements.length) continue;
-      await this.board.addProps(asset, placements, {
-        assetPath: KENNEY(asset),
+      this.propFamilies.push({
+        path: KENNEY(asset),
+        placements,
         partTints: EDGE_TINTS[asset],
         castShadow: false,   // the belt is backdrop; shadows there cost and show nothing
         outline: false,
@@ -1054,12 +1066,13 @@ export class Village {
           }
         }
       }
-      await this.board.addProps(f.asset, placements, {
-        assetPath: (f.path || NA)(f.asset),
+      this.propFamilies.push({
+        path: (f.path || NA)(f.asset),
+        placements,
         castShadow: f.shadow,
         partTints: f.tints || null,
-        // Outlines cost a second InstancedMesh per sub-mesh. The bulk forest is
-        // small and distant, so it goes without; the hero trees keep theirs.
+        // Outlines cost a second draw per sub-mesh. The bulk forest is small
+        // and distant, so it goes without; the hero trees keep theirs.
         outline: f.shadow && !f.tints,
       });
     }
@@ -1068,6 +1081,11 @@ export class Village {
     // stop, showing bare ground running out to the mountains; the treeline
     // closes the valley so the child never sees the edge.
     await this.plantEdgeForest();
+
+    // Every scatter family above was collected, not drawn: baked here into one
+    // merged mesh per cell and material, so each cell is one draw call that
+    // culls as a unit.
+    await this.board.bakeProps(this.propFamilies, { cellOf: gridCellOf(BOUNDS, PROP_CELLS.nx, PROP_CELLS.nz) });
 
     // Bridges. Each sits on the river's centreline at its own x, so they follow
     // the meander automatically rather than being hand-placed. See bridge.js

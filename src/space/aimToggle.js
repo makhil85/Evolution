@@ -4,9 +4,10 @@
 // correct, but a child who wants to turn the ship their own way ends up
 // fighting it. This hands the pointing over: with auto-turn OFF the ship never
 // turns itself (Easy's auto-aim and the Easy/Medium landing auto-steer); A / D
-// are all hers. Press again to give the steering back. Only shown when the
-// autopilot is off and something would auto-turn (Easy, or a Medium landing).
-// It sits in the one status line with Autopilot and Freeze (hud/toggleBar.js).
+// are all hers. Press again to give the steering back. Lead (2026-10-09): always
+// shown in flight, right next to Autopilot, so she can find it at any level
+// (no key letter on it; T still works). It sits in the one status line with
+// Autopilot and Freeze (hud/toggleBar.js).
 
 import { toggleBar, paintToggle } from './hud/toggleBar.js';
 import { anyCardOpen } from './hud/modalQueue.js';
@@ -27,7 +28,7 @@ export function createAimToggle(game) {
   function paint() {
     btn.classList.toggle('is-manual', game.manualAim);
     btn.classList.toggle('is-steering', !game.manualAim && steering);
-    paintToggle(btn, 'T', 'Auto-turn', game.manualAim ? 'off' : steering ? 'warn' : 'on', game.manualAim
+    paintToggle(btn, '', 'Auto-turn', game.manualAim ? 'off' : steering ? 'warn' : 'on', game.manualAim
       ? 'Auto-turn is off: you steer the ship yourself. Click to let it turn itself'
       : steering ? 'You are steering - let go and the ship turns itself again' : 'Auto-turn is on: the ship turns itself. Click to steer yourself');
   }
@@ -49,9 +50,9 @@ export function createAimToggle(game) {
   });
   paint();
   return {
-    /** Per frame: show the button only where something would auto-turn. */
-    update({ applies }) {
-      const show = !!applies && !game.autopilot?.on && !game.cinematic && !game.activeScene;
+    /** Per frame: shown in flight (not in a cut-scene or on foot). */
+    update() {
+      const show = !game.cinematic && !game.activeScene;
       const d = show ? '' : 'none';
       if (btn.style.display !== d) btn.style.display = d;
       const st = show && TURN_KEYS.some((c) => game.controls?.isDown?.(c));
