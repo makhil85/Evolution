@@ -24,7 +24,7 @@ export function partBSteps(game) {
     {
       id: 'c6_habitat', act: 2,
       title: t('Fit out the ring', 'Make the ship a home'),
-      objective: t('Walk the ship’s decks (the lift joins them) and visit all six stations with the crew: shield, air, water, farm, power and the store.', 'Walk round the ship. Visit all 6 stations with the crew.'),
+      objective: t('Visit all six stations with the crew: shield, air, water, farm, power and store.', 'Visit all 6 stations with your crew.'),
       markers: [],
       async enter() {
         await hud.showDialogue([
@@ -41,8 +41,7 @@ export function partBSteps(game) {
             await playStation(id, { bus: game.bus });
             // The question first, then the station counts as done: two missed
             // tries restart the act, and then she redoes this station too. On
-            // foot a short pause with a toast, so she knows it is coming.
-            hud.toast(t('Mission Control has a question...', 'A question is coming!'), { kind: 'info' });
+            // foot the question still waits for a calm moment.
             await game.missions.ask(STATION_BEAT[id], { calm: WALK_CALM_S });
             done.add(id); saveDone([...done]);
           },

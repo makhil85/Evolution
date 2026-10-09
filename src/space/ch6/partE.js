@@ -48,13 +48,13 @@ export function partESteps(game) {
     {
       id: 'c6_lesson_slingshot', act: ACT_E,
       title: t('Stealing energy', 'Borrow speed'),
-      objective: t('Watch the lesson on energy and how to steal it, and answer a question after each film.', 'Watch the lesson about getting speed.'),
+      objective: t('Watch the lesson on stealing energy. Answer a question after each film.', 'Watch the lesson about getting speed.'),
       markers: [],
       async enter() {
         await hud.showDialogue([
           { who: 'girl', text: t('The ship is ready. How do we leave the Sun’s family as fast as we can?', 'How do we go as fast as we can?') },
           { who: CREW.biologist, text: t('Could we fly in close to the Sun first? We would go really fast down there!', 'Can we fly close to the Sun to go fast?') },
-          { who: CREW.signal, text: t('We would speed up falling in, and slow down again climbing out. Energy never comes for free. Let me show you where it CAN come from.', 'Falling in we speed up, but climbing out we slow down. Let me show you!') },
+          { who: CREW.signal, text: t('We would speed up falling in, and slow down climbing out. Energy never comes free. Let me show you where it comes from.', 'Falling in we speed up, but climbing out we slow down. Let me show you!') },
         ]);
         await lessonOnce(LESSON_6B, { bus: game.bus });
       },
@@ -63,11 +63,11 @@ export function partESteps(game) {
     {
       id: 'c6_plan_route', act: ACT_E,
       title: t('Plan the fastest way out', 'Plan the trip'),
-      objective: t(`Find the route that leaves the Sun’s family fastest: first with ${FUELS[0]} t of fuel, then with ${FUELS[1]} t.`, `Find the fastest way out, with ${FUELS[0]} t and then ${FUELS[1]} t of fuel.`),
+      objective: t(`Find the fastest route out: first with ${FUELS[0]} t of fuel, then ${FUELS[1]} t.`, `Fastest way out, with ${FUELS[0]} t, then ${FUELS[1]} t.`),
       markers: [],
       async enter() {
         await hud.showDialogue([
-          { who: 'Mission Control', text: t(`The supply ship can bring ${FUELS[0]} tonnes of fuel now, or ${FUELS[1]} tonnes if you wait. Work out the fastest way out for each.`, `We can send ${FUELS[0]} t of fuel now, or ${FUELS[1]} t later. Find the fastest way for both!`) },
+          { who: 'Mission Control', text: t(`The supply ship can bring ${FUELS[0]} tonnes of fuel now, or ${FUELS[1]} tonnes if you wait. Work out the fastest way out for each.`, `Send ${FUELS[0]} t now, or ${FUELS[1]} t later. Find the fastest way!`) },
           { who: CREW.builder, text: t('Every route burns the whole tank once. Where we burn it, and which planets we rob on the way, is up to us.', 'We use all the fuel. Which way we go is up to us!') },
         ]);
         const res = await playRoutePlanner({ bus: game.bus });
@@ -78,7 +78,7 @@ export function partESteps(game) {
     {
       id: 'c6_fly_slingshots', act: ACT_E,
       title: t('Fly the route', 'Fly the route'),
-      objective: t(`The supply ship brought ${FUELS[1]} t. Fly your plan: at each planet press right at the closest point; at the Sun, fire the drive.`, 'Press at the right time at each stop!'),
+      objective: t(`Fly your plan: press right at each planet’s closest point. Fire at the Sun.`, 'Press at the right time at each stop!'),
       markers: [],
       async enter() {
         const saved = loadRoute();

@@ -22,7 +22,7 @@ async function playRingRun(game) {
     const pick = await hud.choose({
       eyebrow: t('Ring run', 'Ring run'),
       title: t('How thick is the ice?', 'How much ice?'),
-      body: t('Space fires. Line up on white ice (water) and grey rock (metal and stone). A bump jams your gun for a moment, and big rocks need a true aim.', 'Space to shoot. Line up on the ice and rock. A bump jams your gun.'),
+      body: t('Space fires. Line up on white ice (water) and grey rock (metal). A bump jams your gun, and big rocks need a true aim.', 'Space to shoot. Line up on the ice and rock. A bump jams your gun.'),
       options: Object.values(LEVELS).map((L) => ({
         id: L.id, label: L.label, tag: L.id === level ? t('Suggested', 'Try this') : '',
         blurb: `${L.blurb} ${t(`Goal: ${L.goal.ice} ice, ${L.goal.rock} rock.`, `Get ${L.goal.ice} ice, ${L.goal.rock} rock.`)}`,
@@ -40,15 +40,15 @@ async function playRingRun(game) {
       const easier = Object.keys(LEVELS).indexOf(level) > 0;
       await hud.showFact({
         title: t('Not enough yet!', 'Not enough yet!'),
-        body: t(`You got ${res.ice} of ${res.goal.ice} ice and ${res.rock} of ${res.goal.rock} rock. Fly the ring again: line up on a chunk before you fire.${easier ? ' You can pick an easier level too.' : ''}`,
+        body: t(`You got ${res.ice} of ${res.goal.ice} ice and ${res.rock} of ${res.goal.rock} rock. Line up before you fire.${easier ? ' You can pick an easier level.' : ''}`,
           `You got ${res.ice} of ${res.goal.ice} ice and ${res.rock} of ${res.goal.rock} rock. Try again!`),
       });
       continue;
     }
     await hud.showFact({
       title: t(`Goal reached! 🧊 ${res.ice} ice, 🪨 ${res.rock} rock`, `You did it! 🧊 ${res.ice} ice, 🪨 ${res.rock} rock`),
-      body: t(`Your ice makes ${res.water} water points for the trip, and the rock is metal and stone for repairs. You bumped into ${res.bumps}. In real rings the chunks are much more spread out, usually metres apart: we packed them close to make the game.`,
-        `Your ice makes ${res.water} water! The rock is for fixing the ship. Real rings have more space between the chunks.`),
+      body: t(`Your ice makes ${res.water} water points, and the rock makes repairs. You bumped into ${res.bumps}. Real rings have more space between chunks.`,
+        `Your ice makes ${res.water} water! Rock fixes the ship. Real rings have more space.`),
     });
     const again = await hud.choose({
       title: t('Another go?', 'Play again?'),
@@ -78,7 +78,7 @@ export function partASteps(game) {
     {
       id: 'c5_leave_jupiter', act: 1,
       title: t('Leave Jupiter', 'Leave Jupiter'),
-      objective: t('Follow the arrow: fly the same way Jupiter is moving and hold Space until your path breaks free of Jupiter’s pull.', 'Follow the arrow and hold Space to leave Jupiter.'),
+      objective: t('Follow the arrow and hold Space until your path breaks free of Jupiter’s pull.', 'Follow the arrow and hold Space to leave Jupiter.'),
       // No marker on the next planet while she leaves: it is lined up only
       // once she is out (lineup.js), and a distance shown before that jumped
       // the moment she escaped, as if her burn had been ignored (lead, 2026-10-06).
@@ -94,7 +94,7 @@ export function partASteps(game) {
     {
       id: 'c5_to_saturn', act: 1,
       title: t('Catch the Saturn window', 'Head for Saturn'),
-      objective: t('Saturn moves too! Use time warp until the banner says BURN NOW, then point along your path and hold Space until your dotted line reaches Saturn.', 'Wait for the green BURN NOW sign (time warp makes time go fast). Then hold Space until your dotted line reaches Saturn.'),
+      objective: t('Time warp to BURN NOW. Then hold Space until the dotted line reaches Saturn.', 'On green BURN NOW, hold Space to reach Saturn.'),
       markers: ['saturn'],
       aim: 'prograde',
       transfer: 'saturn',
@@ -119,7 +119,7 @@ export function partASteps(game) {
     {
       id: 'c5_saturn_approach', act: 1,
       title: t('Coast to Saturn', 'Fly to Saturn'),
-      objective: t('Coast to Saturn. Time warp makes the long trip quick. If the banner asks for a small burn, it is fine-tuning your path.', 'Fly to Saturn and wait. Time warp makes time go fast.'),
+      objective: t('Coast to Saturn. Time warp helps. Small burns just fine-tune your path.', 'Fly to Saturn. Time warp makes time go fast.'),
       markers: ['saturn'],
       transfer: 'saturn',
       aim: 'prograde',
@@ -132,7 +132,7 @@ export function partASteps(game) {
     {
       id: 'c5_saturn_orbit', act: 1,
       title: t('Let Saturn catch you', 'Go around Saturn'),
-      objective: t('Brake at your lowest point (follow the banner) so Saturn’s gravity catches you in orbit, outside the rings.', 'Slow down when the sign says, so Saturn catches you.'),
+      objective: t('Brake at your lowest point so Saturn’s gravity catches you, outside the rings.', 'Slow down when the sign says, so Saturn catches you.'),
       markers: ['saturn'],
       aim: 'retrograde',
       capture: 'saturn',
@@ -163,8 +163,8 @@ export function partASteps(game) {
         await playPolePass(game);
         await hud.showFact({
           title: t('A six-sided storm', 'A storm with 6 sides'),
-          body: t('Saturn’s north pole has a storm shaped like a hexagon. A fast jet stream of wind (over 300 km an hour) runs round the pole in a wavy loop with six bends, so it makes six straight-ish sides. Each side is longer than Earth is wide. It has been there for over 40 years.',
-            'On top of Saturn is a storm with 6 sides. Fast wind goes round and round in a loop with 6 bends. Each side is longer than Earth is wide!'),
+          body: t('Saturn’s north pole has a hexagon-shaped storm, with winds over 300 km an hour. Each side is longer than Earth is wide.',
+            'Saturn has a storm with 6 sides. Each side is longer than Earth!'),
         });
       },
       beat: 'c5Hexagon',
@@ -181,11 +181,11 @@ export function partASteps(game) {
     {
       id: 'c5_ring_run', act: 1,
       title: t('Ring run', 'Ring run'),
-      objective: t('Fly through the rings: blast ice and rock until you have the goal, and dodge what you can’t break in time.', 'Fly through the rings! Shoot ice and rock.'),
+      objective: t('Fly through the rings. Blast ice and rock until you have enough.', 'Fly through the rings! Shoot ice and rock.'),
       markers: ['saturn'],
       async enter() {
         await hud.showDialogue([
-          { who: 'Mission Control', text: t('We need water for the long trip ahead, and the rings are made of it. Fly in and blast some ice!', 'We need water for the trip. The rings are made of ice. Go and get some!') },
+          { who: 'Mission Control', text: t('We need water for the long trip ahead, and the rings are made of it. Fly in and blast some ice!', 'We need water for the trip. The rings are ice. Go get some!') },
           { who: 'girl', text: t('Shields up. In I go!', 'Here I go!') },
         ]);
         await playRingRun(game);
@@ -194,7 +194,7 @@ export function partASteps(game) {
     {
       id: 'c5_lesson_momentum', act: 1,
       title: t('Bumps in the rings', 'Bumps in the rings'),
-      objective: t('Every time you fired, the ship was kicked back a little. Watch why, and answer a question after the films.', 'Why did the ship jump back when you shot? Watch and find out.'),
+      objective: t('Firing kicks the ship back. Watch why, and answer a question after the films.', 'Why did the ship jump back? Watch and find out.'),
       markers: ['saturn'],
       async enter() { await lessonOnce(LESSON_5AA, { bus: game.bus }); },
     },

@@ -37,7 +37,7 @@ export function act2Steps(game) {
     {
       id: 'a2_capture', act: 2,
       title: t('Get into Moon orbit', 'Get into Moon orbit'),
-      objective: t('Goal: make your path a loop round the Moon. At your lowest point, point backwards (opposite to the way you are moving) and hold Space until the dotted line closes into a circle.', 'Goal: go round the Moon. Turn to face the way you came and hold Space until the dotted line is a circle.'),
+      objective: t('At the low point, point backwards. Hold Space until it’s a circle.', 'Face back. Hold Space until the circle is done.'),
       markers: ['moon'],
       aim: 'retrograde',
       capture: 'moon',
@@ -45,7 +45,7 @@ export function act2Steps(game) {
         game.target = 'moon';
         rig.ensureAttached();
         await hud.showDialogue([
-          { who: 'Mission Control', text: t('The Moon has you now. At your lowest point, burn backwards (against your motion) to drop into orbit.', 'The Moon has you now. Face the way you came and slow down to go around it.') },
+          { who: 'Mission Control', text: t('The Moon has you now. At your lowest point, burn backwards (against your motion) to drop into orbit.', 'The Moon has you! Face the way you came and slow down.') },
           { who: 'girl', text: 'Slow and steady... here goes!' },
         ]);
       },
@@ -73,7 +73,7 @@ export function act2Steps(game) {
     {
       id: 'a2_circle', act: 2,
       title: t('Circle the Moon', 'Circle the Moon'),
-      objective: t('Goal: go once all the way round the Moon. No need to touch Space: just watch the Moon turn below you.', 'Goal: go all the way round the Moon once. Just watch!'),
+      objective: t('Goal: go once round the Moon. No need to touch Space: just watch.', 'Go round the Moon once. Just watch!'),
       markers: ['moon'],
       enter() { moonLast = null; moonSwept = 0; },
       check(ctx, states, stepTime) {
@@ -99,7 +99,7 @@ export function act2Steps(game) {
     {
       id: 'a2_land', act: 2,
       title: 'Land on the Moon',
-      objective: t('Goal: land gently. Point backwards (against your motion) and hold Space to slow down, then keep your falling speed in the green. Legs are down.', 'Goal: land softly. Turn to face backwards and hold Space to slow down.'),
+      objective: t('Point backwards and hold Space to slow down. Keep the speed in the green.', 'Land softly. Face backwards and hold Space to slow down.'),
       markers: ['moon'],
       aim: 'retrograde',
       land: 'moon',
@@ -159,7 +159,7 @@ export function act2Steps(game) {
     {
       id: 'a2_slingshot', act: 2,
       title: t('Leave Earth behind', 'Leave Earth behind'),
-      objective: t('Goal: fly out of Earth’s pull, toward Mars. Follow the arrow (the way the Moon is moving) and hold Space. Going the way you are already moving saves fuel.', 'Goal: fly away from Earth, toward Mars. Follow the arrow and hold Space.'),
+      objective: t('Goal: fly out of Earth’s pull toward Mars. Follow the arrow and hold Space.', 'Fly to Mars. Follow the arrow and hold Space.'),
       markers: ['mars'],
       // Lead playtest: 'target' pointed her straight at Mars (not how orbits
       // work), and 'prograde' straight after liftoff is straight UP, which
@@ -180,7 +180,7 @@ export function act2Steps(game) {
     {
       id: 'a2_coast', act: 2,
       title: t('Catch the Mars window', 'Head for Mars'),
-      objective: t('Mars moves too! Use time warp until the banner says BURN NOW, then point along your path and hold Space until your dotted line reaches Mars.', 'Wait for the green BURN NOW sign (time warp makes time go fast). Then hold Space until your dotted line reaches Mars.'),
+      objective: t('Time warp until BURN NOW. Then hold Space until the dotted line reaches Mars.', 'On green BURN NOW, hold Space to reach Mars.'),
       markers: ['mars'],
       aim: 'prograde',
       transfer: 'mars',

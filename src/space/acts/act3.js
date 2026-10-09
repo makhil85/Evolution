@@ -80,7 +80,7 @@ export function act3Steps(game) {
     {
       id: 'a3_mars_scan', act: 3,
       title: t('Orbit Mars and scan it', 'Go round Mars'),
-      objective: t('Goal: get into a steady orbit round Mars, then scan it. Coast there (time warp is fine far out); on Easy and Medium fly into the blinking circle and Mars catches you, on Hard brake at your lowest point.', 'Goal: go round Mars. Fly into the blinking circle and Mars catches you!'),
+      objective: t('Easy: fly into the blinking circle. Hard: brake at your lowest point.', 'Fly into the blinking circle. Mars catches you!'),
       markers: ['mars'],
       // Keeps the Mars banner going (Level 1 playtest: with no transfer
       // target she drifted with no guidance). Lead 2026-10-07: a steady orbit
@@ -101,7 +101,7 @@ export function act3Steps(game) {
     {
       id: 'a3_power', act: 3,
       title: t('Watch your power', 'Out to the belt'),
-      objective: t('Head out to the asteroid belt: wait for the BURN NOW banner, then hold Space until your dotted line reaches the belt. Watch your Power meter drop as you go.', 'Next: the asteroid belt! Wait for BURN NOW, then hold Space. Watch your Power go down as you fly away from the Sun.'),
+      objective: t('Wait for BURN NOW, then hold Space until your dotted line reaches the belt.', 'On BURN NOW, hold Space to reach the belt.'),
       markers: ['ceres'],
       // Lead playtest: this used to be "coast outward" with the arrow on
       // Ceres, but after the Mars flyby her orbit doesn't reach the belt and
@@ -121,7 +121,7 @@ export function act3Steps(game) {
     {
       id: 'a3_enter_belt', act: 3,
       title: 'Enter the asteroid belt',
-      objective: t('Coast into the belt (time warp is fine). The rocks are far apart out here - you can fly straight through.', 'Fly into the asteroid belt and wait.'),
+      objective: t('Coast into the belt. The rocks are far apart: you can fly straight through.', 'Fly into the asteroid belt and wait.'),
       markers: ['ceres'],
       transfer: 'belt',
       check() {
@@ -131,13 +131,13 @@ export function act3Steps(game) {
       },
       beat: 'enterBelt',
       bonusBeats: ['beltCatalogue'],
-      after() { hud.toast(t('Get close to a rock and press E to reach out with your claw (Z and X nudge you left and right to line up). Stay near the inner edge of the belt (closest to Mars) where your panels get the most power.', 'Fly close to a rock and press E to grab it with your claw! Z and X nudge you left and right.'), { kind: 'good', ms: 5200 }); },
+      after() { hud.toast(t('Get close to a rock and press E to reach out with your claw. Z and X nudge left and right.', 'Get close to a rock. Press E to grab it. Z and X move you.'), { kind: 'good', ms: 5200 }); },
     },
     {
       id: 'a3_mining', act: 3,
       bonusBeats: ['miningScore'],
       title: 'Mine the belt',
-      objective: t('Mine a stony, a metal and an icy rock (get close, press E, hold on).', 'Grab 3 rocks: a stony one, a metal one and an icy one. Fly close and press E.'),
+      objective: t('Mine a stony, metal and icy rock. Get close, press E, hold on.', 'Grab 3 rocks: stony, metal and icy. Press E.'),
       markers: ['ceres'],
       check() {
         fuelSafetyNet(game);
@@ -149,7 +149,7 @@ export function act3Steps(game) {
     {
       id: 'a3_ceres', act: 3,
       title: 'Visit Ceres',
-      objective: t('Point your telescope at Ceres, the biggest object in the belt (the marker shows where it is).', 'Look at Ceres, the biggest rock in the belt.'),
+      objective: t('Point your telescope at Ceres, the biggest object in the belt.', 'Look at Ceres, the biggest rock in the belt.'),
       markers: ['ceres'],
       // Already been there (any time in the belt): ticked off, question asked.
       doneEarly: () => ceresVisited,
@@ -164,9 +164,9 @@ export function act3Steps(game) {
         await wait(2600);
         await hud.showFact({
           title: 'Ceres, the dwarf planet',
-          body: t('Ceres is round and about 940 km across (almost as wide as Texas), the biggest object in the asteroid belt. ' +
-            'Scientists have spotted bright salty patches on it, left behind by water that seeped up from inside.',
-            'Ceres is round. It is the biggest rock in the asteroid belt. It has shiny salt spots. Water from inside made them.'),
+          body: t('Ceres is round, about 940 km across, the biggest object in the belt. ' +
+            'Scientists see bright salty patches left by water from inside.',
+            'Ceres is round. It is the biggest rock in the belt. It has shiny salt.'),
         });
       },
       check() {
@@ -179,7 +179,7 @@ export function act3Steps(game) {
     {
       id: 'a3_build_wings', act: 3,
       title: 'Build Big Solar Wings',
-      objective: t('At Jupiter, sunlight is 1/25 as strong. Open the upgrade bay (the button under Mined) and build Big Solar Wings (4 silicon, 2 metal). Mine more in the belt if you need to.', 'Jupiter is far from the Sun, so the sunlight there is weak. Open the upgrade bay and build Big Solar Wings. Grab more rocks if you need them.'),
+      objective: t('Build Big Solar Wings: open the bay under Mined (4 silicon, 2 metal).', 'Build Big Solar Wings in the upgrade bay.'),
       markers: ['ceres'],
       async enter() { lastOfferAt = 0; await offerBuildLoop(); },
       check(ctx, states, stepTime) {
@@ -195,7 +195,7 @@ export function act3Steps(game) {
     {
       id: 'a3_depart', act: 3,
       title: t('Depart for Jupiter', 'Off to Jupiter'),
-      objective: t('Jupiter moves too! Use time warp until the banner says BURN NOW, then hold Space until your dotted line reaches Jupiter. (You need a Radiation Shield first: 4 metal, 2 ice.)', 'First build a Radiation Shield. Then wait for BURN NOW and hold Space until your dotted line reaches Jupiter.'),
+      objective: t('Build a Radiation Shield first. On BURN NOW, hold Space to reach Jupiter.', 'Build a Radiation Shield. On BURN NOW, hold Space.'),
       markers: ['jupiter'],
       aim: 'prograde',
       transfer: 'jupiter',
@@ -236,7 +236,7 @@ export function act3Steps(game) {
               // low), so "mine some more rocks" repeated forever. Melting ice
               // makes room.
               offering = true;
-              hud.toast(t('Your cargo hold is full! Melt some ice into fuel to make room, then mine a metal rock.', 'Your ship is full! Turn some ice into fuel to make room. Then grab a metal rock.'), { kind: 'warn', ms: 5200 });
+              hud.toast(t('Your cargo hold is full! Melt some ice into fuel to make room, then mine a metal rock.', 'Ship full! Turn ice into fuel to make room.'), { kind: 'warn', ms: 5200 });
               offerUpgrades(game, { includeMelt: true }).finally(() => { offering = false; });
             } else {
               hud.toast(t('Before you leave the belt: Jupiter’s radiation needs a Radiation Shield (4 metal, 2 ice). Mine some more rocks.', 'You need a Radiation Shield for Jupiter. Grab more metal and ice rocks.'), { kind: 'warn', ms: 5200 });

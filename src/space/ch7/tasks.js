@@ -39,24 +39,24 @@ const OXYGEN_PER_O2 = 2; // each O2 molecule has two O atoms
 /** What each task says, per mode, as [Level 4, Level 1] (the hints never give the answer). */
 const TIP = {
   split: {
-    easy: ['Electricity pulls each water molecule apart. Every atom must go back into a molecule: hydrogen balls into H₂ jars, oxygen balls into O₂ jars, two to a jar.', 'Count the balls! Two H balls in each H jar, two O balls in each O jar. Use every ball.'],
+    easy: ['Electricity splits each water molecule. Put every atom into a jar: hydrogen balls into H₂ jars, oxygen into O₂ jars, two to a jar.', 'Two H balls per H jar. Two O balls per O jar. Use every ball.'],
     medium: ['Now four water molecules. Same rule: every atom goes into a jar, two to a jar.', 'Four water molecules. Fill every jar, and use every ball.'],
-    hard: ['Balance it. The same number of hydrogen and oxygen atoms must go in as come out. Set the boxes, then check both atoms. Use the smallest whole numbers.', 'Make the atoms match on both sides. Use the smallest numbers.'],
+    hard: ['Balance it. Same number of hydrogen and oxygen atoms in as out. Set the boxes, then check. Use the smallest whole numbers.', 'Make the atoms match on both sides. Use the smallest numbers.'],
   },
   plants: {
-    easy: ['Light makes the plants turn carbon dioxide and water into sugar, and give back oxygen bubbles. Run the light and count the bubbles until there are enough for the crew.', 'Each light run makes bubbles of oxygen. Count them, and get enough.'],
+    easy: ['Light makes plants turn carbon dioxide and water into sugar and oxygen bubbles. Run the light and count until there is enough.', 'Each light run makes bubbles of oxygen. Count them, and get enough.'],
     medium: ['A bigger harvest: more light runs, more bubbles. Count by sixes.', 'More light runs. Count the bubbles in twos.'],
-    hard: ['Balance the oxygen atoms. Count the O atoms going in (in the carbon dioxide and the water) and coming out (in the sugar and the O₂ molecules). Make the two counts equal.', 'Make the oxygen atoms match on both sides.'],
+    hard: ['Balance the oxygen atoms. Count the O atoms going in and coming out. Make the two counts equal.', 'Make the oxygen atoms match on both sides.'],
   },
   microbes: {
-    easy: ['Pretend hours: each hour, every bacterium splits in two. Keep the hours going until the tank is clean: 64 bacteria, in 8 pretend hours at most.', 'Each pretend hour, every bacterium splits in two. Get 64 helpers.'],
+    easy: ['Pretend hours: each hour, every bacterium splits in two. Clean the tank: 64 bacteria in 8 pretend hours at most.', 'Each pretend hour, every bacterium splits in two. Get 64 helpers.'],
     medium: ['Choose how many bacteria to start with, then the pretend hours. Clean the tank: 100 bacteria, in 8 pretend hours at most.', 'Get 100 helpers in 8 pretend hours.'],
     hard: ['Choose the starting bacteria and the pretend hours. Clean the tank: 1,000 bacteria, in 5 pretend hours at most.', 'Get 1,000 helpers in 5 pretend hours.'],
   },
   bones: {
-    easy: ['In zero g bones get thinner, even with some exercise. The crew shares one bike, with a few hours to spend. Fluids also move up to the head, which is why faces look puffy. Plan the bike so the bones stay strong.', 'No bike, and bones get thinner. One bike is shared: plan it so you keep enough bone blocks.'],
+    easy: ['In zero g bones get thinner, even with exercise. The crew shares one bike. Plan the bike so the bones stay strong.', 'No bike: bones get thinner. Plan the bike so you keep enough bone blocks.'],
     medium: ['One bike is shared by the crew, with 10 hours for the whole trip. Plan each month so the bones stay under the limit.', 'One bike, shared. Plan each month, and keep enough blocks.'],
-    hard: ['Tight: only 9 bike hours for six months, and a tight limit. Tap a month to change its bike time, and keep the bones under the limit.', 'Tap a month to change its bike time.'],
+    hard: ['Tight: only 9 bike hours for six months. Tap a month to change its bike time, and keep bones under the limit.', 'Tap a month to change its bike time.'],
   },
 };
 
@@ -418,7 +418,7 @@ function bonesYear(mode, changed) {
     note.textContent = ok ? t('Safe! The bike is shared well, and the bones stay strong for the whole trip.', 'Safe! Strong bones.')
       : left < 0 ? t('Too many bike hours! The crew has only this many to share. Tap a month to take some away.', 'Too many bike hours. Take some away.')
         : LEVEL === 1 ? t(`Keep at least ${cfg.keep} blocks. No bike loses 2 blocks a month, one hour loses 1, two hours lose none.`, `Keep at least ${cfg.keep} blocks!`)
-          : t(`Too much lost. Tap a month to change its bike time: no bike loses ${BONES.lossTenths[0] / 10}% a month, one hour loses ${BONES.lossTenths[1] / 10}%, and two hours slow the loss a lot, to ${BONES.lossTenths[2] / 10}% (simplified numbers).`, 'Too much lost. Add bike time.');
+          : t(`Too much lost. Tap a month: no bike loses ${BONES.lossTenths[0] / 10}% a month, one hour loses ${BONES.lossTenths[1] / 10}%, two hours slow it to ${BONES.lossTenths[2] / 10}%.`, 'Too much lost. Add bike time.');
   }
   return {
     el: wrap, state: () => plan.slice(),

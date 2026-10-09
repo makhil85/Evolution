@@ -26,7 +26,7 @@ function legSteps(game, { from, to, act, say, beat, ids }) {
     {
       id: ids.leave, act,
       title: t(`Leave ${From}`, `Leave ${From}`),
-      objective: t(`Follow the arrow: fly the same way ${From} is moving and hold Space until your path breaks free of ${From}’s pull.`, `Follow the arrow and hold Space to leave ${From}.`),
+      objective: t(`Follow the arrow and hold Space until you break free of ${From}’s pull.`, `Follow the arrow and hold Space to leave ${From}.`),
       // No marker on the next planet while she leaves: it is lined up only
       // once she is out (lineup.js), and a distance shown before that jumped
       // the moment she escaped, as if her burn had been ignored (lead, 2026-10-06).
@@ -42,7 +42,7 @@ function legSteps(game, { from, to, act, say, beat, ids }) {
     {
       id: ids.window, act,
       title: t(`Catch the ${To} window`, `Head for ${To}`),
-      objective: t(`Use time warp until the banner says BURN NOW, then point along your path and hold Space until your dotted line reaches ${To}.`, `Wait for the green BURN NOW sign (time warp makes time go fast). Then hold Space until your dotted line reaches ${To}.`),
+      objective: t(`Time warp to BURN NOW. Then hold Space until the dotted line reaches ${To}.`, `On green BURN NOW, hold Space to reach ${To}.`),
       markers: [to],
       aim: 'prograde',
       transfer: to,
@@ -62,7 +62,7 @@ function legSteps(game, { from, to, act, say, beat, ids }) {
     {
       id: ids.coast, act,
       title: t(`Coast to ${To}`, `Fly to ${To}`),
-      objective: t(`Coast to ${To}. Time warp makes the long trip quick. If the banner asks for a small burn, it is fine-tuning your path.`, `Fly to ${To} and wait. Time warp makes time go fast.`),
+      objective: t(`Coast to ${To}. Time warp helps. Small burns just fine-tune your path.`, `Fly to ${To}. Time warp makes time go fast.`),
       markers: [to],
       transfer: to,
       aim: 'prograde',
@@ -75,7 +75,7 @@ function legSteps(game, { from, to, act, say, beat, ids }) {
     {
       id: ids.orbit, act,
       title: t(`Let ${To} catch you`, `Go around ${To}`),
-      objective: t(`Brake at your lowest point (follow the banner) so ${To}’s gravity catches you in orbit.`, `Slow down when the sign says, so ${To} catches you.`),
+      objective: t(`Brake at your lowest point so ${To}’s gravity catches you.`, `Slow down when the sign says, so ${To} catches you.`),
       markers: [to],
       aim: 'retrograde',
       capture: to,
@@ -94,7 +94,7 @@ export function partBSteps(game) {
     ...legSteps(game, {
       from: 'saturn', to: 'uranus', act: 2,
       ids: { leave: 'c5_leave_saturn', window: 'c5_to_uranus', coast: 'c5_uranus_approach', orbit: 'c5_uranus_orbit' },
-      say: t('Out of Saturn’s pull, with the water tanks full! Uranus is next: the planet that rolls round the Sun on its side. Wait for BURN NOW.', 'You left Saturn! Next stop: Uranus. Wait for the green BURN NOW sign.'),
+      say: t('Out of Saturn’s pull! Uranus is next: the planet that rolls round the Sun on its side. Wait for BURN NOW.', 'You left Saturn! Next stop: Uranus. Wait for the green BURN NOW sign.'),
       // The "knocked over" question is asked on the look step, after the wait
       // (lead 2026-10-08: let the kid see Uranus first).
       beat: null,
@@ -110,8 +110,8 @@ export function partBSteps(game) {
         await orbitFor(game, 25, { lap: false });
         await hud.showFact({
           title: t('A planet lying on its side', 'A planet on its side'),
-          body: t('Most planets spin standing up, like a top. Uranus spins lying on its side, so it rolls round the Sun like a ball. For part of its long year one pole points straight at the Sun, and the other pole is in the dark the whole time.',
-            'Uranus spins lying down. So it rolls round the Sun like a ball. One side gets sun for a long time, and the other side is dark.'),
+          body: t('Most planets spin upright. Uranus lies on its side and rolls round the Sun. Its poles take turns in sunlight for years.',
+            'Uranus lies down and rolls round the Sun. One side gets sun for years.'),
         });
       },
       // Knocked over (25 s after she arrived), then the pole's day (after the fact).
@@ -121,7 +121,7 @@ export function partBSteps(game) {
     ...legSteps(game, {
       from: 'uranus', to: 'neptune', act: 2,
       ids: { leave: 'c5_leave_uranus', window: 'c5_to_neptune', coast: 'c5_neptune_approach', orbit: 'c5_neptune_orbit' },
-      say: t('Free of Uranus! Neptune is the last big planet, and the furthest. Sunlight takes hours to get there. Wait for BURN NOW.', 'You left Uranus! Next: Neptune, the last big planet. Wait for the green BURN NOW sign.'),
+      say: t('Free of Uranus! Neptune is the last big planet, and the furthest. Sunlight takes hours to get there. Wait for BURN NOW.', 'You left Uranus! Next: Neptune. Wait for green BURN NOW.'),
       beat: 'c5SunlightToNeptune',
     }),
     // Neptune: a pause to look (lesson 5B), then how it was found.
@@ -145,7 +145,7 @@ export function partBSteps(game) {
     {
       id: 'c5_leave_neptune', act: 3,
       title: t('Leave Neptune', 'Leave Neptune'),
-      objective: t('Follow the arrow: fly the same way Neptune is moving and hold Space until your path breaks free of its pull.', 'Follow the arrow and hold Space to leave Neptune.'),
+      objective: t('Follow the arrow and hold Space until your path breaks free of its pull.', 'Follow the arrow and hold Space to leave Neptune.'),
       // No marker on the next planet while she leaves: it is lined up only
       // once she is out (lineup.js), and a distance shown before that jumped
       // the moment she escaped, as if her burn had been ignored (lead, 2026-10-06).
@@ -161,7 +161,7 @@ export function partBSteps(game) {
     {
       id: 'c5_to_pluto', act: 3,
       title: t('Catch the Pluto window', 'Head for Pluto'),
-      objective: t('Pluto is small and far: wait for BURN NOW, then hold Space until your dotted line passes close to Pluto. Let go of the controls to cruise faster.', 'Wait for the green BURN NOW sign. Then hold Space until your dotted line reaches Pluto. Let go of the keys to go fast.'),
+      objective: t('On BURN NOW, hold Space until the line passes Pluto. Let go to cruise.', 'On green BURN NOW, hold Space to reach Pluto.'),
       markers: ['pluto'],
       aim: 'prograde',
       transfer: 'pluto',
@@ -169,7 +169,7 @@ export function partBSteps(game) {
         game.target = 'pluto';
         if (lineUpOnce(game.ship, 'pluto')) { game.replan?.(); game.missions?.save(); }
         await hud.showDialogue([
-          { who: 'Mission Control', text: t('Past Neptune there are no more big planets, just a huge ring of icy rocks: the Kuiper belt. Pluto lives there. Let’s fly past it!', 'No more big planets now. Just lots of icy rocks. Pluto lives here. Let’s go and see it!') },
+          { who: 'Mission Control', text: t('Past Neptune there are no more big planets, just a huge ring of icy rocks: the Kuiper belt. Pluto lives there. Let’s fly past it!', 'No more big planets. Just icy rocks. Pluto lives here!') },
         ]);
       },
       check() {
@@ -201,7 +201,7 @@ export function partBSteps(game) {
       markers: ['pluto'],
       async enter() {
         await hud.showDialogue([
-          { who: 'Mission Control', text: t('Icy rocks all round you! Before we go on, some practice: one day you may need to move a rock in space. Knock the gold rock into the net, using what you learned about bumps.', 'Icy rocks everywhere! Let’s play a game. Knock the gold rock into the net!') },
+          { who: 'Mission Control', text: t('Icy rocks all round you! Some practice first: knock the gold rock into the net, using what you learned about bumps.', 'Icy rocks everywhere! Let’s play a game. Knock the gold rock into the net!') },
         ]);
         await playPool({ bus: game.bus });
         hud.toast(t('Space pool champion! Now on to Pluto.', 'Well done! Now on to Pluto.'), { kind: 'good' });
@@ -210,7 +210,7 @@ export function partBSteps(game) {
     {
       id: 'c5_pluto_coast', act: 3,
       title: t('Fly past Pluto', 'Fly past Pluto'),
-      objective: t('Coast on to Pluto. If the banner asks for a small burn, it is fine-tuning your path.', 'Fly on to Pluto and wait. Time warp makes time go fast.'),
+      objective: t('Coast on to Pluto. Small burns just fine-tune your path.', 'Fly on to Pluto. Time warp makes time go fast.'),
       markers: ['pluto'],
       transfer: 'pluto',
       aim: 'prograde',
@@ -230,8 +230,8 @@ export function partBSteps(game) {
         hud.toast(t('Pluto, right beside you! See the big pale heart?', 'There is Pluto! Can you see the heart shape?'), { kind: 'good' });
         await hud.showFact({
           title: t('Pluto, the dwarf planet', 'Pluto is a dwarf planet'),
-          body: t('Pluto is smaller than our Moon. It has mountains of water ice and a huge pale plain shaped like a heart, made of frozen nitrogen. Its biggest moon, Charon, is half its size. Pluto shares its path round the Sun with lots of other icy worlds, like Eris.',
-            'Pluto is smaller than our Moon. It has a big heart shape made of ice. It has a moon called Charon.'),
+          body: t('Pluto is smaller than our Moon. It has a pale heart-shaped plain of frozen nitrogen, and a big moon, Charon.',
+            'Pluto is smaller than our Moon. It has a heart of ice.'),
         });
       },
       beat: 'c5Pluto',
