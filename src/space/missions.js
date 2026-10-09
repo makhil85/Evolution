@@ -389,6 +389,9 @@ export function createMissions(game) {
       // something the predictor can compute a closest approach to.
       game.target = [step.transfer, step.capture, step.land, step.markers?.[0]].find((id) => id && BODIES[id]) || game.target;
       game.aimHint = step.aim || null;
+      // Aboard the starship (Chapter 6 from the dock, Chapter 7): set before the first frame of a
+      // reload or a Jump, not only inside enter() (ch6/steps.js, ch7/steps.js).
+      if (step.aboard !== undefined) game.aboardStarship = step.aboard;
       game.transferTarget = step.transfer || null;
       game.captureTarget = step.capture || null;
       game.landTarget = step.land || null;

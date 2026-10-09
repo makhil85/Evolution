@@ -261,18 +261,24 @@ const aboardPivot = new THREE.Group();
 aboardPivot.name = 'aboardPivot';
 aboardPivot.scale.setScalar(FLIGHT_LENGTH / STARSHIP_M);
 scene.add(aboardPivot);
-// The chase view, in the starship's metres: behind it (+Z is aft), a little to port and up,
-// looking at the middle of its length (the ship spans -135 m to +230 m along Z).
-const CHASE_EYE = new THREE.Vector3(110, 90, 430);
-const CHASE_AIM = new THREE.Vector3(0, 0, 47);
-const _chaseEye = new THREE.Vector3();
-const _chaseAim = new THREE.Vector3();
+// The flight camera, aboard: the same camera as in her small ship (chase, the C modes, zoom
+// and drag all come from flightCam.update), with its offset from her scaled to the starship's
+// size and looking at its hub, which is her place. Never closer than ABOARD_MIN scene units,
+// so the eye stays clear of the stern (the stern is about 10 units aft of the hub).
+const ABOARD_K = FLIGHT_LENGTH / SHIP.flightLength;
+const ABOARD_MIN = 12;
 function frameStarship(cam) {
-  cam.position.copy(aboardPivot.localToWorld(_chaseEye.copy(CHASE_EYE)));
+  cam.position.multiplyScalar(ABOARD_K);
+  const d = cam.position.length();
+  if (d < ABOARD_MIN) {
+    if (d > 1e-6) cam.position.multiplyScalar(ABOARD_MIN / d);
+    else cam.position.set(0, 0, ABOARD_MIN);
+  }
   cam.up.set(0, 1, 0);
-  cam.lookAt(aboardPivot.localToWorld(_chaseAim.copy(CHASE_AIM)));
+  cam.lookAt(0, 0, 0);
 }
 // Her small rocket goes, and the starship takes its place, every frame she is aboard.
+let plumeCut = false;
 function placeAboard(paused, thrust) {
   shipView.group.visible = false;
   aboardPivot.rotation.y = shipView.group.rotation.y; // the same heading as her nose
@@ -281,9 +287,18 @@ function placeAboard(paused, thrust) {
   if (!star) return;
   star.group.position.set(0, 0, 0);
   star.group.quaternion.copy(aboardPivot.quaternion);
-  // The plume follows her burn; a cutscene that lights the drive sets it itself.
-  if (!game.cinematic) star.setDrive(paused ? 0 : thrust);
+  // The plume follows her burn. A cutscene starts with the plume off (set once, as it starts),
+  // then sets it itself.
+  if (game.cinematic) {
+    if (!plumeCut) star.setDrive(0);
+    plumeCut = true;
+  } else {
+    plumeCut = false;
+    star.setDrive(paused ? 0 : thrust);
+  }
 }
+// The board film's hand-over: one frame of the scene as it is now, as a PNG (boardFilm.js).
+game.frameSnapshot = () => { composer.render(); return renderer.domElement.toDataURL('image/png'); };
 // Rock break-apart, pieces flying in, the upgrade build effect (PLAN item 11).
 game.beltFx = createBeltFx(game);
 

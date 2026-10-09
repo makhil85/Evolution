@@ -23,6 +23,7 @@ export function ch7Steps(game) {
   // game.aboardStarship). Lead 2026-10-09.
   for (const st of steps) {
     const enter = st.enter;
+    st.aboard = true; // missions.js sets the flag before the enter, so a reload gets it at once
     st.enter = async (...a) => { game.aboardStarship = true; showStarship(game); return enter?.(...a); };
   }
   // A walk from the outside view starts with the board film, once per part (boardFilm.js).

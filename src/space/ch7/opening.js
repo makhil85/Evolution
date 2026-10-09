@@ -298,8 +298,7 @@ export function playCh7Opening(game) {
     }
     shipView.group.position.set(0, 0, 0);
     shipView.group.quaternion.copy(shipQuat);
-    shipView.group.visible = true;
-    showStarship(game); // her ship's own starship beside her, for the rest of the chapter
+    showStarship(game); // the starship is her craft from here on (main.js, aboardStarship)
     game.controls.setEnabled(true);
     game.paused = false;
   });

@@ -39,11 +39,11 @@ const DOCK_X = PORT_R + 0.5 - SUPPLY_NOSE;
 // ring's radius before it slides onto the port.
 const APPROACH = [[200, 30, 38], [60, 3, 38], [41, 0, 38], [DOCK_X, 0, 0]];
 // The camera, in the starship's metres: [position, look] at 0, 6, 12 and 18 s.
-// Wide at first (her ship and the starship in frame), round by the port as the
+// Wide at first (the whole starship in frame), round by the port as the
 // supply ship comes in, then close enough on the docking to read it (the ring
 // stays at the edge of the frame), with a little drift to the end.
 const CAM = [
-  [[447, 0, 1631], [330, 0, 500]], // her ship and the starship both in frame (about 360 m from her)
+  [[447, 0, 1631], [330, 0, 500]], // the starship and the supply ship in frame, about 360 m from the hub
   [[380, 140, 260], [140, 10, 40]],
   [[100, 60, 150], [30, 0, 5]],
   [[90, 45, 130], [28, 0, 5]],
@@ -337,7 +337,7 @@ export function playCh6Opening(game) {
         }
       }
       puffs.update(dt);
-      // Camera: wide, with her ship and the starship in frame; drifts round to the
+      // Camera: wide, with the whole starship in frame; drifts round to the
       // port as the supply ship comes in; ends close on the docking. Eased in from
       // her chase view at the start and back out to it at the end, so no cut.
       const k = Math.min(1, t / DURATION);
@@ -356,7 +356,6 @@ export function playCh6Opening(game) {
     overlay.bars(false);
     document.body.classList.remove('in-cinematic');
     setTimeout(() => overlay.remove(), 1500);
-    shipView.group.visible = true;
     game.controls.setEnabled(true);
     game.paused = false;
     // The supply ship stays docked at the port; the starship's remove() takes it too.

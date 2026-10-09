@@ -1,17 +1,17 @@
-// Chapter 7: aboard the starship (her small rocket is never drawn), and the board
-// film before the walks.
+// Chapter 7 and aboard: the starship is her craft, and the board film before the walks.
 //
 //   node scripts/test-ch7-board.mjs
 //
-// Every Chapter 7 step makes her aboard as it starts (game.aboardStarship, set by the
-// step wrapper in ch7/steps.js: also after a reload into one). Chapter 6: aboard from
-// the dock (Part A's first step) on, not before (ch6/steps.js). The board film's length and its skip
-// (after 1 s, straight to the fade), the once-per-part rule (the first walk of
-// each act), and that the film puts everything back when it ends: the flight
-// state, the starship's ring spin, the skip listener and the overlay. The film
-// runs here against a stub game with a small stand-in for the DOM and the window,
-// driven frame by frame the way main.js drives it.
+// Aboard (game.aboardStarship): every Chapter 7 step sets it as it enters, and missions.js sets
+// it from the step's own `aboard` before the enter (so a reload or a Jump gets it before the first
+// frame). Chapter 6: aboard from the dock (Part A's first step) on, not before. The slingshot card's
+// craft is the starship after the dock (ch6/slingshot.js shipDart).
+// The board film: its length and its skip (after 1 s, a hand-over from where the camera is), the
+// once-per-part rule, the last frame on the window, the hand-over snapshot that fades out over
+// the walk (no black), and that everything is put back. The film runs against a stub game with a
+// small stand-in for the DOM and the window, driven frame by frame the way main.js drives it.
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { createServer } from 'vite';
 import * as THREE from 'three';
 
@@ -25,9 +25,9 @@ async function okAsync(name, fn) {
 }
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// A stand-in DOM: just what cinematics.js's overlay and the film touch. Overlay roots
-// are tracked, so the dispose check can see whether one is left on the page.
-const openRoots = new Set();
+// A stand-in DOM: what cinematics.js's overlay and the film's picture touch. Everything the
+// film appends to the body is tracked, so the dispose check can see what is left on the page.
+const bodyNodes = new Set();
 const bodyClasses = new Set();
 const keyListeners = new Set();
 function fakeNode(tag) {
@@ -36,20 +36,21 @@ function fakeNode(tag) {
     className: '',
     textContent: '',
     innerHTML: '',
+    src: '',
     style: {},
     children: [],
     classList: { add() {}, remove() {}, toggle() {} },
     appendChild(c) { return c; },
     querySelector() { return fakeNode('div'); },
-    remove() { openRoots.delete(node); },
+    remove() { bodyNodes.delete(node); },
   };
   return node;
 }
-// The overlay root is the only node with className 'cine'.
+// The overlay root is the node with className 'cine'; it joins the body's nodes when appended.
 const realCreate = (tag) => {
   const n = fakeNode(tag);
   let cls = '';
-  Object.defineProperty(n, 'className', { get: () => cls, set: (v) => { cls = v; if (v === 'cine') openRoots.add(n); } });
+  Object.defineProperty(n, 'className', { get: () => cls, set: (v) => { cls = v; } });
   return n;
 };
 globalThis.document = {
@@ -57,7 +58,7 @@ globalThis.document = {
   head: { appendChild() {} },
   body: {
     classList: { add: (c) => bodyClasses.add(c), remove: (c) => bodyClasses.delete(c), toggle() {} },
-    appendChild(n) { return n; },
+    appendChild(n) { bodyNodes.add(n); return n; },
   },
 };
 globalThis.window = {
@@ -72,6 +73,7 @@ try {
   const { ch7Steps } = await vite.ssrLoadModule('/src/space/ch7/steps.js');
   const film = await vite.ssrLoadModule('/src/space/ch7/boardFilm.js');
   const { readMs } = await vite.ssrLoadModule('/src/play/readTime.js');
+  const { shipDart } = await vite.ssrLoadModule('/src/space/ch6/slingshot.js');
 
   // The enter wrappers set the aboard flag before anything else, so each check reads it
   // straight after the call, without waiting for the step's own enter (a timed cutscene).
@@ -81,7 +83,7 @@ try {
   const steps = ch7Steps(stubGame);
 
   console.log('aboard the starship');
-  ok('every Chapter 7 step makes her aboard: her small rocket is hidden as it enters', () => {
+  ok('every Chapter 7 step makes her aboard: her small rocket is not drawn as it enters', () => {
     assert.ok(steps.length >= 10, 'the chain has its steps');
     for (const st of steps) assert.equal(enterFlag(stubGame, st), true, `${st.id} did not set aboardStarship`);
   });
@@ -95,8 +97,33 @@ try {
       assert.equal(aboard, i >= dock, `${ch6[i].id} (step ${i}, the dock is step ${dock}): aboard ${aboard}`);
     }
   });
+  ok('the flag is set from each step before its enter, so a reload or a Jump gets it before the first frame', () => {
+    // missions.js: the step's own flag goes in beside the per-step fields, before `await step.enter`.
+    const src = readFileSync(new URL('../src/space/missions.js', import.meta.url), 'utf8');
+    const line = src.indexOf('game.aboardStarship = step.aboard');
+    const enter = src.indexOf('await step.enter?.(game)', line);
+    assert.ok(line > 0, 'missions.js sets game.aboardStarship from step.aboard');
+    assert.ok(enter > line, 'the flag is set before the step enter runs');
+    for (const st of [...steps, ...ch6]) assert.equal(typeof st.aboard, 'boolean', `${st.id} has an aboard value`);
+    assert.equal(ch6[dock].aboard, true, 'the dock step is aboard');
+    assert.equal(ch6[dock - 1].aboard, false, 'the step before the dock is not');
+  });
   ok('the walk hook is set, so a walk from the flight view can play its film', () => {
     assert.equal(typeof stubGame.beforeWalk, 'function');
+  });
+
+  console.log('the slingshot craft');
+  ok('after the dock the slingshot card draws the starship, not the grey rock', () => {
+    const calls = [];
+    const ctx = new Proxy({}, {
+      get: (t, k) => (k in t ? t[k] : (...a) => { calls.push(String(k)); return undefined; }),
+      set: (t, k, v) => { calls.push(`${String(k)}=${v}`); t[k] = v; return true; },
+    });
+    shipDart(ctx, 0, 0, 0, true, 0);
+    assert.ok(calls.includes('fillStyle=#f4f1ea'), 'the cream hull');
+    assert.ok(calls.includes('strokeStyle=#ff9a3c'), 'the orange ring');
+    assert.ok(calls.includes('fillRect'), 'the spine and the cap');
+    assert.ok(!calls.some((c) => c.includes('#a9a39a')), 'no rock grey');
   });
 
   console.log('board film');
@@ -105,12 +132,6 @@ try {
   });
   ok('skippable after 1 s, as the other films', () => {
     assert.equal(film.SKIP_AFTER_MS, 1000);
-  });
-  ok('a skip goes straight to the fade, and never back in time', () => {
-    const fadeAt = film.skipClock(0);
-    assert.ok(fadeAt > 0 && fadeAt < film.FILM_S, `skip goes to ${fadeAt}`);
-    assert.equal(film.skipClock(film.FILM_S), film.FILM_S);
-    assert.equal(film.skipClock(fadeAt + 0.5), fadeAt + 0.5);
   });
   ok('the caption stays up readMs (at least 5 s, at most 10 s)', () => {
     const ms = readMs('Chapter 7 Aboard the starship');
@@ -129,51 +150,75 @@ try {
 
   // Film runs: a stub game with a real starship (the film builds nothing else).
   const THREE_CAM = () => new THREE.PerspectiveCamera(55, 16 / 9, 0.02, 400000);
-  const filmGame = () => ({
-    scene: new THREE.Scene(), paused: false, warpIndex: 1,
-    controls: { enabled: null, setEnabled(v) { this.enabled = v; } },
-    missions: { step: { act: 2 } },
-  });
-  // Drives the film the way main.js does: one frame per dt, until the clock is past `until`.
+  const filmGame = () => {
+    const g = {
+      scene: new THREE.Scene(), paused: false, warpIndex: 1,
+      controls: { enabled: null, setEnabled(v) { this.enabled = v; } },
+      missions: { step: { act: 2 } },
+      snapshots: 0,
+      frameSnapshot() { g.snapshots++; return 'data:image/png;base64,QUJD'; },
+    };
+    return g;
+  };
+  // Drives the film the way main.js does: one frame per dt, until the clock is past `until`
+  // (or the film has handed over).
   const drive = (game, cam, until, dt = 1 / 30) => {
     while (game.cinematic && game.cinematic.t < until) game.cinematic.apply(dt, cam);
   };
+  const windowOf = (star) => {
+    const ring = star.getObjectByName('habitat-ring');
+    return ring.localToWorld(new THREE.Vector3(62.12 * Math.cos(Math.PI / 3), 62.12 * Math.sin(Math.PI / 3), 0));
+  };
 
-  await okAsync('the film runs its full length, holds the walk on black, and puts everything back', async () => {
+  await okAsync('the last frame is on the window: the camera is about 3 m off the glass, looking into it', async () => {
     const game = filmGame();
     const p = film.playBoardFilm(game);
-    assert.ok(game.cinematic, 'the film is the cinematic while it plays');
-    assert.equal(game.paused, true, 'flight is paused under the film');
-    assert.equal(game.warpIndex, 0);
     const cam = THREE_CAM();
-    drive(game, cam, film.FILM_S);
-    assert.ok(Math.abs(game.cinematic.t - film.FILM_S) < 1 / 30 + 1e-6, `film clock ${game.cinematic.t}`);
-    // The shot ends a few metres off the ring's rim (the window is at 62 m from the hub),
-    // looking at the window: the starship's scale turns metres into scene units.
+    drive(game, cam, film.FILM_S + 0.01);
+    assert.equal(game.snapshots, 1, 'the hand-over took one picture');
     const star = game._starship.ship.group;
-    const ring = star.getObjectByName('habitat-ring');
     const k = star.scale.x;
-    const d = cam.position.distanceTo(star.position);
-    assert.ok(d > 62 * k && d < 72 * k, `camera ${(d / k).toFixed(1)} m from the hub`);
-    const win = ring.localToWorld(new THREE.Vector3(62.12 * Math.cos(Math.PI / 3), 62.12 * Math.sin(Math.PI / 3), 0));
+    const win = windowOf(star);
+    const off = cam.position.distanceTo(win) / k;
+    assert.ok(off > 2.5 && off < 3.5, `camera ${off.toFixed(2)} m from the glass`);
     const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
     const toWin = win.clone().sub(cam.position).normalize();
     assert.ok(fwd.dot(toWin) > 0.999, `camera looks ${fwd.dot(toWin).toFixed(4)} along the window`);
+    await p;
+    await wait(1600); // the picture's own timers run out before the next test
+  });
+
+  await okAsync('the hand-over has no black: the picture fades out over the walk, and everything is put back', async () => {
+    const game = filmGame();
+    const p = film.playBoardFilm(game);
+    const cam = THREE_CAM();
+    assert.equal(game.paused, true, 'flight is paused under the film');
+    assert.equal(game.warpIndex, 0);
+    drive(game, cam, film.FILM_S + 0.01);
+    const img = [...bodyNodes].find((n) => n.tag === 'img');
+    assert.ok(img, 'the picture of the last frame is on the page');
+    assert.equal(img.src, 'data:image/png;base64,QUJD');
+    assert.ok(String(img.style.transition).includes('opacity'), 'it fades by opacity');
+    assert.equal(img.style.opacity, undefined, 'it starts fully shown');
+    assert.equal([...bodyNodes].filter((n) => n.className === 'cine').length, 0, 'the film overlay is gone at the hand-over');
     await p;
     assert.equal(game.cinematic, null, 'the cinematic is cleared');
     assert.equal(game.paused, false, 'pause is put back');
     assert.equal(game.controls.enabled, true, 'her controls are back');
     assert.equal(bodyClasses.has('in-cinematic'), false, 'the HUD comes back');
+    await wait(200);
+    assert.equal(img.style.opacity, '0', 'the picture starts to fade as the walk draws');
     // The ring turns again at showStarship's spin after the film.
+    const ring = game._starship.ship.group.getObjectByName('habitat-ring');
     const z0 = ring.rotation.z;
     game._starship.ship.update(1, 1);
     assert.ok(Math.abs(ring.rotation.z - z0 - 0.12) < 1e-9, 'the ring spins at 0.12 rad/s again');
-    await wait(1900); // the reveal takes the overlay away after its fade
-    assert.equal(openRoots.size, 0, 'the overlay is removed');
+    await wait(1600); // the picture is taken off the page when its fade is done
+    assert.equal(bodyNodes.size, 0, 'nothing is left on the page');
     assert.equal(keyListeners.size, 0, 'the skip listener is removed');
   });
 
-  await okAsync('a key before 1 s does not skip; after 1 s it goes straight to the fade', async () => {
+  await okAsync('a key before 1 s does not skip; after 1 s it hands over from where the camera is, with no jump', async () => {
     const game = filmGame();
     const p = film.playBoardFilm(game);
     const cam = THREE_CAM();
@@ -182,15 +227,19 @@ try {
     await Promise.resolve();
     assert.equal(game.cinematic.t, 0, 'too early to skip');
     drive(game, cam, 1.2);
+    const before = cam.position.clone();
     await wait(1050); // the skip arms after 1 s
     press();
     await Promise.resolve();
-    assert.ok(game.cinematic.t >= 6, `skipped to ${game.cinematic.t}`);
-    drive(game, cam, film.FILM_S + 0.01);
+    // The next frame hands over at this clock, not at the end of the film (no jump in time).
+    game.cinematic.apply(1 / 30, cam);
+    assert.ok(game.cinematic === null || game.cinematic.t < 1.6, `handed over at ${game.cinematic?.t}`);
+    assert.equal(game.snapshots, 1, 'the hand-over took its picture');
+    assert.ok(cam.position.distanceTo(before) < 0.05, `camera moved ${cam.position.distanceTo(before).toFixed(3)} on the skip`);
     await p;
-    await wait(1900);
+    await wait(1600);
     assert.equal(keyListeners.size, 0);
-    assert.equal(openRoots.size, 0);
+    assert.equal(bodyNodes.size, 0);
   });
 } finally {
   await vite.close();
