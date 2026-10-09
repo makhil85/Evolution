@@ -811,7 +811,7 @@ function updateCaptureCue(thrust) {
   if (vr < 0 && oe.periapsis > tb.soi * 0.55) swingInSticky = true;
   if (swingInSticky && (vr >= 0 || oe.periapsis < tb.soi * 0.4)) swingInSticky = false;
   if (swingInSticky) {
-    setCue('burn', t(`Too far from ${theName}! Point backwards, hold Space.`, 'Too far! Face back, hold Space.'));
+    setCue('burn', t('Too far! Point against your motion, hold Space.', 'Too far! Face back, hold Space.'));
     aimHelp = { phase: 'burn', line: aimLine(t('Nose on the green mark, opposite your motion, and hold Space: a small push now swings your path in closer.', 'Face the way you came, then hold Space.')) };
     return true;
   }
@@ -841,13 +841,13 @@ function updateCaptureCue(thrust) {
   if (captureBurnSticky && thrust > 0 && oe.bound && r < tb.soi * 0.65 && Math.hypot(vx, vz) < orbitSpeed * 1.08) {
     setCue('stop', t('Let go of Space! You’re nearly in orbit.', 'Let go of Space! Almost there!'));
   } else if (captureBurnSticky) {
-    setCue('burn', t('BURN NOW! Point backwards, hold Space.', 'BURN NOW! Face back, hold Space.'));
+    setCue('burn', t('BURN NOW! Point against your motion, hold Space.', 'BURN NOW! Face back, hold Space.'));
     aimHelp = { phase: 'burn', line: aimLine(t('Nose on the green mark, opposite your motion, and hold Space. The engine pushes against your speed and slows you down.', 'Face the way you came: nose on the green mark. Hold Space to slow down.')) };
   } else {
     // The coast before the burn: say now what's coming, so she can turn
     // round in good time (lead: "backwards" alone wasn't clear).
     const inS = Math.max(1, Math.round(tPeri - burnT / 2));
-    setCue('wait', t(`Coast to lowest point. ${Math.round(r - R)} u above ${theName}`, 'Coast to low point. Then brake.'));
+    setCue('wait', t('Coast to your lowest point, then brake.', 'Coast to low point. Then brake.'));
     aimHelp = {
       phase: 'ready', inS,
       line: aimLine(inS > 10
@@ -935,7 +935,7 @@ function updateLandingCue(thrust, target = game.landTarget) {
   if (!falling) {
     setCue('burn', auto
       ? t(`Brake to descend: hold Space. ${Math.round(alt)} u up`, 'Land! Hold Space.')
-      : t(`Point backwards and hold Space. ${Math.round(alt)} u up`, 'Land! Face back, hold Space.'));
+      : t(`Point against motion, hold Space. ${Math.round(alt)} u up`, 'Land! Face back, hold Space.'));
     aimHelp = { up: aimUp, phase: 'burn', line: aimLine(t('Nose on the green mark, opposite your motion, and hold Space: slowing down drops your path onto the ground.', 'Face the way you came and hold Space to start coming down.')) };
   } else if (tooFastSticky) {
     setCue('stop', t(`Too fast! Hold Space to brake. Speed ${speed.toFixed(1)}`, 'Too fast! Hold Space to brake.'));
@@ -1122,7 +1122,7 @@ function aimLine(text) {
   return game.autopilot?.on ? t('Autopilot: pointing backwards, against your motion, to slow down.', 'Autopilot: facing the way you came, to slow down.') : text;
 }
 /** "Point backwards" spelled out (lead: at the Moon, or away from it?). */
-const RETRO = () => t('Point backwards', 'Face back');
+const RETRO = () => t('Point against your motion', 'Face back');
 
 /**
  * The planned path (see plannedView): the plan's burn applied at its moment,
@@ -1358,8 +1358,8 @@ function updateBurnCue(states, thrust) {
       game.aimHint = 'retrograde';
       help('fix', { along: false });
       cue('stop', !oe.bound
-        ? t('Too far out! Point backwards, hold Space.', 'Too far! Face back, hold Space.')
-        : t(`Orbit swings past ${the}. Point backwards, hold Space.`, 'Too far! Face back, hold Space.'));
+        ? t('Too far! Point against your motion, hold Space.', 'Too far! Face back, hold Space.')
+        : t(`Past ${the}! Point against your motion, hold Space.`, 'Too far! Face back, hold Space.'));
       return;
     }
   }
@@ -1413,7 +1413,7 @@ function updateBurnCue(states, thrust) {
   const wait = Math.ceil(tau);
   help(tau < 20 ? 'point' : 'wait', { tau, dvNeed: Math.abs(p.dv), dvDone: 0, along });
   cue('wait', tau > 100
-    ? t(`Burn window in ${wait} s. Use time warp.`, `Wait ${wait} s for green sign.`)
+    ? t(`Burn window in ${wait} s. Use time warp.`, `Wait ${wait} s. Use time warp.`)
     : t(`Burn in ${wait} s. Point ${along ? 'along your path' : 'backwards'}.`, `Get ready: ${wait} s. ${along ? 'Point forward' : 'Face back'}.`));
 }
 

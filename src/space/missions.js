@@ -285,7 +285,7 @@ export function createMissions(game) {
     });
     hud.setMission({
       act: ACT_TITLES[steps[index].act] || '', title: t(`In orbit round ${name}`, `Going around ${name}`),
-      objective: t(`Look round ${name} as long as you like. Press "Ready for the next adventure" when you want to go on.`, `Look at ${name}! Press "Ready" when you want to go on.`),
+      objective: t(`Look round ${name}. Press "Ready for the next adventure" to go on.`, `Look at ${name}! Press "Ready" to go on.`),
       steps: [],
     });
     document.body.appendChild(btn);

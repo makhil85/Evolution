@@ -94,7 +94,7 @@ export function partASteps(game) {
     {
       id: 'c5_to_saturn', act: 1,
       title: t('Catch the Saturn window', 'Head for Saturn'),
-      objective: t('Time warp to BURN NOW. Then hold Space until the dotted line reaches Saturn.', 'On green BURN NOW, hold Space to reach Saturn.'),
+      objective: t('Time warp to BURN NOW. Then hold Space until the dotted line reaches Saturn.', 'Time warp to green BURN NOW, then hold Space.'),
       markers: ['saturn'],
       aim: 'prograde',
       transfer: 'saturn',

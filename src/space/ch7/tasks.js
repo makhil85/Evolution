@@ -418,7 +418,7 @@ function bonesYear(mode, changed) {
     note.textContent = ok ? t('Safe! The bike is shared well, and the bones stay strong for the whole trip.', 'Safe! Strong bones.')
       : left < 0 ? t('Too many bike hours! The crew has only this many to share. Tap a month to take some away.', 'Too many bike hours. Take some away.')
         : LEVEL === 1 ? t(`Keep at least ${cfg.keep} blocks. No bike loses 2 blocks a month, one hour loses 1, two hours lose none.`, `Keep at least ${cfg.keep} blocks!`)
-          : t(`Too much lost. Tap a month: no bike loses ${BONES.lossTenths[0] / 10}% a month, one hour loses ${BONES.lossTenths[1] / 10}%, two hours slow it to ${BONES.lossTenths[2] / 10}%.`, 'Too much lost. Add bike time.');
+          : t(`Too much lost. Tap a month: no bike loses ${BONES.lossTenths[0] / 10}% a month, one hour loses ${BONES.lossTenths[1] / 10}%, two hours slow it to ${BONES.lossTenths[2] / 10}% (simplified).`, 'Too much lost. Add bike time.');
   }
   return {
     el: wrap, state: () => plan.slice(),

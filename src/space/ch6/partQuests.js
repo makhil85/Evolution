@@ -23,7 +23,7 @@ export function partQuestsSteps(game) {
     {
       id: 'c6_life_on_board', act: 2,
       title: t('Life on board', 'Life on board'),
-      objective: t('Keep the crew well: sick bay, coolant, message home, farm bay.', 'Keep the crew well. Visit each one with its crewmate.'),
+      objective: t('Keep the crew well. Walk to the sick bay, coolant, message home and farm.', 'Keep the crew well. Visit each one with its crewmate.'),
       markers: [],
       async enter() {
         await hud.showDialogue([

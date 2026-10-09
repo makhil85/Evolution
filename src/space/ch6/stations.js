@@ -115,7 +115,7 @@ function shieldBody(changed) {
     const steps = [];
     for (let k = 0; k <= Math.min(m, 6); k++) steps.push(String(+raysThrough(k).toFixed(2)));
     info.textContent = t(
-      `This spot is ${m} m thick. Rays through: ${steps.join(' → ')}. Safe is ${SHIELD.safe} m. Worst lets ${worstLeak(sh).toFixed(1)} in.`,
+      `This spot: ${m} m thick. Of 100 rays, ${steps.join(' → ')} get through. Safe: ${SHIELD.safe} m (under 2 in 100).`,
       `This spot is ${m} m thick. Each metre stops half. Make it ${SHIELD.safe} m.`,
     );
   }

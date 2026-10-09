@@ -267,7 +267,7 @@ export function act1Steps(game) {
     {
       id: 'a1_raise', act: 1,
       title: 'Aim for the Moon',
-      objective: t('Point along your path. On green BURN, hold Space until it reaches the Moon.', 'On green BURN NOW, hold Space to reach the Moon.'),
+      objective: t('Point along your path. On green BURN, hold Space until it reaches the Moon.', 'Time warp to green BURN NOW, then hold Space.'),
       markers: ['moon'],
       aim: 'prograde',
       transfer: 'moon',

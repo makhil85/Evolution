@@ -122,7 +122,7 @@ export function act2Steps(game) {
         if (scene) {
           await game.runScene(scene);
         } else {
-          await hud.showFact({ title: 'Moon walk coming soon', body: 'The low-gravity walk is still being built. For now, here is what you found out there.' });
+          await hud.showFact({ title: 'Moon walk coming soon', body: 'The low-gravity walk is still being built. Here is what you found.' });
           await askBeat(game, 'moonWalk');
           await askBeat(game, 'moonSample');
           await askBeat(game, 'moonFootprints');
@@ -180,7 +180,7 @@ export function act2Steps(game) {
     {
       id: 'a2_coast', act: 2,
       title: t('Catch the Mars window', 'Head for Mars'),
-      objective: t('Time warp until BURN NOW. Then hold Space until the dotted line reaches Mars.', 'On green BURN NOW, hold Space to reach Mars.'),
+      objective: t('Time warp until BURN NOW. Then hold Space until the dotted line reaches Mars.', 'Time warp to green BURN NOW, then hold Space.'),
       markers: ['mars'],
       aim: 'prograde',
       transfer: 'mars',

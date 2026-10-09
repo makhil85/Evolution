@@ -66,8 +66,31 @@ function ownedFiles() {
     ...listDir('ch6', /^(part.*|quests|stations|routePlanner|slingshot)\.js$/),
     ...listDir('ch7', /^(part.*|tasks|floatGame|dropTest|lensGame)\.js$/),
     'src/space/main.js',
+    // Mode cards, the autopilot and overlay strings: only the lines named here are this work's
+    // (the rest of these files belongs to other work), see ONLY_LINES below.
+    'src/space/contracts.js', 'src/space/autopilot.js', 'src/space/retry.js', 'src/space/satellite.js',
+    'src/space/hud/transferPanel.js', 'src/space/hud/overlays.js', 'src/space/missions.js',
   ];
 }
+
+/** Lines of a file this work owns (the rest of the file is someone else's); absent = the whole file. */
+const ONLY_LINES = {
+  'src/space/contracts.js': [[360, 415]],
+  'src/space/autopilot.js': [[60, 80]],
+  'src/space/retry.js': [[50, 70]],
+  'src/space/satellite.js': [[930, 1000]],
+  'src/space/hud/transferPanel.js': [[236, 252]],
+  'src/space/hud/overlays.js': [[15, 30], [170, 185]],
+  'src/space/missions.js': [[280, 300]],
+};
+
+/** A file whose lines from this marker on are the Level 1 table (its text is counted at Level 1). */
+const LEVEL1_FROM = { 'src/space/contracts.js': 'export const FLIGHT_MODES_L1' };
+
+/** Property names whose plain string is shown as a message (a dialogue line, a mode blurb). */
+const TEXT_KEYS = new Set(['text', 'body', 'blurb']);
+/** Helpers that take a Level 4 and a Level 1 text, like t(). */
+const T_NAMES = new Set(['t', 'lvl']);
 
 /** A small JS tokenizer: identifiers, punctuation and string text (template ${...} become a 0). */
 function tokenize(src) {
@@ -125,11 +148,24 @@ function callNames(tokens) {
     names[i] = top ? top.name : '';
     if (tk.k !== 'p') return;
     if ('([{'.includes(tk.v)) {
-      const prev = tokens[i - 1];
-      stack.push({ ch: tk.v, name: tk.v === '(' && prev?.k === 'id' ? prev.v : '' });
+      stack.push({ ch: tk.v, name: tk.v === '(' ? calleeOf(tokens, i) : '' });
     } else if (')]}'.includes(tk.v)) stack.pop();
   });
   return names;
+}
+
+/** The name of the function an open '(' calls: `f(`, or `obj.f?.(` (an optional call). */
+function calleeOf(tokens, open) {
+  let j = open - 1;
+  if (tokens[j]?.v === '.' && tokens[j - 1]?.v === '?') j -= 2;
+  return tokens[j]?.k === 'id' ? tokens[j].v : '';
+}
+
+/** The index of the '(' that a name at index i is called with (`f(` or `f?.(`), or -1. */
+function callOpen(tokens, i) {
+  if (tokens[i + 1]?.v === '(') return i + 1;
+  if (tokens[i + 1]?.v === '?' && tokens[i + 2]?.v === '.' && tokens[i + 3]?.v === '(') return i + 3;
+  return -1;
 }
 
 /** The [start, end) token ranges of the top-level comma-separated items between open and close. */
@@ -175,18 +211,27 @@ const TEXT_ARG = { toast: 0, setCue: 1, burnCue: 1, cue: 1 };
 function sourceTexts() {
   const found = [];
   for (const file of ownedFiles()) {
-    const src = readFileSync(`${ROOT}${file}`, 'utf8');
+    const whole = readFileSync(`${ROOT}${file}`, 'utf8');
+    const wholeLines = whole.split('\n');
+    // The owned lines of a shared file are read on their own (the tokenizer does not parse
+    // regex literals, so a stray quote elsewhere in the file would shift everything after it).
+    const pieces = ONLY_LINES[file]
+      ? ONLY_LINES[file].map(([a, b]) => ({ from: a, src: wholeLines.slice(a - 1, b).join('\n') }))
+      : [{ from: 1, src: whole }];
+    const markerLine = LEVEL1_FROM[file] ? whole.slice(0, whole.indexOf(LEVEL1_FROM[file])).split('\n').length : Infinity;
+    for (const piece of pieces) {
+    const src = piece.src;
     const tokens = tokenize(src);
     const match = bracketPairs(tokens);
     const names = callNames(tokens);
-    const line = (pos) => src.slice(0, pos).split('\n').length;
+    const line = (pos) => src.slice(0, pos).split('\n').length + piece.from - 1;
     const inT = new Array(tokens.length).fill(false);
     const add = (i, text, kind, level) => found.push({ file, line: line(tokens[i].pos), text, kind, level });
 
     // t(Level 4, Level 1): each wording at its own Level's limit.
     tokens.forEach((tk, i) => {
-      if (tk.k !== 'id' || tk.v !== 't' || tokens[i + 1]?.v !== '(') return;
-      const open = i + 1; const close = match[open];
+      if (tk.k !== 'id' || !T_NAMES.has(tk.v) || callOpen(tokens, i) < 0) return;
+      const open = callOpen(tokens, i); const close = match[open];
       for (let j = open; j <= close; j++) inT[j] = true;
       const args = splitArgs(tokens, open, close);
       const kind = CUE_CALLS.has(names[i]) ? 'cue'
@@ -197,14 +242,32 @@ function sourceTexts() {
 
     // A toast or cue text written without t(): it shows at both Levels, so the Level 1 limit applies.
     tokens.forEach((tk, i) => {
-      if (tk.k !== 'id' || !(tk.v in TEXT_ARG) || tokens[i + 1]?.v !== '(') return;
-      const open = i + 1; const args = splitArgs(tokens, open, match[open]);
+      if (tk.k !== 'id' || !(tk.v in TEXT_ARG) || callOpen(tokens, i) < 0) return;
+      const open = callOpen(tokens, i); const args = splitArgs(tokens, open, match[open]);
       const arg = args[TEXT_ARG[tk.v]];
       if (!arg) return;
       for (let j = arg[0]; j < arg[1]; j++) {
         if (tokens[j].k === 'str' && !inT[j]) {
           for (const x of [tokens[j].v, ...tokens[j].variants]) add(j, x, CUE_CALLS.has(tk.v) ? 'cue' : 'message', 1);
         }
+      }
+    });
+
+    // A plain string shown as a dialogue line, a fact or a mode blurb (text:, body:, blurb:). In a file
+    // with a Level 1 table (LEVEL1_FROM) the lines after its marker are Level 1's, the rest Level 4's;
+    // elsewhere both Levels see the same text, so the Level 1 limit applies.
+    tokens.forEach((tk, i) => {
+      if (tk.k !== 'id' || !TEXT_KEYS.has(tk.v) || tokens[i + 1]?.v !== ':') return;
+      let depth = 0; let j = i + 2;
+      for (; j < tokens.length; j++) {
+        const x = tokens[j];
+        if (x.k !== 'p') continue;
+        if ('([{'.includes(x.v)) depth++;
+        else if (')]}'.includes(x.v)) { if (depth === 0) break; depth--; } else if (x.v === ',' && depth === 0) break;
+      }
+      const level = LEVEL1_FROM[file] ? (line(tk.pos) >= markerLine ? 1 : 4) : 1;
+      for (let k = i + 2; k < j; k++) {
+        if (tokens[k].k === 'str' && !inT[k]) for (const x of [tokens[k].v, ...tokens[k].variants]) add(k, x, 'message', level);
       }
     });
 
@@ -216,6 +279,7 @@ function sourceTexts() {
       add(args[0][0], tokens[args[0][0]].v, 'message', 4);
       add(args[1][0], tokens[args[1][0]].v, 'message', 1);
     });
+    }
   }
   return found;
 }

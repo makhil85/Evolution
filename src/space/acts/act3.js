@@ -80,7 +80,7 @@ export function act3Steps(game) {
     {
       id: 'a3_mars_scan', act: 3,
       title: t('Orbit Mars and scan it', 'Go round Mars'),
-      objective: t('Easy: fly into the blinking circle. Hard: brake at your lowest point.', 'Fly into the blinking circle. Mars catches you!'),
+      objective: t('Easy and Medium: fly into the blinking circle. Hard: brake at your lowest point.', 'Fly into the blinking circle. Mars catches you!'),
       markers: ['mars'],
       // Keeps the Mars banner going (Level 1 playtest: with no transfer
       // target she drifted with no guidance). Lead 2026-10-07: a steady orbit
@@ -179,7 +179,7 @@ export function act3Steps(game) {
     {
       id: 'a3_build_wings', act: 3,
       title: 'Build Big Solar Wings',
-      objective: t('Build Big Solar Wings: open the bay under Mined (4 silicon, 2 metal).', 'Build Big Solar Wings in the upgrade bay.'),
+      objective: t('Build Big Solar Wings: open the bay under Mined (4 silicon, 2 metal).', 'Build Big Solar Wings: the bay under Mined.'),
       markers: ['ceres'],
       async enter() { lastOfferAt = 0; await offerBuildLoop(); },
       check(ctx, states, stepTime) {

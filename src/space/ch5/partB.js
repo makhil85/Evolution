@@ -42,7 +42,7 @@ function legSteps(game, { from, to, act, say, beat, ids }) {
     {
       id: ids.window, act,
       title: t(`Catch the ${To} window`, `Head for ${To}`),
-      objective: t(`Time warp to BURN NOW. Then hold Space until the dotted line reaches ${To}.`, `On green BURN NOW, hold Space to reach ${To}.`),
+      objective: t(`Time warp to BURN NOW. Then hold Space until the dotted line reaches ${To}.`, 'Time warp to green BURN NOW, then hold Space.'),
       markers: [to],
       aim: 'prograde',
       transfer: to,
@@ -161,7 +161,7 @@ export function partBSteps(game) {
     {
       id: 'c5_to_pluto', act: 3,
       title: t('Catch the Pluto window', 'Head for Pluto'),
-      objective: t('On BURN NOW, hold Space until the line passes Pluto. Let go to cruise.', 'On green BURN NOW, hold Space to reach Pluto.'),
+      objective: t('On BURN NOW, hold Space until the line passes Pluto. Let go to cruise.', 'Time warp to green BURN NOW, then hold Space.'),
       markers: ['pluto'],
       aim: 'prograde',
       transfer: 'pluto',
