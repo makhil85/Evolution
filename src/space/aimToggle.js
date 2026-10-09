@@ -9,6 +9,7 @@
 // It sits in the one status line with Autopilot and Freeze (hud/toggleBar.js).
 
 import { toggleBar, paintToggle } from './hud/toggleBar.js';
+import { anyCardOpen } from './hud/modalQueue.js';
 
 /** @param {object} game  reads game.mode, game.autopilot; sets game.manualAim */
 export function createAimToggle(game) {
@@ -42,7 +43,8 @@ export function createAimToggle(game) {
     if (e.code !== 'KeyT' || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
     const t = e.target;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
-    if (document.querySelector('.sp-modal button')) return;
+    // A card (a question, the Retry card...) has the keyboard: T waits.
+    if (anyCardOpen()) return;
     toggle();
   });
   paint();

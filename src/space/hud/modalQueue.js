@@ -13,6 +13,9 @@
 // she is still steering.
 
 let chain = Promise.resolve();
+// Bumped by resetModalTurns(): a turn asked before the reset never runs, even
+// when the turn ahead of it settles later (a cancelled Ready button does).
+let epoch = 0;
 
 /**
  * Run `fn` once every earlier turn has settled. Returns fn's promise. A turn
@@ -22,7 +25,8 @@ let chain = Promise.resolve();
  * @returns {Promise<T>}
  */
 export function inModalTurn(fn) {
-  const run = chain.then(fn);
+  const mine = epoch;
+  const run = chain.then(() => (mine === epoch ? fn() : new Promise(() => {})));
   chain = run.catch(() => {});
   return run;
 }
@@ -36,5 +40,18 @@ export function inModalTurn(fn) {
  * abandoned turns' promises simply never settle, as a replaced card's always did.
  */
 export function resetModalTurns() {
+  epoch += 1;
   chain = Promise.resolve();
+}
+
+/**
+ * True while any card is on screen: the HUD's modal host (question, fact,
+ * dialogue, pause menu...), the Retry card (retry.js) or a play-mode card
+ * (play/ui.js openLayer). Keys that toggle things (T, F, P, Enter on Ready)
+ * stay quiet then: the card has the keyboard.
+ * @returns {boolean}
+ */
+export function anyCardOpen() {
+  if (typeof document === 'undefined') return false;
+  return !!document.querySelector('.sp-modal:not([hidden]), .sp-retry-card, .pl-back');
 }

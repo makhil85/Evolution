@@ -78,7 +78,15 @@ export function createOverlays(host) {
       next.type = 'button';
       actions.appendChild(next);
 
-      const advance = (e) => { e.stopPropagation(); if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); step(); } };
+      // Done when the last line is read, Esc closes it, or another card replaced
+      // it (a jump): then its Enter listener must not touch the card on screen.
+      let done = false;
+      const drop = () => { done = true; host.backdrop.removeEventListener('keydown', advance); };
+      const advance = (e) => {
+        if (done || !who.isConnected) { drop(); return; }
+        e.stopPropagation();
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); step(); }
+      };
 
       host.open((root) => {
         root.appendChild(who);
@@ -88,7 +96,7 @@ export function createOverlays(host) {
         render();
         host.backdrop.addEventListener('keydown', advance);
         next.addEventListener('click', step);
-      }, { onEscape: () => { host.backdrop.removeEventListener('keydown', advance); host.close(); resolve(); } });
+      }, { onEscape: () => { drop(); host.close(); resolve(); } });
 
       function render() {
         const line = list[i];
@@ -98,8 +106,9 @@ export function createOverlays(host) {
         next.textContent = i === list.length - 1 ? 'Continue' : 'Next';
       }
       function step() {
+        if (done) return;
         i += 1;
-        if (i >= list.length) { host.backdrop.removeEventListener('keydown', advance); host.close(); resolve(); return; }
+        if (i >= list.length) { drop(); host.close(); resolve(); return; }
         render();
       }
     });

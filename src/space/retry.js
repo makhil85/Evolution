@@ -7,6 +7,8 @@
 // the button, the key and the "are you sure?" card. Esc only opens it when no
 // other card or the big map is open (those use Esc to close).
 
+import { anyCardOpen } from './hud/modalQueue.js';
+
 /**
  * @param {object} game  needs game.missions.retryFromCheckpoint(), game.hud
  */
@@ -39,7 +41,12 @@ export function createRetry(game) {
   (hud.root || document.body).appendChild(btn);
 
   let card = null;
-  function close() { card?.remove(); card = null; game.bus?.emit?.('ui-modal', false); }
+  // The game is unpaused only when no other card (a question, the map, a
+  // play-mode card) is still up under this one.
+  function close() {
+    card?.remove(); card = null;
+    if (!anyCardOpen() && !game.hud?.map?.isOpen?.()) game.bus?.emit?.('ui-modal', false);
+  }
   function open() {
     if (card) return;
     card = document.createElement('div');
@@ -64,6 +71,8 @@ export function createRetry(game) {
   // Esc opens the game's pause menu (hud.js), which has "Try again from my
   // last question"; that asks here. Esc closes this card.
   game.bus?.on?.('retry-request', () => open());
+  // A step jump (missions.jump) puts every card away, this one too.
+  game.bus?.on?.('cards-reset', () => { if (card) close(); });
   addEventListener('keydown', (e) => {
     if (e.code === 'Escape' && card) { e.preventDefault(); e.stopImmediatePropagation(); close(); }
   }, true);
