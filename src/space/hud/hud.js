@@ -14,6 +14,7 @@
 //   hud.setMarkers([...])
 //   hud.showControls()             // H key
 //   hud.showEnd(...)
+//   hud.closeCards()               // the step engine's jump: close every card up
 //   hud.setVisible(bool)
 //
 // THE POINTER-EVENTS RULE (see hud.css) means this overlay never eats the
@@ -438,11 +439,21 @@ export class Hud {
 
   /** @returns {Promise<'again'>} */
   showEnd(data) {
-    return this._overlays.showEnd(data);
+    return inModalTurn(() => this._overlays.showEnd(data));
   }
 
   isModalOpen() {
     return this._modalHost.isOpen() || this.map.isOpen();
+  }
+
+  /**
+   * Close whatever the HUD has up (the card host: a question, a dialogue, a
+   * fact, the pause menu; and the big map). Used by the step engine's jump, so
+   * the new step's card is not put up under an old one.
+   */
+  closeCards() {
+    this._modalHost.close();
+    if (this.map.isOpen()) this.map.close();
   }
 
   // --- misc ------------------------------------------------------------

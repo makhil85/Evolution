@@ -18,6 +18,7 @@
 import { t } from './level.js';
 import { OUTER } from './chapter.js';
 import { toggleBar, paintToggle } from './hud/toggleBar.js';
+import { anyCardOpen } from './hud/modalQueue.js';
 import { BODIES, AP_WARP_FAST } from './contracts.js';
 
 // Its speed limit (game.autopilotWarpMax, an index into WARP_LEVELS) starts at
@@ -93,7 +94,8 @@ export function createAutopilot(game, { controls, hud }) {
   btn.addEventListener('click', () => { btn.blur(); toggle(); });
   addEventListener('keydown', (e) => {
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
-    if (e.code === 'KeyP' && !e.repeat) { toggle(); return; }
+    // P waits while a card has the keyboard (a question, the Retry card).
+    if (e.code === 'KeyP' && !e.repeat) { if (!anyCardOpen()) toggle(); return; }
     // Her own hands on the controls take over (not on Easy, where it flies for her).
     if (on && !easyAuto && e.isTrusted && MANUAL_KEYS.has(e.code)) { userOff = true; setOn(false, 'You took the controls. Autopilot off.'); }
   }, true);
