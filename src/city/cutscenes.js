@@ -173,10 +173,10 @@ function makeWaterWheel() {
   m.cyl(0.38, 0.38, 0.5, 0, 0, -0.25, 0x6c757d, { rx: Math.PI / 2, seg: 12 });    // hub
   group.add(m.build());
   const gear = makeGear({ r: 0.95, t: 0.22, teeth: 12, color: 0xffc233 });
-  gear.position.set(0, 0, 1.15);
+  gear.position.set(0, 0, 0.5);          // on the axle (it runs z -0.95 .. 0.95)
   group.add(gear);
   const gear2 = makeGear({ r: 0.5, t: 0.22, teeth: 8, color: 0xced4da });
-  gear2.position.set(WHEEL.x + 1.42, WHEEL.y, WHEEL.z + 1.15);
+  gear2.position.set(WHEEL.x + 1.42, WHEEL.y, WHEEL.z + 0.5);
   return { group, gear2 };
 }
 
@@ -266,32 +266,92 @@ function blueprintTexture() {
   return new THREE.CanvasTexture(c);
 }
 
-/** The inside of the workshop: a set off the map (a table, a plan unrolling on it). */
-function buildRoom() {
+/** The sci-fi kit props the workshop uses, when they load (the set is fine without them). */
+async function loadRoomKit() {
+  try {
+    const { loadModels } = await import('../space/ch6/interior/models.js');
+    return await loadModels(['props/Prop_Computer', 'props/Prop_Crate3', 'props/Prop_Crate4', 'props/Prop_Chest', 'props/Prop_Barrel_Large']);
+  } catch (err) {
+    console.warn('[cutscenes] workshop kit props not loaded:', err?.message || err);
+    return null;
+  }
+}
+
+/**
+ * The inside of the workshop: a set off the map. Walls with a wainscot and
+ * seams, shelves with tool cases and gears, a workbench with a drawer and a
+ * vise, a drafting lamp with a warm pool of light on the blueprint, and (when
+ * they load) sci-fi kit props. Our parts are one Mesher mesh plus a few toon
+ * meshes; the kit's parts are placed at their own height.
+ */
+async function buildRoom() {
+  const kit = await loadRoomKit();
   const group = new THREE.Group();
   group.position.set(ROOM.x, 0, ROOM.z);
   group.visible = false;
-  group.add(
-    prop(10, 0.3, 8, 0, -0.15, 0, 0xd9b98a),                 // floor
-    prop(10, 4.5, 0.3, 0, 2.25, -4.15, 0xd0ebff),            // back wall
-    prop(0.3, 4.5, 8, -5.15, 2.25, 0, 0xd0ebff),
-    prop(0.3, 4.5, 8, 5.15, 2.25, 0, 0xd0ebff),
-    prop(3.2, 0.18, 1.6, 0, 1.0, 0, 0x8c5a2b),              // table top
-  );
-  for (const [x, z] of [[-1.45, -0.65], [1.45, -0.65], [-1.45, 0.65], [1.45, 0.65]]) {
-    group.add(prop(0.16, 0.9, 0.16, x, 0.45, z, 0x6b4423));
+  const code = new THREE.Group();      // ours: disposed by dispose()
+  const kitGroup = new THREE.Group();  // the kit's: disposed by kit.dispose()
+  group.add(code, kitGroup);
+
+  const m = new Mesher({ outlineT: 0.04 });
+  const WALL = 0xcfe3ee, WAINS = 0x8fb3c9, SEAM = 0x9fbfd0, BENCH = 0x8c5a2b, LEG = 0x6b4423, STEEL = 0x868e96;
+  for (let i = 0; i < 8; i++) m.box(10, 0.3, 1, 0, -0.3, -3.5 + i, i % 2 ? 0xcca877 : 0xd9b98a, { outline: false }); // floor boards
+  m.box(10, 4.5, 0.3, 0, 0, -4.15, WALL);                       // back wall
+  m.box(0.3, 4.5, 8, -5.15, 0, 0, WALL);                        // side walls
+  m.box(0.3, 4.5, 8, 5.15, 0, 0, WALL);
+  m.box(10, 1.1, 0.06, 0, 0, -3.97, WAINS);                     // wainscot
+  m.box(0.06, 1.1, 8, -4.96, 0, 0, WAINS);
+  m.box(0.06, 1.1, 8, 4.96, 0, 0, WAINS);
+  for (let x = -3.75; x <= 3.75; x += 1.25) m.box(0.04, 4.5, 0.02, x, 0, -3.97, SEAM, { outline: false });
+  // shelves on the back wall, with tool cases; gears hang between them
+  for (const y of [1.5, 2.7]) m.box(6.0, 0.1, 0.8, 0, y, -3.55, BENCH);
+  m.box(0.7, 0.4, 0.5, -2.2, 1.6, -3.55, 0xe03131);
+  m.box(0.6, 0.35, 0.5, -1.3, 1.6, -3.55, 0x1971c2);
+  m.box(0.8, 0.45, 0.5, 1.8, 2.8, -3.55, 0xf08c00);
+  m.box(0.5, 0.3, 0.5, -2.0, 2.8, -3.55, 0x2f9e44);
+  // the workbench: a top, a drawer, four legs, stretchers, a vise
+  m.box(3.2, 0.16, 1.6, 0, 0.92, 0, BENCH);
+  m.box(3.0, 0.45, 0.04, 0, 0.44, 0.8, LEG);
+  for (const [x, z] of [[-1.5, -0.7], [1.5, -0.7], [-1.5, 0.7], [1.5, 0.7]]) m.box(0.12, 0.92, 0.12, x, 0, z, LEG);
+  m.box(2.9, 0.1, 0.08, 0, 0.3, -0.7, LEG);
+  m.box(2.9, 0.1, 0.08, 0, 0.3, 0.7, LEG);
+  m.box(0.5, 0.25, 0.35, -1.25, 1.08, 0.55, STEEL);
+  // the drafting lamp: a base and an arm, a bulb in the shade
+  m.cyl(0.22, 0.22, 0.06, 1.25, 1.08, -0.5, STEEL, { seg: 12 });
+  m.tube(1.25, 1.12, -0.5, 0.2, 2.2, 0, 0.035, STEEL);
+  m.sph(0.1, 0.2, 2.05, 0, 0xfff3bf, { glow: true, seg: 8, segV: 6 });
+  if (!kit) {
+    // no kit: a few code crates and a barrel stand in for them
+    m.box(0.9, 0.9, 0.9, -3.6, 0, 1.9, 0xc08552);
+    m.box(0.7, 0.7, 0.7, -2.6, 0, 2.2, 0xa2aab2);
+    m.cyl(0.5, 0.5, 1.0, 3.9, 0, -2.6, 0x6c757d, { seg: 12 });
   }
+  code.add(m.build());
+  for (const [x, y, z, r, c] of [[0.6, 2.2, -3.4, 0.36, 0xffc233], [1.25, 2.2, -3.4, 0.22, 0xced4da], [-0.6, 1.9, -3.4, 0.28, 0xffc233]]) {
+    const g = makeGear({ r, t: 0.14, teeth: 10, color: c });
+    g.position.set(x, y, z);
+    code.add(g);
+  }
+  const shade = new THREE.Mesh(new THREE.ConeGeometry(0.5, 0.45, 14, 1, true),
+    new THREE.MeshToonMaterial({ color: 0x2f9e44, gradientMap: toonRamp, side: THREE.DoubleSide }));
+  shade.position.set(0.2, 2.25, 0);
+  // a warm pool of light on the plan
+  const pool = new THREE.Mesh(new THREE.CircleGeometry(1.1, 28),
+    new THREE.MeshBasicMaterial({ color: 0xfff1c1, transparent: true, opacity: 0.22, depthWrite: false, blending: THREE.AdditiveBlending }));
+  pool.rotation.x = -Math.PI / 2;
+  pool.position.set(0.2, 1.13, 0);
+  pool.renderOrder = 3;
+  code.add(shade, pool);
+
+  // the blueprint, on the bench, unrolling from its left roll
   const tex = blueprintTexture();
-  const paperMat = new THREE.MeshBasicMaterial({ map: tex });
-  const paper = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 1.5), paperMat);
+  const paper = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 1.5), new THREE.MeshBasicMaterial({ map: tex }));
   paper.rotation.x = -Math.PI / 2;
   paper.position.set(-1.3, 1.12, 0);
   const roll = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1.5, 12), toon(0xf1e3c0));
   roll.rotation.x = Math.PI / 2;
   roll.position.set(-1.3, 1.22, 0);
-  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.25, 14, 10), new THREE.MeshBasicMaterial({ color: 0xfff1c1 }));
-  lamp.position.set(0, 3.0, 0);
-  group.add(paper, roll, lamp);
+  code.add(paper, roll);
   // The paper unrolls from its left roll: scale the sheet, slide the roll along it.
   const unroll = (k) => {
     const u = clamp01(k / 0.8);
@@ -299,7 +359,28 @@ function buildRoom() {
     paper.position.x = -1.3 + (u * 2.6) / 2;
     roll.position.x = -1.3 + u * 2.6;
   };
-  return { group, unroll };
+
+  // The kit props, each at its own height and standing on the floor or the bench.
+  const place = (name, height, x, y0, z, ry) => {
+    if (!kit) return;
+    const sc = height / kit.size(name).y;
+    const o = kit.object(name);
+    o.scale.setScalar(sc);
+    o.position.set(x, y0 - kit.min(name).y * sc, z);
+    o.rotation.y = ry;
+    kitGroup.add(o);
+  };
+  place('props/Prop_Computer', 0.7, 1.1, 1.08, 0.5, -0.3);
+  place('props/Prop_Crate3', 0.8, -3.6, 0, 1.9, 0.4);
+  place('props/Prop_Crate4', 0.6, -2.6, 0, 2.2, -0.2);
+  place('props/Prop_Chest', 0.7, -3.9, 0, -2.6, 0.3);
+  place('props/Prop_Barrel_Large', 1.0, 3.9, 0, -2.6, 0);
+
+  return {
+    group,
+    unroll,
+    dispose() { disposeTree(code); kit?.dispose(); },
+  };
 }
 
 // --- the films ----------------------------------------------------------------
@@ -308,7 +389,7 @@ function buildRoom() {
  * The opening film. `run(secs, step)` is the chapter's timed move; `root` is
  * the city's world (unused here: the opening shows it as it is).
  */
-export async function playOpening({ run, scene, camera, newtonAt, chasePose, markers = () => {} }) {
+export async function playOpening({ run, scene, camera, root = null, newtonAt, chasePose, markers = () => {} }) {
   const still = reducedMotion();
   const stage = new THREE.Group();
   scene.add(stage);
@@ -332,9 +413,13 @@ export async function playOpening({ run, scene, camera, newtonAt, chasePose, mar
     // From the north-east, over the grass: the Science Center stays out of the frame.
     arrive: cam([-19, 8, 0], [here.pos.x, here.pos.y, here.pos.z], [START.x - 1.5, 1.0, START.z], [here.look.x, here.look.y, here.look.z]),
   };
+  // The town's buildings are one merged mesh; the road shot hides all of it so the
+  // Science Center is not in the foreground. It comes back for the bridge shot.
+  const town = root?.getObjectByName('town') ?? null;
+  const setTown = (on) => { if (town) town.visible = on; };
   const frames = {
-    road: (t, k) => aim(camera, views.road, still ? 0.5 : ease(k)),
-    bridge: (t, k) => aim(camera, views.bridge, still ? 0.5 : ease(k)),
+    road: (t, k) => { setTown(false); aim(camera, views.road, still ? 0.5 : ease(k)); },
+    bridge: (t, k) => { setTown(true); aim(camera, views.bridge, still ? 0.5 : ease(k)); },
     wheel: (t, k) => {
       aim(camera, views.wheel, still ? 0.5 : ease(k));
       const a = still ? 0.8 : t * 1.4;                       // the wheel turns; the gears mesh with it
@@ -354,6 +439,7 @@ export async function playOpening({ run, scene, camera, newtonAt, chasePose, mar
   } finally {
     markers(false);
     cap.remove();
+    setTown(true);
     scene.remove(stage);
     disposeTree(stage);
   }
@@ -371,12 +457,12 @@ export async function playEnding({ run, scene, camera, root, markers = () => {} 
   const cap = caption();
   const cart = makeCart();
   const truss = buildTruss();
-  const room = buildRoom();
+  const room = await buildRoom();
   stage.add(cart, truss.mesh);
   scene.add(room.group);
   const views = {
     open: cam([22.5, 8.0, 19], [40, 7.5, 12], [WORKSHOP.x, 2.2, WORKSHOP.z], [WORKSHOP.x, 2.2, WORKSHOP.z]),
-    truss: cam([17, 3.1, 16.5], [33, 3.4, 16.5], [24, 0.9, BRIDGE.z], [30, 0.9, BRIDGE.z]),
+    truss: cam([17, 7.5, 17.5], [33, 7.5, 17.5], [24, 0.6, BRIDGE.z], [30, 0.6, BRIDGE.z]),
     plan: cam([ROOM.x - 0.9, 2.5, 3.9], [ROOM.x + 0.5, 2.2, 2.6], [ROOM.x, 1.0, 0], [ROOM.x, 1.0, 0]),
     out: cam([22, 8.5, 20], [27, 7.5, 16], [WORKSHOP.x, 2.5, WORKSHOP.z], [WORKSHOP.x, 2.5, WORKSHOP.z]),
   };
@@ -416,6 +502,6 @@ export async function playEnding({ run, scene, camera, root, markers = () => {} 
     scene.remove(stage);
     scene.remove(room.group);
     disposeTree(stage);
-    disposeTree(room.group);
+    room.dispose();
   }
 }

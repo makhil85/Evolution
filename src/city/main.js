@@ -491,7 +491,7 @@ async function main() {
     line: rules.state.builtFinal ? `Welcome back, ${heroName()}! The Engineering Workshop is built.` : t(`Pushes, pulls and machines: fix the city, build the bridge and raise the Engineering Workshop, ${heroName()}.`,
       `Pushes, pulls and machines! Fix the city and build the bridge, ${heroName()}.`),
     lookAt: new THREE.Vector3((BOUNDS.minX + BOUNDS.maxX) / 2, 0, (BOUNDS.minZ + BOUNDS.maxZ) / 2),
-    scene: (run) => playOpening({ run, scene, camera, newtonAt: newton.at, chasePose, markers: filmMarkers }),
+    scene: (run) => playOpening({ run, scene, camera, root: world.root, newtonAt: newton.at, chasePose, markers: filmMarkers }),
   });
   // First time in a village chapter: ask how much help she wants (saved, shared by Chapters 1-3).
   if (savedPlayModeId() === null) {
