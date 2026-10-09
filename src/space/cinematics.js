@@ -69,8 +69,8 @@ function injectCss() {
 /** A card's words fade in over this long: the reading time starts after it. */
 export const CARD_FADE_S = 1;
 
-/** Seconds a card's words must stay up: their reading time (5-10 s, readMs) plus the fade in. */
-export function cardSeconds(...parts) { return readMs(parts.filter(Boolean).join(' ')) / 1000 + CARD_FADE_S; }
+/** Seconds a card's words must stay up: their reading time (5-10 s, readMs), the fade in, and a frame of margin (the film's clock samples at 60 fps). */
+export function cardSeconds(...parts) { return readMs(parts.filter(Boolean).join(' ')) / 1000 + CARD_FADE_S + 1 / 30; }
 
 export function buildOverlay({ eyebrow, title, sub, startBlack }) {
   injectCss();

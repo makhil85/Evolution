@@ -216,7 +216,7 @@ export function buildStarMap3D() {
     const l2 = document.createElement('div'); l2.style.cssText = 'font-weight:500;font-size:13px;color:#cfe0ff'; l2.textContent = distanceWords(st);
     label.append(l1, l2);
     document.body.appendChild(label);
-    return { st, p, label, mesh, glow };
+    return { st, p, label, mesh, glow, px: NaN, py: NaN, hidden: undefined };
   });
 
   // The target's ring, turned to face the camera each frame.
@@ -265,8 +265,11 @@ export function buildStarMap3D() {
         s.label.style.opacity = i < shown ? '1' : '0';
         v.copy(s.p).project(camera);
         const x = (v.x * 0.5 + 0.5) * w; const y = (-v.y * 0.5 + 0.5) * h;
-        s.label.style.transform = `translate(${Math.round(x + 14)}px, ${Math.round(y - 30)}px)`;
-        s.label.style.display = v.z > 1 ? 'none' : '';
+        // Written only when the pixel position or the visibility changes (five labels, every frame).
+        const tx = Math.round(x + 14); const ty = Math.round(y - 30);
+        if (tx !== s.px || ty !== s.py) { s.px = tx; s.py = ty; s.label.style.transform = `translate(${tx}px, ${ty}px)`; }
+        const hide = v.z > 1;
+        if (hide !== s.hidden) { s.hidden = hide; s.label.style.display = hide ? 'none' : ''; }
       });
       const revealed = shown >= stars.length;
       ring.visible = revealed; line.visible = revealed;
