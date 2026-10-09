@@ -371,9 +371,9 @@ ok(!isPlayModalOpen(), 'input lock is a no-op in node');
 
 // ---------------------------------------------------------------------------
 // The HUD's messages (src/game/hud.js), on a small fake DOM and a fake clock.
-// Each message stays up readMs(text); a long one (needsClick) is an OK card that
-// pauses the game until she clicks, Enter or Space; messages wait in line; and
-// the HUD builds no key legend at startup.
+// Each message stays up readMs(text), or until she clicks it; a long one (needsClick)
+// is an OK card that stays until she clicks it. Neither locks her walk (lead
+// 2026-10-09). Messages wait in line; and the HUD builds no key legend at startup.
 // ---------------------------------------------------------------------------
 {
   const realPerf = globalThis.performance;
@@ -532,54 +532,51 @@ ok(!isPlayModalOpen(), 'input lock is a no-op in node');
   advance(2);
   ok(hud._toasts.map((e) => e.message).join('|') === 'Beta two.|Gamma three.', 'when the first goes, the next in line comes up');
 
-  // --- a long message is an OK card that pauses the game ------------------------
-  // OK (and Enter, Space) work only once the wait is over: she has to read it first.
+  // --- a long message is an OK card that stays until she clicks it ---------------
+  // It does not lock her walk (lead 2026-10-09): keys never close it. OK, or a click
+  // on the card, works only once the wait is over: she has to read it first.
+  const CARD = () => hud._readBackdrop.querySelector('.rv-modal__card');
   settle();
   ok(needsClick(LONG) && readMs(LONG) === 10000, 'a long line needs a click');
   hud.toast(LONG, 'info');
   ok(hud._read !== null && hud._read.message === LONG, 'a long message opens the read card');
   ok(!hud._readBackdrop.hidden && hud._readText.textContent === LONG, 'the card shows the whole text');
-  ok(body.dataset.playModal === '1', 'the game is paused under the card');
-  ok(body.classList.contains('rv-question-open'), 'the Clue button and the Help chip step away (question focus class)');
+  ok(hud.isReadPaused(), 'the game clocks pause under the card');
+  ok(body.dataset.playModal === undefined && !isPlayModalOpen(), 'the card does not lock her walk');
+  ok(!body.classList.contains('rv-question-open'), 'the Clue button and the Help chip stay (no focus mode)');
   ok(hud._toasts.length === 0, 'the long message is not a toast');
   ok(hud._readOk.disabled === true, 'OK is dimmed until the wait is over');
   hud.toast('Waits behind the card.', 'info');
   advance(3000);
   ok(hud._toasts.length === 0, 'nothing comes up while the card is open');
-  hud._readOk.dispatch('click');
-  pressKey('Enter');
-  ok(hud._read !== null, 'OK and Enter do nothing before the wait is over');
+  CARD().dispatch('click');
+  ok(hud._read !== null, 'a click does nothing before the wait is over');
   advance(READ_MIN_MS - 3000);
   ok(hud._readOk.disabled === false, 'OK works once the wait is over');
-  hud._readOk.dispatch('click');
-  ok(hud._read === null && hud._readBackdrop.hidden, 'OK closes the card');
-  ok(body.dataset.playModal === undefined, 'OK lets the game run again');
-  ok(!body.classList.contains('rv-question-open'), 'the Clue button and the Help chip come back');
+  CARD().dispatch('click');
+  ok(hud._read === null && hud._readBackdrop.hidden, 'a click on the card closes it');
+  ok(!hud.isReadPaused(), 'the game clocks run again');
   advance(1600);
   ok(hud._toasts.length === 1 && hud._toasts[0].message === 'Waits behind the card.', 'the waiting message comes up after the card');
 
-  // Enter and Space close the card too, from anywhere on the page, once it is ready.
+  // Keys leave the card up: she walks, jumps and presses E while it shows.
   settle();
-  hud.toast(`${LONG} Enter closes it.`, 'info');
+  hud.toast(`${LONG} Keys do not close it.`, 'info');
   ok(hud._read !== null, 'a second long message opens the card');
   advance(READ_MIN_MS);
   pressKey('Enter');
-  ok(hud._read === null && body.dataset.playModal === undefined, 'Enter closes the card');
-  advance(3000);   // a reading pause waits 3 s of free play after the last one (the Enter closed one)
-  hud.toast(`${LONG} Space closes it.`, 'info');
-  advance(READ_MIN_MS);
   pressKey(' ');
-  ok(hud._read === null && body.dataset.playModal === undefined, 'Space closes the card');
+  pressKey('ArrowUp', true);
+  ok(hud._read !== null && body.dataset.playModal === undefined, 'Enter, Space and arrows leave the card up, and she is not locked');
+  CARD().dispatch('click');
+  ok(hud._read === null, 'a click closes it');
   settle();
 
-  // A held key repeats: its repeats never close the card; only a fresh press does.
-  hud.toast(`${LONG} Held key.`, 'info');
-  advance(READ_MIN_MS);
-  pressKey(' ', true);
-  pressKey(' ', true);
-  ok(hud._read !== null, 'a held Space does not close the card');
-  pressKey(' ');
-  ok(hud._read === null, 'a fresh Space press closes it');
+  // A tap on a short message clears it (lead 2026-10-09: "until she clicks it").
+  hud.toast(L4, 'info');
+  ok(hud._toasts.length === 1, 'a message is on screen');
+  hud._toasts[0].node.dispatch('click');
+  ok(hud._toasts.length === 0, 'a click clears the message');
   settle();
 
   // A long message waits its turn behind a short one on screen (no overlap).
@@ -590,8 +587,8 @@ ok(!isPlayModalOpen(), 'input lock is a no-op in node');
   advance(readMs('A short one first.'));
   ok(hud._read !== null, 'and opens once the screen is clear');
   advance(READ_MIN_MS);
-  hud._readOk.dispatch('click');
-  ok(hud._read === null, 'OK closes it once the wait is over');
+  CARD().dispatch('click');
+  ok(hud._read === null, 'a click closes it once the wait is over');
 
   // --- pickup lines: merge while they wait, messages that matter go first ----------
   settle();
@@ -634,8 +631,8 @@ ok(!isPlayModalOpen(), 'input lock is a no-op in node');
 
   // --- the read gate (lead 2026-10-09): statuses at once, lines to read wait -------
   // Her input is a key press (pressKey). A short status shows while she steers and
-  // never pauses. A line to read waits for IDLE_MS with no input, then the game is
-  // paused (her movement locked) for readMs, and it lets go by itself.
+  // never pauses. A line to read waits for IDLE_MS with no input, then it stays up for
+  // readMs, and it lets go by itself. She walks the whole time (no lock).
   {
     settle();
     const GUIDE = 'Move closer to a resource, board, lab, locked room, or foundation.';
@@ -644,25 +641,25 @@ ok(!isPlayModalOpen(), 'input lock is a no-op in node');
     pressKey('ArrowUp', true); advance(100);
     hud.toast('+3 wood', 'good');
     ok(hud._toasts.some((e) => e.message === '+3 wood'), 'a short status shows at once while she steers');
-    ok(body.dataset.playModal === undefined, 'a short status does not pause the game');
+    ok(!hud.isReadPaused(), 'a short status does not pause the game');
     settle();
 
     for (let i = 0; i < 6; i += 1) { pressKey('ArrowUp', true); advance(500); }   // 3 s of steering
     hud.toast(GUIDE, 'info');
     ok(hud._toasts.length === 0 && hud._toastQueue.length === 1, 'a line to read waits while she steers');
-    ok(body.dataset.playModal === undefined, 'nothing is paused while the line waits');
+    ok(!hud.isReadPaused(), 'nothing is paused while the line waits');
     advance(1000);   // 1.5 s since her last key
     ok(hud._toasts.length === 0, 'it still waits: she has had no input for under 2 s');
     advance(IDLE_MS);
     ok(hud._toasts.length === 1 && hud._toasts[0].message === GUIDE, 'it shows once she has had 2 s with no input');
-    ok(body.dataset.playModal === '1', 'the game is paused while she reads it');
+    ok(hud.isReadPaused() && !isPlayModalOpen() && body.dataset.playModal === undefined, 'the line is up and she is not locked');
     const shownAt = hud._toasts[0].shownAt;
     pressKey('ArrowUp'); advance(100);   // she presses keys during the pause
-    ok(body.dataset.playModal === '1' && hud._toasts.length === 1, 'pressing keys does not end the reading pause');
+    ok(hud.isReadPaused() && hud._toasts.length === 1, 'pressing keys does not end the line');
     advance(readMs(GUIDE) - 1 - (clock - shownAt));
-    ok(body.dataset.playModal === '1' && hud._toasts.length === 1, 'the game stays paused just before readMs');
+    ok(hud.isReadPaused() && hud._toasts.length === 1, 'the line stays up just before readMs');
     advance(1);
-    ok(body.dataset.playModal === undefined && hud._toasts.length === 0, 'the game resumes by itself after readMs');
+    ok(!hud.isReadPaused() && hud._toasts.length === 0, 'the line goes by itself after readMs, and the clocks run again');
     settle();
 
     // The next goal is a line to read even when it is short: it waits while she steers.
@@ -767,6 +764,19 @@ ok(!isPlayModalOpen(), 'input lock is a no-op in node');
     ok(aGone > 0 && bShown - aGone >= 2950 && bShown - aGone < 3700, `the next pause waits 3 s after the last ends (${bShown - aGone} ms)`);
     settle();
     ok(!hud.isReadPaused() && body.dataset.playModal === undefined, 'the game runs again between the pauses');
+
+    // A line to read holds whenIdle too (a card does not open over it), and she is not locked.
+    settle();
+    let readDone = false;
+    hud.toast(A, 'info');
+    ok(hud._toasts.some((e) => e.message === A) && !isPlayModalOpen(), 'a line to read is up, and she is not locked');
+    whenIdle(IDLE_MS).then(() => { readDone = true; });
+    advance(readMs(A) - 500);
+    await Promise.resolve(); await Promise.resolve();
+    ok(!readDone, 'whenIdle waits while a line to read is up');
+    advance(1000);
+    await Promise.resolve(); await Promise.resolve();
+    ok(readDone, 'whenIdle resolves once the line has gone');
 
     // whenIdle (readGate) also waits while a card or a reading pause holds the play lock.
     let idleDone = false;

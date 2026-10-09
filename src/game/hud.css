@@ -11,12 +11,13 @@
  * camera is dragged with the mouse ON that canvas. So:
  *
  *   .rv-hud and EVERY descendant are `pointer-events: none` by default;
- *   exactly five things opt back in, all listed in one block below:
+ *   exactly six things opt back in, all listed in one block below:
  *     - .rv-btn, .rv-choice          (buttons)
  *     - .rv-answer__input            (the text answer box)
  *     - .rv-parent, .rv-parent *     (the collapsed parent-hints disclosure)
  *     - .rv-quests, .rv-quests *     (the collapsed quest-list disclosure)
  *     - .rv-modal.is-open            (the modal backdrop, ONLY while open)
+ *     - .rv-toast                    (a message: a click clears it)
  *
  * Nothing else may take pointer events. A panel that does will silently eat the
  * camera drag wherever it overlaps, which reads as "the game is broken".
@@ -67,7 +68,8 @@
 .rv-hud .rv-parent *,
 .rv-hud .rv-quests,
 .rv-hud .rv-quests *,
-.rv-hud .rv-modal.is-open {
+.rv-hud .rv-modal.is-open,
+.rv-hud .rv-toast {
   pointer-events: auto;
 }
 
@@ -630,6 +632,7 @@
   display: flex;
   align-items: flex-start;
   gap: 8px;
+  cursor: pointer;
   padding: 10px 13px;
   border-radius: 13px;
   background: rgba(8, 12, 23, 0.9);
@@ -921,7 +924,23 @@
   outline-offset: 2px;
 }
 
-/* --- the read-it card: a long message waits for an OK click (hud.js) ----- */
+/* --- the read-it card: a long message waits for a click (hud.js) ----------- */
+
+/* No backdrop: she walks while it shows. It sits bottom-left with the messages,
+ * and only the card itself takes clicks (the backdrop is inert, see the top). */
+.rv-hud .rv-read {
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  justify-content: flex-start;
+  align-items: flex-end;
+  padding: 0 12px 14px;
+}
+
+.rv-hud .rv-read .rv-modal__card {
+  width: min(560px, 100%);
+  max-height: 50vh;
+}
 
 .rv-hud .rv-read__text {
   font-size: 19px;
