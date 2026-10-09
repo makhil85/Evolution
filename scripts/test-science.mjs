@@ -178,7 +178,8 @@ for (const level of [1, 4]) {
 
   // Wrong-answer wording.
   ok(l.text.wrongAnswer('m1') === (level === 1 ? 'Not quite. Try again! A grown-up can open Math Hints at the bottom.' : 'Not quite. Try again, or ask a parent to open the Math Hints tab at the bottom.'), `${tag}: math wrong-answer text`);
-  ok(l.text.wrongAnswer('force') === `Not quite. ${qs.force.hint}`, `${tag}: lab wrong-answer text shows the hint`);
+  // Lead 2026-10-09: no hints for the child at any Level.
+  ok(l.text.wrongAnswer('force') === (level === 1 ? 'Not quite. Try again!' : 'Not quite. Try again.') && !l.text.wrongAnswer('force').includes(qs.force.hint), `${tag}: lab wrong-answer text has no hint`);
 }
 
 // ---------------------------------------------------------------------------

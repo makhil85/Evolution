@@ -154,10 +154,10 @@ export const LESSON_7C = {
           { text: ['8 bacteria', '8 bacteria'], correct: true },
           { text: ['16 bacteria', '16 bacteria'] },
         ],
-        hint: ['After two hours there are 4. Now split each one once more.', 'After 2 hours there are 4. Split them once more.'],
+        hint: ['Double the number once for every pretend hour.', 'Double it once for each hour.'],
         why: ['1 becomes 2, then 4, then 8: doubling three times gives 8 bacteria.', '1, then 2, 4, 8: that is 8 bacteria.'],
       },
-      clue: [null, 'Each pretend hour the number doubles: 1, 2, 4, 8.'],
+      clue: [null, 'Each pretend hour the number doubles.'],
     },
     {
       title: ['The recycler’s helpers', 'The recycler’s helpers'],

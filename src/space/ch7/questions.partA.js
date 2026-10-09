@@ -31,7 +31,7 @@ export const CH7A_QUESTIONS = {
       `Light takes ${TAU_CETI_LY} years to get to Tau Ceti. Suppose our ship went at only 10% of light speed, one tenth as fast as light. ` +
       'How many years would the trip take at that speed? (Type a number.)',
     answers: [String(TAU_YEARS_AT_TENTH), `${TAU_YEARS_AT_TENTH} years`],
-    hint: 'One tenth as fast means ten times as long. Multiply 11.9 by 10.',
+    hint: 'One tenth as fast means ten times as long.',
     parentHint: `${TAU_CETI_LY} ÷ 0.1 = ${TAU_YEARS_AT_TENTH} years. At 10% of light speed a trip to Tau Ceti would take a very long time, so the drive goes to full power.`,
     success: `Yes! ${TAU_YEARS_AT_TENTH} years at a tenth of light speed. So the drive goes to full power, and we push on.`,
     doneMessage: 'Full power, then!',

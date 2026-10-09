@@ -207,8 +207,8 @@ export function createQuestionModal(host) {
               try { continueBtn.focus(); } catch { /* detached */ }
               return;
             }
-            const hint = question.hint || 'Have another go.';
-            showFeedback(`Not quite. ${hint} One more try!`, 'warn');
+            // Lead 2026-10-09: no hints for the child, at any Level.
+            showFeedback('Not quite. One more try!', 'warn');
             return;
           }
           answered = true;

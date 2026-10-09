@@ -159,19 +159,17 @@ export function playLens({ bus = null, mode = flyingMode(), rnd = Math.random } 
   let finishFn;
   const done = new Promise((r) => { finishFn = r; });
 
-  const hintText = () => (mode === 'easy' ? t('The real place is closer to the hole than it looks.', 'The real star is closer to the hole than it looks.') : '');
   const hardText = () => (mode === 'hard' ? t('Hard: a faint second image is on the far side. Read the bright one.', 'Read the bright star.') : '');
   function refresh() {
     const lives = '♥'.repeat(Math.max(0, g.lives));
     status.textContent = `${t('Stars found', 'Found')}: ${g.next} / ${g.stars.length}   ${lives}`;
     if (g.status === 'won') msg.textContent = t('You found them all! You read the bent light like a scientist.', 'You found them all!');
     else if (g.status === 'lost') msg.textContent = t('Out of tries. Light can be tricky! Have another go.', 'Oops! Have another go.');
-    else if (fb && !fb.hit) msg.textContent = mode === 'hard' ? t('Not there. Look at where the light comes from.', 'Not there. Try again.')
-      : t('Not quite. The light bent round the hole, so the real star is nearer the hole.', 'Not quite. Try nearer the hole.');
+    else if (fb && !fb.hit) msg.textContent = t('Not there. Try again.', 'Not there. Try again.');
     else if (fb && fb.hit) msg.textContent = mode === 'easy'
       ? t('Yes! The real star was a little nearer the hole than it looked.', 'Yes! The real star was a little nearer the hole.')
       : t('Yes! The light bent round the hole, so the star looked further out.', 'Yes! That is where it really is.');
-    else msg.textContent = [hintText(), hardText()].filter(Boolean).join(' ');
+    else msg.textContent = hardText();
     againBtn.hidden = g.status !== 'lost';
     doneBtn.disabled = g.status !== 'won';
     doneBtn.classList.toggle('is-ready', g.status === 'won');
