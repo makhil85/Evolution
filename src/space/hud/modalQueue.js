@@ -26,3 +26,15 @@ export function inModalTurn(fn) {
   chain = run.catch(() => {});
   return run;
 }
+
+/**
+ * Abandon the queue (the step engine's debug jump, missions.jump). Turns still
+ * waiting behind an unanswered card never start, and turns asked after this run
+ * at once. Lead 2026-10-09: a jump while a card is up (the flight-mode picker,
+ * an unanswered question) left the new step's dialogue queued behind it for good.
+ * The card on screen is replaced by the next one (the host has one slot), so the
+ * abandoned turns' promises simply never settle, as a replaced card's always did.
+ */
+export function resetModalTurns() {
+  chain = Promise.resolve();
+}

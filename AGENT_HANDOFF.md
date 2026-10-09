@@ -1,6 +1,8 @@
 # Rocket Village: handoff for a new AI agent
 
-Written 2026-10-08, at `main` after PR #16. Read this first, then the
+Written 2026-10-08 at `main` after PR #16; updated 2026-10-08 (late) for the
+open PRs #22-#34 and Chapter 7. Read this first (section 11 lists the
+mistakes the lead keeps catching: read it before every PR), then the
 detailed docs it points to. Where this file and an older note disagree, this
 file and the newest `HANDOFF.md` session notes win.
 
@@ -11,7 +13,7 @@ file and the newest `HANDOFF.md` session notes win.
 | `HANDOFF.md` | Running log of every session: what changed, how things work, how to test. Newest sections at the bottom. |
 | `PLAN.md` | The work list (older; "Next items" still valid, see section 8 below) |
 | `LESSONS_PLAN.md` | The teaching-lesson design (films + questions) |
-| `CHAPTER5_PLAN.md`, `CHAPTER6_PLAN.md` | Chapter designs (Ch6 restructured 10-07: see the note at its top) |
+| `CHAPTER5_PLAN.md`, `CHAPTER6_PLAN.md`, `CHAPTER7_PLAN.md` | Chapter designs (Ch6 restructured 10-07: see the note at its top; Ch7 is being built, section 8) |
 
 ---
 
@@ -46,7 +48,7 @@ in every chapter.
 ```
 npm ci                 # once (close the game first on Windows, or EPERM)
 npm run dev            # http://localhost:5173/   (chapters: /chapter1.html ... /chapter6.html)
-npm test               # all ten suites; must pass before every commit
+npm test               # every suite (15 now); must pass before every commit
 npm run build          # must pass too
 npm run package        # build + release/RocketVillage.zip (double-click PLAY.bat to play)
 ```
@@ -86,6 +88,7 @@ chapter openings/endings (`src/game/chapterStory.js`), the question modal
 | 4 Voyage to Europa | `chapter4.html` | Earth orbit (2 laps, zero-g), satellite rescue (two-panel solar game), a lap with it, Flight School lesson, Moon transfer, get in Moon orbit -> circle it -> land, Moon walk, lift off, leave Earth (top-down view), Mars orbit, asteroid belt (mining claw, Ceres any time, upgrades), Jupiter (radiation, moons), Europa landing and walk, end card |
 | 5 Rings to a Star | `chapter5.html` (`src/space/ch5/`) | Jupiter -> Saturn (hexagon pole pass, rings lesson, ring run shooter, momentum lesson), Uranus, Neptune, Kuiper belt, Space pool game, Pluto, the edge cutscene, fusion lesson; **ends at the edge** (10-07) |
 | 6 The Long Trip | `chapter6.html` (`src/space/ch6/`) | **Starts back in the asteroid belt** (10-07): design the ship (design board), find Rock B (rock hunt), build/test the engine (workshop + test-fire cutscene); supply ship docks, meet the crew (2 kids, 2 robots); walk the ship's four Star Trek-style decks, joined by a lift (6 stations: shield, oxygen, water, farm, power, pack list); lesson 6A tiny Earth; Part E: lesson 6B energy (4 films), route planner (10 t then 100 t of fuel, 5 routes, speed far from the Sun), fly it (timing card), fusion drive on, lesson 6C light speed, years to a star, end |
+| 7 Toward Tau Ceti (being built) | `chapter7.html` (`src/space/ch7/`) | Full power out of the Sun's family toward Tau Ceti: feel the push, zero-g float game, chemistry and biology room tasks, a holodeck quasar and the lens game, the cruise to 90% of light. See section 8 and `CHAPTER7_PLAN.md` |
 
 Space features worth knowing: Easy/Medium/Hard flight modes (+ Level 1
 tables), autopilot (P), auto-turn (T), freeze (F), time warp 1-4, Retry,
@@ -206,8 +209,9 @@ Ch1-3 keys in each `contracts.js` / `quests.js`.
 
 ## 6. Testing and verifying
 
-- `npm test`: ten suites (space physics, space questions, play, science,
-  city, ch3 hunt, lessons, ch5 flight, ch5 games, ch6 route). Some load modules
+- `npm test`: 15 suites (space physics, space questions, play, science,
+  city, ch3 hunt, lessons, ch5 flight, ch5 games, ch6 route, ch6 interior,
+  ch6 quests, minimap, flight asks, ch7 chain). Some load modules
   through Vite (`createServer().ssrLoadModule`) because `import.meta.env`.
 - **Browser checks**: Playwright is at `/opt/node-tools/node_modules/playwright/index.mjs`
   (cloud), Chromium with `--use-gl=swiftshader --enable-unsafe-swiftshader`.
@@ -234,13 +238,50 @@ Ch1-3 keys in each `contracts.js` / `quests.js`.
 - They merge themselves, then `git pull` on Windows. Watch PRs you open
   (subscribe) and keep them conflict-free (several PRs append to
   `HANDOFF.md`: merge `main` in and keep both sections).
-- Subagents: `subagent_type: "opus-medium"`, 2-3 at most, give each a strict
-  list of files it may edit, create the branch BEFORE dispatching, and tell
-  them not to commit or kill processes by pattern.
+- Subagents (lead, 10-08): `subagent_type: "haiku-high"` makers AND critics,
+  **5 at a time**, the coordinator (main session) writes the plan and the
+  metric. Loop: maker -> critic (checks against the plan's metrics) -> one fix
+  round (send it back to the same maker with SendMessage) -> coordinator
+  commits and opens the PR. Give each agent only its task, the files it owns
+  and the metric; tell it not to commit, stash, `git add -A` or kill by pattern.
+- Many open PRs at once: build an integration branch (`claude/check-all`:
+  main + every open PR merged) and run `npm test` there before saying a batch
+  is ready; base new work on it and say so in the PR body.
 
 ## 8. Plan: what is next
 
-From the lead and `PLAN.md`, roughly in order:
+**Now: Chapter 7, Toward Tau Ceti** (lead 2026-10-08; full spec, numbers and
+metrics in `CHAPTER7_PLAN.md`). Chapter 6 ended at 10% of light; at that
+speed Tau Ceti (11.9 light-years, a Sun-like star that may have planets: a
+place to look for life one day) would take 119 years, so the fusion drive goes
+to full power. Lead decisions: the quasar is a **holodeck** visit (real
+quasars are billions of light-years away); **no sleep pods**: the drive
+pushes at 1 g for about 1.4 years to **90% of light**, coasts, then flips and
+brakes; **no relativity lesson**, only a story line at the end (clocks: about
+7.4 years on the ship, 14.4 on Earth); the drive is called pretend in a parent
+hint. Mostly inside the ship.
+- Part A (WP-A): opening cutscene (full power, the Sun shrinks to a star, a
+  star map of the neighbours with Tau Ceti ringed), the bridge star map.
+- Part B (WP-B): lesson 7A *How do you know you are speeding up?* (steady
+  speed: you can't tell, Galileo's ship; speeding up: the floor comes up to
+  meet a dropped ball); drop test at the gentle push (1/100 g, ~4.5 s for 1 m)
+  and at full push (1 g, ~0.45 s); a zero-g **float game** in the engine check
+  (push off walls, throw a tool backwards to go forwards); a low-g walk gait.
+- Part C (WP-C): lessons 7B atoms and 7C tiny life; four room tasks built on
+  Chapter 6's recycling: split water (2 H2O -> 2 H2 + O2), the plants' air
+  swap (photosynthesis atom count), the recycler's microbes doubling, bones
+  in zero g (about 1% a month without exercise).
+- Part D (WP-D): the holodeck quasar (shadow, glowing disk, jets, bent
+  starlight, Einstein ring), lesson 7D black holes, the game *Where is it
+  really?* (a point lens shows a star at theta = (beta + sqrt(beta^2 + 4))/2
+  Einstein radii; the kid finds the true place beta = theta - 1/theta).
+- Part E (WP-A): the 1 g cruise to 90% of light, the clocks story, the end.
+- Built as the scaffold PR #34 (`claude/ch7-scaffold`: page, hooks, chain,
+  stubs, `scripts/test-ch7.mjs`) plus four stacked PRs (`claude/ch7-voyage`,
+  `-push`, `-science`, `-holodeck`), each maker -> critic -> one fix round.
+  Merge order: #22-#33 (fixes), #34, then the four.
+
+After Chapter 7, from the lead and `PLAN.md`, roughly in order:
 1. **A child plays every chapter**: watch where they get stuck.
 2. **Real-screen pass** of everything built since 10-06 (none of it was seen
    on a real screen by an agent): Ch6 deck frame rates (ship-lab info())  and cutscenes, the
@@ -327,3 +368,112 @@ From the lead and `PLAN.md`, roughly in order:
 - Admit what you couldn't reproduce or check; give them the exact steps to
   check on their PC.
 - Keep replies short: what changed, what to test, what's open.
+
+## 11. Mistakes the lead keeps catching (check these before every PR)
+
+Compressed from the lead's play-test reports of 2026-10-02 to 10-08 and the
+bugs reviews found in our own PRs. Each line is a rule; the bracket says what
+went wrong once.
+
+**Trajectories and orbital mechanics**
+- Draw the predicted path as one line joined at each zone crossing, running
+  to where a body WILL be, not hung off where it is now [the "weird
+  trajectory after every burn" was the drawing, not the maths].
+- Near a moon or planet only that body pulls; two-body sums only for
+  transfers between systems; the autopilot must plan from wherever she is
+  [the Moon never caught the ship; the path ignored the Moon].
+- The plan must follow the kid's own burns, and a hand burn must always work
+  [Saturn escape plan stayed at 11,000 after she burned to 20,000].
+- Physics of the story must be right: don't fly inwards from the edge to
+  slingshot (costs more fuel); compare routes by speed far from the Sun
+  (energy, not added km/s) [the ship was built at the edge; moved to the belt].
+- Sizes and counting: belt rocks always smaller than Ceres; a visit counts in
+  any order [rocks half Ceres' size; a Ceres flyby didn't tick].
+- Place a ship in a body's frame with circular speed sqrt(gm/r), orbits inside
+  half the SOI; time waits in REAL seconds, not warped game time.
+
+**Camera and point of view**
+- Gameplay is always from the girl/rocket chase view; only cutscenes cut away
+  [automatic top-down camera when leaving Jupiter and Saturn].
+- The chase camera stays behind the ship and never loses it (ring run with
+  Space held pushed it out of view); left/right must turn the way the arrow says.
+- Side map: closed orbit -> that system; escape -> zoom out smoothly to a Sun
+  view with the target AND a guessed next stop; odd path -> planets only; no
+  moons drawn during an escape; no jumps when the view changes.
+- Interior camera: ease its distance, never inside a wall or through a low roof.
+
+**Visual clutter and look**
+- Less is more: few streaks/particles/meteors; no belt or Kuiper/Oort ring on
+  the horizon while flying; hide the asteroid belt near Jupiter/Saturn; atom
+  films show atoms only (no star dots).
+- Interiors must look AAA, not "cheap JS boxes": real CC0 kit models mixed
+  with code-built hero props, Star Trek flight-deck style, large walkable
+  rooms, soft (not over-bright) light, lively robots and crew; keep only the
+  models you use [dull room; too-strong light; 180 unused models].
+- Story pictures must match the words and scale: the rock is only a thin
+  front cap after drilling, the starship is not dwarfed by it; Saturn's
+  hexagon looks real.
+
+**Rendering and flicker**
+- Bloom threshold is 1.25 linear: only things meant to glow go above it; cap
+  anything that can drift over it (ring colour facing the Sun, hull emissive
+  plus sunlight made a cross glare in the test fire).
+- No flicker: no coplanar faces (polygonOffset or a real gap), no per-frame
+  random camera shake, no white flash on every hit [ring run flicker on single
+  shots; mining flash].
+- Toon materials, not PBR without an environment (too dark). Budget per view:
+  <= ~120 draw calls, <= 250k triangles, no per-frame allocations, dispose
+  everything.
+- Headless checks: grab frames with canvas.toDataURL (page.screenshot times out
+  on software GL), and Read every screenshot yourself.
+
+**Pacing, controls and HUD**
+- Calm: no question while she steers; after steering stops wait 10-20 s in a
+  stable orbit; a "Ready for the next adventure?" button instead of guessed
+  waits; let her look round a new planet (Saturn 1 lap/20 s, Uranus 20-30 s,
+  Neptune) before asking. One card at a time (a shared queue), never a frozen
+  screen with nothing on it.
+- Pace: x1 is 0.75 sim s per real s; the autopilot starts OFF.
+- Every HUD control is a real clickable button (`.sp-hud *` and `.rv-hud *`
+  have pointer-events: none: whitelist new buttons) [auto-turn "not working"
+  was an unclickable pill]; time warp Slow/Fast while the autopilot flies;
+  folded info boxes; show cargo only when there is cargo.
+- Kid-friendly keys: Space fires the engine; arrows stop when released (no
+  sliding); walking looks natural (Chapter 1's gait).
+- Grown-up mode (`?unlock=all`, never the default) can skip questions, lessons
+  and mini-games and jump to any part, in every chapter.
+
+**Games**
+- Skill must matter: a do-nothing or hold-one-key player must not win on Hard
+  (check with a bot sweep); Easy is winnable by a 6-year-old.
+- Clear goals per level, a success moment, fail -> play again, success ->
+  choose play again or continue; never a vague message like "Too big".
+
+**Questions and lessons**
+- Questions must be intuitive for kids [the "planet in a bathtub" question].
+- Both levels everywhere: Level 1 short words and sums a 6-year-old can do;
+  made-up numbers say "pretend" [Chapter 5 had no Level 1 questions].
+- Re-derive every number from the game's own tables in a test; check units
+  and one-way vs round trip [light delay used the reply time; a Level 1 rate
+  was 2x wrong; coal 10 vs 20 million; ship 600,000 t vs 1,000 t].
+- Fair choices: the right one is never the longest; hints guide but never
+  contain the answer; no bare-number choices; no three questions in a row
+  (a watch-only film between); no repeats across lessons and banks.
+- When the story changes, grep every old word ("rock ship", "inside a rock")
+  in questions, lessons, cards and the launcher.
+
+**Engineering and process**
+- Never `git add -A` in a worktree (a node_modules symlink reached main);
+  add files by name.
+- After renaming a constant, grep for the old name everywhere [AP_SLOW froze
+  the game when the autopilot came on]; scan changed files for undefined names.
+- Guard optional assets (models can fail to load: every kit call behind
+  `if (M)`, and a test that builds with no models).
+- Many PRs at once: test them merged together (an integration branch) and fix
+  the conflicts there first (steps.js between #24 and #25).
+- Agents: stop one that loops its report; check what an agent staged before
+  committing; they must not create cloud sessions or commit; remove stale
+  worktrees when done.
+- New lead requests mid-batch go to the next PR; at the end of a batch, audit
+  every ask the lead made (DONE / PARTIAL / MISSING with file:line) before
+  calling it finished.
