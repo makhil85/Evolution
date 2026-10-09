@@ -34,6 +34,7 @@ import { createEmotes } from './game/emotes.js';
 import { guardContext } from './game/contextGuard.js';
 import { createFrameMonitor } from './game/frameMonitor.js';
 import { createChapterStory, heroName, confetti } from './game/chapterStory.js';
+import { createOpening, createArrival } from './game/cutscenes.js';
 import { createHud } from './game/hud.js';
 import { audio } from './game/audio.js';
 import { QUESTIONS } from './game/questions.js';
@@ -228,6 +229,8 @@ let villagers = null;
 let avatar = null;
 let emotes = null;
 let story = null; // chapter opening / ending (src/game/chapterStory.js)
+let opening = null; // Chapter 3's own opening (src/game/cutscenes.js)
+let arrivalNow = null; // the arrival in orbit, while it is on screen (src/game/cutscenes.js)
 let restarting = false; // set when two wrong tries restart the chapter
 let nameSigns = null;
 
@@ -773,12 +776,20 @@ async function main() {
     camera, chasePose, getAvatar: () => avatar, getPlayerPos: () => player.position, chapter: 3, level: playLevel,
   });
   window.__game.story = story;
-  await story.intro({
+  // The full opening (src/game/cutscenes.js): the jump in time, the town at sunrise, the
+  // launch tower, then her. A returning child gets the title card only (story.intro).
+  const intro = {
     eyebrow: 'Chapter 3',
     title: 'Ready for Lift-off',
     line: engine.state.launched ? `Welcome back, ${heroName()}! The rocket has flown.` : `Build a real rocket, ${heroName()}: answer the science questions, build it stage by stage, and launch it.`,
     lookAt: new THREE.Vector3(0, 0, -8),
+  };
+  opening = createOpening({
+    camera, scene, sun, ground: (x, z) => village.heightAt(x, z), chasePose, getAvatar: () => avatar,
+    chapter: 3, level: playLevel, title: intro.title, line: intro.line,
   });
+  if (story.seen()) await story.intro(intro);
+  else await opening.play();
 
   // Mode: first visit asks (like Chapter 4), a chip changes it later.
   applyMode(loadPlayMode());
@@ -873,21 +884,28 @@ function tick(dt, now = performance.now()) {
     };
     // The chapter's ending, over the rocket up in the sky: confetti and the
     // "Chapter 3 complete" card pointing at Chapter 4.
-    setTimeout(() => {
+    setTimeout(async () => {
       if (!story) { walkBack(); return; }
+      // A flight that reached orbit first flies the arrival (src/game/cutscenes.js), once per Level.
+      // Its orbit stays on screen behind the card until she leaves the card.
+      const orbit = launch.verdict?.verdict === 'orbit' ? createArrival({ renderer, rocket, level: playLevel }) : null;
+      if (orbit && !orbit.seen()) { arrivalNow = orbit; await orbit.play(); }
       story.outro({
         title: 'Lift-off! The rocket is in space!',
         line: `You did it, ${heroName()}! Every stage built, every question answered. Next: fly that rocket all the way to Europa, Jupiter's icy moon.`,
         focus: null,
         next: { href: 'chapter4.html', label: 'Next: Chapter 4 — Voyage to Europa' },
-      }).then((how) => { if (how === 'stay') walkBack(); });
+      }).then((how) => {
+        if (arrivalNow) { arrivalNow.stop(); arrivalNow = null; }
+        if (how === 'stay') walkBack();
+      });
     }, 1500);
   }
   let motion = null;
   if (controller && !flying) {
     motion = controller.step(dt, emotes ? emotes.input(readInput(), dt) : readInput());
     if (motion && motion.moving && motion.onGround) audio.footstep(motion.running);
-    if (!story?.update(dt)) updateCamera(dt);
+    if (!opening?.update(dt) && !story?.update(dt)) updateCamera(dt);
   }
   // Her legs come from the same state the footsteps do, so a step is heard on
   // the frame the foot is planted. Passed null while the rocket has her, which
@@ -918,7 +936,8 @@ function tick(dt, now = performance.now()) {
       else hud.setInteract(isTarget ? (step.title || 'Start') : 'Not yet', isTarget ? 'E' : '');
     }
   }
-  renderer.render(scene, camera);
+  // The orbit arrival draws its own scene while it is on screen.
+  if (!arrivalNow?.render(dt)) renderer.render(scene, camera);
 
   frames += 1;
   if (now - startedAt < 2500) { frames = 0; last = now; return; }
