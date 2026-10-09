@@ -318,6 +318,8 @@ export function createInstruments(root, { onWarp, onAutoWarp } = {}) {
   /** @param {object} state see hud/hud.js createHud() jsdoc for the full shape */
   function update(state) {
     if (!state || typeof state !== 'object') return;
+    // Flight always has the view button (a walk with no view switch hides it: setCameraLabel).
+    viewPanel.hidden = false;
 
     // Speed -----------------------------------------------------------
     if (changed('speed', state.speed) || changed('speedRel', state.speedRelativeTo)) {
@@ -504,6 +506,8 @@ export function createInstruments(root, { onWarp, onAutoWarp } = {}) {
    * button back to the flight view's name on the next update().
    */
   function setCameraLabel(text) {
+    // A walk with no view switch (the Moon walk) has no button to show on foot.
+    viewPanel.hidden = !text;
     if (text) {
       if (viewBtn.textContent !== text) viewBtn.textContent = text;
     } else {

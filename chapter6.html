@@ -23,7 +23,8 @@
       /* While a mini-scene (cabin, Moon walk, Europa) has the screen, the flight
          instruments are meaningless, so they step aside. Cards, toasts,
          dialogue and questions stay. */
-      body.in-scene .sp-instruments,
+      body.in-scene .sp-instruments:not(.sp-instruments--left),
+      body.in-scene:not(.sp-on-foot) .sp-instruments--left,
       body.in-scene .sp-orbit,
       body.in-scene .sp-landing,
       body.in-scene .sp-markers,

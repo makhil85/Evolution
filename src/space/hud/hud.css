@@ -953,7 +953,7 @@ body.sp-on-foot .sp-hud .sp-tally,
 body.sp-on-foot .sp-hud .sp-markers,
 body.sp-on-foot #burnCue { display: none !important; }
 /* The camera view button stays on foot (lead 2026-10-09): the walk's own view switch. */
-body.sp-on-foot .sp-hud .sp-view-panel { display: block !important; }
+body.sp-on-foot .sp-hud .sp-view-panel:not([hidden]) { display: block !important; }
 body.sp-on-foot .sp-hud .sp-toggles > .sp-autopilot,
 body.sp-on-foot .sp-hud .sp-toggles > .sp-aimtoggle { display: none !important; }
 body.sp-on-foot:not(.sp-is-frozen) .sp-hud .sp-toggles { display: none !important; }
