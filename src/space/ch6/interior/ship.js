@@ -7,9 +7,12 @@
 // "E" (or 1-4) picks a deck. The crewmate who leads a station stands by it;
 // the next station has a beacon (on another deck, the beacon is on the lift
 // and a toast says which deck). At a station "E" opens it (onStation(id)).
+// The walk takes its spots from the caller: stations (STATIONS, the default)
+// or quests (QUESTS, partQuests.js); each spot is { id, lead, title } and is
+// found on its deck by id (decks.js).
 //
 // main.js's runScene contract: { scene, camera, start(), tick(), dispose() }.
-// start() resolves { done: [ids] } once every station in `order` is done.
+// start() resolves { done: [ids] } once every spot in `order` is done.
 // Test hook: scene.debug = { walker, stations, done, deck, place(x, z),
 // goTo(id), pressE(), takeLift(deckId) }.
 import * as THREE from 'three';
@@ -61,10 +64,11 @@ export function preloadInterior({ style } = {}) {
 
 /**
  * @param {object} game
- * @param {{ order?: string[], done?: string[], onStation: (id:string) => Promise<any>, startDeck?: string, models?: object }} opts
+ * @param {{ spots?: object[], order?: string[], done?: string[], onStation: (id:string) => Promise<any>, startDeck?: string, models?: object }} opts
+ *   spots: what to visit (default the six stations; the quests pass theirs)
  *   models: the result of preloadInterior() (a deck without models falls back to its own code-built parts)
  */
-export function createInteriorScene(game, { order = STATIONS.map((s) => s.id), done: doneAlready = [], onStation, startDeck = START_DECK, models = null }) {
+export function createInteriorScene(game, { spots = STATIONS, order = spots.map((s) => s.id), done: doneAlready = [], onStation, startDeck = START_DECK, models = null }) {
   const renderer = game.renderer;
   const hud = game.hud || null;
   const scene = new THREE.Scene();
@@ -88,20 +92,20 @@ export function createInteriorScene(game, { order = STATIONS.map((s) => s.id), d
     decks[spec.id] = d;
   }
 
-  // Stations: where each one is, on which deck.
-  const stations = STATIONS.map((info) => {
+  // Spots (stations or quests): where each one is, on which deck.
+  const stations = spots.map((info) => {
     const deck = deckOf(info.id);
     const s = decks[deck]?.stations?.[info.id];
-    if (!s) throw new Error(`[interior] station ${info.id} has no spot on deck ${deck}`);
+    if (!s) throw new Error(`[interior] ${info.id} has no spot on deck ${deck}`);
     return { ...info, deck, ...s, done: doneAlready.includes(info.id) };
   });
-  // Each crewmate on the deck of their first station, at the deck's crew spot
-  // (or a step beside that station).
+  // Each crewmate on the deck of their first spot, at the deck's crew spot for
+  // that spot (or for the crewmate), or a step beside that spot.
   for (const id of crew.ids) {
     const st = stations.find((s) => s.lead === id);
     const deckId = st?.deck || START_DECK;
     const d = decks[deckId];
-    const spot = d.crewSpots?.[id] || (st && { x: st.x + Math.cos(st.face) * 1.2, z: st.z - Math.sin(st.face) * 1.2, face: st.face });
+    const spot = d.crewSpots?.[st?.id] || d.crewSpots?.[id] || (st && { x: st.x + Math.cos(st.face) * 1.2, z: st.z - Math.sin(st.face) * 1.2, face: st.face });
     if (!spot) continue;
     const c = crew[id];
     c.root.position.set(spot.x, 0, spot.z);
