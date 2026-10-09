@@ -23,9 +23,16 @@
 // (t, k) => { ...move the camera and props... }); }`. See run() below.
 // A scene may also be an object { duration, step(t, say), dispose() } (Chapter
 // 1's style): it is wrapped into a film, say(text) shows a bottom caption.
+//
+// Captions wait to be read (lead 2026-10-09): a caption stays on screen for
+// readMs(text) (5-10 s) before the next one replaces it, and the title card and
+// the film's last caption are held the same way. If a scene asks for the next
+// caption early, the film clock waits (the camera holds) until the current one
+// has had its time. Skip still ends everything at once.
 import * as THREE from 'three';
 import { loadProfile, SEEN_PREFIX } from '../launcher/profile.js';
 import { keepUnlock } from '../launcher/profile.js';
+import { readMs } from '../play/readTime.js';
 
 const smooth = (x) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c); };
 const easeInOut = (x) => { const c = Math.min(1, Math.max(0, x)); return c < 0.5 ? 4 * c * c * c : 1 - (-2 * c + 2) ** 3 / 2; };
@@ -171,21 +178,69 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
       },
     };
   });
-  const endRun = () => { filmOver = true; shot = null; filmStop?.(); filmStop = null; };
+  const endRun = () => {
+    filmOver = true;
+    shot = null;
+    capNext = undefined;
+    showCaption(null);   // a skip clears the caption at once
+    settleCaptions();
+    filmStop?.();
+    filmStop = null;
+  };
+  // A function scene can caption through run.say(text): the same line, with the reading-time hold.
+  run.say = (text) => say(text);
 
   // A caption line under the picture (Chapter 1's scenes use it).
   let capEl = null;
-  function say(text) {
+  // The caption clock: seconds of film time (it runs on in update(), also between shots).
+  let capClock = 0;
+  let capShown = null;      // the caption on screen (null: none)
+  let capUntil = 0;         // capClock when the shown caption may be replaced
+  let capNext;              // the caption waiting for capUntil (undefined: none)
+  let settleWaiters = [];   // captionDone() callers
+  let holdCamera = false;   // the film is over but its last caption is still up
+  function showCaption(text) {
+    capShown = text || null;
+    capUntil = capClock + (text ? readMs(text) / 1000 : 0);
     if (!text && !capEl) return;
     // end() removes the nodes after a film, so a later film (the ending) makes a fresh caption.
     if (!capEl || !capEl.isConnected) { capEl = el('div', 'cs-caption'); document.body.appendChild(capEl); nodes.push(capEl); }
     if (capEl.textContent !== (text || '')) capEl.textContent = text || '';
     capEl.classList.toggle('is-on', !!text);
   }
+  function say(text) {
+    const want = text || null;
+    if (want === capShown) { capNext = undefined; return; }
+    // Skipped, or the last caption has had its time: change now. Otherwise the
+    // film waits (update() holds its clock) until the shown caption has been read.
+    if (filmOver || capClock >= capUntil) { capNext = undefined; showCaption(want); }
+    else capNext = want;
+  }
+  /** Resolves once no caption is waiting and the shown one has had its time. */
+  function captionDone() {
+    return new Promise((resolve) => {
+      if (capNext === undefined && capClock >= capUntil) resolve();
+      else settleWaiters.push(resolve);
+    });
+  }
+  function settleCaptions() {
+    if (capNext !== undefined || capClock < capUntil || !settleWaiters.length) return;
+    const waiting = settleWaiters;
+    settleWaiters = [];
+    for (const resolve of waiting) resolve();
+  }
   /** A scene object { duration, step(t, say), dispose() } as a film. */
   const asFilm = (scene) => (!scene || typeof scene === 'function' ? scene : async (play) => {
     try { await play(scene.duration, (t) => scene.step(t, say)); } finally { say(null); scene.dispose?.(); }
   });
+  /** Play a film to its end, then let its last caption have its time before the next card. */
+  const playFilm = async (scene) => {
+    try { await scene(run); } catch (err) { console.error('[story] film failed:', err); }
+    holdCamera = true;   // the film's last picture stays up while its caption is read
+    say(null);
+    await captionDone();
+    holdCamera = false;
+  };
 
   const bars = el('div', 'cs-bars');
   document.body.appendChild(bars);
@@ -201,6 +256,9 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
   function end() {
     active = false;
     shot = null;
+    capShown = null;
+    capNext = undefined;
+    capUntil = capClock;
     if (prevModal === undefined) delete document.body.dataset.playModal;
     else document.body.dataset.playModal = prevModal;
     document.body.classList.remove('cs-cinematic');
@@ -217,7 +275,12 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
 
     /** Drive the camera while a shot runs. @returns {boolean} true = it did. */
     update(dt) {
-      if (!shot) return false;
+      capClock += dt;
+      if (capNext !== undefined && capClock >= capUntil) { const want = capNext; capNext = undefined; showCaption(want); }
+      settleCaptions();
+      if (!shot && !holdCamera) return false;
+      // The caption on screen has not had its time yet: the film waits, camera held.
+      if (capNext !== undefined || !shot) return true;
       shot.t += dt;
       shot.step(shot.t);
       return true;
@@ -248,7 +311,8 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
       if (!filmFirst) showCard();
 
       return new Promise((resolve) => {
-        const DUR = filmFirst ? 3.6 : full ? 6.2 : 2.6;
+        // The card stays up for its words' reading time (readMs), and at least the old hold.
+        const DUR = Math.max(filmFirst ? 3.6 : full ? 6.2 : 2.6, readMs([eyebrow, title, line]) / 1000 + 1);
         let waved = false;
         let finished = false;
         const finish = () => {
@@ -305,7 +369,7 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
         };
         if (filmFirst) {
           (async () => {
-            try { await scene(run); } catch (err) { console.error('[story] opening film failed:', err); }
+            await playFilm(scene);
             if (!finished) startCard();
           })();
         } else {
@@ -393,7 +457,7 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
       addEventListener('keydown', skipFilm, true);
       addEventListener('pointerdown', skipFilm, true);
       return (async () => {
-        try { await scene(run); } catch (err) { console.error('[story] ending film failed:', err); }
+        await playFilm(scene);
         removeEventListener('keydown', skipFilm, true);
         removeEventListener('pointerdown', skipFilm, true);
         hint.remove();

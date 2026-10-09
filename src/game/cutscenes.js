@@ -29,19 +29,22 @@ import * as THREE from 'three';
 import { toonRamp } from './toonPipeline.js';
 import { ROCKET_VILLAGE } from './rocketVillageLayout.js';
 import { SEEN_PREFIX } from '../launcher/profile.js';
+import { readMs } from '../play/readTime.js';
 
 // ---------------------------------------------------------------------------
-// Shot lists. Durations are seconds of game time. The opening runs about 25 s
-// and the arrival 21 s (plus the hold behind the card). Captions are
-// [Level 4, Level 1]; Level 1 uses shorter words.
+// Shot lists. Durations are seconds of game time. The opening runs about 27 s
+// (33 s with her title card's reading time) and the arrival 21 s. Captions are
+// [Level 4, Level 1]; Level 1 uses shorter words. Every caption stays up for its
+// reading time (readMs, src/play/readTime.js) at the player's Level: readableShots()
+// lengthens a beat that is too short, so `dur` is the least it can be.
 // ---------------------------------------------------------------------------
 
 /** The opening, in order. `id` picks the camera move in openingPose(). */
 export const OPENING_SHOTS = [
-  { id: 'cards', dur: 4.6, caption: ['Years later...', 'Years later...'] },
+  { id: 'cards', dur: 5, caption: ['Years later...', 'Years later...'] },
   { id: 'reveal', dur: 5.2, caption: ['Years later, the same town builds rockets.', 'The town builds rockets now.'] },
   { id: 'road', dur: 7, caption: ['Down the main road, past mission control.', 'Down the road, past mission control.'] },
-  { id: 'pad', dur: 4, caption: ['The launch tower stands empty, waiting for a rocket.', 'The tower is waiting for a rocket.'] },
+  { id: 'pad', dur: 5, caption: ['The launch tower stands empty, waiting for a rocket.', 'The tower is waiting for a rocket.'] },
   { id: 'her', dur: 4.4, caption: null },
 ];
 
@@ -55,6 +58,24 @@ export const ARRIVAL_SHOTS = [
 /** Seconds in a shot list. */
 export function totalSeconds(shots) {
   return shots.reduce((sum, s) => sum + s.dur, 0);
+}
+
+// Her shot's title card: it fades in at TITLE_IN and goes out TITLE_OUT before the shot ends.
+const TITLE_IN = 1.2;
+const TITLE_OUT = 0.9;
+
+/**
+ * The shots with every beat long enough to read at this Level: a caption gets its
+ * readMs(), and her shot gets the title card's words (`cardWords`, an array of
+ * strings) in its window. Returns new objects; `dur` only ever grows.
+ */
+export function readableShots(shots, level, cardWords = null) {
+  return shots.map((sh) => {
+    let need = 0;
+    if (sh.caption) need = readMs(captionText(sh.caption, level)) / 1000;
+    if (sh.id === 'her' && cardWords) need = Math.max(need, readMs(cardWords) / 1000 + TITLE_IN + TITLE_OUT + 0.2);
+    return need > sh.dur ? { ...sh, dur: need } : sh;
+  });
 }
 
 /** A caption pair for this Level: pair[0] for Level 4, pair[1] for Level 1. */
@@ -327,6 +348,7 @@ function placeCard(c, t, inAt, outAt, showAt, hideAt, reduced, W) {
 export function createOpening({ camera, scene, sun, ground, chasePose, getAvatar, chapter = 3, level, title, line }) {
   injectCss();
   const seenKey = `${SEEN_PREFIX}ch${chapter}_L${level}`;
+  const shots = readableShots(OPENING_SHOTS, level, [`Chapter ${chapter}`, title, line]);
   let run = null;
 
   return {
@@ -423,9 +445,9 @@ export function createOpening({ camera, scene, sun, ground, chasePose, getAvatar
       step(dt) {
         st.t += dt;
         if (st.skip) { finish(); return; }
-        locate(OPENING_SHOTS, st.t, loc);
+        locate(shots, st.t, loc);
         if (!loc.ok) { finish(); return; }
-        const shot = OPENING_SHOTS[loc.index];
+        const shot = shots[loc.index];
         const u = reduced ? 1 : loc.u;
         if (loc.index !== st.shot) {
           st.shot = loc.index;
@@ -459,7 +481,7 @@ export function createOpening({ camera, scene, sun, ground, chasePose, getAvatar
         if (shot.id === 'her') {
           const within = loc.u * shot.dur;
           if (!st.wave && within > shot.dur - 2.2) { st.wave = true; getAvatar()?.play?.('wave', { hold: 2 }); }
-          if (within > 1.6 && within < shot.dur - 0.9) titleEl.classList.add('is-on');
+          if (within > TITLE_IN && within < shot.dur - TITLE_OUT) titleEl.classList.add('is-on');
           else titleEl.classList.remove('is-on');
         }
       },
@@ -670,10 +692,11 @@ export function createArrival({ renderer, rocket, level, chapter = 3 }) {
   injectCss();
   const seenKey = `${SEEN_PREFIX}ch${chapter}_L${level}_orbit`;
   const owned = [];
+  const shots = readableShots(ARRIVAL_SHOTS, level);
   let orb = null;
   let playing = null; // { resolve, h, cap, stopSkip, t, shot, skip, reduced }
   let t = 0;
-  const total = totalSeconds(ARRIVAL_SHOTS);
+  const total = totalSeconds(shots);
   const loc = { index: 0, u: 0, ok: false };
 
   return {
@@ -705,9 +728,9 @@ export function createArrival({ renderer, rocket, level, chapter = 3 }) {
       t += dt;
       if (playing) {
         if (playing.skip) t = Math.max(t, total);
-        locate(ARRIVAL_SHOTS, t, loc);
+        locate(shots, t, loc);
         if (loc.ok) {
-          const shot = ARRIVAL_SHOTS[loc.index];
+          const shot = shots[loc.index];
           if (loc.index !== playing.shot) {
             playing.shot = loc.index;
             playing.cap.set(captionText(shot.caption, level));

@@ -13,9 +13,10 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {
   OPENING_SHOTS, ARRIVAL_SHOTS, totalSeconds, captionText, locate, arrivalCamera, openingCamera,
-  createOpening, createArrival,
+  createOpening, createArrival, readableShots,
 } from '../src/game/cutscenes.js';
 import { ROCKET_VILLAGE } from '../src/game/rocketVillageLayout.js';
+import { readMs } from '../src/play/readTime.js';
 
 let passed = 0;
 const ok = (name, fn) => { fn(); passed += 1; console.log(`  ok  ${name}`); };
@@ -63,6 +64,36 @@ ok('captionText picks the Level', () => {
   assert.equal(captionText(pair, 4), 'Long words here.');
   assert.equal(captionText(pair, 1), 'Short words.');
   assert.equal(captionText(null, 1), null);
+});
+
+// Reading time (lead 2026-10-09): every caption stays up for readMs at the player's Level.
+ok('every beat is long enough for its caption at both Levels (readMs), and her title card', () => {
+  const card = ['Chapter 3', 'Ready for Lift-off', 'Build a real rocket, Ada: answer the science questions, build it stage by stage, and launch it.'];
+  for (const level of [4, 1]) {
+    for (const [list, words] of [[OPENING_SHOTS, card], [ARRIVAL_SHOTS, null]]) {
+      const shots = readableShots(list, level, words);
+      list.forEach((sh, i) => {
+        assert.ok(shots[i].dur >= sh.dur, `${sh.id}: the beat only ever grows`);
+        if (sh.caption) {
+          for (const text of sh.caption) assert.ok(shots[i].dur >= readMs(text) / 1000 - 1e-9, `${sh.id} at L${level}: "${text}" needs ${readMs(text) / 1000} s`);
+        }
+        if (sh.id === 'her') {
+          // The card is in view from TITLE_IN to dur - TITLE_OUT: long enough for its words.
+          assert.ok(shots[i].dur - 1.2 - 0.9 >= readMs(words) / 1000, `her: the title card needs ${readMs(words) / 1000} s`);
+        }
+      });
+    }
+  }
+});
+ok('with the real title card the opening stays in the 20-35 s band', () => {
+  const card = ['Chapter 3', 'Ready for Lift-off', 'Build a real rocket, Ada: answer the science questions, build it stage by stage, and launch it.'];
+  const s = totalSeconds(readableShots(OPENING_SHOTS, 4, card));
+  assert.ok(s >= 20 && s <= 35, `opening is ${s.toFixed(1)} s`);
+});
+ok('readableShots does not change a beat that already has its reading time, and keeps the table', () => {
+  const same = readableShots(OPENING_SHOTS, 1, null);
+  assert.equal(same[1], OPENING_SHOTS[1]);
+  assert.equal(totalSeconds(OPENING_SHOTS), 26.6);
 });
 
 console.log('timeline');
