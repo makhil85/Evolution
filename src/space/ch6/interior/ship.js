@@ -58,6 +58,8 @@ const inLift = (x, z) => x > LIFT.x0 && x < LIFT.x1 && z > LIFT.z0 && z < LIFT.z
 // The chase camera's sight line (chaseDistance). These scratch values are set per call, so a frame allocates nothing.
 const SIGHT = { map: null, roof: null, x: 0, z: 0, ty: 0, fx: 0, fz: 0, cp: 1, sp: 0 };
 export const BODY_R = 0.15; // the camera keeps this far from a wall: the hard limit
+const CAM_CLEAR = 0.15;     // and over a low solid (a bed, a desk) it keeps this far above its top
+const CLEAR = { x: 0, z: 0, r: 0, y: 0, m: CAM_CLEAR }; // the camera's clearance query (walkmap.js clearAt)
 const SOFT_R = 0.6;  // and eases to this margin, so a door frame or corner it is about to pass pulls it in early
 /** Set the sight line: from her point p, at this pitch, along her yaw. */
 function aimSight(map, roof, p, pitch) {
@@ -67,9 +69,12 @@ function aimSight(map, roof, p, pitch) {
 }
 /** Is the camera clear at distance d on her sight line, with margin r (no wall, and under the roof)? */
 function sightClear(d, r) {
-  const s = SIGHT;
+  const s = SIGHT; const c = CLEAR;
   const cx = s.x - s.fx * d * s.cp; const cz = s.z - s.fz * d * s.cp;
-  return s.map.fits(cx, cz, r) && s.ty + 0.3 + d * s.sp < s.roof(cx, cz) - 0.35;
+  const cy = s.ty + 0.3 + d * s.sp;
+  // Over a solid with a height (walkmap.js) the camera may pass; a wall (full height) still stops it.
+  c.x = cx; c.z = cz; c.r = r; c.y = cy;
+  return s.map.clearAt(c) && cy < s.roof(cx, cz) - 0.35;
 }
 /** How far along the sight line (at most `want`) the camera stays clear with margin r, found to a few mm. */
 function clearDist(want, r) {
@@ -138,6 +143,11 @@ export function chaseView(map, roof, p, st, dt) {
   st.fade += ((cornered ? 1 : 0) - st.fade) * (1 - Math.exp(-dt * CAM_FADE));
 }
 
+// Scratch objects for the chase (no allocation a frame): the pose chaseView reads, and her state updateCamera fills.
+const _pose = { x: 0, z: 0, ty: 0, yaw: 0, pitch: 0, want: 0 };
+const _her = { x: 0, y: 0, z: 0, heading: 0, speed: 0, want: 0, follow: false };
+const _f = { x: 0, z: 0 }; const _rt = { x: 0, z: 0 }; // her walk's axes (tick)
+
 // The chase rig: the point the camera looks at (a critically damped follow), the turn that follows her heading,
 // and chaseView's pitch, distance and fade. One per scene, reused each frame.
 let _dampV = 0; // the velocity the last damped() left
@@ -175,10 +185,9 @@ export function chaseFrame(rig, cam, map, roof, s, dt) {
   const rate = clamp(angDiff(s.heading, cam.yaw) * FOLLOW_GAIN, -YAW_RATE_MAX, YAW_RATE_MAX) * rig.follow;
   rig.yawRate += (rate - rig.yawRate) * (1 - Math.exp(-dt * 6));
   cam.yaw += clamp(rig.yawRate, -YAW_RATE_MAX, YAW_RATE_MAX) * dt;
-  Object.assign(_pose, { x: rig.fx, z: rig.fz, ty: rig.fy, yaw: cam.yaw, pitch: cam.pitch, want: s.want });
+  _pose.x = rig.fx; _pose.z = rig.fz; _pose.ty = rig.fy; _pose.yaw = cam.yaw; _pose.pitch = cam.pitch; _pose.want = s.want;
   chaseView(map, roof, _pose, rig, dt);
 }
-const _pose = { x: 0, z: 0, ty: 0, yaw: 0, pitch: 0, want: 0 }; // chaseFrame's scratch pose (no allocation a frame)
 
 /** The lift car every deck shares (built once per deck, at the origin). */
 function buildLift(kit) {
@@ -413,10 +422,9 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
     }
     // Her point, the turn to her heading, and the pitch and distance that keep the walls and roof off the view
     // (chaseFrame). The camera follows the rig's point, not her feet, so a bump does not jerk it.
-    chaseFrame(rig, cam, deck.map, deck.roof, {
-      x: walker.pos.x, y: walker.pos.y + 1.0, z: walker.pos.z, heading: walker.heading,
-      speed: Math.hypot(walker.vel.x, walker.vel.y), want: cam.dist, follow: !!mouse && !mouse.dragging,
-    }, dt);
+    _her.x = walker.pos.x; _her.y = walker.pos.y + 1.0; _her.z = walker.pos.z; _her.heading = walker.heading;
+    _her.speed = Math.hypot(walker.vel.x, walker.vel.y); _her.want = cam.dist; _her.follow = !!mouse && !mouse.dragging;
+    chaseFrame(rig, cam, deck.map, deck.roof, _her, dt);
     const fx = Math.sin(cam.yaw); const fz = Math.cos(cam.yaw);
     const tx = rig.fx; const ty = rig.fy; const tz = rig.fz;
     camera.position.set(tx - fx * rig.dist * Math.cos(rig.pitch), ty + 0.3 + rig.dist * Math.sin(rig.pitch), tz - fz * rig.dist * Math.cos(rig.pitch));
@@ -426,6 +434,7 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
     for (const m of herMats) m.opacity = 1 - rig.fade;
   }
 
+  const collide = (p, v) => deck.map.collide(p, v);
   function tick(dt, input, mouse, modalOpen = false) {
     if (disposed) return;
     dt = Math.min(dt, 0.1);
@@ -435,10 +444,9 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
     const pressedE = eDown && !prevE; prevE = eDown;
     const inp = input || { thrust: 0, turn: 0 };
     let speed;
-    const collide = (p, v) => deck.map.collide(p, v);
     if (!modal) {
-      const f = { x: Math.sin(cam.yaw), z: Math.cos(cam.yaw) };
-      const rt = { x: -f.z, z: f.x };
+      const f = _f; const rt = _rt; // her walk's axes (camera-relative), no allocation a frame
+      f.x = Math.sin(cam.yaw); f.z = Math.cos(cam.yaw); rt.x = -f.z; rt.z = f.x;
       _move.set(f.x * (inp.thrust || 0) + rt.x * (inp.turn || 0), f.z * (inp.thrust || 0) + rt.z * (inp.turn || 0));
       if (_move.lengthSq() > 1) _move.normalize();
       const run = !!inp.precision || isDown('ShiftLeft') || isDown('ShiftRight');
