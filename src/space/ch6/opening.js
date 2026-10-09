@@ -229,13 +229,14 @@ function makePuffs(parent) {
     pool.push({ mesh, mat, life: 0, max: 1, vel: new THREE.Vector3() });
   }
   let next = 0;
+  const rnd = new THREE.Vector3(); // reused for every puff's kick (no allocation per puff)
   return {
     emit(at, dir) {
       const p = pool[next];
       next = (next + 1) % pool.length;
       p.max = p.life = 0.9;
       p.mesh.position.copy(at);
-      p.vel.copy(dir).multiplyScalar(3 + Math.random() * 2).add(new THREE.Vector3().randomDirection().multiplyScalar(0.6));
+      p.vel.copy(dir).multiplyScalar(3 + Math.random() * 2).add(rnd.randomDirection().multiplyScalar(0.6));
       p.mesh.visible = true;
     },
     update(dt) {
@@ -292,6 +293,8 @@ export function playCh6Opening(game) {
   star.group.add(supply.group);
   const puffs = makePuffs(star.group);
   const nose = new THREE.Vector3(0, 0, SUPPLY_NOSE).applyEuler(supply.group.rotation); // the probe tip, from the supply's centre
+  const noseDir = nose.clone().normalize(); // the puffs' push (emit copies it), and a scratch point for each puff
+  const puffAt = new THREE.Vector3();
   const path = makePath(APPROACH);
   const camPos = new THREE.CatmullRomCurve3(CAM.map(([p]) => new THREE.Vector3(...p)), false, 'centripetal');
   const camLook = new THREE.CatmullRomCurve3(CAM.map(([, l]) => new THREE.Vector3(...l)), false, 'centripetal');
@@ -323,7 +326,7 @@ export function playCh6Opening(game) {
         puffAcc += dt * 9;
         while (puffAcc >= 1) {
           puffAcc -= 1;
-          puffs.emit(pos.clone().add(nose), nose.clone().normalize());
+          puffs.emit(puffAt.copy(pos).add(nose), noseDir);
         }
       }
       puffs.update(dt);
