@@ -381,6 +381,8 @@ async function main() {
   const p0 = rules.state.player && Number.isFinite(rules.state.player.x) ? rules.state.player : { x: START_TILE.tx, y: START_TILE.ty };
   const start = tileToWorld(p0.x, p0.y);
   controller.teleport(start.x, world.heightAt(start.x, start.z), start.z);
+  // The camera starts behind her looking north: she faces away from it (heading PI), not into the lens.
+  player.rotation.y = Math.PI;
 
   hud = createHud({ mount: document.body, title: 'Chapter 1 - Science Village', resourceRows: RESOURCE_ROWS, missionGoal: 'Build the Science Center.', rank: false, signpostKey: false });
   // Two wrong tries on a question (lead rule): the chapter starts again.
