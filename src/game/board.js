@@ -330,6 +330,54 @@ function placedPiece(src, m, { uv, color, colour }) {
 }
 
 /**
+ * A stable key for a texture's content. Two glTF loads of the same image are
+ * two objects, so the key comes from the pixels (once per image; cached). Falls
+ * back to the texture's own id where there is no image to read (node tests).
+ */
+const _textureKeys = new WeakMap();
+function textureKey(map) {
+  const img = map.image;
+  if (!img || !img.width || !img.height) return `uuid:${map.uuid}`;
+  if (_textureKeys.has(img)) return _textureKeys.get(img);
+  let key = `uuid:${map.uuid}`;
+  try {
+    const c = document.createElement('canvas');
+    c.width = img.width;
+    c.height = img.height;
+    const g = c.getContext('2d');
+    g.drawImage(img, 0, 0);
+    const d = g.getImageData(0, 0, c.width, c.height).data;
+    let h = 2166136261;
+    for (let i = 0; i < d.length; i++) h = Math.imul(h ^ d[i], 16777619);
+    key = `img:${img.width}x${img.height}:${h >>> 0}`;
+  } catch {
+    // A tainted or unreadable image keeps its own identity: no merge, no harm.
+  }
+  _textureKeys.set(img, key);
+  return key;
+}
+
+/**
+ * Normals as signed bytes and colours as unsigned bytes, both normalised: a
+ * quarter of the floats they replace, read by the shader as the same values to
+ * within 1/127 and 1/255. Positions and UVs stay float.
+ */
+function compactAttributes(geometry) {
+  const nrm = geometry.attributes.normal;
+  if (nrm) {
+    const a = new Int8Array(nrm.count * 3);
+    for (let i = 0; i < a.length; i++) a[i] = Math.round(nrm.array[i] * 127);
+    geometry.setAttribute('normal', new THREE.BufferAttribute(a, 3, true));
+  }
+  const col = geometry.attributes.color;
+  if (col) {
+    const a = new Uint8Array(col.count * 3);
+    for (let i = 0; i < a.length; i++) a[i] = Math.round(Math.min(1, Math.max(0, col.array[i])) * 255);
+    geometry.setAttribute('color', new THREE.BufferAttribute(a, 3, true));
+  }
+}
+
+/**
  * The baked form of instanceAsset(): every placed part is written into world
  * space and merged into ONE static mesh per (cell, material kind), so a cell
  * costs a draw call and a frustum test rather than one draw per prototype.
@@ -381,11 +429,17 @@ export function bakeInstances(group, entries, { cellOf }) {
         let b;
         if (untextured) {
           b = bucket(`vc|${cell}|${cast}|${recv}|${m.side}|${m.transparent}|${m.opacity}|${m.alphaTest}`, () => ({
-            material: vertexColouredToon(m), cell, cast, recv, uv: true, color: true,
+            material: vertexColouredToon(m), cell, cast, recv, uv: false, color: true,
           }));
-          b.pieces.push(placedPiece(src, _m, { uv: true, color: true, colour }));
+          b.pieces.push(placedPiece(src, _m, { uv: false, color: true, colour }));
         } else {
-          b = bucket(`tex|${cell}|${m.uuid}|${cast}|${recv}`, () => ({
+          // Three Bark, three Leaves_NormalTree and two Flowers materials carry
+          // identical images, so they share a draw; the key is everything that
+          // decides how the bucket looks, not the material object.
+          const tk = [textureKey(m.map), m.color.getHexString(), m.side, m.transparent, m.opacity,
+            m.alphaTest, m.vertexColors, m.map.colorSpace, m.map.flipY, m.map.wrapS, m.map.wrapT,
+            !!src.attributes.uv, !!src.attributes.color].join('|');
+          b = bucket(`tex|${cell}|${cast}|${recv}|${tk}`, () => ({
             material: m, cell, cast, recv, uv: !!src.attributes.uv, color: !!src.attributes.color,
           }));
           b.pieces.push(placedPiece(src, _m, { uv: b.uv, color: b.color, colour }));
@@ -405,6 +459,7 @@ export function bakeInstances(group, entries, { cellOf }) {
   for (const b of buckets.values()) {
     const geometry = mergeGeometries(b.pieces, false);
     if (!geometry) { console.warn('[board] a batch would not merge; left out'); continue; }
+    compactAttributes(geometry);
     geometry.computeBoundingSphere();
     const mesh = new THREE.Mesh(geometry, b.material);
     mesh.name = b.name || 'props';

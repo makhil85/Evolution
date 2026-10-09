@@ -139,12 +139,13 @@ function makeAnimator(root, clips) {
 }
 
 /**
- * The outline is a 0.011-unit inverted hull. From the chase camera (about 8
- * units back) that is a pixel or so, and past this distance it is under half a
- * pixel, so the hull is not drawn there: nearly half her triangles, for nothing
- * a child could see.
+ * The outline is a 0.011-unit inverted hull, about 1.1 px from the chase camera
+ * (8 units back), about 0.7 px at 12 units and about 0.4 px at 20. Past this
+ * distance the hull is not drawn: nearly half her triangles. 20 sits beyond the
+ * chapter-start sweep and the outro camera (about 17), so the outline never
+ * switches off while she is on screen in either.
  */
-const OUTLINE_NEAR = 12;
+const OUTLINE_NEAR = 20;
 
 const _at = new THREE.Vector3();
 

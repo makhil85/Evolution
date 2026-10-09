@@ -20,8 +20,9 @@ export const BOUNDS = { minX: -34, maxX: 34, minZ: -52, maxZ: 62 };
 /**
  * The scatter (trees, rocks, bushes) is baked into merged cell meshes, one per
  * cell and material kind. A coarser grid means fewer draw calls but more
- * triangles drawn for a given view; this grid is the measured balance (see
- * scripts/test-ch3-streets.mjs and the Chapter 3 perf notes).
+ * triangles drawn for a given view, so this grid is a trade-off between the two.
+ * scripts/test-ch3-streets.mjs checks the baking itself (triangles conserved,
+ * one draw per cell and kind, each cell's bounds holding its instances).
  */
 const PROP_CELLS = { nx: 4, nz: 6 };
 
@@ -1083,8 +1084,7 @@ export class Village {
 
     // Every scatter family above was collected, not drawn: baked here into one
     // merged mesh per cell and material, so each cell is one draw call that
-    // culls as a unit. Calls and triangles per view are measured in
-    // scripts/test-ch3-streets.mjs.
+    // culls as a unit.
     await this.board.bakeProps(this.propFamilies, { cellOf: gridCellOf(BOUNDS, PROP_CELLS.nx, PROP_CELLS.nz) });
 
     // Bridges. Each sits on the river's centreline at its own x, so they follow
