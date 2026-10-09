@@ -150,7 +150,7 @@ export function createTransferPanel(root) {
     const wayDo = h.along === false ? 'Face the way you came' : 'Point forward';
     const errDeg = h.err === null || h.err === undefined ? null : Math.round(Math.abs(h.err) * DEG);
     const lined = errDeg !== null && errDeg <= 8;
-    const turnKey = h.err > 0 ? t('hold → (or D) to turn right', 'hold → ▶') : t('hold ← (or A) to turn left', '◀ hold ←');
+    const turnKey = h.err > 0 ? t('turn right', 'turn right ▶') : t('turn left', '◀ turn left');
     const need = Math.max(0, h.dvNeed || 0);
     const done = Math.max(0, h.dvDone || 0);
     const acc = Math.max(0.01, h.accel || 1);
@@ -175,7 +175,7 @@ export function createTransferPanel(root) {
     if (ph === 'search') { setText(whenBig, '…'); setText(whenSub, t('finding a path', 'finding a way')); }
     else if (ph === 'wait' || ph === 'point') {
       setText(whenBig, `${Math.max(0, Math.ceil(h.tau ?? 0))} s`);
-      setText(whenSub, (h.tau ?? 0) > 100 ? t('time warp is OK', 'keys 1-4: go fast') : t('get ready!', 'get ready!'));
+      setText(whenSub, (h.tau ?? 0) > 100 ? t('time warp is OK', 'you can go fast') : t('get ready!', 'get ready!'));
     } else if (ph === 'burn' || ph === 'fix') { setText(whenBig, t('NOW', 'NOW')); setText(whenSub, t('burn window open', 'go go go!')); }
     else if (ph === 'full' || ph === 'over') { setText(whenBig, t('STOP', 'STOP')); setText(whenSub, t('let go of Space', 'let go of Space')); }
     else { setText(whenBig, '✓'); setText(whenSub, t('just coast', 'just wait')); }

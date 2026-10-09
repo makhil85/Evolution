@@ -133,8 +133,8 @@ export function createAimDial(root) {
     const early = h.phase === 'ready' && (h.inS ?? 0) > 10;
     const errDeg = early || h.err === null || h.err === undefined ? null : Math.round(Math.abs(h.err) * DEG);
     const lined = errDeg !== null && errDeg <= 10;
-    const turnKey = h.err > 0 ? t('hold → (or D) to turn right', 'hold → ▶') : t('hold ← (or A) to turn left', '◀ hold ←');
-    if (early) { setText(off, t(`Turn in ${Math.max(0, h.inS - 10)} s`, `Turn in ${Math.max(0, h.inS - 10)} s`)); setText(keyLine, h.inS > 100 ? t('time warp (1-4) is fine', 'keys 1-4: go fast') : ''); }
+    const turnKey = h.err > 0 ? t('turn right', 'turn right ▶') : t('turn left', '◀ turn left');
+    if (early) { setText(off, t(`Turn in ${Math.max(0, h.inS - 10)} s`, `Turn in ${Math.max(0, h.inS - 10)} s`)); setText(keyLine, h.inS > 100 ? t('time warp is fine', 'you can go fast') : ''); }
     else if (errDeg === null) { setText(off, ''); setText(keyLine, ''); }
     else if (lined) {
       setText(off, t('Lined up ✓', 'Good ✓'));

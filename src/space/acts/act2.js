@@ -17,7 +17,7 @@ export function act2Steps(game) {
     if (sh.landedOn !== 'moon' || sh.fuel >= game.fuelCapacity * 0.45 || sh.t - refilledAt < 20) return;
     refilledAt = sh.t;
     refuel(sh, game.fuelCapacity, game.fuelCapacity);
-    game.hud.toast(t('Your robot melted more Moon ice into fuel. Tank full!', 'Your robot made fuel from Moon ice. Tank full!'), { kind: 'good', ms: 3600 });
+    game.hud.toast(t('Your robot melted more Moon ice into fuel. Tank full!', 'Your robot made fuel from Moon ice. Tank full!'), { kind: 'good' });
   }
   const { hud, shipView } = game;
   ensureStatsTracking(game);
@@ -37,7 +37,7 @@ export function act2Steps(game) {
     {
       id: 'a2_capture', act: 2,
       title: t('Get into Moon orbit', 'Get into Moon orbit'),
-      objective: t('Goal: make your path a loop round the Moon. At your lowest point, point backwards (← / →, opposite to the way you are moving) and hold Space until the dotted line closes into a circle.', 'Goal: go round the Moon. Turn to face the way you came (← →) and hold Space until the dotted line is a circle.'),
+      objective: t('Goal: make your path a loop round the Moon. At your lowest point, point backwards (opposite to the way you are moving) and hold Space until the dotted line closes into a circle.', 'Goal: go round the Moon. Turn to face the way you came and hold Space until the dotted line is a circle.'),
       markers: ['moon'],
       aim: 'retrograde',
       capture: 'moon',
@@ -64,7 +64,7 @@ export function act2Steps(game) {
         if (rig.release()) {
           hud.toast(t('Satellite released into Moon orbit - it will relay your messages home!', 'Bye, satellite! It will go around the Moon and send your messages home!'), { kind: 'good', ms: 5000 });
         }
-        hud.toast(t('Captured! You are in orbit round the Moon.', 'You are going round the Moon!'), { kind: 'good', ms: 4200 });
+        hud.toast(t('Captured! You are in orbit round the Moon.', 'You are going round the Moon!'), { kind: 'good' });
       },
     },
     // One whole loop round the Moon before the question and the landing
@@ -93,13 +93,13 @@ export function act2Steps(game) {
       bonusBeats: ['dockingLights'],
       after() {
         if (game.ship.landedOn) return;
-        hud.toast(t('Now land: point backwards and slow down. Keep your falling speed in the green.', 'Now land slowly! Keep the speed in the green.'), { kind: 'good', ms: 4200 });
+        hud.toast(t('Now land: point backwards and slow down. Keep your falling speed in the green.', 'Now land slowly! Keep the speed in the green.'), { kind: 'good' });
       },
     },
     {
       id: 'a2_land', act: 2,
       title: 'Land on the Moon',
-      objective: t('Goal: land gently. Point backwards (against your motion, ← / →) and hold Space to slow down, then keep your falling speed in the green. Legs are down.', 'Goal: land softly. Turn to face backwards (← →) and hold Space to slow down.'),
+      objective: t('Goal: land gently. Point backwards (against your motion) and hold Space to slow down, then keep your falling speed in the green. Legs are down.', 'Goal: land softly. Turn to face backwards and hold Space to slow down.'),
       markers: ['moon'],
       aim: 'retrograde',
       land: 'moon',
@@ -109,7 +109,7 @@ export function act2Steps(game) {
         fuelSafetyNet(game);
         return game.ship.landedOn === 'moon';
       },
-      after() { hud.toast(t('Touchdown! Climb down and take a look around.', 'You landed! Climb down and look around.'), { kind: 'good', ms: 3200 }); },
+      after() { hud.toast(t('Touchdown! Climb down and take a look around.', 'You landed! Climb down and look around.'), { kind: 'good' }); },
     },
     {
       id: 'a2_surface', act: 2,
@@ -130,7 +130,7 @@ export function act2Steps(game) {
 
         if (!game.samples.includes('Moon regolith sample')) game.samples.push('Moon regolith sample');
         refuel(game.ship, 2, game.fuelCapacity);
-        hud.toast(t('Your robot melted Moon ice into fuel!', 'Your robot made fuel from Moon ice!'), { kind: 'good', ms: 3600 });
+        hud.toast(t('Your robot melted Moon ice into fuel!', 'Your robot made fuel from Moon ice!'), { kind: 'good' });
       },
     },
     {
@@ -180,7 +180,7 @@ export function act2Steps(game) {
     {
       id: 'a2_coast', act: 2,
       title: t('Catch the Mars window', 'Head for Mars'),
-      objective: t('Mars moves too! Use time warp (1-4) until the banner says BURN NOW, then point along your path and hold Space until your dotted line reaches Mars.', 'Wait for the green BURN NOW sign (keys 1 to 4 make time go fast). Then hold Space until your dotted line reaches Mars.'),
+      objective: t('Mars moves too! Use time warp until the banner says BURN NOW, then point along your path and hold Space until your dotted line reaches Mars.', 'Wait for the green BURN NOW sign (time warp makes time go fast). Then hold Space until your dotted line reaches Mars.'),
       markers: ['mars'],
       aim: 'prograde',
       transfer: 'mars',

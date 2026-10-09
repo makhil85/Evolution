@@ -42,7 +42,7 @@ function legSteps(game, { from, to, act, say, beat, ids }) {
     {
       id: ids.window, act,
       title: t(`Catch the ${To} window`, `Head for ${To}`),
-      objective: t(`Use time warp (1-4) until the banner says BURN NOW, then point along your path and hold Space until your dotted line reaches ${To}.`, `Wait for the green BURN NOW sign (keys 1 to 4 make time go fast). Then hold Space until your dotted line reaches ${To}.`),
+      objective: t(`Use time warp until the banner says BURN NOW, then point along your path and hold Space until your dotted line reaches ${To}.`, `Wait for the green BURN NOW sign (time warp makes time go fast). Then hold Space until your dotted line reaches ${To}.`),
       markers: [to],
       aim: 'prograde',
       transfer: to,
@@ -62,7 +62,7 @@ function legSteps(game, { from, to, act, say, beat, ids }) {
     {
       id: ids.coast, act,
       title: t(`Coast to ${To}`, `Fly to ${To}`),
-      objective: t(`Coast to ${To}. Time warp (1-4) makes the long trip quick. If the banner asks for a small burn, it is fine-tuning your path.`, `Fly to ${To} and wait. Keys 1 to 4 make time go fast.`),
+      objective: t(`Coast to ${To}. Time warp makes the long trip quick. If the banner asks for a small burn, it is fine-tuning your path.`, `Fly to ${To} and wait. Time warp makes time go fast.`),
       markers: [to],
       transfer: to,
       aim: 'prograde',
@@ -105,7 +105,7 @@ export function partBSteps(game) {
       objective: t('Captured! Look round Uranus while you orbit.', 'You did it! Look at Uranus.'),
       markers: ['uranus'],
       async enter() {
-        hud.toast(t('Uranus has you! Look how it is tipped right over.', 'You’re going around Uranus! It is lying on its side!'), { kind: 'good', ms: 3600 });
+        hud.toast(t('Uranus has you! Look how it is tipped right over.', 'You’re going around Uranus! It is lying on its side!'), { kind: 'good' });
         // Time to look before the fact and the question (lead 2026-10-08).
         await orbitFor(game, 25, { lap: false });
         await hud.showFact({
@@ -204,13 +204,13 @@ export function partBSteps(game) {
           { who: 'Mission Control', text: t('Icy rocks all round you! Before we go on, some practice: one day you may need to move a rock in space. Knock the gold rock into the net, using what you learned about bumps.', 'Icy rocks everywhere! Let’s play a game. Knock the gold rock into the net!') },
         ]);
         await playPool({ bus: game.bus });
-        hud.toast(t('Space pool champion! Now on to Pluto.', 'Well done! Now on to Pluto.'), { kind: 'good', ms: 3200 });
+        hud.toast(t('Space pool champion! Now on to Pluto.', 'Well done! Now on to Pluto.'), { kind: 'good' });
       },
     },
     {
       id: 'c5_pluto_coast', act: 3,
       title: t('Fly past Pluto', 'Fly past Pluto'),
-      objective: t('Coast on to Pluto. If the banner asks for a small burn, it is fine-tuning your path.', 'Fly on to Pluto and wait. Keys 1 to 4 make time go fast.'),
+      objective: t('Coast on to Pluto. If the banner asks for a small burn, it is fine-tuning your path.', 'Fly on to Pluto and wait. Time warp makes time go fast.'),
       markers: ['pluto'],
       transfer: 'pluto',
       aim: 'prograde',
@@ -227,7 +227,7 @@ export function partBSteps(game) {
       objective: '',
       markers: ['pluto'],
       async enter() {
-        hud.toast(t('Pluto, right beside you! See the big pale heart?', 'There is Pluto! Can you see the heart shape?'), { kind: 'good', ms: 4000 });
+        hud.toast(t('Pluto, right beside you! See the big pale heart?', 'There is Pluto! Can you see the heart shape?'), { kind: 'good' });
         await hud.showFact({
           title: t('Pluto, the dwarf planet', 'Pluto is a dwarf planet'),
           body: t('Pluto is smaller than our Moon. It has mountains of water ice and a huge pale plain shaped like a heart, made of frozen nitrogen. Its biggest moon, Charon, is half its size. Pluto shares its path round the Sun with lots of other icy worlds, like Eris.',

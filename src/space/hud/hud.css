@@ -340,7 +340,6 @@
 }
 .sp-hud .sp-mission__step.is-done { color: var(--sp-text); text-decoration: line-through; text-decoration-color: rgba(247,239,226,.35); }
 .sp-hud .sp-mission__step.is-done::before { content: '●'; color: var(--sp-good); }
-.sp-hud .sp-mission__hint { margin-top: 6px; font-size: calc(10.8px * var(--hud-scale)); color: rgba(205,191,169,.7); }  /* -> 14px */
 
 /* Orbit readout */
 .sp-hud .sp-orbit__state { font-size: calc(12.3px * var(--hud-scale)); font-weight: 800; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }  /* -> 16px */
@@ -712,13 +711,6 @@
   filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.45));
 }
 .sp-hud .sp-minimap__canvas { display: block; }
-.sp-hud .sp-minimap__hint {
-  text-align: center;
-  font-size: calc(9.5px * var(--hud-scale));
-  color: var(--sp-muted);
-  margin-top: 2px;
-  opacity: 0.8;
-}
 .sp-hud .sp-minimap:hover .sp-minimap__canvas { outline: 2px solid var(--sp-accent-soft); outline-offset: -6px; border-radius: 50%; }
 .sp-hud .sp-minimap.is-hidden,
 .sp-hud .sp-minimap.is-off { display: none; }
@@ -873,7 +865,6 @@
 .sp-hud.is-focus .sp-warp-panel,
 .sp-hud.is-focus .sp-orbit,
 .sp-hud.is-focus .sp-mission__steps,
-.sp-hud.is-focus .sp-mission__hint,
 .sp-hud.is-focus .sp-mission__act,
 .sp-hud.is-focus .sp-supplies .sp-gauge + .sp-gauge,
 .sp-hud.is-focus .sp-gauge__note,
