@@ -679,3 +679,39 @@ lines are in place but not tuned.
 - Open: the Ch7 lens Skip stall seen once in a browser after a grown-up
   Jump was not reproduced in node (most likely the hands-off wait before the
   question). Check it when playing.
+
+## Session 2026-10-09 (round 2): words only when idle, pause to read, calmer HUD
+
+- **Reading gate** (lead): `src/play/readGate.js`. A short status (`isShort`,
+  at most 8 words, 6 at Level 1) shows at once and never pauses. A live cue
+  ("Let go of Space!") shows at once and must be short. Everything else waits
+  for 2 s with no input (`whenIdle`), then play pauses for `readMs(text)`.
+  After 15 s of waiting, a 1 s stop is enough (guidance is never dropped).
+  At least 3 s of free play between two pauses. The mission card folds while
+  she moves and opens after 3 s still. Word limits per kind and Level are in
+  `TEXT_LIMITS`; `test-text-limits` (Ch4-7) and `test-ch123-text` (Ch1-3)
+  scan every line.
+- **Ch4-7 HUD**: no key pad on a computer (touch only); Warp and Camera view
+  sit under Fuel in the same style; Frozen is the pause; Auto-turn is beside
+  Autopilot; no rewind button (Retry covers it, R still works). The space HUD
+  has one combined pause (card, map, reading, play) and every bus `ui-modal`
+  joins it.
+- **Flame**: Space always shows the engine. On Easy, while the ship swings
+  more than 0.45 rad before a burn, a small flame (0.25) shows (`main.js`
+  `aimHoldFlame`). No flame means Frozen is on or a card is holding the game.
+- **Ship walk (Ch6, Ch7)**: the Camera view button switches behind her /
+  from above (`ship.js` `toggleView`). The camera is never nearer than 1.5 m
+  while she is seen: in a corner it lifts first, turns only while she
+  stands, and fades as the last resort (about 2% of walking frames, 14% when
+  she backs into a corner). Option for the lead: allow a 0.8 m pull-in
+  instead of the fade.
+- **Aboard the starship**: from `c6_meet_crew` on, `game.aboardStarship` is
+  set by the step (`aboard` in missions); the small rocket is hidden and the
+  starship is her craft in every later film and part.
+- **Ch5 ring run**: no flicker when shooting (pooled shots and bursts,
+  shaders warmed up, the bolt under the bloom threshold, 256 burst parts).
+- **Ch3 town**: props baked per cell and culled; memory 30 -> 17.5 MB.
+  Square, road, pad, hydro and hub views are in budget. Open: the homes view
+  (156 calls / 305k triangles) and the wide view (171 / 331k) are still over.
+- Open: some question-bank success lines are long (up to 63 words); they
+  show as OK cards for now. Shorten them in a later round.

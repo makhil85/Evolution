@@ -510,6 +510,14 @@ went wrong once.
 - **No key legends on screen** (lead 2026-10-09): no "WASD / arrow keys /
   press J" lines, no key letters on buttons. Keep only what a child cannot
   play without ("hold Space" to burn, "press E" where it is the only way).
+- **Words only when she is not playing** (lead 2026-10-09): banners,
+  questions and guidance wait for 2 s with no input and then pause play
+  while she reads (`whenIdle` in `src/play/readGate.js`); only short statuses
+  and live cues show while she plays. Keep every line inside `TEXT_LIMITS`
+  (the text-limit tests fail otherwise). Never show a long line mid-steer.
+- **A calm HUD** (lead 2026-10-09): no key pad on a computer, no key letters
+  on buttons, small toggles stacked under Fuel; Frozen is the pause. Check
+  the HUD in a browser at 1280x720 for overlaps before a PR.
 - When the story changes, grep every old word ("rock ship", "inside a rock")
   in questions, lessons, cards and the launcher.
 
