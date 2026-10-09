@@ -24,7 +24,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 /** Human names for the station ids the steps reference. */
 const STATION_NAME = {
   missionSchool: 'Mission School',
-  materialsForge: 'Materials Forge',
+  materialsForge: 'Materials Lab',
   waterLab: 'River Flow Lab',
   windTunnel: 'Wind Tunnel',
   scienceCenter: 'Science Center',

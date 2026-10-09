@@ -78,7 +78,7 @@ export const CHAPTERS = [
   },
   {
     n: 2,
-    title: 'City Engineering',
+    title: 'Forces and Machines',
     blurb: 'Build the bridge, then raise the Engineering Workshop.',
     href: 'chapter2.html', // the 3-D version (CHAPTER2_PLAN.md); the old one stays in docs/legacy-chapters/
     store: { 1: 'level2_city_engineering_v5_three_side_moat_route', 4: 'level2_city_engineering_grade3_olympiad_v2_science' },
@@ -86,7 +86,7 @@ export const CHAPTERS = [
   },
   {
     n: 3,
-    title: 'Rocket Village',
+    title: 'Ready for Lift-off',
     blurb: 'Answer the science questions, build the rocket stage by stage, and launch it.',
     href: 'chapter3.html',
     store: { 1: 'level3_rocket_village_v2_L1', 4: 'level3_rocket_village_v2' },

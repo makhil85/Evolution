@@ -44,7 +44,7 @@ const pad4 = (n) => (n + 3) & ~3;
  */
 export function exportGlb(geo, {
   name = 'girl',
-  generator = 'Rocket Village character page',
+  generator = 'Evolution character page',
   bones = null,
   skeleton = null,
   clips = [],

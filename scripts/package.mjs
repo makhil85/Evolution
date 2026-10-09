@@ -1,7 +1,7 @@
 // npm run package: build the game and make it double-click playable.
 //   dist/                  the built game + PLAY.bat, play.command,
 //                          play-server.mjs, HOW-TO-PLAY.txt
-//   release/RocketVillage.zip   the same, zipped (written here, no outside
+//   release/Evolution.zip   the same, zipped (written here, no outside
 //                          tools, and read back to check every file)
 // Give people the zip; they unzip it and double-click PLAY.bat.
 import { copyFileSync, chmodSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
@@ -98,7 +98,7 @@ function checkZip(path, expected) {
 }
 
 // Run it (after the helpers above are defined).
-const zipPath = 'release/RocketVillage.zip';
+const zipPath = 'release/Evolution.zip';
 const files = listFiles('dist');
 writeFileSync(zipPath, makeZip('dist', files));
 checkZip(zipPath, files.length);

@@ -124,7 +124,7 @@ const forge = building('materialsForge');
 const lab = building('waterLab');
 const tunnel = building('windTunnel');
 const mill = { x: 16, z: 11.2 };
-ok(school.z === forge.z && school.x < forge.x, 'the Mission School is due west of the Materials Forge');
+ok(school.z === forge.z && school.x < forge.x, 'the Mission School is due west of the Materials Lab');
 ok(lab.z === tunnel.z && lab.x < tunnel.x, 'the River Flow Lab is due west of the Wind Tunnel');
 ok(Math.abs(lab.x - school.x) <= 1.5 && lab.z < school.z, 'the River Flow Lab is (nearly) due north of the Mission School');
 

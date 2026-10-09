@@ -230,7 +230,7 @@ export class Hud {
 
     /** The one-line chapter goal on the mission card (Chapter 2 passes its own). */
     this._missionGoal = options.missionGoal || MISSION_GOAL;
-    this._buildTop(options.title || 'Rocket Village', options);
+    this._buildTop(options.title || 'Evolution', options);
     this._buildSide();
     this._restoreMissionOpen();
     this._bindMissionKey();

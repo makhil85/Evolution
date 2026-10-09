@@ -1,16 +1,20 @@
-// Villagers.
+// Townspeople.
 //
-// Props made the village look built; people make it look lived in. These walk
-// the path network on loops, pause now and then, and turn to face where they
-// are going. They are scenery, not gameplay: nothing collides with them and
-// nothing depends on them, so they can never wedge a child.
+// Props made the town look built; people make it look lived in. These are the
+// people who build the rocket: engineers in hard hats and hi-vis vests,
+// scientists in lab coats, a pilot in a flight suit and helmet, and mission
+// control staff with headsets. They walk the path network on loops, pause now
+// and then, and turn to face where they are going. They are scenery, not
+// gameplay: nothing collides with them and nothing depends on them, so they
+// can never wedge a child.
 //
-// COST NOTE, learned the hard way: the first version built each villager from
-// nine separate meshes, which is nine draw calls each and 108 for the crowd -
-// it pushed the whole scene from 140 calls to 204. Everything that does not
-// need to move independently is now MERGED into one geometry with its colours
-// baked into vertex colours, so a villager is three draw calls: body, and two
-// legs that still swing.
+// COST NOTE, learned the hard way: the first version built each townsperson
+// from nine separate meshes, which is nine draw calls each and 108 for the
+// crowd - it pushed the whole scene from 140 calls to 204. Everything that does
+// not need to move independently is now MERGED into one geometry with its
+// colours baked into vertex colours, so a person is three draw calls: body, and
+// two legs that still swing. The hats, vests and headsets are merged into the
+// body like everything else, so the outfits cost nothing extra in draw calls.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { toonRamp } from './toonPipeline.js';
@@ -18,17 +22,7 @@ import { VILLAGE_PATHS, ROCKET_VILLAGE } from './rocketVillageLayout.js';
 import { AVATAR_HEIGHT } from './contracts.js';
 import { RIVER, CROSSINGS } from './village.js';
 
-const toon = (c) => new THREE.MeshToonMaterial({ color: c, gradientMap: toonRamp });
-
-/** Palettes. Colours are baked into vertex colours, not into materials. */
-const PALETTE = {
-  skin: [0xffdcc4, 0xe8b88a, 0xf1c9a0, 0xc98d5e],
-  coat: [0xd96f5a, 0x5b8fd6, 0x6fbf73, 0xd7a94b, 0x9b7fd4, 0xd98cb0],
-  legs: [0x4a5568, 0x3e63c8, 0x6b5b45],
-  hair: [0x3b2b25, 0x5a382f, 0x2c1d18, 0x8a6a3a],
-};
-
-/** ONE material for the entire crowd. */
+/** ONE material for the entire crowd. Colours are baked into vertex colours. */
 const CROWD_MATERIAL = new THREE.MeshToonMaterial({ gradientMap: toonRamp, vertexColors: true });
 
 const _c = new THREE.Color();
@@ -42,9 +36,9 @@ const _up = new THREE.Vector3(0, 1, 0);
 
 /**
  * Height of the figure as modelled, before scaling. Measured from the parts in
- * outfitBody(): the hair cap tops out at about 1.45.
+ * outfitBody(): the hard hat tops out at about 1.49, the highest of the four.
  */
-const VILLAGER_MODEL_HEIGHT = 1.45;
+const TOWNSPERSON_MODEL_HEIGHT = 1.49;
 /** Paint every vertex of a geometry a flat colour, so it can be merged. */
 function paint(geo, hex) {
   _c.setHex(hex);
@@ -66,8 +60,8 @@ function makeRng(seed) {
  * Four outfits, rather than four independent random palettes.
  *
  * The crowd used to roll skin, coat, hair and trousers separately, which made
- * every villager geometrically unique - and a unique geometry cannot be
- * instanced. Ten villagers cost 30 draw calls, the second largest block in the
+ * every townsperson geometrically unique - and a unique geometry cannot be
+ * instanced. Ten townspeople cost 30 draw calls, the second largest block in the
  * scene after the props. Fixed outfits mean four body geometries shared by
  * everyone, which is 8 calls for the whole crowd.
  *
@@ -75,10 +69,14 @@ function makeRng(seed) {
  * and the routes keep them apart.
  */
 const OUTFITS = [
-  { coat: 0xd96f5a, skin: 0xffdcc4, hair: 0x3b2b25, legs: 0x4a5568 },
-  { coat: 0x5b8fd6, skin: 0xe8b88a, hair: 0x5a382f, legs: 0x3e63c8 },
-  { coat: 0x6fbf73, skin: 0xf1c9a0, hair: 0x2c1d18, legs: 0x6b5b45 },
-  { coat: 0xd7a94b, skin: 0xc98d5e, hair: 0x8a6a3a, legs: 0x4a5568 },
+  // Engineer: work shirt and navy overalls under a hi-vis vest, yellow hard hat.
+  { shirt: 0x2f4a6e, vest: 0xff8a1f, legs: 0x2f3f5c, skin: 0xffdcc4, head: 'hardhat', hat: 0xffd23f },
+  // Scientist: white lab coat, teal tie, glasses, grey hair.
+  { shirt: 0xf6f8fb, labCoat: true, legs: 0x3a4a63, skin: 0xe8b88a, hair: 0x9aa3ad, head: 'glasses', tie: 0x2fb7a6 },
+  // Pilot: navy flight suit with a zip, white helmet with a dark visor.
+  { shirt: 0x2e4f8a, legs: 0x2e4f8a, skin: 0xf1c9a0, head: 'helmet', hat: 0xf4f7fb, visor: 0x17324d },
+  // Mission control: sky-blue shirt, dark trousers, headset.
+  { shirt: 0x5bb8e0, legs: 0x4a5568, skin: 0xc98d5e, hair: 0x2c1d18, head: 'headset' },
 ];
 
 /** Body geometry for one outfit: everything that does not swing. */
@@ -88,15 +86,58 @@ function outfitBody(outfit) {
     geo.translate(x, y, z);
     statics.push(paint(geo, hex));
   };
-  at(new THREE.CylinderGeometry(0.15, 0.185, 0.5, 8), outfit.coat, 0, 0.85, 0);
-  at(new THREE.CylinderGeometry(0.048, 0.043, 0.42, 6), outfit.coat, -0.19, 0.87, 0);
-  at(new THREE.CylinderGeometry(0.048, 0.043, 0.42, 6), outfit.coat, 0.19, 0.87, 0);
+  // Torso. A lab coat is longer than a shirt and hangs over the top of the legs.
+  if (outfit.labCoat) {
+    at(new THREE.CylinderGeometry(0.165, 0.2, 0.56, 8), outfit.shirt, 0, 0.84, 0);
+    at(new THREE.BoxGeometry(0.035, 0.2, 0.02), outfit.tie, 0, 1.0, 0.175);
+  } else {
+    at(new THREE.CylinderGeometry(0.15, 0.185, 0.5, 8), outfit.shirt, 0, 0.85, 0);
+  }
+  if (outfit.vest) {
+    // Hi-vis vest: a bright shell over the shirt, with a reflective band.
+    at(new THREE.CylinderGeometry(0.163, 0.195, 0.4, 8, 1, true), outfit.vest, 0, 0.87, 0);
+    at(new THREE.CylinderGeometry(0.178, 0.184, 0.05, 8, 1, true), 0xe9eef5, 0, 0.9, 0);
+  }
+  if (outfit.head === 'helmet') {
+    at(new THREE.BoxGeometry(0.03, 0.42, 0.02), 0xdfe6ef, 0, 0.85, 0.165);   // flight suit zip
+  }
+  at(new THREE.CylinderGeometry(0.048, 0.043, 0.42, 6), outfit.shirt, -0.19, 0.87, 0);
+  at(new THREE.CylinderGeometry(0.048, 0.043, 0.42, 6), outfit.shirt, 0.19, 0.87, 0);
+
+  // Head. A hair cap, unless a hat or helmet covers the hair.
   at(new THREE.SphereGeometry(0.155, 10, 8), outfit.skin, 0, 1.26, 0);
-  const capGeo = new THREE.SphereGeometry(0.168, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.5);
-  capGeo.rotateX(-0.1);
-  at(capGeo, outfit.hair, 0, 1.28, -0.01);
-  at(new THREE.SphereGeometry(0.028, 6, 5), 0x18202c, -0.06, 1.25, 0.135);
-  at(new THREE.SphereGeometry(0.028, 6, 5), 0x18202c, 0.06, 1.25, 0.135);
+  if (outfit.head === 'hardhat') {
+    // Hard hat: a dome with a brim, sitting above the eyes.
+    at(new THREE.SphereGeometry(0.185, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), outfit.hat, 0, 1.3, 0);
+    at(new THREE.CylinderGeometry(0.21, 0.21, 0.025, 12), outfit.hat, 0, 1.295, 0);
+  } else if (outfit.head === 'helmet') {
+    at(new THREE.SphereGeometry(0.19, 12, 8), outfit.hat, 0, 1.27, 0);
+    // The visor is a dark glass shell on the front of the helmet.
+    const visor = new THREE.SphereGeometry(0.12, 10, 6);
+    visor.scale(1, 0.85, 0.5);
+    at(visor, outfit.visor, 0, 1.27, 0.17);
+  } else {
+    const capGeo = new THREE.SphereGeometry(0.168, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.5);
+    capGeo.rotateX(-0.1);
+    at(capGeo, outfit.hair, 0, 1.28, -0.01);
+  }
+  if (outfit.head !== 'helmet') {
+    at(new THREE.SphereGeometry(0.028, 6, 5), 0x18202c, -0.06, 1.25, 0.135);
+    at(new THREE.SphereGeometry(0.028, 6, 5), 0x18202c, 0.06, 1.25, 0.135);
+  }
+  if (outfit.head === 'glasses') {
+    for (const x of [-0.06, 0.06]) at(new THREE.TorusGeometry(0.038, 0.008, 4, 10), 0x2b2f3a, x, 1.25, 0.14);
+  }
+  if (outfit.head === 'headset') {
+    // Headband over the hair, an ear cup each side, and a mic on a boom by the mouth.
+    at(new THREE.TorusGeometry(0.19, 0.018, 4, 12, Math.PI), 0x262e3a, 0, 1.27, 0);
+    at(new THREE.BoxGeometry(0.04, 0.08, 0.05), 0x262e3a, -0.19, 1.23, 0);
+    at(new THREE.BoxGeometry(0.04, 0.08, 0.05), 0x262e3a, 0.19, 1.23, 0);
+    const boom = new THREE.CylinderGeometry(0.01, 0.01, 0.14, 4);
+    boom.rotateX(Math.PI / 2);
+    at(boom, 0x262e3a, 0.17, 1.17, 0.08);
+    at(new THREE.SphereGeometry(0.022, 6, 5), 0x262e3a, 0.12, 1.16, 0.15);
+  }
 
   const merged = mergeGeometries(statics, false);
   statics.forEach((x) => { if (x !== merged) x.dispose(); });
@@ -116,9 +157,9 @@ function routeFrom(path) {
 }
 
 /**
- * Clearance a villager keeps from the edge of a solid.
+ * Clearance a townsperson keeps from the edge of a solid.
  *
- * Wider than a villager actually is (they are about 0.45 across). The extra
+ * Wider than a townsperson actually is (they are about 0.45 across). The extra
  * is walking room: at exactly body width they clipped the corners of market
  * stalls as they rounded them, because a route is a polyline and a walk is a
  * series of chords across it.
@@ -128,7 +169,7 @@ const BODY_RADIUS = 0.85;
 /**
  * Bend a route around whatever is standing in it.
  *
- * Villagers have no collision - deliberately, because a villager that can
+ * Townspeople have no collision - deliberately, because a townsperson that can
  * block a doorway can trap a child. But "no collision" was being applied to
  * the route as well as the body, so they walked through the fountain, the
  * market stalls and the buildings. The main road runs straight through the
@@ -154,7 +195,7 @@ function bendAroundSolids(route, solids) {
   // whether the route was authored as a loop or not. Skipping that segment
   // left the main road with one un-resampled leg running from (0, 60) to
   // (0, 3): a straight line down the middle of the map, through the plaza,
-  // through the fountain. Every route point was clear and a villager still
+  // through the fountain. Every route point was clear and a townsperson still
   // stood in the water, because the WALK was never checked, only the corners.
   for (let n = 0; n < route.length; n++) {
     const a = route[n];
@@ -231,7 +272,7 @@ function bendAroundSolids(route, solids) {
 
   // CHORD REPAIR. Clear points are not a clear path: two samples pushed to
   // opposite sides of the fountain are both outside it, and the straight line
-  // between them goes through the middle. That is precisely how a villager
+  // between them goes through the middle. That is precisely how a townsperson
   // ended up standing in the water. Subdivide any segment whose midpoint is
   // inside something, shove the new point out, and repeat - each round halves
   // the worst chord.
@@ -262,7 +303,7 @@ export class Villagers {
   constructor(parent, { village, count = 10, solids = [] }) {
     this.village = village;
     this.group = new THREE.Group();
-    this.group.name = 'villagers';
+    this.group.name = 'townspeople';
     parent.add(this.group);
 
     const rng = makeRng(31337);
@@ -294,9 +335,9 @@ export class Villagers {
         mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
         mesh.castShadow = false;
         mesh.receiveShadow = false;
-        // A crowd spread across the whole village; culled as one unit it
-        // would vanish the moment its shared bounds left the frustum.
-        mesh.frustumCulled = false;
+        // Culling stays on. The bounds are refitted to where the people
+        // actually stand every frame (update() below), so a batch is culled
+        // only when every one of its people is out of view.
         this.group.add(mesh);
       }
       return { body, legs };
@@ -308,7 +349,7 @@ export class Villagers {
     // round-robin. An even spread is exactly what makes a place feel deserted:
     // nobody is anywhere in PARTICULAR, and a child can walk the whole way
     // from the spawn to the first station and meet no one, which is what
-    // happened. Real villages cluster, so the plaza gets a crowd, the road she
+    // happened. Real towns cluster, so the plaza gets a crowd, the road she
     // actually starts on gets company, and the back lanes get whoever is left.
     //
     // routes[] is VILLAGE_PATHS in order, then the plaza pushed on the end.
@@ -334,7 +375,7 @@ export class Villagers {
           // A pause timer means the crowd is not a conveyor belt of walkers.
           pause: rng() * 6,
           phase: rng() * 6.28,
-          scale: AVATAR_HEIGHT * (0.88 + rng() * 0.18) / VILLAGER_MODEL_HEIGHT,
+          scale: AVATAR_HEIGHT * (0.88 + rng() * 0.18) / TOWNSPERSON_MODEL_HEIGHT,
           loop: route === plaza,
           dir: rng() < 0.5 ? 1 : -1,
           x: 0, z: 0, y: 0, heading: 0, swing: 0,
@@ -370,7 +411,7 @@ export class Villagers {
       const x = a.x + (b.x - a.x) * p.t;
       const z = a.y + (b.y - a.y) * p.t;
 
-      // Villagers are scenery with no collision, so nothing stopped them
+      // Townspeople are scenery with no collision, so nothing stopped them
       // walking straight into the river. Turn them back at the water unless
       // there is a bridge under their feet.
       if (!this.canStand(x, z)) {
@@ -382,6 +423,8 @@ export class Villagers {
 
       this.place(p, x, z, Math.atan2(b.x - a.x, b.y - a.y), time, true);
     }
+    // Ten people is cheap to refit every frame: one sphere per batch, from its instances.
+    for (const b of this.batches) { b.body.computeBoundingSphere(); b.legs.computeBoundingSphere(); }
   }
 
   /** Is this dry land, or a bridge that has actually been built? */
@@ -396,7 +439,7 @@ export class Villagers {
   }
 
   place(p, x, z, heading, time, walking) {
-    // The villagers' routes cross the river at the bridge. Following the
+    // The townspeople's routes cross the river at the bridge. Following the
     // terrain sank them into the water halfway over.
     const y = this.village.surfaceHeightAt(x, z);
     p.x = x; p.z = z; p.y = y;

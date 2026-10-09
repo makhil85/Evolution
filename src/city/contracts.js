@@ -1,4 +1,4 @@
-// Chapter 2 "City Engineering", 3-D version: the shared contract every city
+// Chapter 2 "Forces and Machines" (was "City Engineering"), 3-D version: the shared contract every city
 // module builds against (see CHAPTER2_PLAN.md). Numbers here are the old
 // single-file game's (docs/legacy-chapters/level{1,4}/chapter2.html), so saves,
 // the launcher's completion check and the puzzles all carry over unchanged.

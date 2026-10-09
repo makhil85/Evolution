@@ -50,12 +50,18 @@ const CAM = [
 ];
 
 /** Where Rock B hangs, relative to her ship: off to the side, a little away from the Sun. */
+/** Rock B's radius in the flight scene (lead 2026-10-09: smaller than Ceres, whose radius is 7). */
+export const ROCK_B_R = 5.4;
+const ROCK_NATIVE_R = 36; // buildRockShip's rock radius in its own units (ch5/ending.js R)
+const ROCK_K = ROCK_B_R / ROCK_NATIVE_R;
+
 function rockOffset(game) {
   const S = new THREE.Vector3(-(game.ship?.x ?? 1), 0, -(game.ship?.z ?? 0));
   if (S.lengthSq() < 1e-6) S.set(-1, 0, 0);
   S.normalize();
   const P = new THREE.Vector3(-S.z, 0, S.x);
-  return { S, P, at: P.clone().multiplyScalar(150).addScaledVector(S, -60).add(new THREE.Vector3(0, 6, 0)) };
+  // Beside her at the same scale as the rock (it was 150 u out at full size, ~6x Ceres).
+  return { S, P, at: P.clone().multiplyScalar(150 * ROCK_K).addScaledVector(S, -60 * ROCK_K).add(new THREE.Vector3(0, 6 * ROCK_K, 0)) };
 }
 
 /**
@@ -67,6 +73,7 @@ export function showRockB(game) {
   const { scene } = game;
   const rock = buildRockShip();
   rock.setRings(1);
+  rock.group.scale.setScalar(ROCK_K);
   const { S, at } = rockOffset(game);
   rock.group.position.copy(at);
   rock.group.lookAt(at.clone().multiplyScalar(2)); // hangar door (local -Z) towards her

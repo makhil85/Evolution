@@ -1,4 +1,4 @@
-// Chapter 2 "City Engineering": the 3-D world.
+// Chapter 2 "Forces and Machines" (was "City Engineering"): the 3-D world.
 //
 // buildCityWorld() builds everything from src/city/layout.js and returns the
 // small API the game loop needs (see CHAPTER2_PLAN.md, part B). The pieces:
