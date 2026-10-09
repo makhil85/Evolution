@@ -308,13 +308,13 @@ function buildRoom() {
  * The opening film. `run(secs, step)` is the chapter's timed move; `root` is
  * the city's world (unused here: the opening shows it as it is).
  */
-export async function playOpening({ run, scene, camera, newtonAt, chasePose }) {
+export async function playOpening({ run, scene, camera, newtonAt, chasePose, markers = () => {} }) {
   const still = reducedMotion();
   const stage = new THREE.Group();
   scene.add(stage);
   const cap = caption();
   const cart = makeCart();
-  cart.position.set(20.2, 0, 6.25);     // stuck at the bridge's edge, nose down
+  cart.position.set(20.6, 0, 6.25);     // stuck at the bridge's edge, nose down
   cart.rotation.z = -0.08;
   const wheel = makeWaterWheel();
   const apple = makeApple();
@@ -322,11 +322,15 @@ export async function playOpening({ run, scene, camera, newtonAt, chasePose }) {
   stage.add(cart, wheel.group, wheel.gear2, apple);
   const here = chasePose();
   const views = {
-    road: cam([-41.8, 3.0, 6.25], [-33.5, 2.4, 6.25], [-24, 1.0, 6.25], [-22, 1.0, 6.25]),
-    bridge: cam([-2, 15, 22], [12, 10, 14], [8, 0, 8], [21.5, 0.6, 6.25]),
-    wheel: cam([27, 6, -17], [39, 5.2, -15], [WHEEL.x, WHEEL.y + 0.2, WHEEL.z], [WHEEL.x, WHEEL.y + 0.2, WHEEL.z]),
+    // A wide establishing shot high over the west edge, down the road into the city.
+    road: cam([-42.2, 20, 6.25], [-38.5, 18, 6.25], [-12, 0, 6.25], [-10, 0, 6.25]),
+    // Side-on from the south-west: the moat gap, the bridge's empty span and the stuck cart.
+    bridge: cam([12.5, 4.2, 14.5], [14.5, 4.6, 13.5], [21.5, 0.6, 6.25], [23, 0.8, 6.25]),
+    // Low, from the north: the wheel and its gears fill the middle of the frame.
+    wheel: cam([28.5, 1.8, -12.5], [29.5, 2.0, -12], [WHEEL.x, WHEEL.y + 0.2, WHEEL.z], [WHEEL.x, WHEEL.y + 0.2, WHEEL.z]),
     apple: cam([newtonAt.x + 4.2, 2.6, newtonAt.z + 4.6], [newtonAt.x + 2.4, 1.7, newtonAt.z + 3.2], [newtonAt.x, 1.6, newtonAt.z], [newtonAt.x, 1.6, newtonAt.z]),
-    arrive: cam([-38.5, 4.6, 12], [here.pos.x, here.pos.y, here.pos.z], [START.x - 1.5, 1.0, START.z], [here.look.x, here.look.y, here.look.z]),
+    // From the north-east, over the grass: the Science Center stays out of the frame.
+    arrive: cam([-19, 8, 0], [here.pos.x, here.pos.y, here.pos.z], [START.x - 1.5, 1.0, START.z], [here.look.x, here.look.y, here.look.z]),
   };
   const frames = {
     road: (t, k) => aim(camera, views.road, still ? 0.5 : ease(k)),
@@ -344,9 +348,11 @@ export async function playOpening({ run, scene, camera, newtonAt, chasePose }) {
     },
     arrive: (t, k) => aim(camera, views.arrive, still ? 1 : ease(k)),
   };
+  markers(true);
   try {
     await playShots(run, OPENING, frames, cap);
   } finally {
+    markers(false);
     cap.remove();
     scene.remove(stage);
     disposeTree(stage);
@@ -358,7 +364,7 @@ export async function playOpening({ run, scene, camera, newtonAt, chasePose }) {
  * beams glow red under the load), a cut inside the workshop (the rocket plan),
  * and a cut back out for the card. `root` is the city's world, hidden inside.
  */
-export async function playEnding({ run, scene, camera, root }) {
+export async function playEnding({ run, scene, camera, root, markers = () => {} }) {
   const still = reducedMotion();
   const stage = new THREE.Group();
   scene.add(stage);
@@ -408,9 +414,11 @@ export async function playEnding({ run, scene, camera, root }) {
       aim(camera, views.out, still ? 0.5 : ease(k));
     },
   };
+  markers(true);
   try {
     await playShots(run, ENDING, frames, cap);
   } finally {
+    markers(false);
     cap.remove();
     root.visible = true;
     scene.remove(stage);

@@ -295,4 +295,18 @@ await (async () => {
   });
 })();
 
+await (async () => {
+  // One chapter story: the opening film ends, and the ending film still plays in full.
+  store.clear();
+  const order = [];
+  const story = hookStory(hookCamera());
+  const film = (name) => async (run) => { order.push(name); await run(1, () => {}); order.push(`${name}-end`); };
+  await drive(story, story.intro({ eyebrow: 'Chapter 2', title: 'Forces and Machines', line: 'x', scene: film('open') }));
+  const p = story.outro({ title: 'The Engineering Workshop is built!', line: 'x', focus: null, scene: film('end') });
+  await drive(story, p, 300);   // the card waits for a button; the film is what we check
+  ok('the opening film, then the ending film, both play on one chapter story', () => {
+    assert.deepEqual(order, ['open', 'open-end', 'end', 'end-end']);
+  });
+})();
+
 console.log(`\n${passed} checks passed (cutscenes-ch2)`);

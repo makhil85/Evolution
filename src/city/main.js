@@ -118,6 +118,7 @@ let miner = null;
 let hunt = null;
 let modeChip = null;
 let navTimer = 0;
+let filming = false;        // a film is playing: no name tags, beacons, glows, arrow or E hint
 
 const RESOURCE_ROWS = [
   { key: 'wood', label: 'Wood', icon: '🪵' },
@@ -234,6 +235,22 @@ function applyMode(m) {
   if (m.treasureHunt) hunt.start();
 }
 
+/**
+ * Films (cutscenes.js) show the world without its markers: name tags, the
+ * station beacons, the pickup glows, the highlight ring and the nav arrow.
+ * The play mode's own settings come back when the film ends.
+ */
+function filmMarkers(on) {
+  if (!world || !nav) return;
+  filming = on;
+  world.setLabelsVisible(!on);
+  world.highlight(null);
+  world.setPickupGlow(on ? false : mode.resourceGlow);
+  world.setStationBeacons(on ? false : mode.targetBeacon);
+  nav.setArrow(on ? false : mode.navArrow);
+  nav.setBeacon(on ? false : mode.targetBeacon);
+}
+
 /** Raise a structure piece by piece, like the old game (330 ms a piece). */
 function riseStructure(target, pieces, doneMessage, questKey) {
   if (questKey) building.add(questKey);
@@ -264,7 +281,7 @@ function riseStructure(target, pieces, doneMessage, questKey) {
           focus: new THREE.Vector3(c.x, world.heightAt(c.x, c.z), c.z),
           next: { href: 'chapter3.html', label: 'Next: Chapter 3 — Ready for Lift-off' },
           // The film: the workshop opens, the cart crosses the truss, the rocket plan.
-          scene: (run) => playEnding({ run, scene, camera, root: world.root }),
+          scene: (run) => playEnding({ run, scene, camera, root: world.root, markers: filmMarkers }),
         });
       } else {
         hud.toast(doneMessage, 'good');
@@ -442,7 +459,7 @@ async function main() {
   document.getElementById('boot')?.classList.add('done');
   window.__city = {
     scene, renderer, camera, world, rules, controller, hud, avatar, player, THREE, interact, nearestUsable, newton,
-    nav, miner, hunt, nextObjective, applyMode, getMode: () => mode, emotes,
+    nav, miner, hunt, nextObjective, applyMode, getMode: () => mode, emotes, filmMarkers,
   };
   say(`Chapter 2 ready - Level ${LEVEL}`);
   // Unlock mode only: the grown-up "Jump" panel.
@@ -471,7 +488,7 @@ async function main() {
     line: rules.state.builtFinal ? `Welcome back, ${heroName()}! The Engineering Workshop is built.` : t(`Pushes, pulls and machines: fix the city, build the bridge and raise the Engineering Workshop, ${heroName()}.`,
       `Pushes, pulls and machines! Fix the city and build the bridge, ${heroName()}.`),
     lookAt: new THREE.Vector3((BOUNDS.minX + BOUNDS.maxX) / 2, 0, (BOUNDS.minZ + BOUNDS.maxZ) / 2),
-    scene: (run) => playOpening({ run, scene, camera, newtonAt: newton.at, chasePose }),
+    scene: (run) => playOpening({ run, scene, camera, newtonAt: newton.at, chasePose, markers: filmMarkers }),
   });
   // First time in a village chapter: ask how much help she wants (saved, shared by Chapters 1-3).
   if (savedPlayModeId() === null) {
@@ -533,7 +550,7 @@ function tick(dt) {
   if (tools) tools.update(dt);
   if (world) {
     world.update(dt, elapsed, player.position, camera.position);
-    const n = rules && nearestUsable(player.position.x, player.position.z);
+    const n = !filming && rules && nearestUsable(player.position.x, player.position.z);
     const key = n ? `${n.kind}:${n.id}` : '';
     if (key !== lastNear) {
       lastNear = key;

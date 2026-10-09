@@ -171,6 +171,7 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
 
   function begin() {
     active = true;
+    filmOver = false;     // a new film (the opening, then the ending) plays in full
     prevModal = document.body.dataset.playModal;
     document.body.dataset.playModal = '1';
     document.body.classList.add('cs-cinematic');
