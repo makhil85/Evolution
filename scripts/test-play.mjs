@@ -11,7 +11,7 @@ import { lockPlayInput, unlockPlayInput, isPlayModalOpen } from '../src/play/ui.
 import { createNavArrow } from '../src/play/navArrow.js';
 import { createHeldKeys, REPEAT_QUIET_MS } from '../src/game/heldKeys.js';
 import { readMs, needsClick, READ_MIN_MS } from '../src/play/readTime.js';
-import { IDLE_MS, noteInput } from '../src/play/readGate.js';
+import { IDLE_MS, noteInput, whenIdle } from '../src/play/readGate.js';
 import { register } from 'node:module';
 
 let passed = 0;
@@ -565,7 +565,7 @@ ok(!isPlayModalOpen(), 'input lock is a no-op in node');
   advance(READ_MIN_MS);
   pressKey('Enter');
   ok(hud._read === null && body.dataset.playModal === undefined, 'Enter closes the card');
-  advance(IDLE_MS);   // a line to read waits until she has had no input for 2 s (the Enter was input)
+  advance(3000);   // a reading pause waits 3 s of free play after the last one (the Enter closed one)
   hud.toast(`${LONG} Space closes it.`, 'info');
   advance(READ_MIN_MS);
   pressKey(' ');
@@ -639,6 +639,7 @@ ok(!isPlayModalOpen(), 'input lock is a no-op in node');
   {
     settle();
     const GUIDE = 'Move closer to a resource, board, lab, locked room, or foundation.';
+    const UNFOLD_MS = 3000; // the mission card opens again after this long with no input (hud.js)
 
     pressKey('ArrowUp', true); advance(100);
     hud.toast('+3 wood', 'good');
@@ -672,40 +673,112 @@ ok(!isPlayModalOpen(), 'input lock is a no-op in node');
     ok(hud._toasts.some((e) => e.message === 'Next goal: Go to the forge'), 'the next goal shows once she stops');
     settle();
 
-    // The mission card folds to its title line while she walks, and opens again once she stops.
+    // The mission card folds on her first input, and opens again only after 3 s with none.
+    // Each state holds at least 1 s, so the card never flickers at the edge of a pause.
     const card = hud._missionCard;
-    ok(!card.classList.contains('is-collapsed'), 'the mission card is open while she stands still');
+    const folded = () => card.classList.contains('is-collapsed');
+    advance(1000);
+    ok(!folded(), 'the mission card is open while she stands still');
     pressKey('ArrowLeft', true); advance(300);
-    ok(card.classList.contains('is-collapsed') && card.classList.contains('is-moving'), 'it folds to its title line while she walks');
-    advance(IDLE_MS + 300);
-    ok(!card.classList.contains('is-collapsed') && !card.classList.contains('is-moving'), 'it opens again after 2 s with no input');
+    ok(folded() && card.classList.contains('is-moving'), 'it folds to its title line on her first input');
+    advance(UNFOLD_MS + 300);
+    ok(!folded() && !card.classList.contains('is-moving'), 'it opens again after 3 s with no input');
 
     // Her own choice still rules: a card she folded stays folded, and a click shows it even while she walks.
+    advance(1000);
     hud._missionToggle.dispatch('click');
-    ok(card.classList.contains('is-collapsed') && globalThis.localStorage.getItem('rocket_village_mission_open') === '0', 'she can fold the card, and it is remembered');
-    pressKey('ArrowLeft', true); advance(300); advance(IDLE_MS + 300);
-    ok(card.classList.contains('is-collapsed'), 'a card she folded stays folded when she stops');
+    ok(folded() && globalThis.localStorage.getItem('rocket_village_mission_open') === '0', 'she can fold the card, and it is remembered');
+    pressKey('ArrowLeft', true); advance(300); advance(UNFOLD_MS + 300);
+    ok(folded(), 'a card she folded stays folded when she stops');
     pressKey('ArrowLeft', true); advance(300);
     hud._missionToggle.dispatch('click');
-    ok(!card.classList.contains('is-collapsed'), 'a click shows the card while she walks');
+    ok(!folded(), 'a click shows the card while she walks');
     pressKey('ArrowLeft', true); advance(300);
-    ok(!card.classList.contains('is-collapsed'), 'and it stays shown while she keeps walking');
-    advance(IDLE_MS + 300);
+    ok(!folded(), 'and it stays shown while she keeps walking');
+    advance(UNFOLD_MS + 300);
+    ok(!folded(), 'it stays open once she has stopped');
+    advance(1000);
     pressKey('ArrowLeft', true); advance(300);
-    ok(card.classList.contains('is-collapsed'), 'the next walk folds it again');
-    advance(IDLE_MS + 300);
+    ok(folded(), 'the next walk folds it again');
+    advance(UNFOLD_MS + 300);
     pressKey('KeyM'); advance(50);
-    ok(card.classList.contains('is-collapsed') && globalThis.localStorage.getItem('rocket_village_mission_open') === '0', 'M folds the card, and it is remembered');
-    pressKey('KeyM'); advance(IDLE_MS + 300);
-    ok(!card.classList.contains('is-collapsed') && globalThis.localStorage.getItem('rocket_village_mission_open') === '1', 'M opens it again');
+    ok(folded() && globalThis.localStorage.getItem('rocket_village_mission_open') === '0', 'M folds the card, and it is remembered');
+    advance(1000);
+    pressKey('KeyM'); advance(UNFOLD_MS + 300);
+    ok(!folded() && globalThis.localStorage.getItem('rocket_village_mission_open') === '1', 'M opens it again');
+
     // A click is input too: the card it opens does not fold under that click.
-    hud._missionToggle.dispatch('click');
-    advance(IDLE_MS + 300);
+    advance(1000);
+    hud._missionToggle.dispatch('click');   // closes it
+    advance(1000);
     noteInput();
     hud._missionToggle.dispatch('click'); advance(300);
-    ok(!card.classList.contains('is-collapsed'), 'a click opens the card and it stays open under its own input');
-    advance(IDLE_MS + 300);
-    ok(!card.classList.contains('is-collapsed'), 'and it stays open once she is idle again');
+    ok(!folded(), 'a click opens the card and it stays open under its own input');
+    advance(UNFOLD_MS + 300);
+    ok(!folded(), 'and it stays open once she is idle again');
+
+    // Flicker: 21 s of taps with 2.5 s stops between bursts changes the card's state at most twice.
+    settle();
+    let flips = 0;
+    let lastFolded = folded();
+    for (let t = 0; t < 21000; t += 100) {
+      if (t % 5000 < 3000 && t % 500 === 0) pressKey('ArrowUp', true);
+      advance(100);
+      if (folded() !== lastFolded) { flips += 1; lastFolded = folded(); }
+    }
+    ok(flips <= 2, `the mission card changes state at most twice in 21 s of on-and-off walking (${flips} changes)`);
+    settle();
+
+    // A status waits while a card that is not the HUD's own holds the play lock (a chooser, a lesson).
+    lockPlayInput();
+    hud.toast('+1 stone', 'good');
+    ok(!hud._toasts.some((e) => e.message === '+1 stone'), 'a status waits behind a card that is not the HUD\'s own');
+    unlockPlayInput();
+    advance(1000);
+    ok(hud._toasts.some((e) => e.message === '+1 stone'), 'and shows once that card closes');
+    settle();
+
+    // A line that waited 15 s needs only a 0.8 s stop; before that it never shows while she steers.
+    pressKey('ArrowUp', true); advance(100);   // she is steering when the line comes
+    hud.toast(GUIDE, 'info');
+    hud.toast('+3 wood', 'good');
+    ok(hud._toasts.some((e) => e.message === '+3 wood') && hud._toastQueue.some((q) => q.message === GUIDE), 'a status shows at once behind a long line that waits');
+    for (let i = 0; i < 40; i += 1) { pressKey('ArrowUp', true); advance(400); }   // 16 s, a key every 400 ms
+    ok(!hud._toasts.some((e) => e.message === GUIDE), 'a line still waits while she keeps steering (16 s)');
+    advance(300);
+    ok(!hud._toasts.some((e) => e.message === GUIDE), 'after 16 s it still needs a stop: 0.7 s is not enough');
+    advance(700);
+    ok(hud._toasts.some((e) => e.message === GUIDE), 'after 16 s a 1 s stop shows it');
+    settle();
+
+    // Back-to-back pauses: the next line waits 3 s of free play after a pause, and a quiet time from its end.
+    const A = 'First line that needs a pause to read it.';
+    const B = 'Second line that needs its own pause to read.';
+    hud.toast(A, 'info');
+    hud.toast(B, 'info');
+    ok(hud.isReadPaused(), 'a reading pause is up while the first line shows');
+    let aGone = -1;
+    let bShown = -1;
+    for (let i = 0; i < 400 && bShown < 0; i += 1) {
+      advance(50);
+      if (aGone < 0 && !hud._toasts.some((e) => e.message === A)) aGone = clock;
+      if (bShown < 0 && hud._toasts.some((e) => e.message === B)) bShown = clock;
+    }
+    ok(aGone > 0 && bShown - aGone >= 2950 && bShown - aGone < 3700, `the next pause waits 3 s after the last ends (${bShown - aGone} ms)`);
+    settle();
+    ok(!hud.isReadPaused() && body.dataset.playModal === undefined, 'the game runs again between the pauses');
+
+    // whenIdle (readGate) also waits while a card or a reading pause holds the play lock.
+    let idleDone = false;
+    lockPlayInput();
+    whenIdle(IDLE_MS).then(() => { idleDone = true; });
+    advance(IDLE_MS + 500);
+    await Promise.resolve(); await Promise.resolve();
+    ok(!idleDone, 'whenIdle waits while a card holds the play lock');
+    unlockPlayInput();
+    advance(IDLE_MS + 500);
+    await Promise.resolve(); await Promise.resolve();
+    ok(idleDone, 'whenIdle resolves once the lock is gone and she is idle');
     settle();
   }
 

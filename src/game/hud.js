@@ -33,9 +33,9 @@ import { MARKER_COLOR } from './stations.js';
 import { audio } from './audio.js';
 import { loadProfile } from '../launcher/profile.js';
 import { skipButton } from '../play/grownUp.js';
-import { lockPlayInput, unlockPlayInput } from '../play/ui.js';
+import { lockPlayInput, unlockPlayInput, playLockCount } from '../play/ui.js';
 import { readMs, needsClick, READ_MIN_MS } from '../play/readTime.js';
-import { install, isIdle, isShort, IDLE_MS } from '../play/readGate.js';
+import { install, idleMs, isShort, IDLE_MS } from '../play/readGate.js';
 import { IS_LEVEL1 as IS_L1 } from '../space/level.js';
 
 /**
@@ -103,6 +103,15 @@ const TOAST_STALE_MS = 20000;
 const TOAST_DUP_MS = 10000;
 /** How often the HUD looks at her input: the mission card folds and unfolds on it. */
 const WATCH_MS = 250;
+/** A line to read that has waited this long needs only a short natural stop to show. */
+const LONG_WAIT_MS = 15000;
+const STOP_MS = 800;
+/** Free play between two reading pauses; the quiet time for the next one counts from the pause's end. */
+const PAUSE_GAP_MS = 3000;
+/** The mission card folds on any input, and opens again only after this long with none. */
+const MISSION_UNFOLD_MS = 3000;
+/** The mission card keeps each state (folded, open) at least this long before it changes. */
+const MISSION_STATE_MS = 1000;
 
 const BADGE_GLYPH = { done: '✓', active: '●', open: '○', locked: '○' };
 
@@ -217,9 +226,12 @@ export class Hud {
 
     /** Whoever holds the reading pause (a toast, the cue): her movement is locked while any is held. */
     this._holds = new Set();
-    /** Is she walking or steering right now (no input for less than IDLE_MS, checked every WATCH_MS)? */
+    this._lastPauseEnd = -Infinity; // performance.now() when the last reading pause ended
+    this._createdAt = performance.now();
+    /** Is the mission card folded for her walk? Changes at most once a second (MISSION_STATE_MS). */
     this._moving = false;
-    /** She clicked the mission card open: it stays open until she has been idle again. */
+    this._stateAt = this._createdAt;
+    /** She clicked the mission card open: it stays open until she has been idle for a while. */
     this._revealed = false;
     this._watchTimer = 0;
 
@@ -496,21 +508,35 @@ export class Hud {
   }
 
   /**
-   * Every WATCH_MS: fold the card while she walks, open it once she has had
-   * no input for IDLE_MS. A click counts as input, so the reveal lasts until
-   * she is idle again (not until the walk starts): the card does not fold
-   * under the click that opened it. The next walk after that folds it.
+   * Every WATCH_MS: fold the card on any input (since the last look), and open
+   * it only after MISSION_UNFOLD_MS with none. Each state holds for at least
+   * MISSION_STATE_MS, so a tap or a short stop never makes it flicker. A click
+   * counts as input, so the reveal lasts until she has been idle for a while
+   * (not until the walk starts): the card does not fold under the click that
+   * opened it. The next walk after that folds it.
    */
   _watch() {
     this._watchTimer = 0;
     if (this._destroyed) return;
-    const moving = !isIdle(IDLE_MS);
-    if (moving !== this._moving) {
-      this._moving = moving;
-      if (!moving) this._revealed = false;
-      this._paintMission();
+    const t = performance.now();
+    const idle = idleMs(t);
+    if (t - this._stateAt >= MISSION_STATE_MS) {
+      if (!this._moving && idle < 2 * WATCH_MS) this._setMoving(true, t);
+      else if (this._moving && idle >= MISSION_UNFOLD_MS) this._setMoving(false, t);
     }
     this._watchTimer = setTimeout(() => this._watch(), WATCH_MS);
+  }
+
+  _setMoving(moving, t) {
+    this._moving = moving;
+    this._stateAt = t;
+    if (!moving) this._revealed = false;
+    this._paintMission();
+  }
+
+  /** Is the game paused for her reading (a line on screen, or the OK card)? The chapter then stops its gameplay clocks. */
+  isReadPaused() {
+    return this._holds.size > 0 || !!this._read;
   }
 
   /**
@@ -1000,7 +1026,7 @@ export class Hud {
     // Join the line (a newer copy of a waiting message moves to the back), then
     // show whatever the screen has room for now.
     this._toastQueue = this._toastQueue.filter((q) => q.message !== message);
-    this._toastQueue.push({ message, kind, at: now, status });
+    this._toastQueue.push({ message, kind, at: now, since: now, status });
     this._showQueued();
   }
 
@@ -1016,8 +1042,22 @@ export class Hud {
     const urgent = q.kind === 'warn' || q.kind === 'bad';
     const long = needsClick(q.message);
     if (this._focusNow() && (!urgent || long)) return false;
-    if (!q.status && (this._holds.size || !isIdle(IDLE_MS))) return false;
+    if (!q.status && !this._canPause(q.since, now)) return false;
     return long ? this._toasts.length === 0 : this._toasts.length < MAX_VISIBLE_TOASTS;
+  }
+
+  /**
+   * May a line to read start its reading pause now? Not while one is up, not
+   * before PAUSE_GAP_MS of free play since the last one ended, and only after
+   * she has been quiet for IDLE_MS (STOP_MS once it has waited LONG_WAIT_MS).
+   * The quiet time counts from the pause's end, so one pause never chains into
+   * the next.
+   */
+  _canPause(since, now) {
+    if (this._holds.size || this._read) return false;
+    if (now - this._lastPauseEnd < PAUSE_GAP_MS) return false;
+    const need = now - since >= LONG_WAIT_MS ? STOP_MS : IDLE_MS;
+    return Math.min(idleMs(now), now - this._lastPauseEnd) >= need;
   }
 
   /**
@@ -1047,8 +1087,9 @@ export class Hud {
         this._showNow(q, now);
         break;
       }
-      // A message that needs a click keeps its place: nothing jumps ahead of it.
-      if (needsClick(q.message)) break;
+      // A message that needs a click and is ready to pause keeps its place: nothing jumps ahead of it.
+      // One still waiting for her to stop playing does not hold anything up (a status shows at once).
+      if (needsClick(q.message) && this._canPause(q.since, now)) break;
     }
     if (this._toastQueue.length) {
       this._toastQueueTimer = setTimeout(() => this._showQueued(), 250);
@@ -1091,6 +1132,7 @@ export class Hud {
 
   _release(token) {
     if (!this._holds.delete(token)) return;
+    this._lastPauseEnd = performance.now();
     unlockPlayInput();
   }
 
@@ -1137,6 +1179,7 @@ export class Hud {
     this._readBackdrop.classList.remove('is-open');
     if (typeof removeEventListener === 'function') removeEventListener('keydown', this._onReadKey, true);
     if (!this._modal) document.body.classList.remove('rv-question-open');
+    this._lastPauseEnd = performance.now();
     unlockPlayInput();
     this._toastNextAt = performance.now() + TOAST_GAP_MS;
     this._showQueued();
@@ -1147,8 +1190,11 @@ export class Hud {
    * reading pause also sets the play lock, but it is not a card: it does not count.
    */
   _focusNow() {
-    const lockedByCard = typeof document !== 'undefined' && !!document.body.dataset.playModal && this._holds.size === 0;
-    return !!this._modal || !!this._read || lockedByCard;
+    // Counted locks beyond our own pauses are cards (a chooser, a lesson, the tuner). A film
+    // sets the flag directly (chapterStory.js, cutscenes.js), so the flag alone counts when no pause is up.
+    const external = playLockCount() > this._holds.size;
+    const film = typeof document !== 'undefined' && document.body.dataset.playModal === '1' && this._holds.size === 0;
+    return !!this._modal || !!this._read || external || film;
   }
 
   _dismissToast(entry) {
@@ -1604,7 +1650,7 @@ export class Hud {
     // Behind the chapter opening or a play card it would be wasted: wait. It is
     // a line to read, so it also waits until she has stopped playing (lead
     // 2026-10-09), and it pauses the game while it is up.
-    if (this._focusNow() || this._holds.size || !isIdle(IDLE_MS)) {
+    if (this._focusNow() || !this._canPause(this._createdAt, performance.now())) {
       this._onboardTimers.push(setTimeout(() => this._showOnboard(), this._focusNow() ? 600 : WATCH_MS));
       return;
     }

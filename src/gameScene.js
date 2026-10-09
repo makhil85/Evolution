@@ -222,7 +222,8 @@ let state = null;
 let effects = null;
 let stations = null;
 let rocket = null;
-let elapsed = 0;
+let elapsed = 0; // real time, for the ambient world (water, villagers)
+let gameTime = 0; // the game's own clock: stops while a reading pause is up (hud.isReadPaused)
 const shadowAnchor = new THREE.Vector3(0, 0, 0);
 let onInteract = null;
 let hud = null;
@@ -894,9 +895,14 @@ function frame() {
 
 /** One frame of everything. Split from frame() so tests can step it by hand. */
 function tick(dt, now = performance.now()) {
+  // A reading pause (a line on screen, the OK card) freezes the game: the rocket,
+  // pickups, stations, nav, mining and her walk get no time. The ambient world keeps dt.
+  const gdt = hud && hud.isReadPaused() ? 0 : dt;
+  elapsed += dt;
+  gameTime += gdt;
 
   // While the rocket is flying it owns the camera and the player is a passenger.
-  const flying = launch && launch.update(dt);
+  const flying = launch && launch.update(gdt);
   // ...and it must give control back. Without this the session ended at apogee:
   // frozen camera, no movement, dark sky, forever.
   if (launch && launch.finished && !launch.handedBack) {
@@ -931,7 +937,7 @@ function tick(dt, now = performance.now()) {
   }
   let motion = null;
   if (controller && !flying) {
-    motion = controller.step(dt, emotes ? emotes.input(readInput(), dt) : readInput());
+    motion = controller.step(gdt, emotes ? emotes.input(readInput(), gdt) : readInput());
     if (motion && motion.moving && motion.onGround) audio.footstep(motion.running);
     if (!opening?.update(dt) && !story?.update(dt)) updateCamera(dt);
   }
@@ -943,16 +949,15 @@ function tick(dt, now = performance.now()) {
   if (village) village.update(elapsed);
   if (villagers) villagers.update(dt, elapsed);
   if (nameSigns) nameSigns.update(player.position, camera.position);
-  if (pickups) pickups.update(elapsed, player.position);
-  if (miner) miner.update(dt);
-  if (tools) tools.update(dt);
+  if (pickups) pickups.update(gameTime, player.position);
+  if (miner) miner.update(gdt);
+  if (tools) tools.update(gdt);
   if (nav) {
     nav.setTarget(playMode.navArrow || playMode.targetBeacon ? objective() : null);
-    nav.update(dt, player.position);
+    nav.update(gdt, player.position);
   }
   if (stations) {
-    elapsed += dt;
-    const near = stations.update(elapsed, player.position);
+    const near = stations.update(gameTime, player.position);
     if (hud) {
       const step = engine && engine.current();
       const isTarget = near && step && step.stationId === near.id;

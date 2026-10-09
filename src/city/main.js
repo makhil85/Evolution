@@ -547,20 +547,23 @@ let elapsed = 0;
 let lastNear = '';
 function tick(dt) {
   elapsed += dt;
+  // A reading pause (a line on screen, the OK card) freezes her walk and the game's own
+  // timers (nav, mining, the tools, the apple); the ambient world and camera keep dt.
+  const gdt = hud && hud.isReadPaused() ? 0 : dt;
   let motion = null;
   if (controller) {
-    motion = controller.step(dt, emotes ? emotes.input(readInput(), dt) : readInput());
+    motion = controller.step(gdt, emotes ? emotes.input(readInput(), gdt) : readInput());
     if (!story?.update(dt)) updateCamera(dt);
   }
   if (avatar) avatar.update(dt, motion);
   if (nav && world && rules) {
-    navTimer -= dt;
+    navTimer -= gdt;
     if (navTimer <= 0) { navTimer = 0.2; nav.setTarget(currentTarget()); }
-    nav.update(dt, player.position);
+    nav.update(gdt, player.position);
   }
-  if (miner) miner.update(dt);
-  if (newton) newton.update(dt);
-  if (tools) tools.update(dt);
+  if (miner) miner.update(gdt);
+  if (newton) newton.update(gdt);
+  if (tools) tools.update(gdt);
   if (world) {
     world.update(dt, elapsed, player.position, camera.position);
     const n = !filming && rules && nearestUsable(player.position.x, player.position.z);
