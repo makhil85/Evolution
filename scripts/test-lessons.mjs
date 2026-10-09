@@ -87,8 +87,56 @@ for (const L of LESSONS) {
     }
   });
 }
-ok('most films end in a question (watch-only films are rare)', () => {
-  for (const L of LESSONS) assert.ok(L.films.filter((f) => f.watchOnly).length <= 1, `${L.id}: too many watch-only films`);
+// Breathers (lead, 2026-10-08, Chapter 5 review): never three film questions in a row.
+// A watch-only film (no question) breaks the run, so the child gets a rest between
+// questions. (Chapters 1-4 and 6 keep their own pattern; this checks Chapter 5.)
+ok('Chapter 5: no lesson asks three questions in a row (a watch-only film gives a breather)', () => {
+  for (const L of [LESSON_5A, LESSON_5AA, LESSON_5B, LESSON_5C]) {
+    let run = 0;
+    L.films.forEach((f, i) => {
+      run = f.watchOnly ? 0 : run + 1;
+      assert.ok(run < 3, `${L.id}: film ${i + 1} is the third question in a row`);
+    });
+    assert.ok(L.films.filter((f) => f.watchOnly).length <= 2, `${L.id}: too many watch-only films`);
+  }
+});
+ok('Chapter 5: 5A, 5B and 5C end on a breather; 5AA has its own rests (films 2 and 4)', () => {
+  const watch = (L) => L.films.map((f) => !!f.watchOnly);
+  assert.deepEqual(watch(LESSON_5A), [false, false, true]);
+  assert.deepEqual(watch(LESSON_5B), [false, false, true]);
+  assert.deepEqual(watch(LESSON_5C), [false, false, true, false, false]);
+  assert.deepEqual(watch(LESSON_5AA), [false, true, false, true, false]);
+});
+ok('Chapter 5 fusion: the coal figure is about 20 million (hydrogen to helium, ~6e14 J/kg vs coal ~3e7 J/kg)', () => {
+  const coal = LESSON_5C.films[4];
+  assert.ok(coal.beats.some((b) => b.cap[0].includes('about 20 million kilograms of coal')), 'Level 4 caption');
+  assert.ok(coal.beats.some((b) => b.cap[1].includes('20 million kilos of coal')), 'Level 1 caption');
+  assert.ok(coal.question.why[0].includes('about 20 million times less'), 'why line');
+  assert.ok(!JSON.stringify(LESSON_5C).includes('10 million'), 'no stale 10 million figure');
+  assert.ok(!JSON.stringify(LESSON_5C).includes('1 cup'), 'no stale cup figure');
+  assert.ok(LESSON_5C.films[4].beats.some((b) => b.cap[0].includes('about as long as the pyramids have stood')), 'pyramid comparison is about 5,000 years');
+});
+ok('Chapter 5 momentum: "Catching up" has number choices, and 2 is the right answer', () => {
+  const q = LESSON_5AA.films[2].question;
+  assert.deepEqual(q.choices.map((c) => c.text[0]).sort(), ['1', '2', '4']);
+  assert.equal(q.choices.find((c) => c.correct).text[0], '2');
+  assert.deepEqual(q.choices.map((c) => c.text[1]).sort(), ['Speed 1', 'Speed 2', 'Speed 4']);
+  assert.equal(q.choices.find((c) => c.correct).text[1], 'Speed 2');
+  assert.ok(LESSON_5AA.films[2].beats[0].cap[0].includes('same-size chunks'), 'the chunks are the same size');
+});
+// Balance (critic, 2026-10-08): in a Chapter 5 lesson question the right answer is never the
+// uniquely longest choice, at either Level, so a child cannot pick the longest one.
+ok('Chapter 5: no lesson question has the right answer as the uniquely longest choice (both Levels)', () => {
+  for (const L of [LESSON_5A, LESSON_5AA, LESSON_5B, LESSON_5C]) {
+    L.films.forEach((f, i) => {
+      if (!f.question) return;
+      for (const lvl of [0, 1]) {
+        const right = f.question.choices.find((c) => c.correct).text[lvl].length;
+        const others = f.question.choices.filter((c) => !c.correct).map((c) => c.text[lvl].length);
+        assert.ok(!(right > Math.max(...others)), `${L.id} film ${i + 1} level ${lvl === 0 ? 4 : 1}: right answer is the longest (${right} vs ${Math.max(...others)})`);
+      }
+    });
+  }
 });
 ok('captions are held long enough to read', () => {
   for (const L of LESSONS) {

@@ -209,9 +209,9 @@ export const LESSON_5B = {
       question: {
         prompt: ['Neptune has 17 times the mass of Earth. How heavy would you feel on its cloud tops?', 'How heavy would you feel on Neptune?'],
         choices: [
-          { text: ['17 times heavier', '17 times heavier'] },
+          { text: ['You would be 17 times heavier, crushed flat', '17 times heavier, crushed flat'] },
           { text: ['About the same, just a little heavier', 'Just a little heavier'], correct: true },
-          { text: ['Weightless, floating', 'Floating'] },
+          { text: ['Weightless, floating like in a space ship', 'Floating in the air, like a balloon'] },
         ],
         hint: ['What did the scales say on Neptune?', 'Look at the scales.'],
         why: ['Its pull is 17 times bigger for its mass, but you are 4 times as far from its middle, which makes it 16 times weaker. 17 ÷ 16 is just over 1.', 'Just a little heavier than on Earth!'],
@@ -227,17 +227,7 @@ export const LESSON_5B = {
         { dur: 4, cap: ['Stop them completely and you reach −273 °C, the coldest anything can ever be.', 'Atoms that stop moving are the coldest.'] },
       ],
       draw: drawColdAtoms,
-      question: {
-        prompt: ['What does “cold” mean for the tiny atoms inside something?', 'What do atoms do when it is cold?'],
-        choices: [
-          { text: ['The atoms move slowly', 'They move slowly'], correct: true },
-          { text: ['The atoms shrink', 'They get small'] },
-          { text: ['The atoms turn blue', 'They turn blue'] },
-        ],
-        hint: ['Compare the atoms in the two boxes.', 'Look at the two boxes.'],
-        why: ['Temperature is how fast atoms jiggle. In cold Neptune they crawl; in warm Earth they buzz about.', 'Cold atoms move slowly!'],
-      },
-      clue: [null, 'Cold atoms move slowly.'],
+      watchOnly: true, // the third film in a row with a question: a breather (the answer is the caption above)
     },
   ],
 };

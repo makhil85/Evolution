@@ -5,7 +5,7 @@
 //
 //   node scripts/test-space-questions.mjs
 import { SPACE_QUESTIONS, SPACE_QUESTION_ORDER, checkSpaceAnswer, questionForBeat, level1Bank } from '../src/space/questions.space.js';
-import { CH5_QUESTIONS } from '../src/space/ch5/questions.ch5.js';
+import { CH5_QUESTIONS, CH5Q_LEVEL1, ch5Bank } from '../src/space/ch5/questions.ch5.js';
 
 const results = [];
 function check(name, ok, detail = '') {
@@ -200,6 +200,96 @@ check('c5_voyager: rejects 45 (a borrowing slip)', !checkSpaceAnswer(CH5_QUESTIO
 check('c5_deuterium: 64,000 / 6,400 = 10 accepted', checkSpaceAnswer(CH5_QUESTIONS.c5_deuterium, String(64000 / 6400)));
 check('c5_deuterium: rejects 100 (one zero too many)', !checkSpaceAnswer(CH5_QUESTIONS.c5_deuterium, '100'));
 check('c5_saturn_size: 117,000 / 13,000 = 9', 117000 / 13000 === 9 && CH5_QUESTIONS.c5_saturn_size.choices.find((c) => c.correct).text === 'About 9');
+
+// Chapter 5 Level 1: a bank must exist, with an overlay for EVERY Level 4 question
+// (same id, type, beat, act), its own words, and short sentences a 6-year-old can read.
+const CH5_L1 = ch5Bank(1);
+const CH5_L4 = ch5Bank(4);
+check('ch5 L1: bank is the Level 4 bank with the overlay merged', Object.keys(CH5_L1).length === Object.keys(CH5_QUESTIONS).length);
+check('ch5 L4: ch5Bank(4) is the Level 4 bank', CH5_L4 === CH5_QUESTIONS);
+for (const id of Object.keys(CH5_QUESTIONS)) {
+  const base = CH5_QUESTIONS[id];
+  const q = CH5_L1[id];
+  check(`ch5 L1 ${id}: has its own overlay`, !!CH5Q_LEVEL1[id]);
+  check(`ch5 L1 ${id}: same id, type, beat and act`, q.id === id && q.type === base.type && q.beat === base.beat && q.act === base.act);
+  check(`ch5 L1 ${id}: says Level 1`, /^Level 1/.test(q.difficulty || ''), q.difficulty);
+  check(`ch5 L1 ${id}: own prompt, hint and success`, q.prompt !== base.prompt && q.hint !== base.hint && q.success !== base.success);
+  check(`ch5 L1 ${id}: short prompt (≤ 35 words)`, q.prompt.split(/\s+/).length <= 35, `${q.prompt.split(/\s+/).length} words`);
+  check(`ch5 L1 ${id}: short hint (≤ 20 words)`, q.hint.split(/\s+/).length <= 20, `${q.hint.split(/\s+/).length} words`);
+  if (q.type === 'choice') {
+    check(`ch5 L1 ${id}: exactly one correct choice`, q.choices.filter((c) => c.correct === true).length === 1);
+    check(`ch5 L1 ${id}: 4 choices`, q.choices.length === 4);
+    check(`ch5 L1 ${id}: correct choice accepted`, checkSpaceAnswer(q, q.choices.find((c) => c.correct).text));
+    for (const c of q.choices.filter((c) => !c.correct)) check(`ch5 L1 ${id}: wrong choice rejected (${c.text.slice(0, 24)}…)`, !checkSpaceAnswer(q, c.text));
+  } else {
+    check(`ch5 L1 ${id}: text has answers`, Array.isArray(q.answers) && q.answers.length > 0);
+    for (const a of q.answers) check(`ch5 L1 ${id}: accepts "${a}"`, checkSpaceAnswer(q, a));
+  }
+}
+// The Level 1 sums, re-derived from each prompt's own numbers.
+const derivedCh5L1 = {
+  c5_saturn_size: 9 - 3, // 9 Earths across, 3 already in a row
+  c5_hexagon: 6 * 2, // 6 sides, 2 steps each
+  c5_uranus_pole_day: 84 / 2, // half of 84
+  c5_sunlight_neptune: 8 * 3, // 8 minutes, three times as far (pretend)
+  c5_voyager: 1980 - 1977, // count on from 1977 to 1980
+  c5_deuterium: 30 / 10, // 1 in every 10 is heavy (pretend), 30 atoms
+};
+for (const [id, v] of Object.entries(derivedCh5L1)) check(`ch5 L1 ${id}: derived ${v} accepted`, checkSpaceAnswer(CH5_L1[id], String(v)));
+const temptingCh5L1 = {
+  c5_saturn_size: [],
+  c5_hexagon: ['6', '2'],
+  c5_uranus_pole_day: ['84'],
+  c5_sunlight_neptune: ['8', '11'],
+  c5_voyager: ['1980', '35'],
+  c5_deuterium: ['30', '10'],
+};
+for (const [id, wrong] of Object.entries(temptingCh5L1)) for (const w of wrong) check(`ch5 L1 ${id}: rejects tempting "${w}"`, !checkSpaceAnswer(CH5_L1[id], w));
+// Honest science: a made-up number must say so.
+check('ch5 L1 c5_sunlight_neptune: says "pretend"', /pretend/i.test(CH5_L1.c5_sunlight_neptune.prompt));
+check('ch5 L1 c5_deuterium: says "pretend", never a fact of 1 in 10', /pretend/i.test(CH5_L1.c5_deuterium.prompt) && !/1 in every 10 (hydrogen )?atoms is/i.test(CH5_L1.c5_deuterium.prompt.replace(/Pretend[^.]*\./, '')));
+check('ch5 L1 c5_saturn_size: says 9 Earths (the real width, rounded)', /about 9 Earths/.test(CH5_L1.c5_saturn_size.prompt));
+check('ch5 L1 c5_hexagon: says "pretend" for the 2 steps a side (no made-up fact)', /Pretend each side is 2 steps long/.test(CH5_L1.c5_hexagon.prompt));
+check('ch5 L1 c5_voyager: the sum has an event (1977 to 1980, Saturn)', /reached Saturn in 1980/.test(CH5_L1.c5_voyager.prompt));
+check('ch5 L1 c5_neptune_1846: "scientists", not "astronomers", and "roughly"', !/astronomers/.test(CH5_L1.c5_neptune_1846.prompt) && /scientists knew roughly/.test(CH5_L1.c5_neptune_1846.prompt));
+check('ch5 L4 c5_neptune_1846: "roughly", not "exactly"', /knew roughly/.test(CH5_QUESTIONS.c5_neptune_1846.prompt));
+check('ch5 L1 c5_pluto: success names Charon', /Charon/.test(CH5_L1.c5_pluto.success));
+check('ch5 L4 c5_voyager: names the heliopause', /heliopause/.test(CH5_QUESTIONS.c5_voyager.prompt));
+
+// Hints guide, they do not give the answer (both Levels): no answer of a text question, and no
+// correct choice's text, appears in its hint. Every answer is checked, not only the first.
+const escRe = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const givesAway = (hint, text) => new RegExp(`(?<![\\w,])${escRe(text)}(?![\\w])`, 'i').test(hint);
+for (const id of Object.keys(CH5_QUESTIONS)) {
+  for (const [level, bank] of [[4, CH5_L4], [1, CH5_L1]]) {
+    const q = bank[id];
+    if (q.type === 'text') {
+      for (const a of q.answers) {
+        const n = a.replace(/,/g, '');
+        check(`ch5 L${level} ${id}: hint does not give away "${a}"`, !givesAway(q.hint, n), q.hint);
+      }
+    } else {
+      const right = q.choices.find((c) => c.correct).text;
+      check(`ch5 L${level} ${id}: hint does not give away the right choice`, !givesAway(q.hint, right), q.hint);
+    }
+  }
+}
+check('ch5 L4 c5_deuterium: hint no longer says "10 times"', !/10 times/.test(CH5_QUESTIONS.c5_deuterium.hint));
+check('ch5 L4 c5_saturn_size: hint no longer says "Try 13 x 9"', !/13 x 9/.test(CH5_QUESTIONS.c5_saturn_size.hint));
+check('ch5 L4 c5_uranus_tilt: hint no longer says "A big bump!"', !/big bump/i.test(CH5_QUESTIONS.c5_uranus_tilt.hint));
+check('ch5 L4 c5_sunlight_neptune: says "about 4 hours ago", not "before lunch"', /about 4 hours ago/.test(CH5_QUESTIONS.c5_sunlight_neptune.success) && !/before lunch/.test(CH5_QUESTIONS.c5_sunlight_neptune.success));
+check('ch5 L4 c5_hexagon: calls it a jet-stream pattern, not a storm', !/storm/i.test(CH5_QUESTIONS.c5_hexagon.prompt) && /jet stream/.test(CH5_QUESTIONS.c5_hexagon.prompt));
+check('ch5 L4 c5_deuterium: "1 in every 6,400" is the real ratio', /1 hydrogen atom in every 6,400/.test(CH5_QUESTIONS.c5_deuterium.prompt));
+// Balanced choices (the three that were longest-is-right): the right one is not the longest, and the lengths are close.
+for (const id of ['c5_uranus_tilt', 'c5_pluto', 'c5_neptune_1846']) {
+  for (const [level, bank] of [[4, CH5_L4], [1, CH5_L1]]) {
+    const lens = bank[id].choices.map((c) => c.text.length);
+    const right = bank[id].choices.find((c) => c.correct).text.length;
+    check(`ch5 L${level} ${id}: the right choice is not the longest`, right < Math.max(...lens), `${right} vs ${Math.max(...lens)}`);
+    check(`ch5 L${level} ${id}: choices are of similar length`, Math.max(...lens) / Math.min(...lens) <= 1.4, lens.join(','));
+  }
+}
+// Catching up (lesson 5AA) is in the lesson file; the bank has no such question.
 
 // --- report -----------------------------------------------------------------------
 const failed = results.filter((r) => !r.ok);
