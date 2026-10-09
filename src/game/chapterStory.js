@@ -16,8 +16,15 @@
 //   tick(dt):  if (!story.update(dt)) updateCamera(dt);
 //   blocked:   story.active (it also sets body[data-play-modal], which every
 //              chapter already treats as "no walking, no E")
-//   await story.intro({ title, line, lookAt });
-//   await story.outro({ title, line, focus, next });
+//   await story.intro({ title, line, lookAt, scene });
+//   await story.outro({ title, line, focus, next, scene });
+//
+// `scene` (optional; Chapter 1 and Chapter 2 use it) is a scripted cutscene
+// { duration, step(t, say), dispose() } in seconds: the first visit plays it
+// BEFORE the intro's title card (or the outro's "Chapter complete" card), with
+// the chapter's own camera. step(t, say) runs every frame with t from 0;
+// say(text) shows a caption at the bottom (say(null) clears it). dispose()
+// runs once when the scene ends or is skipped. Returning visits skip it.
 import * as THREE from 'three';
 import { loadProfile, SEEN_PREFIX } from '../launcher/profile.js';
 import { keepUnlock } from '../launcher/profile.js';
@@ -43,7 +50,8 @@ function injectCss() {
 .cs-bars::before { top: 0; transform: translateY(-100%); }
 .cs-bars::after { bottom: 0; transform: translateY(100%); }
 .cs-bars.is-on::before, .cs-bars.is-on::after { transform: none; }
-body.cs-cinematic .rv-hud { opacity: 0; transition: opacity .5s; pointer-events: none; }
+body.cs-cinematic .rv-hud, body.cs-cinematic .pl-back, body.cs-cinematic .pl-chip, body.cs-cinematic .play-nav-text,
+body.cs-cinematic .pl-hint, body.cs-cinematic .pl-cluebtn, body.cs-cinematic #rvBackToChapters { opacity: 0; transition: opacity .5s; pointer-events: none; }
 .cs-title { position: fixed; left: 50%; top: 30%; transform: translate(-50%, 12px); z-index: 9001;
   text-align: center; color: #fff; opacity: 0; transition: opacity .8s, transform .8s; pointer-events: none;
   font-family: 'Segoe UI', 'Trebuchet MS', system-ui, Arial, Helvetica, sans-serif; text-shadow: 0 2px 18px rgba(0,0,0,.55); width: min(92vw, 760px); }
@@ -51,6 +59,10 @@ body.cs-cinematic .rv-hud { opacity: 0; transition: opacity .5s; pointer-events:
 .cs-title__eyebrow { font: 700 15px/1 'Segoe UI', 'Trebuchet MS', system-ui, Arial, Helvetica, sans-serif; letter-spacing: .32em; text-transform: uppercase; color: #ffd36b; }
 .cs-title__name { font: 800 clamp(34px, 6vw, 62px)/1.05 'Segoe UI', 'Trebuchet MS', system-ui, Arial, Helvetica, sans-serif; margin: 12px 0 10px; }
 .cs-title__line { font: 500 clamp(16px, 2.2vw, 21px)/1.4 'Segoe UI', 'Trebuchet MS', system-ui, Arial, Helvetica, sans-serif; color: #e9eefc; }
+.cs-caption { position: fixed; left: 50%; bottom: calc(11vh + 14px); z-index: 9000; width: min(92vw, 820px); transform: translate(-50%, 8px);
+  text-align: center; color: #fff; font: 600 clamp(16px, 2.3vw, 22px)/1.35 'Segoe UI', 'Trebuchet MS', system-ui, Arial, Helvetica, sans-serif;
+  text-shadow: 0 2px 12px rgba(0,0,0,.8); opacity: 0; transition: opacity .6s, transform .6s; pointer-events: none; }
+.cs-caption.is-on { opacity: 1; transform: translate(-50%, 0); }
 .cs-skip { position: fixed; right: 18px; bottom: calc(11vh + 12px); z-index: 9001; color: #c9d2e8;
   font: 500 13px/1 'Segoe UI', 'Trebuchet MS', system-ui, Arial, Helvetica, sans-serif; opacity: 0; transition: opacity .6s; pointer-events: none; }
 .cs-skip.is-on { opacity: .8; }
@@ -75,7 +87,7 @@ body.cs-cinematic .rv-hud { opacity: 0; transition: opacity .5s; pointer-events:
 .cs-btn--stay { background: #eef1f7; color: #2a3347; }
 .cs-btn:focus-visible { outline: 3px solid #ffb347; outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
-  .cs-bars::before, .cs-bars::after, .cs-title, .cs-card, .cs-card__stars span { transition: none; }
+  .cs-bars::before, .cs-bars::after, .cs-title, .cs-card, .cs-card__stars span, .cs-caption { transition: none; }
 }`;
   document.head.appendChild(s);
 }
@@ -148,6 +160,7 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
   document.body.appendChild(bars);
 
   function begin() {
+    endScene();                  // a scene still running from before is disposed first
     active = true;
     prevModal = document.body.dataset.playModal;
     document.body.dataset.playModal = '1';
@@ -155,6 +168,8 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
     bars.classList.add('is-on');
   }
   function end() {
+    endScene();
+    capEl = null;
     active = false;
     shot = null;
     if (prevModal === undefined) delete document.body.dataset.playModal;
@@ -166,6 +181,26 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
 
   const _pos = new THREE.Vector3();
   const _look = new THREE.Vector3();
+
+  // A scene's caption line, and the scene itself while it runs (dispose once).
+  let capEl = null;
+  let liveScene = null;
+  function say(text) {
+    if (!text && !capEl) return;
+    if (!capEl) {
+      capEl = el('div', 'cs-caption');
+      document.body.appendChild(capEl);
+      nodes.push(capEl);
+    }
+    if (capEl.textContent !== (text || '')) capEl.textContent = text || '';
+    capEl.classList.toggle('is-on', !!text);
+  }
+  function endScene() {
+    const s = liveScene;
+    liveScene = null;
+    say(null);
+    s?.dispose?.();
+  }
 
   return {
     get active() { return active; },
@@ -181,23 +216,32 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
 
     /**
      * The opening. `lookAt` is the middle of the map (the sweep starts
-     * looking at it). Resolves when it ends or is skipped.
+     * looking at it). `scene` (first visit only) plays first, then the title
+     * card. Resolves when it ends or is skipped.
      */
-    intro({ eyebrow, title, line, lookAt }) {
+    intro({ eyebrow, title, line, lookAt, scene = null }) {
       const full = !this.seen();
+      const timed = full && scene ? scene : null;
+      const T = timed ? timed.duration : 0;      // the scene's length
+      const DUR = full ? 6.2 : 2.6;              // the default sweep, or the short title
+      const HOLD = timed ? 4.2 : DUR;            // how long the title card stays up
       begin();
+      liveScene = timed;
       const card = el('div', 'cs-title');
       card.append(el('div', 'cs-title__eyebrow', eyebrow), el('div', 'cs-title__name', title), el('div', 'cs-title__line', line));
       const skip = el('div', 'cs-skip', 'Press any key to skip');
       document.body.append(card, skip);
       nodes.push(card, skip);
       // A timer, not requestAnimationFrame: rAF never fires in a hidden tab.
-      setTimeout(() => { card.classList.add('is-on'); if (full) skip.classList.add('is-on'); }, 30);
+      const showTitle = () => card.classList.add('is-on');
+      // A timer, not requestAnimationFrame: rAF never fires in a hidden tab.
+      setTimeout(() => { if (!timed) showTitle(); if (full) skip.classList.add('is-on'); }, 30);
 
       return new Promise((resolve) => {
-        const DUR = full ? 6.2 : 2.6;
         let waved = false;
         let finished = false;
+        let titled = false;
+        let armed = false;
         const finish = () => {
           if (finished) return;
           finished = true;
@@ -207,9 +251,11 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
           end();
           resolve();
         };
-        const onSkip = (e) => { e.stopPropagation(); if (e.type === 'keydown') e.preventDefault(); finish(); };
+        // Any key or click skips, once the first second has passed.
+        const onSkip = (e) => { if (!armed) return; e.stopPropagation(); if (e.type === 'keydown') e.preventDefault(); finish(); };
         addEventListener('keydown', onSkip, true);
         addEventListener('pointerdown', onSkip, true);
+        setTimeout(() => { armed = true; }, 1000);
 
         // Start: high over the map on the far side, looking at its middle;
         // end: exactly where the chase camera wants to be.
@@ -222,13 +268,17 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
         shot = {
           t: 0,
           step(t) {
-            if (full) {
-              const e = easeInOut(t / (DUR - 0.8));
+            // The scene first (its own camera and captions), then the title card.
+            if (timed && t < T) { timed.step(t, say); return; }
+            if (timed && !titled) { titled = true; endScene(); showTitle(); }
+            const u = t - T;
+            if (full && !timed) {
+              const e = easeInOut(u / (DUR - 0.8));
               const a = endA + 2.3 * (1 - e);
               const r = endR + 44 * (1 - e);
               const h = endH + 30 * (1 - e) * (1 - e * 0.35);
               _pos.set(p0.x + Math.sin(a) * r, p0.y + h, p0.z + Math.cos(a) * r);
-              _look.copy(center).lerp(home.look, smooth(t / (DUR - 1.2)));
+              _look.copy(center).lerp(home.look, smooth(u / (DUR - 1.2)));
               camera.position.copy(_pos);
               camera.lookAt(_look);
             } else {
@@ -236,9 +286,9 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
               camera.position.lerp(hp.pos, 0.2);
               camera.lookAt(hp.look);
             }
-            if (!waved && t > DUR - 2.2) { waved = true; getAvatar()?.play?.('wave', { hold: 2 }); }
-            if (t > DUR - 0.9) card.classList.remove('is-on');
-            if (t >= DUR) finish();
+            if (!waved && u > HOLD - 2.2) { waved = true; getAvatar()?.play?.('wave', { hold: 2 }); }
+            if (u > HOLD - 0.9) card.classList.remove('is-on');
+            if (u >= HOLD) finish();
           },
         };
       });
@@ -250,14 +300,43 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
      * `next` = { href, label } for the next chapter.
      * @returns {Promise<'next'|'stay'>}
      */
-    outro({ title, line, focus = null, next = null }) {
+    outro({ title, line, focus = null, next = null, scene = null }) {
       begin();
-      getAvatar()?.play?.('cheer', { hold: 4 });
-      setTimeout(() => confetti(), 400);
+      const timed = scene;                       // a scripted ending plays first (its own cheer and confetti)
+      const T = timed ? timed.duration : 0;
+      liveScene = timed;
+      let skipNow = false;
+      let cardUp = false;
+      let reveal = () => {};                     // shows the card (set below)
+      if (!timed) {
+        getAvatar()?.play?.('cheer', { hold: 4 });
+        setTimeout(() => confetti(), 400);
+      } else {
+        // Any key or click after the first second skips the scene, not the card.
+        const skipScene = () => {
+          if (cardUp) return;
+          skipNow = true;
+          removeEventListener('keydown', skipScene, true);
+          removeEventListener('pointerdown', skipScene, true);
+        };
+        setTimeout(() => { addEventListener('keydown', skipScene, true); addEventListener('pointerdown', skipScene, true); }, 1000);
+      }
       const c0 = camera.position.clone();
-      const f = focus ? focus.clone() : null;
+      const f = focus && !timed ? focus.clone() : null;
       const startA = f ? Math.atan2(c0.x - f.x, c0.z - f.z) : 0;
-      if (f) {
+      if (timed) {
+        shot = {
+          t: 0,
+          step(t) {
+            if (t < T && !skipNow) { timed.step(t, say); return; }
+            if (cardUp) return;
+            cardUp = true;
+            endScene();
+            reveal();
+            confetti();
+          },
+        };
+      } else if (f) {
         const _lk = new THREE.Vector3();
         shot = {
           t: 0,
@@ -304,11 +383,12 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
         goBtn?.addEventListener('click', () => done('next'));
         stayBtn.addEventListener('click', () => done('stay'));
         addEventListener('keydown', onKey, true);
-        setTimeout(() => {
+        reveal = () => {
           document.body.appendChild(card);
           nodes.push(card);
           setTimeout(() => { card.classList.add('is-on'); (goBtn || stayBtn).focus(); }, 30);
-        }, 3200);
+        };
+        if (!timed) setTimeout(reveal, 3200);
       });
     },
   };
