@@ -15,8 +15,8 @@
 // Each chapter's HUD does the pausing (src/game/hud.js for Chapters 1-3,
 // src/space/hud/hud.js for 4-7); this file only knows about input and words.
 // Input comes from the key, pointer, wheel and touch listeners (install). The
-// Chapters 1-3 loops do not call noteInput themselves. The Chapters 4-7 flight
-// code does not call it yet either, so its only input is the listeners.
+// Chapters 1-3 loops add nothing; the Chapters 4-7 main.js also calls noteInput
+// while she steers, walks or drags the view.
 
 import { wordCount } from './readTime.js';
 
@@ -35,7 +35,7 @@ const now = () => (typeof performance !== 'undefined' ? performance.now() : Date
 let lastInput = -Infinity;
 let installed = false;
 
-/** Note a control input (the listeners do this; the flight loop calls it while she steers). */
+/** Note a control input (the listeners do this; main.js also calls it while she steers, walks or drags). */
 export function noteInput(t = now()) { lastInput = t; }
 
 /** How long since her last control input, in ms. */
