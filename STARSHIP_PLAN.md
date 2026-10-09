@@ -168,7 +168,17 @@ star windows, lamps), `decks.js` (the contract), `ship-lab.html` (lab).
 - WP-7 (Ch1-5 sweep) is skipped for now (lead). Ch5 fixes the lead reported
   on 2026-10-08 are done by the coordinator as their own small PRs.
 
-## 6. PRs (small, one session each)
+## 6. Status (2026-10-08)
+
+- Done: interior framework (PR #20); four decks built, critic-reviewed
+  and fixed once, Part B switched over, habitat.js removed, interior test;
+  starship model built, reviewed and fixed once (not yet in the cutscenes).
+- Running: crew and robots (WP-4).
+- Next: WP-2 (the starship in the cutscenes, the drilling beat), WP-5
+  (words and questions for the drilled-cap story), bridge chairs (still
+  plain drums), lounge door look.
+
+## 7. PRs (small, one session each)
 
 | PR | Content |
 |---|---|

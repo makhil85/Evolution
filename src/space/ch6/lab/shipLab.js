@@ -5,6 +5,9 @@
 //   ?view=interior&deck=bridge   walk a deck: the real interior scene (ship.js)
 //   ?view=ship[&detail=far]      the starship model (starship.js), drag to orbit
 //   ?view=crew                   the crew and robots in a row
+//   ?view=models&set=walls[&style=pbr][&page=0]   a contact sheet of a model kit
+//                                (walls | platforms | columns | props | decals | kenney),
+//                                24 pieces a page with their names and sizes
 //
 // window.__shipLab:
 //   ready            true once the first frame is drawn
@@ -75,8 +78,10 @@ let camPin = null; // { pos, look } for orbit views
 
 // --- the views ------------------------------------------------------------------------
 async function setupInterior() {
-  const { createInteriorScene } = await import('../interior/ship.js');
+  const { createInteriorScene, preloadInterior } = await import('../interior/ship.js');
+  const models = await preloadInterior({ style: params.get('style') || 'toon' });
   const sc = createInteriorScene(fakeGame, {
+    models,
     async onStation(id) { fakeGame.hud.toast(`station ${id} (lab: done)`); },
     startDeck: params.get('deck') || undefined,
   });
@@ -161,7 +166,45 @@ async function setupCrew() {
   return camera;
 }
 
-const camera = await ({ interior: setupInterior, ship: setupShip, crew: setupCrew }[VIEW] || setupInterior)();
+async function setupModels() {
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x1a1d26);
+  scene.add(new THREE.HemisphereLight(0xe6ecff, 0x3a3444, 1.2));
+  const key = new THREE.DirectionalLight(0xfff1e0, 1.4); key.position.set(4, 8, 6); scene.add(key);
+  const set = params.get('set') || 'walls';
+  const page = Number(params.get('page') || 0);
+  const man = await (await fetch('assets/models/scifi/manifest.json')).json();
+  const names = (man[set] || []).slice(page * 24, page * 24 + 24).map((n) => `${set === 'kenney' ? 'kenney' : set}/${n}`);
+  const { loadModels } = await import('../interior/models.js');
+  const lib = await loadModels(names, { style: params.get('style') || 'toon' });
+  const COLS = 6; const GAP = 5.5;
+  names.forEach((n, i) => {
+    const o = lib.object(n);
+    const sz = lib.size(n); const mn = lib.min(n);
+    const k = 3.2 / Math.max(1, sz.x, sz.y, sz.z); // big pieces shrunk to fit their cell
+    o.scale.setScalar(k);
+    const cx = (i % COLS - (COLS - 1) / 2) * GAP; const cz = Math.floor(i / COLS) * GAP;
+    o.position.set(cx - (mn.x + sz.x / 2) * k, -mn.y * k, cz - (mn.z + sz.z / 2) * k);
+    scene.add(o);
+    // Name and size on a little card in front.
+    const cv = document.createElement('canvas'); cv.width = 512; cv.height = 96;
+    const c = cv.getContext('2d'); c.fillStyle = '#0b0d14'; c.fillRect(0, 0, 512, 96); c.fillStyle = '#ffcc99';
+    c.font = 'bold 30px sans-serif'; c.fillText(n.split('/')[1].slice(0, 30), 10, 40);
+    c.font = '26px monospace'; c.fillStyle = '#9fb4ff'; c.fillText(`${sz.x.toFixed(1)} x ${sz.y.toFixed(1)} x ${sz.z.toFixed(1)} m${k < 1 ? ` (x${k.toFixed(2)})` : ''}`, 10, 80);
+    const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+    const card = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 0.86), new THREE.MeshBasicMaterial({ map: tex }));
+    card.position.set(cx, 0.02, cz + 2.3); card.rotation.x = -Math.PI / 2; scene.add(card);
+  });
+  lab.scene = scene; lab.models = lib;
+  const rows = Math.ceil(names.length / COLS);
+  const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 400);
+  const step = orbitCamera(camera, new THREE.Vector3(0, 0, (rows - 1) * GAP / 2), { dist: 30, sheet: { yaw: 0, pitch: 0.75, dist: 30 }, low: { yaw: 0.2, pitch: 0.35, dist: 22 } });
+  lab.cam('sheet');
+  tickFn = (dt) => step(dt);
+  return camera;
+}
+
+const camera = await ({ interior: setupInterior, ship: setupShip, crew: setupCrew, models: setupModels }[VIEW] || setupInterior)();
 if (VIEW !== 'interior') { pass.camera = camera; pass.scene = lab.scene || pass.scene; }
 
 function fit() {
