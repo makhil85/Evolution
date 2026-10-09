@@ -934,3 +934,22 @@
 .sp-hud .sp-goal.is-on { opacity: 1; transform: translate(-50%, 0); }
 .sp-hud .sp-goal__title { font-size: calc(15px * var(--hud-scale)); font-weight: 800; color: #ffd27a; letter-spacing: .02em; }
 .sp-hud .sp-goal__text { margin-top: 6px; font-size: calc(12px * var(--hud-scale)); line-height: 1.35; }
+
+/* --- on foot (Chapters 6 and 7: body.sp-on-foot, set by main.js while a walk scene runs) ----------
+ * Lead 2026-10-09: "look at the HUD display while the girl is walking". The flight panels, the flight
+ * switches, the minimap, the transfer and aim panels, the markers, the retry button and the burn banner
+ * are for flying: they go while she walks, and come back in flight. Kept: the mission card, the toasts,
+ * the station prompt and the grown-up Jump. Freeze stays while the game is frozen (so she can carry on). */
+body.sp-on-foot .sp-hud .sp-instruments,
+body.sp-on-foot .sp-hud .sp-minimap,
+body.sp-on-foot .sp-hud .sp-xfer,
+body.sp-on-foot .sp-hud .sp-aim,
+body.sp-on-foot .sp-hud .sp-landing,
+body.sp-on-foot .sp-hud .sp-orbit,
+body.sp-on-foot .sp-hud .sp-tally,
+body.sp-on-foot .sp-hud .sp-markers,
+body.sp-on-foot .sp-retry,
+body.sp-on-foot #burnCue { display: none !important; }
+body.sp-on-foot .sp-hud .sp-toggles > .sp-autopilot,
+body.sp-on-foot .sp-hud .sp-toggles > .sp-aimtoggle { display: none !important; }
+body.sp-on-foot:not(.sp-is-frozen) .sp-hud .sp-toggles { display: none !important; }

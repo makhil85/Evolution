@@ -1408,6 +1408,8 @@ function tick(realDt, render = true) {
     activeScene.tick(realDt, input, modalOpen ? { dx: 0, dy: 0, wheel: 0, dragging: false } : mouse, modalOpen);
     missions.tickCalm(realDt, modalOpen || game.paused || game.frozen);
     touch.update({ onFoot: true, cinematic: false, autoAim: game.mode.autoAim });
+    // On foot the flight panels and switches go (hud.css, body.sp-on-foot); the mission card and toasts stay.
+    document.body.classList.toggle('sp-on-foot', !!activeScene.onFoot);
     if (render) composer.render();
     return;
   }
@@ -1818,6 +1820,7 @@ game.runScene = async (sceneObj) => {
     renderPass.scene = scene;
     renderPass.camera = camera;
     document.body.classList.remove('in-scene');
+    document.body.classList.remove('sp-on-foot');
     sceneObj.dispose?.();
     last = performance.now();
     fit();
