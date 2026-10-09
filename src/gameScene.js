@@ -36,6 +36,7 @@ import { createFrameMonitor } from './game/frameMonitor.js';
 import { createChapterStory, heroName, confetti } from './game/chapterStory.js';
 import { createOpening, createArrival } from './game/cutscenes.js';
 import { createHud } from './game/hud.js';
+import { install, whenIdle } from './play/readGate.js';
 import { audio } from './game/audio.js';
 import { QUESTIONS } from './game/questions.js';
 import { createNavArrow } from './play/navArrow.js';
@@ -82,6 +83,7 @@ const camera = new THREE.PerspectiveCamera(52, mount.clientWidth / mount.clientH
 // Input
 // ---------------------------------------------------------------------------
 const keys = createHeldKeys(); // also lets go on blur / a lost keyup
+install(); // the read gate: any key, click or touch is "she is playing" (src/play/readGate.js)
 /** True when the keystroke belongs to a text field, not the game. */
 function typingInField(e) {
   const t = e.target;
@@ -94,7 +96,8 @@ addEventListener('keydown', (e) => {
   // question was literally untypeable and it gates the launch.
   if (typingInField(e)) return;
   if (['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','ShiftLeft'].includes(e.code)) e.preventDefault();
-  keys.add(e.code, e.repeat);
+  // A key pressed while the game is paused (a card, a reading pause) is not kept: nothing walks after it.
+  if (!playBlocked() && !(hud && hud.isModalOpen())) keys.add(e.code, e.repeat);
 });
 addEventListener('keyup', (e) => keys.delete(e.code));
 
@@ -691,7 +694,7 @@ async function main() {
       // before the two mass puzzles.
       const lesson = LESSON_BEFORE[step.questionId];
       if (lesson && !lessonSeen(lesson.id)) {
-        lessonOnce(lesson).then(() => onInteract());
+        lessonOnce(lesson).then(() => whenIdle()).then(() => onInteract());
         return;
       }
       hud.askQuestion(q, (ok) => { if (ok) hud.update(engine); }, {
@@ -733,6 +736,7 @@ async function main() {
       // space in a test can be launched, so the chapter's ending still comes.
       (async () => {
         await lessonOnce(LESSON_3B);
+        await whenIdle(); // the tuner opens by itself after the lesson: only once she has stopped playing
         const build = await openLaunchTuner({ mode: playMode?.id || 'medium' });
         if (!build) { hud.update(engine); return; }
         const res = engine.launch?.();
@@ -793,6 +797,7 @@ async function main() {
   applyMode(loadPlayMode());
   modeChip = createModeChip({ level: playLevel, onChange: (id) => applyMode(PLAY_MODES[id]) });
   if (savedPlayModeId() === null) {
+    await whenIdle(); // a card she did not ask for opens only once she has stopped playing
     chooserOpen = true;
     try { await choosePlayMode({ level: playLevel }); } finally { chooserOpen = false; }
     applyMode(loadPlayMode());

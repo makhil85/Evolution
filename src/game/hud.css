@@ -1170,6 +1170,9 @@
 }
 
 .rv-hud .rv-card--mission.is-collapsed .rv-mission__body { display: none; }
+/* While she walks the card folds to its title and one line of the objective
+   (hud.js _movingFold); her own folded card keeps its two-line peek. */
+.rv-hud .rv-card--mission.is-moving .rv-mission__peek { -webkit-line-clamp: 1; }
 
 /* A changed objective gets a brief ring, so it reads as new rather than as
    the card having been open all along. */

@@ -11,6 +11,7 @@ import { lockPlayInput, unlockPlayInput, isPlayModalOpen } from '../src/play/ui.
 import { createNavArrow } from '../src/play/navArrow.js';
 import { createHeldKeys, REPEAT_QUIET_MS } from '../src/game/heldKeys.js';
 import { readMs, needsClick, READ_MIN_MS } from '../src/play/readTime.js';
+import { IDLE_MS, noteInput } from '../src/play/readGate.js';
 import { register } from 'node:module';
 
 let passed = 0;
@@ -564,7 +565,7 @@ ok(!isPlayModalOpen(), 'input lock is a no-op in node');
   advance(READ_MIN_MS);
   pressKey('Enter');
   ok(hud._read === null && body.dataset.playModal === undefined, 'Enter closes the card');
-  advance(1600);
+  advance(IDLE_MS);   // a line to read waits until she has had no input for 2 s (the Enter was input)
   hud.toast(`${LONG} Space closes it.`, 'info');
   advance(READ_MIN_MS);
   pressKey(' ');
@@ -630,6 +631,83 @@ ok(!isPlayModalOpen(), 'input lock is a no-op in node');
   advance(READ_MIN_MS);
   ok(!hud._toasts.some((e) => e.message === '+1 iron') && !hud._toastQueue.some((q) => q.message === '+1 iron'), 'an old pickup line is dropped');
   settle();
+
+  // --- the read gate (lead 2026-10-09): statuses at once, lines to read wait -------
+  // Her input is a key press (pressKey). A short status shows while she steers and
+  // never pauses. A line to read waits for IDLE_MS with no input, then the game is
+  // paused (her movement locked) for readMs, and it lets go by itself.
+  {
+    settle();
+    const GUIDE = 'Move closer to a resource, board, lab, locked room, or foundation.';
+
+    pressKey('ArrowUp', true); advance(100);
+    hud.toast('+3 wood', 'good');
+    ok(hud._toasts.some((e) => e.message === '+3 wood'), 'a short status shows at once while she steers');
+    ok(body.dataset.playModal === undefined, 'a short status does not pause the game');
+    settle();
+
+    for (let i = 0; i < 6; i += 1) { pressKey('ArrowUp', true); advance(500); }   // 3 s of steering
+    hud.toast(GUIDE, 'info');
+    ok(hud._toasts.length === 0 && hud._toastQueue.length === 1, 'a line to read waits while she steers');
+    ok(body.dataset.playModal === undefined, 'nothing is paused while the line waits');
+    advance(1000);   // 1.5 s since her last key
+    ok(hud._toasts.length === 0, 'it still waits: she has had no input for under 2 s');
+    advance(IDLE_MS);
+    ok(hud._toasts.length === 1 && hud._toasts[0].message === GUIDE, 'it shows once she has had 2 s with no input');
+    ok(body.dataset.playModal === '1', 'the game is paused while she reads it');
+    const shownAt = hud._toasts[0].shownAt;
+    pressKey('ArrowUp'); advance(100);   // she presses keys during the pause
+    ok(body.dataset.playModal === '1' && hud._toasts.length === 1, 'pressing keys does not end the reading pause');
+    advance(readMs(GUIDE) - 1 - (clock - shownAt));
+    ok(body.dataset.playModal === '1' && hud._toasts.length === 1, 'the game stays paused just before readMs');
+    advance(1);
+    ok(body.dataset.playModal === undefined && hud._toasts.length === 0, 'the game resumes by itself after readMs');
+    settle();
+
+    // The next goal is a line to read even when it is short: it waits while she steers.
+    pressKey('ArrowUp', true); advance(300);
+    hud.setProgress(55, '55% — Go to the forge');
+    ok(!hud._toasts.some((e) => e.message === 'Next goal: Go to the forge'), 'the next goal waits while she steers');
+    advance(IDLE_MS + 300);
+    ok(hud._toasts.some((e) => e.message === 'Next goal: Go to the forge'), 'the next goal shows once she stops');
+    settle();
+
+    // The mission card folds to its title line while she walks, and opens again once she stops.
+    const card = hud._missionCard;
+    ok(!card.classList.contains('is-collapsed'), 'the mission card is open while she stands still');
+    pressKey('ArrowLeft', true); advance(300);
+    ok(card.classList.contains('is-collapsed') && card.classList.contains('is-moving'), 'it folds to its title line while she walks');
+    advance(IDLE_MS + 300);
+    ok(!card.classList.contains('is-collapsed') && !card.classList.contains('is-moving'), 'it opens again after 2 s with no input');
+
+    // Her own choice still rules: a card she folded stays folded, and a click shows it even while she walks.
+    hud._missionToggle.dispatch('click');
+    ok(card.classList.contains('is-collapsed') && globalThis.localStorage.getItem('rocket_village_mission_open') === '0', 'she can fold the card, and it is remembered');
+    pressKey('ArrowLeft', true); advance(300); advance(IDLE_MS + 300);
+    ok(card.classList.contains('is-collapsed'), 'a card she folded stays folded when she stops');
+    pressKey('ArrowLeft', true); advance(300);
+    hud._missionToggle.dispatch('click');
+    ok(!card.classList.contains('is-collapsed'), 'a click shows the card while she walks');
+    pressKey('ArrowLeft', true); advance(300);
+    ok(!card.classList.contains('is-collapsed'), 'and it stays shown while she keeps walking');
+    advance(IDLE_MS + 300);
+    pressKey('ArrowLeft', true); advance(300);
+    ok(card.classList.contains('is-collapsed'), 'the next walk folds it again');
+    advance(IDLE_MS + 300);
+    pressKey('KeyM'); advance(50);
+    ok(card.classList.contains('is-collapsed') && globalThis.localStorage.getItem('rocket_village_mission_open') === '0', 'M folds the card, and it is remembered');
+    pressKey('KeyM'); advance(IDLE_MS + 300);
+    ok(!card.classList.contains('is-collapsed') && globalThis.localStorage.getItem('rocket_village_mission_open') === '1', 'M opens it again');
+    // A click is input too: the card it opens does not fold under that click.
+    hud._missionToggle.dispatch('click');
+    advance(IDLE_MS + 300);
+    noteInput();
+    hud._missionToggle.dispatch('click'); advance(300);
+    ok(!card.classList.contains('is-collapsed'), 'a click opens the card and it stays open under its own input');
+    advance(IDLE_MS + 300);
+    ok(!card.classList.contains('is-collapsed'), 'and it stays open once she is idle again');
+    settle();
+  }
 
   // The Help chip does not open the chooser over a card.
   {

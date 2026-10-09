@@ -35,6 +35,7 @@ import { loadProfile } from '../launcher/profile.js';
 import { skipButton } from '../play/grownUp.js';
 import { lockPlayInput, unlockPlayInput } from '../play/ui.js';
 import { readMs, needsClick, READ_MIN_MS } from '../play/readTime.js';
+import { install, isIdle, isShort, IDLE_MS } from '../play/readGate.js';
 import { IS_LEVEL1 as IS_L1 } from '../space/level.js';
 
 /**
@@ -90,11 +91,18 @@ const MISSION_FLASH_MS = 7000;
  *  at most 2 toasts at once, a new one 1.5 s after the last, none while a
  *  question or play card is open (warnings pass). Pickup lines ("+1 wood")
  *  merge while they wait, go after the other messages, and are dropped after
- *  20 s in line; the same text again within 10 s is not shown twice. */
+ *  20 s in line; the same text again within 10 s is not shown twice.
+ *
+ *  Lead 2026-10-09 (src/play/readGate.js): a short status (isShort: "+3 wood",
+ *  "Built!") shows at once and never pauses. Anything else is a line to read:
+ *  it waits until she has had no input for IDLE_MS, then the game is paused
+ *  for its reading time (her movement is locked, src/play/ui.js). */
 const MAX_VISIBLE_TOASTS = 2;
 const TOAST_GAP_MS = 1500;
 const TOAST_STALE_MS = 20000;
 const TOAST_DUP_MS = 10000;
+/** How often the HUD looks at her input: the mission card folds and unfolds on it. */
+const WATCH_MS = 250;
 
 const BADGE_GLYPH = { done: '✓', active: '●', open: '○', locked: '○' };
 
@@ -205,6 +213,15 @@ export class Hud {
    */
   constructor(options = {}) {
     const mount = options.mount || document.body;
+    install(); // the read gate listens for her input (src/play/readGate.js), once per page
+
+    /** Whoever holds the reading pause (a toast, the cue): her movement is locked while any is held. */
+    this._holds = new Set();
+    /** Is she walking or steering right now (no input for less than IDLE_MS, checked every WATCH_MS)? */
+    this._moving = false;
+    /** She clicked the mission card open: it stays open until she has been idle again. */
+    this._revealed = false;
+    this._watchTimer = 0;
 
     /** Supplies counters this HUD shows. Chapter 2 passes its own six via options.resourceRows. */
     this._resourceRows = Array.isArray(options.resourceRows) && options.resourceRows.length
@@ -268,6 +285,7 @@ export class Hud {
     // Never hardcode a direction here — that would drift from quests.js the
     // moment either one changes.
     this._onboardTimers.push(setTimeout(() => this._showOnboard(), ONBOARD_DELAY_MS));
+    this._watch();
   }
 
   // --- construction -------------------------------------------------------
@@ -391,7 +409,7 @@ export class Hud {
     this._missionPeek = el('span', 'rv-mission__peek', '');
     head.appendChild(this._missionPeek);
     head.appendChild(el('span', 'rv-card__chevron', '▾'));
-    head.addEventListener('click', () => this._setMissionOpen(!this._missionOpen));
+    head.addEventListener('click', () => this._toggleMission());
     mission.appendChild(head);
     this._missionToggle = head;
 
@@ -434,12 +452,65 @@ export class Hud {
    */
   _setMissionOpen(open, { remember = true } = {}) {
     this._missionOpen = !!open;
-    this._missionCard.classList.toggle('is-collapsed', !open);
-    this._missionToggle.setAttribute('aria-expanded', String(!!open));
-    this._missionToggle.title = open ? 'Hide the mission' : 'Show the mission';
+    this._paintMission();
     if (remember) {
       try { localStorage.setItem(MISSION_OPEN_KEY, open ? '1' : '0'); } catch { /* private mode */ }
     }
+  }
+
+  /**
+   * The card as she sees it. Her choice (open or closed, remembered) is what
+   * `_missionOpen` holds; while she walks it folds to its title line and the
+   * one-line peek, unless she clicked it open again (`_revealed`). Lead
+   * 2026-10-09: "show banners only when kids aren't actively playing".
+   */
+  _movingFold() {
+    return this._missionOpen && this._moving && !this._revealed;
+  }
+
+  /** Is the card on screen right now (open, and not folded for her walk)? */
+  _missionShown() {
+    return this._missionOpen && !this._movingFold();
+  }
+
+  /** Paint the card from her choice and the walking fold. Changes no choice. */
+  _paintMission() {
+    const shown = this._missionShown();
+    this._missionCard.classList.toggle('is-collapsed', !shown);
+    this._missionCard.classList.toggle('is-moving', this._movingFold());
+    this._missionToggle.setAttribute('aria-expanded', String(shown));
+    this._missionToggle.title = shown ? 'Hide the mission' : 'Show the mission';
+  }
+
+  /**
+   * Her click (or M): hide the card if it is on screen, otherwise show it. A
+   * card shown while she walks stays open until she stops walking.
+   */
+  _toggleMission() {
+    if (this._missionShown()) {
+      this._setMissionOpen(false);
+      return;
+    }
+    this._revealed = true;
+    this._setMissionOpen(true);
+  }
+
+  /**
+   * Every WATCH_MS: fold the card while she walks, open it once she has had
+   * no input for IDLE_MS. A click counts as input, so the reveal lasts until
+   * she is idle again (not until the walk starts): the card does not fold
+   * under the click that opened it. The next walk after that folds it.
+   */
+  _watch() {
+    this._watchTimer = 0;
+    if (this._destroyed) return;
+    const moving = !isIdle(IDLE_MS);
+    if (moving !== this._moving) {
+      this._moving = moving;
+      if (!moving) this._revealed = false;
+      this._paintMission();
+    }
+    this._watchTimer = setTimeout(() => this._watch(), WATCH_MS);
   }
 
   /**
@@ -481,7 +552,7 @@ export class Hud {
       const t = e.target;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
       if (this.isModalOpen()) return;
-      this._setMissionOpen(!this._missionOpen);
+      this._toggleMission();
     };
     addEventListener('keydown', this._onMissionKey);
   }
@@ -716,7 +787,7 @@ export class Hud {
     // The next goal, said once when it changes (lead 2026-10-07: "explain the
     // next goal, then remove it from the screen"): a toast, which goes away.
     const goal = this._status.replace(/^\s*\d{1,3}\s*%\s*[—-]?\s*/, '').trim();
-    if (goal && this._goalSaid !== undefined && goal !== this._goalSaid && value < 100) this.toast(`Next goal: ${goal}`, 'info');
+    if (goal && this._goalSaid !== undefined && goal !== this._goalSaid && value < 100) this.toast(`Next goal: ${goal}`, 'info', { status: false });
     if (goal) this._goalSaid = goal;
     // On screen just the number: the "what next" words are the mission card's
     // job, and showing them here too said the same thing twice at the top of
@@ -881,15 +952,22 @@ export class Hud {
    * pickup line waiting in line ("+1 wood") merges with the next of the same
    * kind ("+2 wood"), and messages that matter go ahead of pickup lines.
    *
+   * A short status ("+3 wood", "Built!": isShort at her Level) shows at once and
+   * never pauses. Any other line waits until she has had no input for IDLE_MS,
+   * then the game pauses for its reading time. Pass `{ status: false }` for a
+   * line that must wait even when it is short ("Next goal: ...").
+   *
    * @param {string} text
    * @param {'info'|'good'|'warn'|'bad'} [kind]
+   * @param {{status?: boolean}} [opts]
    * @returns {void}
    */
-  toast(text, kind = 'info') {
+  toast(text, kind = 'info', opts = {}) {
     if (this._destroyed) return;
     const message = typeof text === 'string' ? text.trim() : '';
     if (!message) return;
     const now = performance.now();
+    const status = opts.status ?? isShort(message, IS_L1 ? 1 : 4);
 
     // Already on screen: refresh it (and count it when it is the newest).
     const shown = this._toasts.find((e) => e.message === message);
@@ -922,7 +1000,7 @@ export class Hud {
     // Join the line (a newer copy of a waiting message moves to the back), then
     // show whatever the screen has room for now.
     this._toastQueue = this._toastQueue.filter((q) => q.message !== message);
-    this._toastQueue.push({ message, kind, at: now });
+    this._toastQueue.push({ message, kind, at: now, status });
     this._showQueued();
   }
 
@@ -930,13 +1008,15 @@ export class Hud {
    * Can this waiting message go up now? A click card needs the screen to be
    * clear; a toast needs a free slot. Nothing shows under a click card, and
    * while a question or play card is open only warnings get through (and only
-   * as toasts: a long one waits for the card to close).
+   * as toasts: a long one waits for the card to close). A line to read also
+   * waits for her to stop playing, and for the reading pause before it to end.
    */
-  _roomFor({ message, kind }, now) {
+  _roomFor(q, now) {
     if (this._read || now < this._toastNextAt) return false;
-    const urgent = kind === 'warn' || kind === 'bad';
-    const long = needsClick(message);
+    const urgent = q.kind === 'warn' || q.kind === 'bad';
+    const long = needsClick(q.message);
     if (this._focusNow() && (!urgent || long)) return false;
+    if (!q.status && (this._holds.size || !isIdle(IDLE_MS))) return false;
     return long ? this._toasts.length === 0 : this._toasts.length < MAX_VISIBLE_TOASTS;
   }
 
@@ -964,7 +1044,7 @@ export class Hud {
     for (const q of order) {
       if (this._roomFor(q, now)) {
         this._toastQueue.splice(this._toastQueue.indexOf(q), 1);
-        this._showNow(q.message, q.kind, now);
+        this._showNow(q, now);
         break;
       }
       // A message that needs a click keeps its place: nothing jumps ahead of it.
@@ -975,8 +1055,8 @@ export class Hud {
     }
   }
 
-  /** Put one message on screen: a toast for 5-10 s, or the click card. */
-  _showNow(message, kind, now) {
+  /** Put one waiting message on screen: a toast for 5-10 s, or the click card. */
+  _showNow({ message, kind, status }, now) {
     this._toastSeen.set(message, now);
     this._toastNextAt = now + TOAST_GAP_MS;
     if (needsClick(message)) {
@@ -990,10 +1070,28 @@ export class Hud {
     countEl.hidden = true;
     node.appendChild(countEl);
 
-    const entry = { node, countEl, message, repeat: 1, timer: 0, shownAt: now };
+    // A line to read pauses the game while it is up (a status does not).
+    const entry = { node, countEl, message, repeat: 1, timer: 0, shownAt: now, paused: !status };
+    if (entry.paused) this._hold(entry);
     entry.timer = setTimeout(() => this._dismissToast(entry), readMs(message));
     this._toasts.push(entry);
     this._toastLayer.appendChild(node);
+  }
+
+  /**
+   * A reading pause: her movement and the world's play input are locked while
+   * anything holds one (the same lock as the play cards, src/play/ui.js). The
+   * token is the toast or the cue; `_release` gives the lock back once.
+   */
+  _hold(token) {
+    if (this._holds.has(token)) return;
+    this._holds.add(token);
+    lockPlayInput();
+  }
+
+  _release(token) {
+    if (!this._holds.delete(token)) return;
+    unlockPlayInput();
   }
 
   /**
@@ -1044,9 +1142,13 @@ export class Hud {
     this._showQueued();
   }
 
-  /** A question card, a play card or the read-it card is up (focus mode). */
+  /**
+   * A question card, a play card or the read-it card is up (focus mode). Our own
+   * reading pause also sets the play lock, but it is not a card: it does not count.
+   */
   _focusNow() {
-    return !!this._modal || !!this._read || (typeof document !== 'undefined' && !!document.body.dataset.playModal);
+    const lockedByCard = typeof document !== 'undefined' && !!document.body.dataset.playModal && this._holds.size === 0;
+    return !!this._modal || !!this._read || lockedByCard;
   }
 
   _dismissToast(entry) {
@@ -1054,6 +1156,7 @@ export class Hud {
     if (i < 0) return;
     this._toasts.splice(i, 1);
     clearTimeout(entry.timer);
+    if (entry.paused) this._release(entry);
     entry.node.classList.add('is-out');
     // Remove after the fade rather than on a transitionend that may never fire
     // (the element can be detached while a tab is backgrounded).
@@ -1498,9 +1601,11 @@ export class Hud {
    */
   _showOnboard() {
     if (this._onboardShown || this._destroyed) return;
-    // Behind the chapter opening or a play card it would be wasted: wait.
-    if (this._focusNow()) {
-      this._onboardTimers.push(setTimeout(() => this._showOnboard(), 600));
+    // Behind the chapter opening or a play card it would be wasted: wait. It is
+    // a line to read, so it also waits until she has stopped playing (lead
+    // 2026-10-09), and it pauses the game while it is up.
+    if (this._focusNow() || this._holds.size || !isIdle(IDLE_MS)) {
+      this._onboardTimers.push(setTimeout(() => this._showOnboard(), this._focusNow() ? 600 : WATCH_MS));
       return;
     }
     const first = this._missionLines && this._missionLines.querySelector('.rv-mission__line');
@@ -1512,6 +1617,7 @@ export class Hud {
     if (needsClick(text)) { this._showReadCard(text); return; }
     this._onboardText.textContent = text;
     this._onboard.hidden = false;
+    this._hold(this._onboard);
     // rAF so the browser paints the hidden->visible flip before the
     // transition starts, or the fade-in never runs.
     requestAnimationFrame(() => this._onboard.classList.add('is-in'));
@@ -1519,6 +1625,7 @@ export class Hud {
   }
 
   _hideOnboard() {
+    if (this._onboard) this._release(this._onboard);
     if (!this._onboard || this._onboard.hidden) return;
     this._onboard.classList.remove('is-in');
     this._onboard.classList.add('is-out');
@@ -1531,10 +1638,12 @@ export class Hud {
   destroy() {
     if (this._onMissionKey) removeEventListener('keydown', this._onMissionKey);
     this._destroyed = true;
+    clearTimeout(this._watchTimer);
     for (const entry of this._toasts.slice()) this._dismissToast(entry);
     clearTimeout(this._toastQueueTimer);
     this._toastQueue = [];
     for (const t of this._onboardTimers.splice(0)) clearTimeout(t);
+    for (const token of [...this._holds]) this._release(token);
     this._closeReadCard();
     this.closeQuestion();
     this.root.remove();
