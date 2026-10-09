@@ -7,16 +7,22 @@ import { partASteps } from './partA.js';
 import { partBSteps } from './partB.js';
 import { partCSteps } from './partC.js';
 import { partESteps } from './partE.js';
-import { showRockB } from './opening.js';
+import { showRockB, showStarship } from './opening.js';
 
 export function ch6Steps(game) {
   const build = partBuildSteps(game);
   const rest = [...partASteps(game), ...partBSteps(game), ...partCSteps(game), ...partESteps(game)];
-  // Rock B hangs beside her once she has chosen it: every step from the
-  // engine build on shows it (also after a reload straight into one).
-  for (const st of [...build.slice(build.findIndex((s) => s.id === 'c6_engine')), ...rest]) {
+  const wrap = (st, show) => {
     const enter = st.enter;
-    st.enter = async (...a) => { showRockB(game); return enter?.(...a); };
+    st.enter = async (...a) => { show(); return enter?.(...a); };
+  };
+  // The engine step: her rock is being mined, so Rock B hangs beside her.
+  const engine = build.findIndex((s) => s.id === 'c6_engine');
+  wrap(build[engine], () => showRockB(game));
+  // From the next step on (also after a reload straight into one) the starship
+  // hangs beside her: the engine's test fire is done and Rock B is gone.
+  for (const st of [...build.slice(engine + 1), ...rest]) {
+    wrap(st, () => { game._rockB?.remove(); showStarship(game); });
   }
   return [...build, ...rest];
 }
