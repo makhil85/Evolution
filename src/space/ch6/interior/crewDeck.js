@@ -245,7 +245,7 @@ export function buildDeck(kit) {
   b.add(new RoundedBoxGeometry(2.05, 0.16, 1.16, 2, 0.06), cream, -6.45, 0.44, BED);       // mattress
   b.add(new RoundedBoxGeometry(1.4, 0.1, 1.2, 2, 0.04), cushion, -5.8, 0.54, BED);         // blanket
   b.add(new RoundedBoxGeometry(0.42, 0.14, 0.8, 2, 0.06), cream, -7.1, 0.56, BED);         // pillow
-  solids.push({ rect: [-6.5, BED, 2.2, 1.3] });
+  solids.push({ rect: [-6.5, BED, 2.2, 1.3], h: 1.15 }); // the headboard's top (the chase camera may pass over the bed)
   wallLight(CAB_X, BED, [1, 0], 2.3); // a reading light over the bed (at 2.9 it read as a block hanging from the ceiling)
   b.box(0.03, 0.14, 0.34, kit.glow(0xffd9a0, 1.3), CAB_X + 0.3, 2.3, BED); // its warm lit face (under the bloom threshold)
   // A rug by the bed (flat, lilac).
@@ -275,7 +275,7 @@ export function buildDeck(kit) {
   b.add(new RoundedBoxGeometry(0.5, 0.52, 0.07, 2, 0.03), cushion, CHX, 0.76, CHZ - 0.22);              // back
   b.cyl(0.035, 0.035, 0.4, mats.metal, CHX, 0.22, CHZ, { seg: 8 });                                      // post
   b.cyl(0.24, 0.24, 0.04, mats.metal, CHX, 0.02, CHZ, { seg: 16 });                                      // foot
-  solids.push({ rect: [DESK_X, DESK_Z - 0.0, 1.4, 0.62] }, { disc: [CHX, CHZ, 0.3] });
+  solids.push({ rect: [DESK_X, DESK_Z - 0.0, 1.4, 0.62], h: 1.0 }, { disc: [CHX, CHZ, 0.3], h: 1.05 }); // desk top ~0.9, chair back ~1.0
 
   // --- the sick bay: 6 x 6 m off the corridor's right side, through a door at z 29 --------------
   // Inside it runs x 2.91..7.7 (the corridor's right wall is 1.21 m thick: the door is a tunnel 1.2 m long), z 26..32.
@@ -302,7 +302,7 @@ export function buildDeck(kit) {
   b.add(new RoundedBoxGeometry(2.1, 0.1, 0.8, 2, 0.04), mats.accentBlue, 5.4, 0.67, 29);
   b.add(new RoundedBoxGeometry(0.35, 0.1, 0.6, 2, 0.04), cream, 4.65, 0.77, 29);             // the pillow, at the head end
   b.box(1.6, 0.04, 0.9, glowCool, 5.4, 2.9, 29);
-  solids.push({ rect: [5.4, 29, 2.2, 0.9] });
+  solids.push({ rect: [5.4, 29, 2.2, 0.9], h: 0.85 }); // the biobed: its top is ~0.72
   // The scanner: a slim gantry over the biobed, two posts 1.6 m apart (either side of the bed) with a beam and a light under it.
   for (const z of [28.2, 29.8]) { b.cyl(0.07, 0.07, 2.5, mats.metal, 5.4, 1.25, z, { seg: 10 }); solids.push({ disc: [5.4, z, 0.15] }); }
   b.add(new RoundedBoxGeometry(0.3, 0.22, 1.9, 2, 0.06), mats.metal, 5.4, 2.6, 29);
@@ -310,7 +310,7 @@ export function buildDeck(kit) {
   // The cabinet on the back wall, white, with a lit door.
   b.add(new RoundedBoxGeometry(0.5, 1.2, 1.4, 2, 0.05), cream, 7.45, 0.6, 27.3);
   b.box(0.02, 0.8, 1.1, glowCool, 7.19, 0.7, 27.3);
-  solids.push({ rect: [7.45, 27.3, 0.5, 1.4] });
+  solids.push({ rect: [7.45, 27.3, 0.5, 1.4], h: 1.25 }); // the cabinet: 1.2 m
   const medLamp = kit.lamp(PALETTE.teal); medLamp.position.set(7.45, 1.3, 27.3); group.add(medLamp);
   // The screen on the room's near wall.
   const medScreen = kit.screen(1.4, 0.8, { title: 'SICK BAY', accent: PALETTE.teal, seed: 77 });

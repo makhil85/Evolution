@@ -339,7 +339,7 @@ export function buildDeck(kit) {
   // Two barrels a side in the hall's far corners, as engine-room clutter (the kit's barrels, no new materials).
   for (const [x, z] of [[-6.4, 21.6], [-5.7, 22.2], [6.4, 21.6], [5.7, 22.2]]) {
     putPiece(b, 'props/Prop_Barrel_Large', x, 0, z, 0.4);
-    solids.push({ rect: [x, z, 0.55, 0.55], rot: 0 });
+    solids.push({ rect: [x, z, 0.55, 0.55], rot: 0, h: 1.1 }); // a large barrel: about 1 m
   }
 
   // Quest: coolant (the tank, its screen and lamp; the quest's spots are below). A coolant tank: a round tank with a

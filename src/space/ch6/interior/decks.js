@@ -3,7 +3,8 @@
 //
 //   export function buildDeck(kit) -> {
 //     group,                       THREE.Group in deck-local metres (floor y = 0)
-//     floors: [shape], solids: [shape],   walkmap.js shapes
+//     floors: [shape], solids: [shape],   walkmap.js shapes (a solid may give h, its top in m: low
+//                                  furniture the chase camera may pass over; none = full height)
 //     ceiling: number,             room height under the camera (m), default 3.2
 //     stations: { [id]: { x, z, face, lamp, y? } }   where she stands, the yaw she
 //                                  faces to use it, a status lamp mesh (the shell

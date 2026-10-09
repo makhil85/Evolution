@@ -937,9 +937,10 @@
 
 /* --- on foot (Chapters 6 and 7: body.sp-on-foot, set by main.js while a walk scene runs) ----------
  * Lead 2026-10-09: "look at the HUD display while the girl is walking". The flight panels, the flight
- * switches, the minimap, the transfer and aim panels, the markers, the retry button and the burn banner
+ * switches, the minimap, the transfer and aim panels, the markers and the burn banner
  * are for flying: they go while she walks, and come back in flight. Kept: the mission card, the toasts,
- * the station prompt and the grown-up Jump. Freeze stays while the game is frozen (so she can carry on). */
+ * the station prompt, the Retry button (a way back at any time, lead 2026-10-09) and the grown-up Jump.
+ * Freeze stays while the game is frozen (so she can carry on). */
 body.sp-on-foot .sp-hud .sp-instruments,
 body.sp-on-foot .sp-hud .sp-minimap,
 body.sp-on-foot .sp-hud .sp-xfer,
@@ -948,7 +949,6 @@ body.sp-on-foot .sp-hud .sp-landing,
 body.sp-on-foot .sp-hud .sp-orbit,
 body.sp-on-foot .sp-hud .sp-tally,
 body.sp-on-foot .sp-hud .sp-markers,
-body.sp-on-foot .sp-retry,
 body.sp-on-foot #burnCue { display: none !important; }
 body.sp-on-foot .sp-hud .sp-toggles > .sp-autopilot,
 body.sp-on-foot .sp-hud .sp-toggles > .sp-aimtoggle { display: none !important; }

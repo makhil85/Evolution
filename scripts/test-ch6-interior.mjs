@@ -245,6 +245,57 @@ try {
     for (let f = 0; f < 240; f++) chaseView(wallMap, roof32, p, st, 1 / 60);
     assert.ok(st.fade < 0.05 && st.dist > 4.5, `back in view: fade ${st.fade.toFixed(3)}, dist ${st.dist.toFixed(2)}`);
   });
+  // A low solid (a bench, a bed: walkmap.js's h) is not a wall for the camera: it may go over it. A tall solid
+  // (no h, full height) still is. The bench is 0.35..0.85 m behind her, on the camera's side.
+  ok('the chase camera: a low solid behind her (a bench 1 m high) lets the camera rise over it: never nearer than CAM_MIN, not faded', () => {
+    const low = map.createWalkMap({ floors: [{ rect: [0, 0, 80, 40] }], solids: [{ rect: [0, 2.6, 4, 0.5], h: 1.0 }] });
+    const st = { dist: 4.6, pitch: 0.3, fade: 0 };
+    const p = { x: 0, z: 2.0, ty: 1.0, yaw: Math.PI, pitch: 0.3, want: 4.6 };
+    let minD = 9;
+    for (let f = 0; f < 240; f++) { chaseView(low, roof32, p, st, 1 / 60); if (f > 60) minD = Math.min(minD, st.dist); }
+    assert.ok(minD >= CAM_MIN - 0.02, `closest ${minD.toFixed(3)} m over the bench`);
+    assert.ok(st.fade < 0.05, `faded ${st.fade.toFixed(3)} over a bench`);
+  });
+  ok('the chase camera: a tall solid behind her (full height, a wall) still fades her when the camera has no room', () => {
+    const tall = map.createWalkMap({ floors: [{ rect: [0, 0, 80, 40] }], solids: [{ rect: [0, 2.6, 4, 0.5] }] });
+    const st = { dist: 4.6, pitch: 0.3, fade: 0 };
+    const p = { x: 0, z: 2.0, ty: 1.0, yaw: Math.PI, pitch: 0.3, want: 4.6 };
+    for (let f = 0; f < 240; f++) chaseView(tall, roof32, p, st, 1 / 60);
+    assert.ok(st.fade > 0.9, `faded ${st.fade.toFixed(3)} behind a wall`);
+    assert.ok(st.dist < 1, `held short of the wall: ${st.dist.toFixed(3)} m`);
+  });
+  // The chase makes no objects a frame: its per-frame functions build no object literals (checked in the source), and
+  // a long run adds little to the heap. (V8 still boxes the numbers it passes to a call, a few hundred bytes a frame
+  // at most, so the heap bound is loose: it catches a regression, not a single boxed number.)
+  ok('the chase camera builds no object literal a frame (source check of its per-frame functions)', () => {
+    const fs = require('node:fs');
+    const src = fs.readFileSync(new URL('../src/space/ch6/interior/ship.js', import.meta.url), 'utf8');
+    const body = (name) => { const i = src.indexOf(`function ${name}(`); assert.ok(i >= 0, name); return src.slice(i, src.indexOf('\n}', i)).replace(/\/\/.*$/gm, ''); };
+    for (const name of ['aimSight', 'sightClear', 'clearDist', 'chaseDistance', 'chaseView', 'damped', 'chaseFrame']) {
+      assert.ok(!/[=(,:?]\s*\{|return\s*\{|\[\s*\{/.test(body(name)), `${name} builds an object`);
+    }
+    assert.ok(!/Object\.assign|new Array|\.map\(|\.filter\(/.test(body('chaseFrame') + body('chaseView')), 'no per-frame copies');
+  });
+  ok('the chase camera: 5000 frames add under 15 MB to the heap (a loose bound: it catches a regression)', () => {
+    const v8 = require('node:v8'); const vm = require('node:vm');
+    v8.setFlagsFromString('--expose-gc');
+    const gc = vm.runInNewContext('gc');
+    const cam = { yaw: 0, pitch: 0.3, dist: 4.6 };
+    const rig = createChaseRig(cam);
+    const her = { x: 0, y: 1, z: 2, heading: 0, speed: 2, want: 4.6, follow: true };
+    const frames = (n) => {
+      for (let i = 0; i < n; i++) {
+        her.z = 2 + Math.sin(i * 0.01); her.x = Math.cos(i * 0.013); her.heading = Math.sin(i * 0.02) * 0.5; her.speed = 1 + (i % 3);
+        chaseFrame(rig, cam, wallMap, roof32, her, 1 / 60);
+      }
+    };
+    frames(3000); gc();
+    const before = process.memoryUsage().heapUsed;
+    frames(5000);
+    const grew = process.memoryUsage().heapUsed - before;
+    assert.ok(grew < 15 * 1024 * 1024, `the heap grew ${grew} bytes over 5000 frames`);
+  });
+
   // Her walk, frame by frame as ship.js runs it: her speed eases to the walk, the walk map's collide() stops her at
   // a wall (the speed goes), and chaseFrame moves the camera. Returns what the lead saw go wrong.
   function walkChase({ fps, start, dir, cam0 = 0, secs = 4, speed = 3.2, pre = 0, release = Infinity }) {
