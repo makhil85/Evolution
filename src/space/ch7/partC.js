@@ -71,7 +71,7 @@ export function partCSteps(game) {
         await hud.showDialogue([
           { who: who('builder'), text: t('The lab first. Electricity can split water into its atoms, then we build them back up.', 'The lab first! Electricity splits water.') },
           { who: 'girl', text: t('And then the farm?', 'And then the farm?') },
-          { who: who('biologist'), text: t('Yes. The plants do the reverse: carbon dioxide and water go in, oxygen comes out. Same atoms, new partners!', 'The plants give back the oxygen we breathe.') },
+          { who: who('biologist'), text: t('Yes. We breathe oxygen in and breathe carbon dioxide out. Plants do it the other way round: carbon dioxide and water go in, oxygen comes out.', 'The plants give back the oxygen we breathe.') },
         ]);
         await walkTasks(game, CHEMISTRY);
         hud.toast(t('The lab and the farm are done!', 'Chemistry done!'), { kind: 'good', ms: 3600 });
@@ -96,9 +96,9 @@ export function partCSteps(game) {
       markers: [],
       async enter() {
         await hud.showDialogue([
-          { who: who('biologist'), text: t('The recycler needs more helpers. They double each hour, so let us grow enough.', 'The recycler needs more helpers.') },
+          { who: who('biologist'), text: t('The recycler needs more helpers. They double each pretend hour, so let us grow enough.', 'The recycler needs more helpers.') },
           { who: 'girl', text: t('And the sick bay?', 'And the sick bay?') },
-          { who: who('doctor'), text: t('In zero g our bones get thinner. We have to plan the bike, so nobody loses too much.', 'In zero g, the bones need exercise. Plan the bike!') },
+          { who: who('doctor'), text: t('In zero g our bones get thinner, and we share one bike. We have to plan it, so nobody loses too much.', 'In zero g, the bones need exercise. Share the bike!') },
         ]);
         await walkTasks(game, BIOLOGY);
         hud.toast(t('The helpers are growing, and the crew is strong!', 'Helpers and bones: done!'), { kind: 'good', ms: 3600 });

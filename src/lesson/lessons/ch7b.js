@@ -179,7 +179,7 @@ export const LESSON_7B = {
         prompt: ['What are all the things around us made of?', 'What are things made of?'],
         choices: [
           { text: ['Tiny building blocks called atoms', 'Tiny blocks called atoms'], correct: true },
-          { text: ['Tiny grains of sand, all packed together', 'Grains of sand packed together'] },
+          { text: ['Little bricks of clay, stacked up', 'Clay bricks stacked up'] },
           { text: ['Invisible bubbles of air, joined up', 'Bubbles of air joined up'] },
         ],
         hint: ['Look at the last zoom: what is the smallest part we saw?', 'What is the smallest bit we saw?'],

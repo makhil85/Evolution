@@ -136,14 +136,31 @@ ok('the microbe answers: 64 in 6 pretend hours; 128 (first over 100) in 7; 32 ba
   assert.deepEqual(L.taskAnswer('microbes', 'medium'), { start: 1, hours: 7 });
   assert.deepEqual(L.taskAnswer('microbes', 'hard'), { start: 32, hours: 5 });
 });
-ok('the bones answer: two hours of bike a month keeps every mode under its limit', () => {
+ok('bones: one bike shared by the crew; the answer keeps the bike budget and the bone limit (Level 4) or the blocks (Level 1)', () => {
   for (const mode of L.MODES) {
     const plan = L.taskAnswer('bones', mode);
     assert.equal(plan.length, L.BONES.modes[mode].months);
     assert.ok(L.boneOk(mode, plan), mode);
+    assert.ok(L.boneHours(plan) <= L.BONES.modes[mode].budget, `${mode} budget`);
   }
+  for (const mode of ['easy', 'medium']) {
+    const plan = L.taskAnswer('bones', mode, 1);
+    assert.ok(L.boneOk(mode, plan, 1), `Level 1 ${mode}`);
+    assert.equal(L.blocksLeft(plan) >= L.BONES.blocks.modes[mode].keep, true);
+  }
+  assert.equal(L.BONES.modes.hard.budget, 9);
+  assert.equal(L.BONES.modes.hard.limit, 25);
+  assert.equal(L.BONES.modes.medium.budget, 10);
+  assert.equal(L.BONES.modes.medium.limit, 20);
   assert.equal(L.noExerciseLoss(6), 6);
   assert.equal(L.boneLoss(Array(6).fill(0)) / 10, 6);
+  assert.equal(L.blocksLeft([0, 0, 0]), 4, 'no bike for 3 months leaves 4 of 10 blocks');
+});
+ok('bones: a plan that spends too much of the bike is not safe, even if the bones are fine', () => {
+  assert.equal(L.boneOk('hard', [2, 2, 2, 2, 2, 2], 4), false, '12 hours is over the 9 shared');
+  assert.equal(L.boneOk('medium', [2, 2, 2, 2, 2, 2], 4), false, '12 hours is over the 10 shared');
+  assert.equal(L.boneOk('hard', [0, 0, 0, 0, 0, 0], 4), false, 'no bike loses 6%');
+  assert.equal(L.bikeLeft('hard', [2, 2, 2, 1, 1, 1], 4), 0);
 });
 ok('do-nothing (the starting state) fails every Hard mode', () => {
   assert.equal(L.solved('split', 'hard', { water: 1, h2: 1, o2: 1 }), false);
@@ -170,7 +187,7 @@ ok('random play wins at most 10% of Hard, in every task (seeded)', () => {
   const micro = [...Array(RANDOM_TRIALS)].filter(() => L.microbesDone('hard', pickOf(modes.starts), Math.floor(rnd() * (modes.hours + 1)))).length;
   const bones = [...Array(RANDOM_TRIALS)].filter(() => {
     const plan = Array.from({ length: L.BONES.modes.hard.months }, () => Math.floor(rnd() * L.BONES.hours.length));
-    return L.boneOk('hard', plan);
+    return L.boneOk('hard', plan, 4);
   }).length;
   rates.split = split / RANDOM_TRIALS; rates.plants = plants / RANDOM_TRIALS; rates.microbes = micro / RANDOM_TRIALS; rates.bones = bones / RANDOM_TRIALS;
   for (const [k, v] of Object.entries(rates)) assert.ok(v <= 0.1, `${k} random Hard wins ${(v * 100).toFixed(1)}%`);
@@ -188,8 +205,14 @@ ok('a sensible player wins Easy and Medium: the greedy plays (more light, more h
     while (!L.microbesDone(mode, start, hours) && hours < L.MICROBES.modes[mode].hours) hours++;
     assert.ok(L.microbesDone(mode, start, hours), mode);
   }
-  // Bones: a sensible plan (two hours a day on the bike) is always safe.
-  for (const mode of ['easy', 'medium', 'hard']) assert.ok(L.boneOk(mode, Array(L.BONES.modes[mode].months).fill(2)), mode);
+  // Bones: a sensible plan spreads the shared bike over the coast, two hours at a time, earliest months first.
+  const spread = (months, budget) => {
+    const plan = Array(months).fill(0); let left = budget;
+    for (let round = 0; round < 2; round++) for (let m = 0; m < months && left > 0; m++) if (plan[m] < 2) { plan[m]++; left--; }
+    return plan;
+  };
+  for (const mode of ['easy', 'medium', 'hard']) assert.ok(L.boneOk(mode, spread(L.BONES.modes[mode].months, L.BONES.modes[mode].budget), 4), `L4 ${mode}`);
+  for (const mode of ['easy', 'medium']) assert.ok(L.boneOk(mode, spread(L.BONES.blocks.modes[mode].months, L.BONES.blocks.modes[mode].budget), 1), `L1 ${mode}`);
 });
 
 console.log('questions');
@@ -233,11 +256,11 @@ ok('Level 4 numbers: 2 oxygen molecules from 4 water; 12 oxygen atoms in 6 CO2; 
   assert.equal(h, 7);
   assert.equal(6 * (L.BONES.lossTenths[0] / 10), 6);
 });
-ok('Level 1 numbers: 2 from 4 water; 4 oxygen atoms in 2 CO2; 8 after 3 hours; 3% over 3 months', () => {
+ok('Level 1 numbers: 2 from 4 water; 4 oxygen atoms in 2 CO2; 4 after 2 hours; 3% over 3 months', () => {
   const b = bankAt(1);
   assert.deepEqual(b.c7_split_oxygen.answers.slice(0, 1), ['2']);
   assert.deepEqual(b.c7_plants_oxygen_atoms.answers.slice(0, 1), ['4']);
-  assert.deepEqual(b.c7_microbes_hours.answers.slice(0, 1), ['8']);
+  assert.deepEqual(b.c7_microbes_hours.answers.slice(0, 1), ['4']);
   assert.deepEqual(b.c7_bones_percent.answers.slice(0, 1), ['3']);
 });
 ok('no hint gives its answer as a number (the parent hint may)', () => {
@@ -294,7 +317,7 @@ ok('lesson 7B’s films ask the atom questions in order: what things are made of
 });
 ok('lesson 7C’s films: doubling, the recycler (watch-only), bread rising', () => {
   assert.equal(LESSON_7C.id, 'ch7_tiny_life');
-  assert.ok(LESSON_7C.films[0].question.choices.find((c) => c.correct).text[0].includes('4 bacteria'));
+  assert.ok(LESSON_7C.films[0].question.choices.find((c) => c.correct).text[0].includes('8 bacteria'), 'after 3 hours: 8');
   assert.ok(!LESSON_7C.films[1].question);
   assert.ok(LESSON_7C.films[2].question.choices.find((c) => c.correct).text[0].includes('bubbles'));
 });

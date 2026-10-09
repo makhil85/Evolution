@@ -12,9 +12,10 @@
 //   microbes - the recycler's helpers (life deck, the algae tanks): bacteria
 //              double every pretend hour. Grow enough to clean the tank (all
 //              three modes).
-//   bones    - the sick bay: in zero g bones lose about 1% a month without
-//              exercise. Plan the bike months so nobody loses more than the
-//              limit over the coast (all three modes).
+//   bones    - the sick bay: in zero g bones lose about 1% a month (simplified
+//              numbers). One bike is shared: spend its hours over the coast so
+//              nobody loses more than the limit (Level 4), or keeps enough of
+//              their 10 bone blocks (Level 1).
 //
 // Level 1 plays the counting modes (Easy, Medium); Level 4 plays all three.
 // Every state is plain data, so a save could hold it.
@@ -156,28 +157,61 @@ export function hoursToPass(target, start = 1) {
 export const microbesDone = (mode, start, hours) => cellsAfter(start, hours) >= MICROBES.modes[mode].target;
 
 // --- bones: exercise in zero g -----------------------------------------------------------
+// One bike, shared by the crew: every coast has a total of bike hours to spend
+// (`budget`), and each month's hours (0, 1 or 2) cost bone. Level 4 counts the
+// loss in tenths of a percent (the numbers are simplified, not measured: no bike
+// 1%, an hour 0.5%, two hours 0.2% a month). Level 1 counts whole bone blocks
+// (no bike 2 blocks, an hour 1, two hours 0) out of 10: keep at least `keep`.
 
-/**
- * Bone lost in a month, in tenths of a percent, by bike hours a day: no bike 1%,
- * an hour 0.5%, two hours 0.2%. A coast is `months` long; `limit` is the most
- * (tenths) a person may lose over it.
- */
 export const BONES = Object.freeze({
   hours: [0, 1, 2],
-  lossTenths: [10, 5, 2],
-  modes: {
-    easy: { months: 3, limit: 10 },
-    medium: { months: 6, limit: 20 },
-    hard: { months: 6, limit: 15 },
+  lossTenths: [10, 5, 2],      // Level 4: loss a month, tenths of a percent
+  modes: {                     // Level 4: a coast of `months`, bike hours in all, and the most loss (tenths)
+    easy: { months: 3, budget: 6, limit: 15 },
+    medium: { months: 6, budget: 10, limit: 20 },
+    hard: { months: 6, budget: 9, limit: 25 },
+  },
+  blocks: {                    // Level 1
+    lossBlocks: [2, 1, 0],
+    start: 10,
+    modes: {
+      easy: { months: 3, budget: 6, keep: 6 },
+      medium: { months: 3, budget: 4, keep: 7 },
+    },
   },
 });
-/** Tenths of a percent lost by a plan (one bike-hours value per month). */
+
+/** The mode's coast: months, bike budget and the target (the limit or the blocks to keep). */
+export const boneCfg = (mode, level = 4) => (level === 1 ? BONES.blocks.modes[mode] : BONES.modes[mode]);
+/** Bike hours a plan spends in all. */
+export const boneHours = (plan) => plan.reduce((a, h) => a + h, 0);
+/** Tenths of a percent lost by a plan (Level 4). */
 export const boneLoss = (plan) => plan.reduce((a, h) => a + BONES.lossTenths[h], 0);
+/** Blocks left out of the start (Level 1). */
+export const blocksLeft = (plan) => BONES.blocks.start - plan.reduce((a, h) => a + BONES.blocks.lossBlocks[h], 0);
+/** Bike hours still to spend. */
+export const bikeLeft = (mode, plan, level = 4) => boneCfg(mode, level).budget - boneHours(plan);
 /** The plan a child starts from: no bike at all. */
-export const boneStart = (mode) => Array(BONES.modes[mode].months).fill(0);
-export const boneOk = (mode, plan) => boneLoss(plan) <= BONES.modes[mode].limit;
-/** Percent lost over a coast with no exercise at all: 1% a month. */
+export const boneStart = (mode, level = 4) => Array(boneCfg(mode, level).months).fill(0);
+/** A plan is safe: the bike budget is kept, and the bones are kept (under the limit, or at least `keep` blocks). */
+export function boneOk(mode, plan, level = 4) {
+  const c = boneCfg(mode, level);
+  if (plan.length !== c.months || boneHours(plan) > c.budget) return false;
+  return level === 1 ? blocksLeft(plan) >= c.keep : boneLoss(plan) <= c.limit;
+}
+/** Percent lost over a coast with no exercise at all: 1% a month (the simple figure the question uses). */
 export const noExerciseLoss = (months) => (BONES.lossTenths[0] * months) / 10;
+/** The first plan (in counting order) that is safe, for the solver and the tests. */
+export function boneAnswer(mode, level = 4) {
+  const c = boneCfg(mode, level);
+  const n = c.months;
+  for (let i = 0; i < BONES.hours.length ** n; i++) {
+    const plan = []; let x = i;
+    for (let m = 0; m < n; m++) { plan.push(x % BONES.hours.length); x = Math.floor(x / BONES.hours.length); }
+    if (boneOk(mode, plan, level)) return plan;
+  }
+  throw new Error(`no bone plan for ${mode}`);
+}
 
 // --- the rules, for every task and mode -------------------------------------------------
 // A task's state is plain data: split (easy, medium) the kitchen; split (hard) the
@@ -194,19 +228,19 @@ export function microbeAnswer(mode) {
 }
 
 /** One answer that solves a task in a mode, as the card's state (the solve() hook and the tests use it). */
-export function taskAnswer(task, mode) {
+export function taskAnswer(task, mode, level = 4) {
   if (task === 'split') return mode === 'hard' ? { ...SPLIT.equation } : kitchenSolution(SPLIT.water[mode]);
   if (task === 'plants') return mode === 'hard' ? plantsO2Answer() : runsFor(PLANTS.targets[mode]);
   if (task === 'microbes') return microbeAnswer(mode);
-  if (task === 'bones') return Array(BONES.modes[mode].months).fill(BONES.hours.length - 1);
+  if (task === 'bones') return boneAnswer(mode, level);
   throw new Error(`no task ${task}`);
 }
 
 /** Is a task solved in a mode? `state` is what the card holds (see the header above). */
-export function solved(task, mode, state) {
+export function solved(task, mode, state, level = 4) {
   if (task === 'split') return mode === 'hard' ? splitSmallest(state) : kitchenDone(state);
   if (task === 'plants') return mode === 'hard' ? plantsBalanced(state) : bubblesFrom(state) >= PLANTS.targets[mode];
   if (task === 'microbes') return microbesDone(mode, state.start, state.hours);
-  if (task === 'bones') return boneOk(mode, state);
+  if (task === 'bones') return boneOk(mode, state, level);
   throw new Error(`no task ${task}`);
 }

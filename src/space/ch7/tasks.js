@@ -26,6 +26,7 @@ import {
   TASKS, modesFor, SPLIT, JAR_SIZE, PLANTS, MICROBES, BONES,
   kitchen, placeAtom, takeAtom, kitchenDone, splitBalanced, splitSmallest, splitCounts,
   oxygenIn, oxygenOut, oxygenInCo2, bubblesFrom, plantsBalanced, cellsAfter, boneLoss, boneStart,
+  boneCfg, boneOk, bikeLeft, blocksLeft,
   taskAnswer, solved,
 } from './tasksLogic.js';
 
@@ -44,7 +45,7 @@ const TIP = {
   },
   plants: {
     easy: ['Light makes the plants turn carbon dioxide and water into sugar, and give back oxygen bubbles. Run the light and count the bubbles until there are enough for the crew.', 'Each light run makes bubbles of oxygen. Count them, and get enough.'],
-    medium: ['A bigger harvest: more light runs, more bubbles. Count by sixes.', 'More light runs. Count by sixes.'],
+    medium: ['A bigger harvest: more light runs, more bubbles. Count by sixes.', 'More light runs. Count the bubbles in twos.'],
     hard: ['Balance the oxygen atoms. Count the O atoms going in (in the carbon dioxide and the water) and coming out (in the sugar and the O₂ molecules). Make the two counts equal.', 'Make the oxygen atoms match on both sides.'],
   },
   microbes: {
@@ -53,15 +54,16 @@ const TIP = {
     hard: ['Choose the starting bacteria and the pretend hours. Clean the tank: 1,000 bacteria, in 5 pretend hours at most.', 'Get 1,000 helpers in 5 pretend hours.'],
   },
   bones: {
-    easy: ['In zero g nobody has to hold their weight, so bones get thinner: about 1% a month with no bike. Fluids also move up to the head, which is why faces look puffy. Plan the bike so the loss stays under the limit.', 'No bike, and bones get thinner. Plan the bike so the loss stays under the limit.'],
-    medium: ['Bones lose about 1% a month with no bike, and less with exercise. Plan each month so the whole trip stays under the limit.', 'Plan the bike for each month. Stay under the limit.'],
-    hard: ['Tight limit: bones need a lot of bike. Tap a month to change its bike time, and keep the total loss under the limit.', 'Tap a month to change its bike time. Keep the total under the limit.'],
+    easy: ['In zero g bones get thinner, even with some exercise. The crew shares one bike, with a few hours to spend. Fluids also move up to the head, which is why faces look puffy. Plan the bike so the bones stay strong.', 'No bike, and bones get thinner. One bike is shared: plan it so you keep enough bone blocks.'],
+    medium: ['One bike is shared by the crew, with 10 hours for the whole trip. Plan each month so the bones stay under the limit.', 'One bike, shared. Plan each month, and keep enough blocks.'],
+    hard: ['Tight: only 9 bike hours for six months, and a tight limit. Tap a month to change its bike time, and keep the bones under the limit.', 'Tap a month to change its bike time.'],
   },
 };
 
 const CSS_ID = 'ch7-tasks-css';
 const CSS = `
 .tk-card { width: min(800px, 94vw); box-sizing: border-box; }
+.tk-card .ls-btn:disabled { opacity: .4; cursor: not-allowed; }
 .tk-modes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 .tk-mode { min-height: 40px; padding: 0 14px; border-radius: 10px; border: 2px solid rgba(255,255,255,.2); background: #1a2540; color: inherit; font: inherit; font-weight: 800; cursor: pointer; }
 .tk-mode.is-on { border-color: #7fd3ff; background: rgba(127,211,255,.18); }
@@ -95,6 +97,7 @@ const CSS = `
 .tk-dish { display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start; min-height: 70px; padding: 10px; border-radius: 14px; background: #0c1426; }
 .tk-dot { width: 12px; height: 12px; border-radius: 50%; background: #8ff0a0; }
 .tk-bubble { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #cfe8ff; background: rgba(207,232,255,.25); }
+.tk-pair { display: inline-flex; gap: 2px; margin-right: 12px; }
 .tk-months { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
 .tk-month { min-height: 52px; padding: 6px 8px; border-radius: 12px; border: 2px solid rgba(255,255,255,.18); background: #1a2540; color: inherit; font: inherit; font-weight: 800; font-size: 14px; cursor: pointer; }
 .tk-month.is-on { border-color: #ffd27a; }
@@ -263,7 +266,17 @@ function plantsLight(mode, changed) {
     runN.textContent = String(runs);
     less.disabled = runs <= 0; more.disabled = runs >= PLANTS.maxRuns;
     bubbles.replaceChildren();
-    for (let i = 0; i < made; i++) bubbles.append(el('span', 'tk-bubble'));
+    // Level 1 counts in twos: the bubbles come in pairs.
+    if (LEVEL === 1) {
+      for (let i = 0; i < made; i += 2) {
+        const pair = el('span', 'tk-pair');
+        pair.append(el('span', 'tk-bubble'));
+        if (i + 1 < made) pair.append(el('span', 'tk-bubble'));
+        bubbles.append(pair);
+      }
+    } else {
+      for (let i = 0; i < made; i++) bubbles.append(el('span', 'tk-bubble'));
+    }
     readout.textContent = t(`Oxygen bubbles: ${made} / ${target}`, `Bubbles: ${made} / ${target}`);
     fill.style.width = `${Math.min(100, (100 * made) / target)}%`;
     bar.className = 'tk-bar';
@@ -294,8 +307,7 @@ function plantsBalance(changed) {
     line.textContent = `${PLANTS.co2} CO₂ + ${PLANTS.h2o} H₂O → sugar + ${o2} O₂`;
     val.textContent = String(o2);
     less.disabled = o2 <= 0; more.disabled = o2 >= PLANTS.maxO2;
-    counts.textContent = t(`Oxygen atoms in: ${oxygenIn()} (${oxygenInCo2(PLANTS.co2)} in the CO₂, ${PLANTS.h2o} in the water). Out: ${oxygenOut(o2)} (${PLANTS.sugarO} in the sugar, ${OXYGEN_PER_O2 * o2} in the O₂).`,
-      `Oxygen in: ${oxygenIn()}. Oxygen out: ${oxygenOut(o2)}.`);
+    counts.textContent = t(`Oxygen atoms in: ${oxygenIn()}. Out: ${oxygenOut(o2)}.`, `Oxygen in: ${oxygenIn()}. Oxygen out: ${oxygenOut(o2)}.`);
     const ok = plantsBalanced(o2);
     note.className = `tk-note${ok ? ' tk-good' : ' tk-warn'}`;
     note.textContent = ok ? t('Balanced! Every oxygen atom is counted, and none is lost.', 'Balanced! Every oxygen atom is counted.')
@@ -343,7 +355,7 @@ function microbeDish(mode, changed) {
     readout.textContent = t(`Bacteria now: ${n}. Clean the tank at ${cfg.target}.`, `Bacteria: ${n}. Goal: ${cfg.target}.`);
     const row = [];
     for (let h = 0; h <= Math.min(hours, 9); h++) row.push(cellsAfter(start, h));
-    seq.textContent = t(`Each pretend hour, every bacterium splits in two: ${row.join(' → ')}`, `Each hour it doubles: ${row.join(' → ')}`);
+    seq.textContent = t(`Each pretend hour, every bacterium splits in two: ${row.join(' → ')}`, `Each pretend hour it doubles: ${row.join(' → ')}`);
     const done = n >= cfg.target;
     note.className = `tk-note${done ? ' tk-good' : hours >= cfg.hours ? ' tk-warn' : ''}`;
     note.textContent = done ? t('Clean! The helpers have made enough bacteria to clean the tank.', 'Clean! Enough helpers.')
@@ -357,11 +369,17 @@ function microbeDish(mode, changed) {
   };
 }
 
-/** Bones: a bike plan for each month of the coast; the total loss must stay under the limit. */
+/**
+ * Bones: one bike shared by the crew. Each month gets 0, 1 or 2 bike hours, and the
+ * coast has a total to spend. Level 4 counts the bone lost in percent (the numbers
+ * are simplified); Level 1 counts whole bone blocks out of 10, and keeps at least
+ * some of them.
+ */
 function bonesYear(mode, changed) {
-  const cfg = BONES.modes[mode];
-  let plan = boneStart(mode);
+  const cfg = boneCfg(mode, LEVEL);
+  let plan = boneStart(mode, LEVEL);
   const wrap = el('div', 'tk-body');
+  const bike = el('div', 'tk-big');
   const months = el('div', 'tk-months');
   const monthBtns = plan.map((_, i) => {
     const b = el('button', 'tk-month'); b.type = 'button';
@@ -372,24 +390,39 @@ function bonesYear(mode, changed) {
   const readout = el('div', 'tk-big');
   const bar = el('div', 'tk-bar'); const fill = el('i'); bar.append(fill);
   const note = el('div', 'tk-note');
-  wrap.append(months, readout, bar, note);
+  wrap.append(bike, months, readout, bar, note);
+  const blockLoss = (h) => BONES.blocks.lossBlocks[h];
   function refresh() {
+    const left = bikeLeft(mode, plan, LEVEL);
+    bike.textContent = t(`Bike hours left for the crew: ${left} of ${cfg.budget}`, `Bike hours left: ${left} of ${cfg.budget}`);
     plan.forEach((h, i) => {
-      monthBtns[i].textContent = `${t('Month', 'Month')} ${i + 1}: ${bikeLabel(h)} (−${BONES.lossTenths[h] / 10}%)`;
+      const loss = LEVEL === 1
+        ? (blockLoss(h) ? `−${blockLoss(h)} ${blockLoss(h) === 1 ? 'block' : 'blocks'}` : 'no loss')
+        : `−${BONES.lossTenths[h] / 10}%`;
+      monthBtns[i].textContent = `${t('Month', 'Month')} ${i + 1}: ${bikeLabel(h)} (${loss})`;
       monthBtns[i].className = `tk-month${h ? ' is-on' : ''}`;
     });
-    const lost = boneLoss(plan) / 10; const limit = cfg.limit / 10;
-    readout.textContent = t(`Bone lost on the trip: ${lost}% (the limit is ${limit}%)`, `Lost: ${lost}% (limit ${limit}%)`);
-    fill.style.width = `${Math.min(100, (100 * lost) / (limit * 1.5))}%`;
-    const ok = lost <= limit;
-    bar.className = `tk-bar${ok ? '' : ' is-over'}`;
+    const ok = boneOk(mode, plan, LEVEL);
+    if (LEVEL === 1) {
+      const kept = blocksLeft(plan);
+      readout.textContent = t(`Bone blocks left: ${kept} of ${BONES.blocks.start}`, `Bone blocks: ${kept} of ${BONES.blocks.start}`);
+      fill.style.width = `${Math.max(0, Math.min(100, (100 * kept) / BONES.blocks.start))}%`;
+      bar.className = `tk-bar${ok ? '' : ' is-over'}`;
+    } else {
+      const lost = boneLoss(plan) / 10; const limit = cfg.limit / 10;
+      readout.textContent = t(`Bone lost on the trip: ${lost}% (the limit is ${limit}%). The numbers are simplified.`, `Lost: ${lost}% (limit ${limit}%)`);
+      fill.style.width = `${Math.min(100, (100 * lost) / (limit * 1.5))}%`;
+      bar.className = `tk-bar${boneLoss(plan) / 10 <= limit ? '' : ' is-over'}`;
+    }
     note.className = `tk-note${ok ? ' tk-good' : ' tk-warn'}`;
-    note.textContent = ok ? t('Safe! The bike keeps the bones strong for the whole trip.', 'Safe! Strong bones.')
-      : t(`Too much lost. Tap a month to add bike time: no bike loses ${BONES.lossTenths[0] / 10}%, an hour loses ${BONES.lossTenths[1] / 10}%, two hours lose ${BONES.lossTenths[2] / 10}%.`, 'Too much lost. Add bike time.');
+    note.textContent = ok ? t('Safe! The bike is shared well, and the bones stay strong for the whole trip.', 'Safe! Strong bones.')
+      : left < 0 ? t('Too many bike hours! The crew has only this many to share. Tap a month to take some away.', 'Too many bike hours. Take some away.')
+        : LEVEL === 1 ? t(`Keep at least ${cfg.keep} blocks. No bike loses 2 blocks a month, one hour loses 1, two hours lose none.`, `Keep at least ${cfg.keep} blocks!`)
+          : t(`Too much lost. Tap a month to change its bike time: no bike loses ${BONES.lossTenths[0] / 10}%, an hour ${BONES.lossTenths[1] / 10}%, two hours ${BONES.lossTenths[2] / 10}% (simplified numbers).`, 'Too much lost. Add bike time.');
   }
   return {
     el: wrap, state: () => plan.slice(),
-    solve() { plan = taskAnswer('bones', mode); changed(); },
+    solve() { plan = taskAnswer('bones', mode, LEVEL); changed(); },
     refresh,
   };
 }
@@ -440,7 +473,7 @@ export function playTask(id, { bus = null } = {}) {
   let finishFn;
   const done = new Promise((r) => { finishFn = r; });
   const changed = () => { moves++; body.refresh(); paint(); };
-  const ok = () => solved(id, mode, body.state());
+  const ok = () => solved(id, mode, body.state(), LEVEL);
   function build() {
     body = makeBody(id, mode, changed);
     bodyBox.replaceChildren(body.el);

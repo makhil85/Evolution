@@ -61,7 +61,7 @@ function drawDoubling(ctx, T) {
   }
   label(ctx, `bacteria: ${n}`, 400, 420, { size: 24, color: '#ffffff', halo: 'rgba(0,0,0,0.6)' });
   label(ctx, `pretend hour ${hour}`, 650, 90, { size: 18, color: '#cfe8ff', halo: 'rgba(0,0,0,0.6)' });
-  if (T > 2.5) label(ctx, 'Each hour: 2 times as many', 150, 90, { size: 18, color: '#ffe27a', halo: 'rgba(0,0,0,0.6)', align: 'left' });
+  if (T > 2.5) label(ctx, 'Each pretend hour: 2 times as many', 150, 90, { size: 18, color: '#ffe27a', halo: 'rgba(0,0,0,0.6)', align: 'left' });
 }
 
 // --- film 2: the recycler's helpers (watch only) -----------------------------------------------
@@ -128,7 +128,7 @@ function drawYeast(ctx, T) {
   ctx.save(); ctx.strokeStyle = 'rgba(120,90,40,0.6)'; ctx.lineWidth = 3;
   ctx.beginPath(); ctx.ellipse(cx, cy, 170 * sc, 110 * sc, 0, 0, TAU); ctx.stroke(); ctx.restore();
   label(ctx, 'dough', 650, 300, { size: 18, color: '#e9d3a0', halo: 'rgba(0,0,0,0.6)' });
-  if (T > 4) label(ctx, 'yeast bubbles', 150, 200, { size: 18, color: '#ffffff', halo: 'rgba(0,0,0,0.6)', align: 'left' });
+  if (T > 4) label(ctx, 'yeast bubbles', 110, 110, { size: 18, color: '#ffffff', halo: 'rgba(0,0,0,0.6)', align: 'left' });
   if (T > 12) label(ctx, 'Bubbles puff the dough up: it rises!', 400, 420, { size: 20, color: '#ffe27a', halo: 'rgba(0,0,0,0.6)' });
 }
 
@@ -143,21 +143,21 @@ export const LESSON_7C = {
       beats: [
         { dur: 4, cap: ['A bacterium is a single cell: one tiny cell is a whole living thing.', 'A bacterium is one tiny cell.'] },
         { dur: 5, cap: ['Like the cells in the leaf, it splits in two. Bacteria do it on their own, and fast.', 'It splits in two, and fast.'] },
-        { dur: 5, cap: ['Watch the count: it doubles every pretend hour.', 'Watch: it doubles every hour.'] },
+        { dur: 5, cap: ['Watch the count: it doubles every pretend hour.', 'Watch: it doubles every pretend hour.'] },
         { dur: 5, cap: ['Doubling again and again makes huge numbers, very fast.', 'Doubling makes big numbers fast!'] },
       ],
       draw: drawDoubling,
       question: {
-        prompt: ['A bacterium splits in two every pretend hour. It starts as 1. How many are there after 2 hours?', 'Start with 1 bacterium. It splits in two each hour. How many after 2 hours?'],
+        prompt: ['A bacterium splits in two every pretend hour. It starts as 1. How many are there after 3 pretend hours?', 'Start with 1 bacterium. It splits in two each pretend hour. How many after 3 pretend hours?'],
         choices: [
-          { text: ['2 bacteria', '2 bacteria'] },
-          { text: ['4 bacteria', '4 bacteria'], correct: true },
-          { text: ['8 bacteria', '8 bacteria'] },
+          { text: ['4 bacteria', '4 bacteria'] },
+          { text: ['8 bacteria', '8 bacteria'], correct: true },
+          { text: ['16 bacteria', '16 bacteria'] },
         ],
-        hint: ['After one hour there are 2. Now split each one again.', 'After 1 hour there are 2. Split them again.'],
-        why: ['1 becomes 2, and 2 becomes 4: doubling twice gives 4 bacteria.', '1, then 2, then 4: that is 4 bacteria.'],
+        hint: ['After two hours there are 4. Now split each one once more.', 'After 2 hours there are 4. Split them once more.'],
+        why: ['1 becomes 2, then 4, then 8: doubling three times gives 8 bacteria.', '1, then 2, 4, 8: that is 8 bacteria.'],
       },
-      clue: [null, 'Each hour the number doubles: 1, 2, 4.'],
+      clue: [null, 'Each pretend hour the number doubles: 1, 2, 4, 8.'],
     },
     {
       title: ['The recycler’s helpers', 'The recycler’s helpers'],
