@@ -255,8 +255,7 @@ export async function loadSurfaceScene(game, opts) {
   const card = landedCard(t(`Landed on ${name}!`, `You landed on ${name}!`),
     t('A soft, safe touchdown. Climbing down the ladder...', 'Safe and soft! Climbing down...'));
   try {
-    const path = '../surface.js';
-    const mod = await import(/* @vite-ignore */ path);
+    const mod = await import('../surface.js');
     if (mod?.createSurfaceScene) {
       const scene = mod.createSurfaceScene(game, opts);
       scene.onFoot = true; // a walk (main.js resets warp after it)
