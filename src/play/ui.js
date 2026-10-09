@@ -142,7 +142,8 @@ export const PLAY_CSS = `
 /* Focus mode: under a question card (game/hud.js sets the class) the pills
  * and the Clue button step away; they used to sit on top of the card. */
 body.rv-question-open .play-nav-text,
-body.rv-question-open .pl-cluebtn { display: none !important; }
+body.rv-question-open .pl-cluebtn,
+body.rv-question-open .pl-chip { display: none !important; }
 
 /* --- the "Clue" button ------------------------------------------------------- */
 .pl-cluebtn {

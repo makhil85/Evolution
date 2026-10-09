@@ -34,7 +34,7 @@ import { audio } from './audio.js';
 import { loadProfile } from '../launcher/profile.js';
 import { skipButton } from '../play/grownUp.js';
 import { lockPlayInput, unlockPlayInput } from '../play/ui.js';
-import { readMs, needsClick } from '../play/readTime.js';
+import { readMs, needsClick, READ_MIN_MS } from '../play/readTime.js';
 import { IS_LEVEL1 as IS_L1 } from '../space/level.js';
 
 /**
@@ -88,14 +88,21 @@ const MISSION_FLASH_MS = 7000;
  *  needs more than 10 s is a card with an OK button, and the game pauses under
  *  it until she clicks (or presses Enter or Space). Messages queue in order:
  *  at most 2 toasts at once, a new one 1.5 s after the last, none while a
- *  question or play card is open (warnings pass), and a message that has
- *  waited 20 s in line is dropped. The same text again within 10 s is not shown twice. */
+ *  question or play card is open (warnings pass). Pickup lines ("+1 wood")
+ *  merge while they wait, go after the other messages, and are dropped after
+ *  20 s in line; the same text again within 10 s is not shown twice. */
 const MAX_VISIBLE_TOASTS = 2;
 const TOAST_GAP_MS = 1500;
 const TOAST_STALE_MS = 20000;
 const TOAST_DUP_MS = 10000;
 
 const BADGE_GLYPH = { done: '✓', active: '●', open: '○', locked: '○' };
+
+/** A pickup line ("+3 wood", Supplies collected) -> { n: 3, what: 'wood' }, else null. */
+function pickupOf(text) {
+  const m = /^\+(\d+) (\S.*)$/.exec(String(text));
+  return m ? { n: Number(m[1]), what: m[2] } : null;
+}
 
 /** How long the one-time spawn nudge stays up before it fades for good. */
 const ONBOARD_DELAY_MS = 500;
@@ -650,23 +657,33 @@ export class Hud {
     card.setAttribute('aria-modal', 'true');
     this._readText = el('p', 'rv-modal__prompt rv-read__text', '');
     card.appendChild(this._readText);
+    // The wait before OK works: a meter that fills over READ_MIN_MS, then goes.
+    this._readMeter = el('div', 'rv-read__meter');
+    this._readMeter.appendChild(el('div', 'rv-read__fill'));
+    card.appendChild(this._readMeter);
 
     const actions = el('div', 'rv-modal__actions');
     this._readOk = el('button', 'rv-btn rv-btn--go', 'OK');
     this._readOk.type = 'button';
+    this._readOk.disabled = true;
     actions.appendChild(this._readOk);
     card.appendChild(actions);
 
     this._readBackdrop.appendChild(card);
     this.root.appendChild(this._readBackdrop);
 
-    this._readOk.addEventListener('click', () => this._closeReadCard());
+    this._readOk.addEventListener('click', () => {
+      if (this._read && this._read.ready) this._closeReadCard();
+    });
     // Enter or Space closes it from anywhere, not only when OK has the focus.
-    // Registered while the card is up (see _showReadCard).
+    // Registered while the card is up (see _showReadCard). Swallowed for the
+    // game in every case; only a fresh press after the wait closes the card,
+    // so a held key cannot close it.
     this._onReadKey = (e) => {
       if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
       e.preventDefault();
       e.stopPropagation();
+      if (e.repeat || !this._read || !this._read.ready) return;
       this._closeReadCard();
     };
   }
@@ -860,7 +877,9 @@ export class Hud {
    *
    * Each message stays up readMs(text) (5-10 s). One that needs more than 10 s
    * to read becomes a card with an OK button, and the game waits for the click.
-   * Messages wait in line behind each other, so none is pushed off early.
+   * Messages wait in line behind each other, so none is pushed off early. A
+   * pickup line waiting in line ("+1 wood") merges with the next of the same
+   * kind ("+2 wood"), and messages that matter go ahead of pickup lines.
    *
    * @param {string} text
    * @param {'info'|'good'|'warn'|'bad'} [kind]
@@ -885,9 +904,20 @@ export class Hud {
       this._toastSeen.set(message, now);
       return;
     }
-    // The same words again within 10 s are a duplicate, not news.
+    // The same words again within 10 s are a duplicate, not news. A pickup
+    // always is news: three crates in a row are three crates.
+    const pick = pickupOf(message);
     const seenAt = this._toastSeen.get(message);
-    if (seenAt !== undefined && now - seenAt < TOAST_DUP_MS) return;
+    if (!pick && seenAt !== undefined && now - seenAt < TOAST_DUP_MS) return;
+
+    // A pickup joins a waiting pickup of the same thing: one line, "+3 wood".
+    const waiting = pick && this._toastQueue.find((q) => pickupOf(q.message)?.what === pick.what);
+    if (waiting) {
+      waiting.message = `+${pickupOf(waiting.message).n + pick.n} ${pick.what}`;
+      waiting.at = now;
+      this._showQueued();
+      return;
+    }
 
     // Join the line (a newer copy of a waiting message moves to the back), then
     // show whatever the screen has room for now.
@@ -920,13 +950,20 @@ export class Hud {
     clearTimeout(this._toastQueueTimer);
     this._toastQueueTimer = 0;
     const now = performance.now();
-    // Held behind a card is not stale: the 20 s starts once the card is closed.
+    // Held behind a card is not stale: the clock starts once the card is closed.
     if (this._focusNow()) for (const q of this._toastQueue) q.at = now;
-    this._toastQueue = this._toastQueue.filter((q) => now - q.at < TOAST_STALE_MS);
-    for (let i = 0; i < this._toastQueue.length; i += 1) {
-      const q = this._toastQueue[i];
+    // Only a pickup line can go stale (it is no longer about what she is doing).
+    // Anything else waits until it can show.
+    this._toastQueue = this._toastQueue.filter((q) => !(pickupOf(q.message) && now - q.at >= TOAST_STALE_MS));
+    // Messages that matter go ahead of pickup lines, so a burst of "+1 wood"
+    // cannot hold up a goal, a warning or the Guidance Crystal.
+    const order = [
+      ...this._toastQueue.filter((q) => !pickupOf(q.message)),
+      ...this._toastQueue.filter((q) => pickupOf(q.message)),
+    ];
+    for (const q of order) {
       if (this._roomFor(q, now)) {
-        this._toastQueue.splice(i, 1);
+        this._toastQueue.splice(this._toastQueue.indexOf(q), 1);
         this._showNow(q.message, q.kind, now);
         break;
       }
@@ -961,15 +998,34 @@ export class Hud {
 
   /**
    * Open the read-it card for a long message. The game pauses (the input lock
-   * is the same one the play-mode cards use) until OK, Enter or Space.
+   * is the same one the play-mode cards use) and the Clue button and the Help
+   * chip step away (the question cards' focus class), until OK, Enter or Space
+   * once the wait is over (READ_MIN_MS: she has to read it before OK works).
    */
   _showReadCard(message) {
-    this._read = { message };
+    this._read = { message, ready: false, timer: 0 };
     this._readText.textContent = personalise(message);
+    this._readOk.disabled = true;
+    this._readOk.classList.remove('is-ready');
+    this._readMeter.hidden = false;
+    this._readMeter.classList.remove('is-timing');
+    void this._readMeter.offsetWidth; // restart the fill
+    this._readMeter.classList.add('is-timing');
     this._readBackdrop.hidden = false;
     this._readBackdrop.classList.add('is-open');
+    document.body.classList.add('rv-question-open');
     lockPlayInput();
     if (typeof addEventListener === 'function') addEventListener('keydown', this._onReadKey, true);
+    this._read.timer = setTimeout(() => this._readReady(), READ_MIN_MS);
+  }
+
+  /** The wait is over: OK works now, and the meter goes. */
+  _readReady() {
+    if (!this._read) return;
+    this._read.ready = true;
+    this._readOk.disabled = false;
+    this._readOk.classList.add('is-ready');
+    this._readMeter.hidden = true;
     // Focus OK so a keyboard or tab user is on the button (after the paint).
     setTimeout(() => { try { this._readOk.focus(); } catch { /* detached */ } }, 0);
   }
@@ -977,10 +1033,12 @@ export class Hud {
   /** Close the read-it card and let the next message come up. Safe to call twice. */
   _closeReadCard() {
     if (!this._read) return;
+    clearTimeout(this._read.timer);
     this._read = null;
     this._readBackdrop.hidden = true;
     this._readBackdrop.classList.remove('is-open');
     if (typeof removeEventListener === 'function') removeEventListener('keydown', this._onReadKey, true);
+    if (!this._modal) document.body.classList.remove('rv-question-open');
     unlockPlayInput();
     this._toastNextAt = performance.now() + TOAST_GAP_MS;
     this._showQueued();
