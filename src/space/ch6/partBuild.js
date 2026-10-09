@@ -12,6 +12,7 @@ import { playRockHunt } from '../ch5/rockHunt.js';
 import { playWorkshop } from '../ch5/workshop.js';
 import { playCh5Ending } from '../ch5/ending.js';
 import { showRockB } from './opening.js';
+import { playCh6Arrival, arrivalSeen } from './arrival.js';
 import { clearPartB } from './partB.js';
 import { clearPartQuests } from './partQuests.js';
 import { clearPartE } from './partE.js';
@@ -31,6 +32,8 @@ export function partBuildSteps(game) {
         // The chapter's first step: a fresh start (or a full restart), so the
         // stations and the route from a previous go are cleared.
         clearPartB(); clearPartQuests(); clearPartE();
+        // The belt first, the first time (arrival.js): her ship flies in, then the talk.
+        if (!arrivalSeen()) await playCh6Arrival(game);
         await hud.showDialogue([
           { who: 'Mission Control', text: t('Welcome home to the asteroid belt! This is where we will build your ship for the stars.', 'Welcome back to the asteroid belt! We will build a ship for the stars here.') },
           { who: 'girl', text: t('Why here, and not out at the edge where I was?', 'Why here?') },
