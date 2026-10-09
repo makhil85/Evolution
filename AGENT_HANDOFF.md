@@ -502,6 +502,14 @@ went wrong once.
 - **No hints for the child, at any Level, in any card or game** (lead
   2026-10-09). Wrong answers just say try again; the lesson clue strip is off
   (`SHOW_CLUES` in `lesson/card.js`). Parent hints stay. Do not add hints.
+- **Kids need time to read** (lead 2026-10-09): every text a child reads that
+  goes away by itself stays up `readMs(text)` from `src/play/readTime.js`
+  (5-10 s by word count); text too long for 10 s is an OK card that pauses
+  play, and its OK answers only after 5 s. Films hold their clock until the
+  caption has had its time. Use the helper; never a bare `ms: 1400`.
+- **No key legends on screen** (lead 2026-10-09): no "WASD / arrow keys /
+  press J" lines, no key letters on buttons. Keep only what a child cannot
+  play without ("hold Space" to burn, "press E" where it is the only way).
 - When the story changes, grep every old word ("rock ship", "inside a rock")
   in questions, lessons, cards and the launcher.
 
