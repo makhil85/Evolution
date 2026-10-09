@@ -452,7 +452,7 @@ async function main() {
     footprint: { x: 0, z: 0, radius: 0 },
   });
 
-  hud = createHud({ mount: document.body, title: 'Chapter 3 - Rocket Village' });
+  hud = createHud({ mount: document.body, title: 'Chapter 3 - Ready for Lift-off' });
   // Two wrong tries on a question (lead rule): the chapter starts again.
   hud.onCorrect = () => { avatar?.play?.('cheer'); confetti(1800); };
   hud.onOutOfTries = () => {
@@ -775,7 +775,7 @@ async function main() {
   window.__game.story = story;
   await story.intro({
     eyebrow: 'Chapter 3',
-    title: 'Rocket Village',
+    title: 'Ready for Lift-off',
     line: engine.state.launched ? `Welcome back, ${heroName()}! The rocket has flown.` : `Build a real rocket, ${heroName()}: answer the science questions, build it stage by stage, and launch it.`,
     lookAt: new THREE.Vector3(0, 0, -8),
   });

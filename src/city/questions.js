@@ -1,4 +1,4 @@
-// Chapter 2 "City Engineering": the question bank, in Chapter 3's question
+// Chapter 2 "Forces and Machines" (was "City Engineering"): the question bank, in Chapter 3's question
 // shape (see src/game/questions.js typedefs) so the same HUD modal can ask them.
 //
 // Titles, prompts, answers, choices, success lines, done messages and rewards

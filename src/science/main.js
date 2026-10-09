@@ -249,7 +249,7 @@ function riseScienceCenter(pieces) {
           title: 'The Science Center is built!',
           line: `Well done, ${heroName()}! You solved the puzzles and built the Science Center. Next: build a whole city.`,
           focus: new THREE.Vector3(c.x, world.heightAt(c.x, c.z), c.z),
-          next: { href: 'chapter2.html', label: 'Next: Chapter 2 — City Engineering' },
+          next: { href: 'chapter2.html', label: 'Next: Chapter 2 — Forces and Machines' },
         });
       }
     }

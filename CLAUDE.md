@@ -1,4 +1,4 @@
-# Rocket Village: working instructions
+# Evolution (formerly Rocket Village): working instructions
 
 ## Models (always)
 

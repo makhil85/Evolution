@@ -1,4 +1,4 @@
-// Chapter 2 "City Engineering": the game rules, pure logic (no DOM, no THREE).
+// Chapter 2 "Forces and Machines" (was "City Engineering"): the game rules, pure logic (no DOM, no THREE).
 //
 // This is the old single-file game's state machine (docs/legacy-chapters/level{1,4}/
 // chapter2.html: defaultState, normalizeLoadedState, mediumSolvedCount,

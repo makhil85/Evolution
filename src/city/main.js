@@ -1,4 +1,4 @@
-// Chapter 2 "City Engineering", 3-D version (see CHAPTER2_PLAN.md).
+// Chapter 2 "Forces and Machines" (was "City Engineering"), 3-D version (see CHAPTER2_PLAN.md).
 //
 // The integration: renderer + Chapter 3's light rig, the city world
 // (world.js), the rules (rules.js, the old game's logic and save format),
@@ -255,7 +255,7 @@ function riseStructure(target, pieces, doneMessage, questKey) {
           title: 'The Engineering Workshop is built!',
           line: `Amazing work, ${heroName()}! The city has water, power, a bridge and a workshop. Next: build a rocket.`,
           focus: new THREE.Vector3(c.x, world.heightAt(c.x, c.z), c.z),
-          next: { href: 'chapter3.html', label: 'Next: Chapter 3 — Rocket Village' },
+          next: { href: 'chapter3.html', label: 'Next: Chapter 3 — Ready for Lift-off' },
         });
       } else {
         hud.toast(doneMessage, 'good');
@@ -390,7 +390,7 @@ async function main() {
     toast: (m, k) => hud.toast(m, k),
   });
 
-  hud = createHud({ mount: document.body, title: 'Chapter 2 - City Engineering', resourceRows: RESOURCE_ROWS, missionGoal: 'Build the Engineering Workshop.', rank: false, signpostKey: false });
+  hud = createHud({ mount: document.body, title: 'Chapter 2 - Forces and Machines', resourceRows: RESOURCE_ROWS, missionGoal: 'Build the Engineering Workshop.', rank: false, signpostKey: false });
   // Two wrong tries on a question (lead rule): the chapter starts again.
   hud.onCorrect = () => { avatar?.play?.('cheer'); confetti(1800); };
   hud.onOutOfTries = () => {
@@ -457,7 +457,7 @@ async function main() {
   window.__city.story = story;
   await story.intro({
     eyebrow: 'Chapter 2',
-    title: 'City Engineering',
+    title: 'Forces and Machines',
     line: rules.state.builtFinal ? `Welcome back, ${heroName()}! The Engineering Workshop is built.` : `Time to engineer, ${heroName()}: fix the city, build the bridge and raise the Engineering Workshop.`,
     lookAt: new THREE.Vector3((BOUNDS.minX + BOUNDS.maxX) / 2, 0, (BOUNDS.minZ + BOUNDS.maxZ) / 2),
   });
