@@ -52,6 +52,7 @@ import { CH5_START, CH5_UPGRADES } from './ch5/start.js';
 import { CH6_START } from './ch6/start.js';
 import { CH7_START } from './ch7/start.js';
 import { setMoonPulls } from './gravity.js';
+import { FLIGHT_LENGTH } from './ch6/starship.js';
 import { playCh5Opening } from './ch5/opening.js';
 import { t, IS_LEVEL1, LEVEL } from './level.js';
 
@@ -225,6 +226,11 @@ const game = {
   /** A cinematic overriding the camera this frame (cinematics.js), or null.
    *  `calm: true` turns off the speed dust and warp streaks while it plays. */
   cinematic: null,
+  /** Aboard the starship (lead 2026-10-09): from Chapter 6's dock on, and all of Chapter 7. Her small
+   *  rocket is never drawn then; the starship is her craft (see aboardPivot and frameStarship). */
+  aboardStarship: IS_CH7,
+  /** Before a walk starts from the flight view (runScene): a chapter may play a film first (ch7/boardFilm.js). */
+  beforeWalk: null,
   /** The flying mode (contracts FLIGHT_MODES / FLIGHT_MODES_L1): how much the game helps. */
   mode: MODES.medium,
   /** Which way the current step wants her pointed: 'prograde' | 'retrograde' | 'target' | null. */
@@ -242,6 +248,42 @@ const game = {
 };
 window.__space = game; // debug handle, like Chapter 3's
 game.camera = camera; // debug: tests read the flight camera
+
+// Aboard the starship (lead 2026-10-09: "why does she go back to the old rocket ship while
+// she is actually in the big newly built ship?"). Once aboard, her small rocket is not drawn
+// and the starship is her craft: it sits where she is and points where she points (the
+// frame below), its plume follows her burn, and the flight camera is a chase view of the
+// starship. Physics and flight logic run underneath, untouched.
+// The frame: the starship's own metres scaled to scene units as showStarship scales it
+// (370 m long, FLIGHT_LENGTH units). Its origin is the hub; nose -Z, port +X, aft +Z.
+const STARSHIP_M = 370; // createStarship's dims.length, in metres
+const aboardPivot = new THREE.Group();
+aboardPivot.name = 'aboardPivot';
+aboardPivot.scale.setScalar(FLIGHT_LENGTH / STARSHIP_M);
+scene.add(aboardPivot);
+// The chase view, in the starship's metres: behind it (+Z is aft), a little to port and up,
+// looking at the middle of its length (the ship spans -135 m to +230 m along Z).
+const CHASE_EYE = new THREE.Vector3(110, 90, 430);
+const CHASE_AIM = new THREE.Vector3(0, 0, 47);
+const _chaseEye = new THREE.Vector3();
+const _chaseAim = new THREE.Vector3();
+function frameStarship(cam) {
+  cam.position.copy(aboardPivot.localToWorld(_chaseEye.copy(CHASE_EYE)));
+  cam.up.set(0, 1, 0);
+  cam.lookAt(aboardPivot.localToWorld(_chaseAim.copy(CHASE_AIM)));
+}
+// Her small rocket goes, and the starship takes its place, every frame she is aboard.
+function placeAboard(paused, thrust) {
+  shipView.group.visible = false;
+  aboardPivot.rotation.y = shipView.group.rotation.y; // the same heading as her nose
+  aboardPivot.updateMatrixWorld(true);
+  const star = game._starship?.ship;
+  if (!star) return;
+  star.group.position.set(0, 0, 0);
+  star.group.quaternion.copy(aboardPivot.quaternion);
+  // The plume follows her burn; a cutscene that lights the drive sets it itself.
+  if (!game.cinematic) star.setDrive(paused ? 0 : thrust);
+}
 // Rock break-apart, pieces flying in, the upgrade build effect (PLAN item 11).
 game.beltFx = createBeltFx(game);
 
@@ -1568,6 +1610,8 @@ function tick(realDt, render = true) {
   _sunDir.set(-ship.x, 0, -ship.z).normalize();
   shipView.setSunDirection(_sunDir);
   shipView.update(realDt);
+  // Aboard: her rocket is never drawn (cutscenes that show it again turn it back on, so this runs every frame).
+  if (game.aboardStarship) placeAboard(paused, physInput.thrust);
 
   // Camera BEFORE the visuals: the lens flare, distance glows and atmosphere
   // rims all read the camera, so they must see this frame's position.
@@ -1587,6 +1631,9 @@ function tick(realDt, render = true) {
     hold: game.warpIndex > 0, follow: game.autopilot?.on ? 0.9 : 2.4,
     mouse: modalOpen ? { dx: 0, dy: 0, wheel: 0, dragging: false } : mouse,
   });
+  // Aboard, the chase view is of the starship. Before any cinematic takes over, so a
+  // cutscene blends from it (not from her rocket's old view).
+  if (game.aboardStarship) frameStarship(camera);
   // A cinematic (opening / ending) takes the camera over, blending from the
   // flight camera's pose it was just given.
   if (game.cinematic) game.cinematic.apply(realDt, camera, states);
@@ -1615,7 +1662,7 @@ function tick(realDt, render = true) {
   }
 
   // Zoomed out, the ship is sub-pixel: an orange arrow keeps her findable.
-  shipBeacon.visible = flightCam.distance > 12;
+  shipBeacon.visible = flightCam.distance > 12 && !game.aboardStarship;
   shipBeacon.scale.setScalar(flightCam.distance * 0.035);
   shipBeacon.rotation.y = shipView.group.rotation.y;
 
@@ -1645,7 +1692,9 @@ function tick(realDt, render = true) {
     // onto the planned one instead of in jumps.
     predictorClock = physInput.thrust > 0 ? 0.1 : 0.2;
   }
-  trajectory.setVisible(!ship.landedOn && !game.cinematic?.hidePath);
+  // Aboard, her predicted path (the line off the ship) is shown only on a step that
+  // flies to a target (a transfer): the starship has no trail of its own to draw.
+  trajectory.setVisible(!ship.landedOn && !game.cinematic?.hidePath && !(game.aboardStarship && !game.transferTarget));
   trajectory.update({ time: ship.t, origin: _origin, positions: states });
 
   const _tc = performance.now();
@@ -1798,6 +1847,11 @@ game.debugShot = async (name, w = 1600, h = 900) => {
  * dialogue and mission card keep working, so a scene can ask questions.
  */
 game.runScene = async (sceneObj) => {
+  // A walk from the flight view may first play its film (the flight view is still up
+  // here, so the film runs on the flight frame; see ch7/boardFilm.js).
+  if (sceneObj.onFoot && game.beforeWalk && !activeScene) {
+    try { await game.beforeWalk(); } catch (e) { console.error('before walk', e); }
+  }
   activeScene = sceneObj;
   game.activeScene = sceneObj; // tests reach its debug handle through this
   renderPass.scene = sceneObj.scene;

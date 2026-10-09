@@ -193,9 +193,12 @@ export function playDriveOn(game, { speedKms = 60 } = {}) {
   game.paused = true;
   game.warpIndex = 0;
 
-  // Her ship is inside the starship now: hide it.
+  // Her ship is inside the starship now: hide it. The flight starship (her craft, at
+  // her place) is hidden too: this scene's own starship does the move (lead 2026-10-09).
   const shipQuat = shipView.group.quaternion.clone();
   shipView.group.visible = false;
+  const flightStar = game._starship?.ship.group;
+  if (flightStar) flightStar.visible = false;
   const ship = createStarship({ detail: 'near' });
   ship.group.scale.setScalar(FLIGHT_LENGTH / ship.dims.length);
   ship.setRingSpin(0.5);
@@ -367,6 +370,7 @@ export function playDriveOn(game, { speedKms = 60 } = {}) {
     shipView.group.position.set(0, 0, 0);
     shipView.group.quaternion.copy(shipQuat);
     shipView.group.visible = true;
+    if (flightStar) flightStar.visible = true;
     skip.dispose();
     overlay.showSkip(false);
     overlay.bars(false);
