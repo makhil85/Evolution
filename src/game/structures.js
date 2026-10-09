@@ -10,13 +10,13 @@
 //   - That kit's Atlas.png palette is dark industrial charcoal, which is wrong
 //     for a bright village, so every space piece carries an explicit tint.
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { loadShared } from './board.js';
 import { toonify } from './toonPipeline.js';
 import { SCALE, asset } from './contracts.js';
 import { ROCKET_VILLAGE } from './rocketVillageLayout.js';
 
 const SP = (n) => asset(`assets/models/space/${n}.gltf`);
-const MED = (n) => asset(`assets/models/medieval/${n}.gltf`);
 const KIT = (n) => asset(`assets/models/kit/${n}.glb`);
 
 /** No single piece of a village building may exceed this in any axis. */
@@ -45,12 +45,153 @@ export const PAINT = {
   guidance: 0x9ccf94,
   scienceBase: 0xe2d6f5,
   observatoryBase: 0x7384c4,
+  // Chapter 3 is the space-age town (lead 2026-10-09): the two stations that
+  // were medieval are white, glass and bright lab colours now.
+  schoolWall: 0xf7fafc,
+  paving: 0xe9eef4,
+  roofLight: 0xdfe6ee,
+  roofGrey: 0xc9d2dc,
+  frame: 0x3b4f66,
+  doorBlue: 0x3f7fc4,
+  labWall: 0xe9eef3,
+  labBand: 0x2bb3a6,
+  yard: 0xbfc7d0,
+  housing: 0x4b5a6b,
+  recess: 0x2e3a48,
+  slatA: 0xb8c4d0,
+  slatB: 0x9fb0c2,
 };
+
+/** A box part for a code-built piece: x and z are its centre, yBase its bottom. */
+function part(w, h, d, x, yBase, z, hex) {
+  const g = new THREE.BoxGeometry(w, h, d);
+  g.translate(x, yBase + h / 2, z);
+  return [g, hex];
+}
+
+/** A cylinder part (a stack, a cap): x and z its centre, yBase its bottom. */
+function cylPart(r, h, x, yBase, z, hex) {
+  const g = new THREE.CylinderGeometry(r, r, h, 12);
+  g.translate(x, yBase + h / 2, z);
+  return [g, hex];
+}
+
+/** Paint a geometry one flat colour as vertex colours, so pieces merge (homes.js does the same). */
+function paintGeometry(geo, hex) {
+  const g = geo.index ? geo.toNonIndexed() : geo;
+  const c = new THREE.Color(hex);
+  const n = g.attributes.position.count;
+  const arr = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { arr[i * 3] = c.r; arr[i * 3 + 1] = c.g; arr[i * 3 + 2] = c.b; }
+  g.setAttribute('color', new THREE.BufferAttribute(arr, 3));
+  if (g !== geo) geo.dispose();
+  return g;
+}
+
+/**
+ * A code-built piece: boxes and cylinders with the base on y = 0, merged into
+ * ONE vertex-coloured mesh (one draw call). Made fresh each time a structure is built.
+ * The mesh sits in a group, as a loaded model does: toonify adds the outline
+ * hulls to the mesh's parent, and a bare mesh has none.
+ * @param {Array<[THREE.BufferGeometry, number]>} parts  from part() / cylPart()
+ */
+function codePiece(parts) {
+  const painted = parts.map(([g, hex]) => paintGeometry(g, hex));
+  const merged = mergeGeometries(painted, false);
+  painted.forEach((g) => g.dispose());
+  const group = new THREE.Group();
+  group.add(new THREE.Mesh(merged, new THREE.MeshStandardMaterial({ vertexColors: true })));
+  return group;
+}
+
+/**
+ * A roll-up shutter in the face at z = faceZ (+ for the front, - for the back),
+ * half rolled up: the slats hang low and a dark gap shows above them, with the
+ * roll-up box over the top.
+ */
+function rollUpDoor(width, faceZ, height, slats) {
+  const s = Math.sign(faceZ);
+  const out = [
+    part(width, height, 0.1, 0, 0, faceZ + s * 0.02, PAINT.recess),
+    part(width + 0.3, 0.32, 0.3, 0, height, faceZ + s * 0.1, PAINT.housing),
+  ];
+  const slatH = (height * 0.8) / slats;
+  for (let i = 0; i < slats; i++) {
+    out.push(part(width - 0.04, slatH - 0.04, 0.08, 0, i * slatH + 0.02, faceZ + s * 0.14, i % 2 ? PAINT.slatB : PAINT.slatA));
+  }
+  return out;
+}
+
+/** The Mission School's walls: a white block, a wide glass front with a blue door in the middle, glass ends. */
+function schoolWalls() {
+  return codePiece([
+    part(4.0, 2.8, 4.0, 0, 0, 0, PAINT.schoolWall),
+    part(1.25, 2.0, 0.06, -1.225, 0.2, 2.04, PAINT.glass),
+    part(1.25, 2.0, 0.06, 1.225, 0.2, 2.04, PAINT.glass),
+    part(0.9, 2.2, 0.1, 0, 0, 2.04, PAINT.doorBlue),
+    part(0.6, 0.6, 0.12, 0, 1.4, 2.06, PAINT.glass),
+    part(3.0, 0.3, 0.08, 0, 2.45, 2.04, PAINT.accent),
+    ...[-1.9, -0.52, 0.52, 1.9].map((x) => part(0.12, 2.1, 0.1, x, 0.1, 2.06, PAINT.frame)),
+    part(0.06, 1.6, 2.6, -2.04, 0.6, 0, PAINT.glass),
+    part(0.06, 1.6, 2.6, 2.04, 0.6, 0, PAINT.glass),
+  ]);
+}
+
+/** The Mission School's roof: a flat slab with a blue fascia on the front edge. */
+function schoolRoof() {
+  return codePiece([
+    part(4.3, 0.3, 4.3, 0, 0, 0, PAINT.roofLight),
+    part(4.3, 0.26, 0.12, 0, 0.02, 2.2, PAINT.doorBlue),
+  ]);
+}
+
+/** The materials lab's hall: a teal plinth band, roll-up doors front and back, glass side windows. */
+function labWalls() {
+  return codePiece([
+    part(4.7, 2.8, 4.7, 0, 0, 0, PAINT.labWall),
+    part(4.8, 0.35, 4.8, 0, 0, 0, PAINT.labBand),
+    part(0.06, 1.2, 3.0, -2.37, 0.9, 0, PAINT.glass),
+    part(0.06, 1.2, 3.0, 2.37, 0.9, 0, PAINT.glass),
+    ...rollUpDoor(2.5, 2.35, 2.1, 5),
+    ...rollUpDoor(1.8, -2.35, 2.1, 4),
+  ]);
+}
+
+/** The lab's roof: a grey slab with an amber fascia on the front and a glass skylight strip. */
+function labRoof() {
+  return codePiece([
+    part(4.9, 0.3, 4.9, 0, 0, 0, PAINT.roofGrey),
+    part(4.94, 0.26, 0.14, 0, 0.02, 2.48, PAINT.accent),
+    part(3.4, 0.35, 1.0, 0, 0.3, 0, PAINT.glass),
+  ]);
+}
+
+/**
+ * A roof vent for the lab. Code-built: the space kit's Roof_VentL has its own
+ * origin well off its centre, and fitting it by height pushed it two units from
+ * where the recipe put it (the footprint came out 0.7 wider than the old one).
+ */
+function labVent() {
+  return codePiece([
+    part(0.9, 0.5, 0.9, 0, 0, 0, PAINT.metal),
+    part(1.0, 0.1, 1.0, 0, 0.5, 0, PAINT.metalDark),
+  ]);
+}
+
+/** The lab's exhaust stack, standing on the roof at the back right. */
+function labStack() {
+  return codePiece([
+    cylPart(0.2, 1.5, 1.4, 0, -1.2, PAINT.housing),
+    cylPart(0.26, 0.12, 1.4, 1.5, -1.2, PAINT.frame),
+  ]);
+}
+
 
 /**
  * One buildable piece of a structure.
  * @typedef {object} PieceSpec
- * @property {string} asset  full model path
+ * @property {string} [asset]  full model path (or:)
+ * @property {() => THREE.Object3D} [make]  a code-built piece (see codePiece)
  * @property {[number,number,number]} pos  offset from the structure origin
  * @property {number} [rotY]
  * @property {number} [scale]
@@ -62,37 +203,36 @@ export const PAINT = {
  * so each list runs foundation -> walls -> roof -> detail.
  */
 export const RECIPES = {
-  // A village building is ~4 units across and ~4 tall, against a 1.52 girl:
-  // roughly two and a half of her, which reads as a real single-storey house.
-  // The two medieval buildings are the only ones assembled from FLAT pieces -
-  // the space kit's houses are closed volumes already. Both used to be a roof
-  // on one or two walls, which from most angles is a large tiled roof floating
-  // over a doorway with daylight through the middle. Four walls each now: a
-  // door at the front, windows on the other three sides. That is also the only
-  // wall vocabulary this kit ships, and it happens to make a village building.
-  //
-  // Walls sit at +-2.0 from centre, matching the 4.6-wide floor.
+  // Lead 2026-10-09: the space-age town. The Mission School is a glass-fronted
+  // training centre for the cadets: a white block with a wide glass front and
+  // a blue door in the middle, a flat roof, and the space kit's radar and mast.
+  // Built from code geometry (schoolWalls, schoolRoof). The footprint is the
+  // rotated roof's box (4.3 square at rotY 0.2 measures 2.54 a side, as the
+  // medieval roof did), the door and the reveal order are the medieval building's.
   missionSchool: {
     label: 'P1 - Mission School',
     pieces: [
-      { asset: MED('Floor_Brick'), pos: [0, 0, 0], fitWidth: 4.6 },
-      { asset: MED('Wall_Plaster_Door_Round'), pos: [0, 0, 2.0], fitHeight: 2.8, outline: true },
-      { asset: MED('Wall_Plaster_Window_Wide_Round'), pos: [2.0, 0, 0], fitHeight: 2.8, rotY: Math.PI / 2 },
-      { asset: MED('Wall_Plaster_Window_Wide_Round'), pos: [-2.0, 0, 0], fitHeight: 2.8, rotY: -Math.PI / 2 },
-      { asset: MED('Wall_Plaster_Window_Wide_Round'), pos: [0, 0, -2.0], fitHeight: 2.8, rotY: Math.PI },
-      { asset: MED('Roof_Tower_RoundTiles'), pos: [0, 2.8, 0], fitWidth: 4.4, outline: true },
+      { make: () => codePiece([part(4.4, 0.4, 4.4, 0, 0, 0, PAINT.paving)]), pos: [0, 0, 0] },
+      { make: schoolWalls, pos: [0, 0.4, 0], outline: true },
+      { make: schoolRoof, pos: [0, 3.2, 0] },
+      { asset: SP('Roof_Radar'), pos: [1.1, 3.5, -1.0], fitWidth: 1.4, tint: PAINT.metal },
+      { asset: SP('Roof_Antenna'), pos: [-1.1, 3.5, -1.0], fitHeight: 1.8, tint: PAINT.accent },
     ],
   },
+  // Lead 2026-10-09: now a materials lab and workshop. A hall 4.7 square under
+  // a 4.9 roof, so the rotated footprint stays about 3.0 (the sign is still five
+  // units south of it), with roll-up doors front and back, glass side windows,
+  // a skylight and an exhaust stack. The sign keeps the name "Materials Forge"
+  // because quests.js says it.
   materialsForge: {
     label: 'P2 - Materials Forge',
     pieces: [
-      { asset: MED('Floor_UnevenBrick'), pos: [0, 0, 0], fitWidth: 4.6 },
-      { asset: MED('Wall_UnevenBrick_Door_Round'), pos: [0, 0, 2.0], fitHeight: 2.8, outline: true },
-      { asset: MED('Wall_Plaster_Window_Wide_Round'), pos: [2.0, 0, 0], fitHeight: 2.8, rotY: Math.PI / 2 },
-      { asset: MED('Wall_Plaster_Window_Wide_Round'), pos: [-2.0, 0, 0], fitHeight: 2.8, rotY: -Math.PI / 2 },
-      { asset: MED('Wall_UnevenBrick_Door_Round'), pos: [0, 0, -2.0], fitHeight: 2.8, rotY: Math.PI },
-      { asset: MED('Roof_RoundTiles_6x6'), pos: [0, 2.8, 0], fitWidth: 5.0, outline: true },
-      { asset: MED('Prop_Chimney'), pos: [1.5, 2.6, -1.2], fitHeight: 1.8 },
+      { make: () => codePiece([part(5.0, 0.4, 5.0, 0, 0, 0, PAINT.yard)]), pos: [0, 0, 0] },
+      { make: labWalls, pos: [0, 0.4, 0], outline: true },
+      { make: labRoof, pos: [0, 3.2, 0] },
+      { make: labVent, pos: [-1.4, 3.5, -0.9] },
+      { asset: SP('SolarPanel_Structure'), pos: [1.2, 3.5, 0.9], fitHeight: 1.2, tint: PAINT.glass },
+      { make: labStack, pos: [0, 3.5, 0] },
     ],
   },
   // Scaled up by 1.3 from a 3.0 body. At 3.6 units tall this and the fuel
@@ -235,9 +375,10 @@ export async function buildStructure(id, { x, z, y = 0, rotY = 0, revealed = 0 }
 
   const pieces = [];
   for (const spec of recipe.pieces) {
-    const src = await loadShared(spec.asset);
+    // Code-built pieces are made fresh; model pieces are cloned from the shared cache.
+    const src = spec.make ? spec.make() : await loadShared(spec.asset);
     if (!src) continue; // fail-soft: a missing model must never break the village
-    const piece = src.clone(true);
+    const piece = spec.make ? src : src.clone(true);
     piece.rotation.y = spec.rotY ?? 0;
 
     // Prefer declaring the height a piece should END UP, not a raw scale.
@@ -368,7 +509,7 @@ export const PLACEMENTS = (() => {
 export async function preloadStructureAssets() {
   const paths = new Set();
   for (const recipe of Object.values(RECIPES)) {
-    for (const piece of recipe.pieces) paths.add(piece.asset);
+    for (const piece of recipe.pieces) if (piece.asset) paths.add(piece.asset);
   }
   await Promise.all([...paths].map((p) => loadShared(p)));
   return paths.size;
