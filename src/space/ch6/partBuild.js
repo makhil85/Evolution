@@ -61,7 +61,7 @@ export function partBuildSteps(game) {
       markers: [],
       async enter() {
         await playRockHunt({ bus: game.bus });
-        hud.toast(t('Rock B it is. Time to build!', 'We found our rock!'), { kind: 'good', ms: 3200 });
+        hud.toast(t('Rock B it is. Time to build!', 'We found our rock!'), { kind: 'good' });
         showRockB(game);
       },
     },

@@ -140,8 +140,6 @@ export function createMinimap(root, { onOpenMap } = {}) {
   canvas.className = 'sp-minimap__canvas';
   canvas.setAttribute('aria-label', 'Top-down map of your path. Click to open the full map.');
   wrap.appendChild(canvas);
-  const hint = el('div', 'sp-minimap__hint', 'M: big map · N: hide');
-  wrap.appendChild(hint);
   root.appendChild(wrap);
   wrap.addEventListener('click', () => onOpenMap?.());
 

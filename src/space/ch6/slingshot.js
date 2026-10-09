@@ -114,7 +114,7 @@ export function playSlingshots({ bus = null, plan, mode = flyingMode() }) {
   const actions = el('div', 'ls-actions');
   const dots = el('div', 'ls-dots');
   legs.forEach(() => dots.appendChild(el('span', 'ls-dot')));
-  const pressBtn = el('button', 'ls-btn', t('Press! (Space)', 'Press! (Space)'));
+  const pressBtn = el('button', 'ls-btn', t('Press!', 'Press!'));
   pressBtn.type = 'button';
   actions.append(dots, pressBtn);
   card.append(eyebrow, title, view, tip, actions);

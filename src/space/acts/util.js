@@ -113,7 +113,7 @@ export async function askBeat(game, beat) {
     if (q.reward?.resources) {
       for (const [k, v] of Object.entries(q.reward.resources)) game.resources[k] = (game.resources[k] || 0) + v;
     }
-    if (personal.doneMessage) game.hud.toast(personal.doneMessage, { kind: 'good', ms: 4500 });
+    if (personal.doneMessage) game.hud.toast(personal.doneMessage, { kind: 'good' });
   }
   return res;
 }
@@ -178,9 +178,9 @@ export async function offerUpgrades(game, { includeMelt = true } = {}) {
   const ok = applyUpgrade(game, id);
   if (ok) {
     const def = upgrades[id];
-    game.hud.toast(id === 'meltIce' ? def.label : t(`🎉 ${def.label} built!`, `🎉 Yay! ${def.label} built!`), { kind: 'good', ms: 3000 });
+    game.hud.toast(id === 'meltIce' ? def.label : t(`🎉 ${def.label} built!`, `🎉 Yay! ${def.label} built!`), { kind: 'good' });
   } else {
-    game.hud.toast(t('Not enough resources for that yet.', 'You need more rocks for that.'), { kind: 'warn', ms: 2500 });
+    game.hud.toast(t('Not enough resources for that yet.', 'You need more rocks for that.'), { kind: 'warn' });
   }
   return ok ? id : null;
 }
@@ -203,7 +203,7 @@ export function fuelSafetyNet(game) {
   if (game.ship.fuel <= 0) {
     const given = emergencyTopUp(game.ship, game.fuelCapacity);
     if (given > 0) {
-      game.hud.toast(t('Mission Control: emergency fuel transfer complete. You are not stranded!', 'Mission Control sent you more fuel!'), { kind: 'good', ms: 4200 });
+      game.hud.toast(t('Mission Control: emergency fuel transfer complete. You are not stranded!', 'Mission Control sent you more fuel!'), { kind: 'good' });
     }
   }
 }

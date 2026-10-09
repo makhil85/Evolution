@@ -22,7 +22,7 @@ async function playRingRun(game) {
     const pick = await hud.choose({
       eyebrow: t('Ring run', 'Ring run'),
       title: t('How thick is the ice?', 'How much ice?'),
-      body: t('Arrows or WASD steer, Space fires. Line up on white ice (water) and grey rock (metal and stone). A bump jams your gun for a moment, and big rocks need a true aim.', 'Arrows to steer. Space to shoot. Line up on the ice and rock. A bump jams your gun.'),
+      body: t('Space fires. Line up on white ice (water) and grey rock (metal and stone). A bump jams your gun for a moment, and big rocks need a true aim.', 'Space to shoot. Line up on the ice and rock. A bump jams your gun.'),
       options: Object.values(LEVELS).map((L) => ({
         id: L.id, label: L.label, tag: L.id === level ? t('Suggested', 'Try this') : '',
         blurb: `${L.blurb} ${t(`Goal: ${L.goal.ice} ice, ${L.goal.rock} rock.`, `Get ${L.goal.ice} ice, ${L.goal.rock} rock.`)}`,
@@ -94,7 +94,7 @@ export function partASteps(game) {
     {
       id: 'c5_to_saturn', act: 1,
       title: t('Catch the Saturn window', 'Head for Saturn'),
-      objective: t('Saturn moves too! Use time warp (1-4) until the banner says BURN NOW, then point along your path and hold Space until your dotted line reaches Saturn.', 'Wait for the green BURN NOW sign (keys 1 to 4 make time go fast). Then hold Space until your dotted line reaches Saturn.'),
+      objective: t('Saturn moves too! Use time warp until the banner says BURN NOW, then point along your path and hold Space until your dotted line reaches Saturn.', 'Wait for the green BURN NOW sign (time warp makes time go fast). Then hold Space until your dotted line reaches Saturn.'),
       markers: ['saturn'],
       aim: 'prograde',
       transfer: 'saturn',
@@ -119,7 +119,7 @@ export function partASteps(game) {
     {
       id: 'c5_saturn_approach', act: 1,
       title: t('Coast to Saturn', 'Fly to Saturn'),
-      objective: t('Coast to Saturn. Time warp (1-4) makes the long trip quick. If the banner asks for a small burn, it is fine-tuning your path.', 'Fly to Saturn and wait. Keys 1 to 4 make time go fast.'),
+      objective: t('Coast to Saturn. Time warp makes the long trip quick. If the banner asks for a small burn, it is fine-tuning your path.', 'Fly to Saturn and wait. Time warp makes time go fast.'),
       markers: ['saturn'],
       transfer: 'saturn',
       aim: 'prograde',
@@ -142,7 +142,7 @@ export function partASteps(game) {
         return game.ship.soi === 'saturn' && isCaptured(game);
       },
       async after() {
-        hud.toast(t('Saturn has you! Enjoy a lap: look at those rings.', 'You’re going around Saturn! Look at the rings!'), { kind: 'good', ms: 4200 });
+        hud.toast(t('Saturn has you! Enjoy a lap: look at those rings.', 'You’re going around Saturn! Look at the rings!'), { kind: 'good' });
         // The capture is done (ticked off), so the card stops saying "brake"
         // during the lap (game-experience review: a stale objective).
         game.missions?.showObjective?.(t('Captured! Look round Saturn while you orbit.', 'You did it! Look at Saturn.'), { done: true });

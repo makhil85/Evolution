@@ -72,9 +72,9 @@ export function createMiningController(game) {
     if (!rock) {
       if (game.mode?.rockMarkers === 'pulse') {
         pulseUntil = game.ship.t + PULSE_SECONDS;
-        hud.toast(t('Scanner pulse! Nearby rocks show up for a few seconds.', 'Beep! Rocks near you light up for a moment.'), { kind: 'info', ms: 2400 });
+        hud.toast(t('Scanner pulse! Nearby rocks show up for a few seconds.', 'Beep! Rocks near you light up for a moment.'), { kind: 'info' });
       } else {
-        hud.toast(t('Get closer to a rock, then press E.', 'Fly closer to a rock, then press E.'), { kind: 'info', ms: 2000 });
+        hud.toast(t('Get closer to a rock, then press E.', 'Fly closer to a rock, then press E.'), { kind: 'info' });
       }
       return;
     }
@@ -86,7 +86,7 @@ export function createMiningController(game) {
       // panels (see the tuning note in this file's header), so this really
       // does come up - the inner edge (closest to Mars) is the reliable spot.
       hud.toast(t(`Not enough power for the claw (need ${SOLAR.powerNeededForClaw}, have ${power().toFixed(0)}). Fly toward the inner edge of the belt, closer to the Sun.`,
-        'Not enough power for the claw. Fly a bit closer to the Sun.'), { kind: 'warn', ms: 3600 });
+        'Not enough power for the claw. Fly a bit closer to the Sun.'), { kind: 'warn' });
       return;
     }
     if (game.ship.cargo >= SHIP.cargoMax) {
@@ -99,9 +99,9 @@ export function createMiningController(game) {
         const drop = Math.min(AMOUNT_PER_MINE, game.resources[most] || 0);
         game.resources[most] -= drop;
         game.ship.cargo = Math.max(0, game.ship.cargo - drop);
-        hud.toast(t(`Hold full: you tip out ${drop.toFixed(1)} t of ${most} to make room for the ${rock.kind} sample.`, `Your ship is full! You let some ${most} go to make room.`), { kind: 'info', ms: 3600 });
+        hud.toast(t(`Hold full: you tip out ${drop.toFixed(1)} t of ${most} to make room for the ${rock.kind} sample.`, `Your ship is full! You let some ${most} go to make room.`), { kind: 'info' });
       } else {
-        hud.toast(t('Cargo hold is full! Press U (or the Upgrade bay button) to turn ore into upgrades or fuel.', 'Your ship is full of rocks! Press U to use them.'), { kind: 'warn', ms: 3200 });
+        hud.toast(t('Cargo hold is full! Use the Upgrade bay button to turn ore into upgrades or fuel.', 'Your ship is full of rocks! Open the upgrade bay to use them.'), { kind: 'warn' });
         return;
       }
     }
@@ -128,7 +128,7 @@ export function createMiningController(game) {
         sampleCounts[kind] += 1;
         game.samples.push(BELT.kinds[kind].sample);
       }
-      hud.toast(t(`Mined ${result.taken.toFixed(1)} t of ${result.resource}${result.depleted ? ' - the rock broke apart!' : '.'}`, `You got ${result.resource}!`), { kind: 'good', ms: 1800 });
+      hud.toast(t(`Mined ${result.taken.toFixed(1)} t of ${result.resource}${result.depleted ? ' - the rock broke apart!' : '.'}`, `You got ${result.resource}!`), { kind: 'good' });
     }
     game.beltFx?.shake(null);
     miningId = null;

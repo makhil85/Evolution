@@ -6,7 +6,7 @@
 //   const hud = createHud({ mount, bus });
 //   hud.update(state)              // every frame, cheap
 //   hud.setMission({...})          // J toggles it, this module owns that key
-//   hud.toast(text, {kind, ms})
+//   hud.toast(text, {kind, ms})    // stays up readMs(text); long text waits for a click
 //   hud.askQuestion(q) -> Promise<{correct, attempts}>
 //   hud.showFact(...) / hud.showDialogue(...) -> Promise
 //   hud.openUpgrades(...) -> Promise<id|null>
@@ -36,17 +36,26 @@ import { createQuestionModal } from './questionModal.js';
 import { createOverlays } from './overlays.js';
 import { inModalTurn } from './modalQueue.js';
 import { createTally, flyIcons } from './tally.js';
+import { readMs, needsClick, READ_MAX_MS } from '../../play/readTime.js';
 
 const MISSION_OPEN_KEY = 'space_ch4_mission_open';
 const MISSION_FLASH_MS = 6000;
-const TOAST_MIN_MS = 5000;
-const TOAST_PER_CHAR_MS = 60;
-const TOAST_MAX_MS = 12000;
-/** A child reads slowly: explicit durations are stretched, never under this. */
-const TOAST_FLOOR_MS = 5000;
 /** New messages are spaced out instead of arriving in a burst. */
 const TOAST_GAP_MS = 1500;
 const MAX_VISIBLE_TOASTS = 2;
+/** A queued message older than this is dropped (its moment has passed). */
+const TOAST_STALE_MS = 12000;
+
+/**
+ * How long a message stays up by itself: a child needs readMs() to read it
+ * (lead 2026-10-09: "the writing comes and goes away too fast"). A caller's
+ * longer `ms` is kept up to READ_MAX_MS; a shorter one is ignored.
+ * @param {string|string[]} text
+ * @param {number} [ms]
+ */
+function readLife(text, ms) {
+  return Math.min(READ_MAX_MS, Math.max(readMs(text), Number.isFinite(ms) ? ms : 0));
+}
 
 /** A key event that should be ignored: typing into a field, or a held-down repeat. */
 function isTypingTarget(e) {
@@ -68,6 +77,10 @@ export class Hud {
     this.root.setAttribute('data-sp-hud', '1');
 
     this._toasts = [];
+    this._toastQueue = [];
+    this._toastNextAt = 0;
+    this._toastSeen = new Map();
+    this._readPending = 0; // cards waiting for a click (see _readCard)
     this._missionOpen = this._restoreMissionOpen();
     this._missionNow = undefined;
 
@@ -131,8 +144,6 @@ export class Hud {
     this._missionObjective = el('div', 'sp-mission__objective', '');
     this._missionSteps = el('ul', 'sp-mission__steps');
     body.append(this._missionAct, this._missionObjective, this._missionSteps);
-    this._missionHint = el('div', 'sp-mission__hint', 'Press J to show or hide this card.');
-    body.appendChild(this._missionHint);
     mission.appendChild(body);
     this._missionBody = body;
 
@@ -259,6 +270,8 @@ export class Hud {
    * @param {string} [text] what to do
    */
   announce(title, text = '', ms = 6500) {
+    // Stays up for readMs like a toast; a long one waits for a click instead.
+    if (needsClick([title, text])) { this._readCard(text, title); return; }
     if (!this._goal) {
       this._goal = el('div', 'sp-goal');
       this._goal.setAttribute('role', 'status');
@@ -274,7 +287,7 @@ export class Hud {
     this._goal.classList.remove('is-gone');
     this._goal.classList.add('is-on');
     clearTimeout(this._goalTimer);
-    this._goalTimer = setTimeout(() => { this._goal.classList.remove('is-on'); this._goal.classList.add('is-gone'); }, ms);
+    this._goalTimer = setTimeout(() => { this._goal.classList.remove('is-on'); this._goal.classList.add('is-gone'); }, readLife([title, text], ms));
   }
 
   // --- contract: per-frame instruments --------------------------------------
@@ -299,47 +312,61 @@ export class Hud {
   // --- contract: toasts --------------------------------------------------
 
   /**
+   * A message for the child. It stays up for readMs(text) (5-10 s, see
+   * src/play/readTime.js) even when a caller asks for less; a text too long
+   * for that waits for a click instead (_readCard). Messages queue behind the
+   * one on screen rather than pushing it out early.
    * @param {string} text
-   * @param {{kind?: 'info'|'good'|'warn', ms?: number}} [opts]
+   * @param {{kind?: 'info'|'good'|'warn', ms?: number}} [opts]  ms is a floor: a longer reading time is kept, a shorter one ignored
    */
   toast(text, opts = {}) {
     const message = typeof text === 'string' ? text.trim() : '';
     if (!message) return;
-    // Lead 2026-10-02: messages came too fast and went too quickly. A new
-    // one waits until TOAST_GAP_MS after the last one appeared (the same text
-    // still merges straight away, below); the queue drops stale duplicates.
-    const now = performance.now();
     // The same message again within 10 s is a duplicate (play-test: "Next
     // stop: the asteroid belt" twice, two capture toasts, two warp refusals).
-    this._toastSeen = this._toastSeen || new Map();
+    const now = performance.now();
     const seenAt = this._toastSeen.get(message);
     const shownNow = this._toasts.some((e) => e.message === message);
     if (!shownNow && seenAt !== undefined && now - seenAt < 10000) return;
     this._toastSeen.set(message, now);
     const newestShown = this._toasts[this._toasts.length - 1];
-    const sameAsNewest = newestShown && newestShown.message === message;
+    const sameAsNewest = !!newestShown && newestShown.message === message;
     // While she has to act (focus mode) only warnings get through; the rest
-    // wait (they used to cover the landing gauge and the aim panel).
-    const held = this._focus && opts.kind !== 'warn';
-    if (!sameAsNewest && (held || now < (this._toastNextAt || 0))) {
-      this._toastQueue = (this._toastQueue || []).filter((q) => q.text !== text);
-      this._toastQueue.push({ text, opts, at: now });
+    // wait (they used to cover the landing gauge and the aim panel). Nothing
+    // gets past a card she is reading, and a third message waits for a slot.
+    const held = (this._focus && opts.kind !== 'warn') || this._readPending > 0;
+    const full = this._toasts.length >= MAX_VISIBLE_TOASTS;
+    // Lead 2026-10-02: messages came too fast and went too quickly. A new one
+    // waits until TOAST_GAP_MS after the last one appeared, and anything
+    // already waiting goes first (the same text still merges straight away).
+    const waits = held || full || this._toastQueue.length > 0 || now < this._toastNextAt;
+    if (!sameAsNewest && waits) {
+      this._toastQueue = this._toastQueue.filter((q) => q.text !== message);
+      this._toastQueue.push({ text: message, opts, at: now });
       if (!this._toastQueueTimer) this._drainToasts();
       return;
     }
-    if (!sameAsNewest) this._toastNextAt = now + TOAST_GAP_MS;
-    const kind = ['good', 'warn'].includes(opts.kind) ? opts.kind : 'info';
+    this._show(message, opts);
+  }
 
+  /** Put one message on screen now (toast() has checked that it may go). */
+  _show(message, opts = {}) {
+    const now = performance.now();
     const newest = this._toasts[this._toasts.length - 1];
+    if (!newest || newest.message !== message) this._toastNextAt = now + TOAST_GAP_MS;
+    // Too long to read by itself: a card with an OK button, not a toast.
+    if (needsClick(message)) { this._readCard(message); return; }
+
     if (newest && newest.message === message) {
       newest.repeat += 1;
       newest.countEl.textContent = `×${newest.repeat}`;
       newest.countEl.hidden = false;
       clearTimeout(newest.timer);
-      newest.timer = setTimeout(() => this._dismissToast(newest), this._toastLife(message, opts.ms));
+      newest.timer = setTimeout(() => this._dismissToast(newest), readLife(message, opts.ms));
       return;
     }
 
+    const kind = ['good', 'warn'].includes(opts.kind) ? opts.kind : 'info';
     const node = el('div', `sp-toast is-${kind}`);
     node.appendChild(el('span', null, message));
     const countEl = el('span', 'sp-toast__count', '');
@@ -347,30 +374,80 @@ export class Hud {
     node.appendChild(countEl);
 
     const entry = { node, countEl, message, repeat: 1, timer: 0 };
-    entry.timer = setTimeout(() => this._dismissToast(entry), this._toastLife(message, opts.ms));
+    entry.timer = setTimeout(() => this._dismissToast(entry), readLife(message, opts.ms));
     this._toasts.push(entry);
     this._toastLayer.appendChild(node);
-    while (this._toasts.length > MAX_VISIBLE_TOASTS) this._dismissToast(this._toasts[0]);
   }
 
-  _toastLife(message, ms) {
-    if (Number.isFinite(ms) && ms > 0) return Math.max(TOAST_FLOOR_MS, ms * 1.6);
-    return Math.min(TOAST_MAX_MS, TOAST_MIN_MS + message.length * TOAST_PER_CHAR_MS);
+  /**
+   * A card with an OK button for text too long to read by itself (needsClick).
+   * The game pauses under it (ui-modal, from the shared host) until she clicks
+   * OK, or presses Enter, Space or Escape. It takes its turn in modalQueue.js
+   * like every other card, and holds the toasts behind it (_readPending).
+   * @param {string} text
+   * @param {string} [title]
+   */
+  _readCard(text, title = '') {
+    this._readPending += 1;
+    inModalTurn(() => this._waitForHost().then(() => new Promise((resolve) => {
+      const host = this._modalHost;
+      let closed = false;
+      const finish = () => {
+        if (closed) return;
+        closed = true;
+        host.backdrop.removeEventListener('keydown', onKey);
+        host.close();
+        this._readPending -= 1;
+        this._releaseToasts();
+        resolve();
+      };
+      const onKey = (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); finish(); }
+      };
+      host.open((root) => {
+        if (title) root.appendChild(el('h3', 'sp-modal__title', title));
+        root.appendChild(el('p', 'sp-modal__body', text));
+        const actions = el('div', 'sp-modal__actions');
+        const ok = el('button', 'sp-btn', 'OK');
+        ok.type = 'button';
+        ok.addEventListener('click', finish);
+        actions.appendChild(ok);
+        root.appendChild(actions);
+        host.backdrop.addEventListener('keydown', onKey);
+        setTimeout(() => { try { ok.focus(); } catch { /* detached */ } }, 0);
+      }, { onEscape: finish });
+    })));
   }
 
-  /** Show queued messages one at a time, TOAST_GAP_MS apart. */
+  /** Resolves once the shared card host is free (the pause menu can hold it). */
+  _waitForHost() {
+    return new Promise((resolve) => {
+      const tick = () => { if (this._modalHost.isOpen()) setTimeout(tick, 250); else resolve(); };
+      tick();
+    });
+  }
+
+  /** Toasts held back by a card she was reading go on once it is shut. */
+  _releaseToasts() {
+    if (this._readPending === 0 && this._toastQueue.length && !this._toastQueueTimer) this._drainToasts();
+  }
+
+  /** Show queued messages one at a time, TOAST_GAP_MS apart, as slots free up. */
   _drainToasts() {
-    const wait = Math.max(0, (this._toastNextAt || 0) - performance.now());
+    const wait = Math.max(0, this._toastNextAt - performance.now());
     this._toastQueueTimer = setTimeout(() => {
       this._toastQueueTimer = 0;
-      // Drop what's out of date: a message more than 8 s old belongs to a
-      // moment that has passed ("Coast there..." arriving in Moon orbit).
-      this._toastQueue = (this._toastQueue || []).filter((q) => performance.now() - q.at < 8000);
-      if (this._focus && this._toastQueue.every((q) => q.opts?.kind !== 'warn')) return; // setFocus(false) drains
-      const next = this._toastQueue.shift();
-      if (!next) return;
-      this._toastNextAt = 0;
-      this.toast(next.text, next.opts);
+      // A card or a dismissed toast calls this again when it can go on.
+      if (this._readPending || this._toasts.length >= MAX_VISIBLE_TOASTS) return;
+      // Drop what's out of date: a message this old belongs to a moment that
+      // has passed ("Coast there..." arriving in Moon orbit).
+      const now = performance.now();
+      this._toastQueue = this._toastQueue.filter((q) => now - q.at < TOAST_STALE_MS);
+      // While she has to act only warnings get through (setFocus(false) drains again).
+      const i = this._toastQueue.findIndex((q) => !this._focus || q.opts?.kind === 'warn');
+      if (i < 0) return;
+      const [next] = this._toastQueue.splice(i, 1);
+      this._show(next.text, next.opts);
       if (this._toastQueue.length) this._drainToasts();
     }, wait);
   }
@@ -380,7 +457,7 @@ export class Hud {
     if (this._focus === !!on) return;
     this._focus = !!on;
     this.root.classList.toggle('is-focus', this._focus);
-    if (!this._focus && this._toastQueue?.length && !this._toastQueueTimer) this._drainToasts();
+    if (!this._focus) this._releaseToasts();
   }
 
   _dismissToast(entry) {
@@ -390,6 +467,8 @@ export class Hud {
     clearTimeout(entry.timer);
     entry.node.classList.add('is-out');
     setTimeout(() => entry.node.remove(), 220);
+    // A slot is free: the next waiting message may go.
+    this._releaseToasts();
   }
 
   // --- contract: blocking overlays --------------------------------------

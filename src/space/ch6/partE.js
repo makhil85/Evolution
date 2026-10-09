@@ -83,7 +83,7 @@ export function partESteps(game) {
       async enter() {
         const saved = loadRoute();
         const plan = saved.plan && routeById(saved.plan.route) ? saved.plan : fastestRoute(FUELS[1]);
-        if (!routeById(plan.route).stops.length) hud.toast(t(`Straight out: all ${plan.fuel} t burned at once.`, 'Burn all the fuel!'), { kind: 'info', ms: 3200 });
+        if (!routeById(plan.route).stops.length) hud.toast(t(`Straight out: all ${plan.fuel} t burned at once.`, 'Burn all the fuel!'), { kind: 'info' });
         const res = await playSlingshots({ bus: game.bus, plan });
         saveRoute({ flight: { speed: res.speed, legs: res.legs.map((l) => ({ id: l.id, kept: l.kept })) } });
         game.stats = { ...(game.stats || {}), slingSpeed: res.speed };

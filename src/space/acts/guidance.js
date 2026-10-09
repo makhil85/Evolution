@@ -23,10 +23,10 @@ export function createRadiationGuard(game) {
         });
         if (id === 'radiationShield') {
           applyUpgrade(game, id);
-          game.hud.toast(t('Radiation Shield built! You can fly in safely now.', 'Radiation Shield built! Now you are safe.'), { kind: 'good', ms: 3800 });
+          game.hud.toast(t('Radiation Shield built! You can fly in safely now.', 'Radiation Shield built! Now you are safe.'), { kind: 'good' });
         }
       } else {
-        game.hud.toast(t('You need more metal and ice for a Radiation Shield. Head back to the belt to mine some.', 'You need more metal and ice for a Radiation Shield. Go back to the belt and grab some.'), { kind: 'warn', ms: 4800 });
+        game.hud.toast(t('You need more metal and ice for a Radiation Shield. Head back to the belt to mine some.', 'You need more metal and ice for a Radiation Shield. Go back to the belt and grab some.'), { kind: 'warn' });
       }
     } finally {
       offering = false;
@@ -65,7 +65,7 @@ export function createRadiationGuard(game) {
 
     if (!warned) {
       warned = true;
-      game.hud.toast(t('Radiation zone! Your ship was pushed back - build a Radiation Shield before flying this close to Jupiter.', 'Danger, radiation! You need a Radiation Shield to go this close.'), { kind: 'warn', ms: 4800 });
+      game.hud.toast(t('Radiation zone! Your ship was pushed back - build a Radiation Shield before flying this close to Jupiter.', 'Danger, radiation! You need a Radiation Shield to go this close.'), { kind: 'warn' });
       offerShield();
     }
   }

@@ -295,8 +295,8 @@ export function buildRingRun(game, { level = 'easy', seed = 7 } = {}) {
     debug,
     start() {
       const L = run.level;
-      panel.tip(lvl(`Arrows steer · Space fires · get ${L.goal.ice} ice 🧊 and ${L.goal.rock} rock 🪨 · big rocks take ${L.bigHits} hits`,
-        `Arrows to steer. Space to shoot. Get ${L.goal.ice} ice and ${L.goal.rock} rock!`));
+      panel.tip(lvl(`Space fires · get ${L.goal.ice} ice 🧊 and ${L.goal.rock} rock 🪨 · big rocks take ${L.bigHits} hits`,
+        `Space to shoot. Get ${L.goal.ice} ice and ${L.goal.rock} rock!`));
       return done;
     },
     tick,

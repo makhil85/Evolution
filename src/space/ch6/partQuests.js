@@ -44,12 +44,12 @@ export function partQuestsSteps(game) {
             // The question first, then the quest counts as done: two missed
             // tries restart the act, and then she redoes this quest too. On
             // foot a short pause with a toast, so she knows it is coming.
-            hud.toast(t('Mission Control has a question...', 'A question is coming!'), { kind: 'info', ms: 1400 });
+            hud.toast(t('Mission Control has a question...', 'A question is coming!'), { kind: 'info' });
             await game.missions.ask(QUEST_BEAT[id], { calm: WALK_CALM_S });
             done.add(id); saveDone([...done]);
           },
         }));
-        hud.toast(t('The crew is looked after. The ship is a good home!', 'The crew is well. A good ship!'), { kind: 'good', ms: 4200 });
+        hud.toast(t('The crew is looked after. The ship is a good home!', 'The crew is well. A good ship!'), { kind: 'good' });
       },
     },
   ];
