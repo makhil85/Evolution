@@ -13,7 +13,7 @@ export function partASteps(game) {
     {
       id: 'c6_meet_crew', act: 1,
       title: t('Meet the crew', 'Meet the crew'),
-      objective: t('The supply ship from Earth has docked at the rock ship. Say hello to the crew who will fly with you.', 'Say hello to your new crew!'),
+      objective: t('The supply ship from Earth has docked at the ship for the stars. Say hello to the crew who will fly with you.', 'Say hello to your new crew!'),
       markers: [],
       async enter() {
         await playCh6Opening(game); // the supply ship docks
