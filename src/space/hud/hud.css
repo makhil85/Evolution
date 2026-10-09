@@ -711,6 +711,17 @@
   filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.45));
 }
 .sp-hud .sp-minimap__canvas { display: block; }
+/* Touch screens only (main.js adds it): the small map's tap hint. */
+.sp-hud .sp-btn.sp-btn--wait { position: relative; overflow: hidden; opacity: 0.5; }
+.sp-hud .sp-btn__fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: rgba(255, 255, 255, 0.3); animation: sp-btn-fill 5s linear forwards; pointer-events: none; }
+@keyframes sp-btn-fill { from { width: 0; } to { width: 100%; } }
+.sp-hud .sp-minimap__hint {
+  text-align: center;
+  font-size: calc(9.5px * var(--hud-scale));
+  color: var(--sp-muted);
+  margin-top: 2px;
+  opacity: 0.8;
+}
 .sp-hud .sp-minimap:hover .sp-minimap__canvas { outline: 2px solid var(--sp-accent-soft); outline-offset: -6px; border-radius: 50%; }
 .sp-hud .sp-minimap.is-hidden,
 .sp-hud .sp-minimap.is-off { display: none; }

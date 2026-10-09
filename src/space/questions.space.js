@@ -62,7 +62,7 @@ const LEVEL4_SPACE_QUESTIONS = {
       'A wing makes lift by deflecting air downward. No air, no lift. The tempting wrong answer is “no gravity”, but gravity is almost as strong in low orbit as on the ground.',
     success:
       'Right! A wing is an air-pusher. Out here there is nothing to push, so the ship turns with small puffs of gas from its thrusters instead.',
-    doneMessage: 'Thrusters online. Tap ← and → (or A and D) to feel the little puffs turn the ship.',
+    doneMessage: 'Thrusters online. Turn left and right to feel the little puffs turn the ship.',
     reward: { science: 10 },
   },
 
@@ -218,7 +218,7 @@ const LEVEL4_SPACE_QUESTIONS = {
     parentHint:
       'A prograde burn raises the opposite side of the orbit (the apoapsis). The burn point stays at the same height, because she is already there.',
     success: 'Exactly! Pushing forward lifts the far side of the orbit. Push enough, and the far side reaches the Moon.',
-    doneMessage: 'Plan your burn so the far side of your orbit touches the Moon’s path. Press M to see the map.',
+    doneMessage: 'Plan your burn so the far side of your orbit touches the Moon’s path. Click the small map to see it big.',
     reward: { science: 15 },
   },
 
@@ -389,7 +389,7 @@ const LEVEL4_SPACE_QUESTIONS = {
     success:
       'Yes! The Moon’s pull is only about 1/6 of Earth’s. To get away from Earth you need about 11 km/s; from the Moon only about 2.4 km/s. ' +
       'So leaving the Moon takes only about 1/20 of the energy. That’s why a small engine was enough!',
-    doneMessage: 'Next stop: Mars! Use time warp (keys 1 to 4) while you’re far from everything.',
+    doneMessage: 'Next stop: Mars! Use the time-warp buttons while you’re far from everything.',
     reward: { science: 20 },
   },
 
@@ -898,7 +898,7 @@ export const LEVEL1_SPACE_QUESTIONS = {
     parentHint:
       'Wings need air to push against; gravity doesn’t need air at all. The tempting “it floats” mixes up “no air” with “no gravity”.',
     success: 'Right! No air, no gliding. So in space the ship folds its wings. It turns with little puffs of gas.',
-    doneMessage: 'Press ← and → to turn the ship.',
+    doneMessage: 'Turn left and right to turn the ship.',
   },
 
   zero_g: {
@@ -1076,7 +1076,7 @@ export const LEVEL1_SPACE_QUESTIONS = {
     hint: 'Remember how high you jumped on the Moon. Is the Moon’s pull big or small?',
     parentHint: 'The Moon’s gravity is about 1/6 of Earth’s, so leaving it takes only about 1/20 of the energy.',
     success: 'Yes! The Moon pulls only about 1/6 as hard as Earth. So leaving it takes much, much less fuel: about 1/20!',
-    doneMessage: 'On your way to Mars! Keys 1 to 4 make time go fast.',
+    doneMessage: 'On your way to Mars! The time-warp buttons make time go fast.',
   },
 
   mars_day: {

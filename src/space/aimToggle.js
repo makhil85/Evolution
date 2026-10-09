@@ -28,15 +28,15 @@ export function createAimToggle(game) {
     btn.classList.toggle('is-manual', game.manualAim);
     btn.classList.toggle('is-steering', !game.manualAim && steering);
     paintToggle(btn, 'T', 'Auto-turn', game.manualAim ? 'off' : steering ? 'warn' : 'on', game.manualAim
-      ? 'Auto-turn is off: you steer with ← and → (or A and D). T to let the ship turn itself'
-      : steering ? 'You are steering (← / →) - let go and the ship turns itself again' : 'Auto-turn is on: the ship turns itself. T to steer yourself');
+      ? 'Auto-turn is off: you steer the ship yourself. Click to let it turn itself'
+      : steering ? 'You are steering - let go and the ship turns itself again' : 'Auto-turn is on: the ship turns itself. Click to steer yourself');
   }
   function toggle() {
     game.manualAim = !game.manualAim;
     paint();
     game.hud?.toast?.(game.manualAim
-      ? 'You steer now: ← and → (or A and D) turn the ship. Press T to let it turn itself again.'
-      : 'The ship turns itself again.', { kind: 'info', ms: 3200 });
+      ? 'You steer now: turn left and right to turn the ship. Click the button to let it turn itself again.'
+      : 'The ship turns itself again.', { kind: 'info' });
   }
   btn.addEventListener('click', () => { btn.blur(); toggle(); });
   addEventListener('keydown', (e) => {
