@@ -180,6 +180,31 @@ await (async () => {
   });
 })();
 
+// The truss is green from the first frame it shows (the 'open' shot), not the
+// black of unpainted vertex colours: paint() only runs in the 'truss' shot.
+await (async () => {
+  const ctx = stubCtx();
+  let seenFirst = false;
+  const run = async (secs, step) => {
+    if (!seenFirst) {
+      seenFirst = true;
+      // The film's stage is the scene's first child; the room (LIT meshes) is not in it.
+      const meshes = ctx.scene.children[0].children.filter((c) => c.isMesh && c.material.vertexColors);
+      ok('ending: the truss has vertex colours painted green before the first shot', () => {
+        assert.ok(meshes.length >= 1, 'no vertex-coloured mesh in the stage');
+        const rest = new THREE.Color(0x2fa84f).toArray();
+        for (const m of meshes) {
+          const c = m.geometry.attributes.color.array;
+          assert.ok(c.length > 0, 'empty colour attribute');
+          for (let i = 0; i < c.length; i++) assert.ok(Math.abs(c[i] - rest[i % 3]) < 1e-6, `component ${i} is ${c[i]}`);
+        }
+      });
+    }
+    await stubRun([])(secs, step);
+  };
+  await playEnding({ run, ...ctx });
+})();
+
 // Reduced motion: the same shots, held still. It must not throw or hang.
 await (async () => {
   globalThis.matchMedia = () => ({ matches: true });

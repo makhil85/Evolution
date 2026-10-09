@@ -215,6 +215,7 @@ function buildTruss() {
   const geo = mergeGeometries(geos, false);
   geos.forEach((g) => g.dispose());
   const colors = new Float32Array(geo.attributes.position.count * 3);
+  for (let i = 0; i < colors.length; i += 3) REST.toArray(colors, i);   // green until the cart paints it
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   const mesh = new THREE.Mesh(geo, new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: toonRamp }));
   const perMember = geos[0].attributes.position.count;   // 24 vertices per box
