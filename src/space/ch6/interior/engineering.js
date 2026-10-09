@@ -20,6 +20,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { toonRamp } from '../../../game/toonPipeline.js';
 import { PALETTE } from './kit.js';
+import { roofAt } from './walkmap.js';
 
 // The kit pieces this deck uses (models.js names; loaded before the deck is built).
 export const MODELS = [
@@ -163,6 +164,8 @@ export function buildDeck(kit) {
   // The hall: a rounded near end (discs at its corners) and a square far end.
   const hall = [{ rect: [0, 15.5, 16, 15] }, { rect: [0, 6.5, 10, 3] }, { disc: [5, 8, 3] }, { disc: [-5, 8, 3] }];
   const cargo = { rect: [0, 30, 14, 14] };
+  // The roof over each room: the corridor is low (3.2), the hall high (7), the bay in between (5).
+  const roofs = [{ shape: corridor, h: CORR_H }, ...hall.map((s) => ({ shape: s, h: HALL_H })), { shape: cargo, h: CARGO_H }];
   for (const s of [corridor, ...hall, cargo]) kit.floor(b, s, { mat: mats.deck });
   kit.ceiling(b, corridor, CORR_H);
   for (const s of hall) kit.ceiling(b, s, HALL_H);
@@ -496,7 +499,7 @@ export function buildDeck(kit) {
     group,
     floors,
     solids,
-    ceiling: HALL_H,
+    ceiling: HALL_H, ceilingAt: (x, z) => roofAt(roofs, x, z, HALL_H),
     stations,
     crewSpots,
     views,

@@ -74,6 +74,15 @@ ok('timing: a perfect press keeps all; inside the window at least 70%; a miss ke
   for (let e = 0; e <= 3; e += 0.05) { const k = R.keptFraction(e); assert.ok(k <= prev + 1e-12); prev = k; assert.equal(R.keptFraction(-e), k); }
   for (let c = 2; c <= CLOSE_LEVELS; c++) assert.ok(R.windowFor(c) < R.windowFor(c - 1), 'closer = narrower window');
 });
+ok('the flying mode sets the window: Easy wider than Medium, Hard narrower; an unknown mode is Medium', () => {
+  for (let c = 1; c <= CLOSE_LEVELS; c++) {
+    assert.ok(R.windowFor(c, 'easy') > R.windowFor(c, 'medium'), `easy ${c}`);
+    assert.ok(R.windowFor(c, 'hard') < R.windowFor(c, 'medium'), `hard ${c}`);
+    assert.equal(R.windowFor(c), R.windowFor(c, 'medium'));
+    assert.equal(R.windowFor(c, 'nope'), R.windowFor(c, 'medium'));
+  }
+  assert.ok(R.windowFor(CLOSE_LEVELS, 'hard') > 0.2, 'Hard still gives a window she can press');
+});
 ok('the flight: perfect presses fly the plan; misses never leave her faster', () => {
   for (const id of ['jsun', 'sun']) {
     const plan = R.bestPlan(id, FUELS[1]);
