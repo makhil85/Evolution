@@ -8,7 +8,7 @@
 - **Subagents: Haiku 5.5 at high effort** (`claude-haiku-5-5`; lead,
   2026-10-08; replaces the Opus-medium rule). Makers and critics both. Spawn
   them as `subagent_type: "haiku-high"` (`.claude/agents/haiku-high.md`).
-- **5 subagents at a time** (lead). Each gets only the context it needs: its
+- **Up to 10 subagents at a time** (lead, 2026-10-09; was 5). Each gets only the context it needs: its
   task, the files it owns, the metric. Loop: maker -> critic -> one fix round.
 - Keep each PR small enough to finish inside one session.
 

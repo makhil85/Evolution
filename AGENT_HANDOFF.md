@@ -243,7 +243,7 @@ Ch1-3 keys in each `contracts.js` / `quests.js`.
   (subscribe) and keep them conflict-free (several PRs append to
   `HANDOFF.md`: merge `main` in and keep both sections).
 - Subagents (lead, 10-08): `subagent_type: "haiku-high"` makers AND critics,
-  **5 at a time**, the coordinator (main session) writes the plan and the
+  **up to 10 at a time** (lead 10-09), the coordinator (main session) writes the plan and the
   metric. Loop: maker -> critic (checks against the plan's metrics) -> one fix
   round (send it back to the same maker with SendMessage) -> coordinator
   commits and opens the PR. Give each agent only its task, the files it owns
