@@ -116,11 +116,12 @@ export function preloadInterior({ style } = {}) {
 
 /**
  * @param {object} game
- * @param {{ spots?: object[], order?: string[], done?: string[], onStation: (id:string) => Promise<any>, startDeck?: string, models?: object }} opts
+ * @param {{ spots?: object[], order?: string[], done?: string[], onStation: (id:string) => Promise<any>, startDeck?: string, models?: object, gait?: 'earth'|'lope' }} opts
  *   spots: what to visit (default the six stations; the quests pass theirs)
  *   models: the result of preloadInterior() (a deck without models falls back to its own code-built parts)
+ *   gait: 'earth' (default, Chapter 6's spin weight) or 'lope' (the Moon's floaty step, Chapter 7's low push)
  */
-export function createInteriorScene(game, { spots = STATIONS, order = spots.map((s) => s.id), done: doneAlready = [], onStation, startDeck = START_DECK, models = null }) {
+export function createInteriorScene(game, { spots = STATIONS, order = spots.map((s) => s.id), done: doneAlready = [], onStation, startDeck = START_DECK, models = null, gait = 'earth' }) {
   const renderer = game.renderer;
   const hud = game.hud || null;
   const scene = new THREE.Scene();
@@ -183,7 +184,9 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
   beacon.add(beaconRing, beaconArrow);
 
   // Her.
-  const walker = createWalker({ gravity: 9.8 * 0.6, gait: 'earth' });
+  // 'lope' (the gentle push's walk) is the Moon's floaty hop: a look, not the push. The pull she feels in the
+  // ship is 1/100 of Earth's (0.098 m/s²); the 1.6 here only sets the hop's timing. Chapter 6 keeps its spin weight.
+  const walker = createWalker({ gravity: gait === 'earth' ? 9.8 * 0.6 : 1.6, gait });
   walker.helmet.visible = false;
   if (walker.pack) walker.pack.visible = false;
   walker.root.traverse((o) => { if (o.isMesh && o.geometry?.type === 'TorusGeometry') o.visible = false; });
