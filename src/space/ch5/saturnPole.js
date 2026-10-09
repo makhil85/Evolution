@@ -200,7 +200,7 @@ export function playPolePass(game) {
       const w = ease(t / 2) * (1 - ease((t - 11) / 2));
       blendCamera(camera, camPos, look, w);
       if (t > 0.6 && !overlay._titled) { overlay._titled = true; overlay.showTitle(); }
-      if (t > 3.6 && !overlay._untitled) { overlay._untitled = true; overlay.hideTitle(); }
+      if (t > 0.6 + overlay.readS && !overlay._untitled) { overlay._untitled = true; overlay.hideTitle(); }
       if (t >= DURATION) { game.cinematic = null; finish(); }
     },
   };

@@ -164,7 +164,7 @@ export function playCh5Opening(game) {
       geo.setDrawRange(0, pts.length);
 
       if (t > 1.2 && !overlay._titled) { overlay._titled = true; overlay.showTitle(); }
-      if (t > 8.5 && !overlay._untitled) { overlay._untitled = true; overlay.hideTitle(); }
+      if (t > 1.2 + overlay.readS && !overlay._untitled) { overlay._untitled = true; overlay.hideTitle(); }
       if (t > T_FREE + 0.5 && !overlay._unbarred) { overlay._unbarred = true; overlay.bars(false); document.body.classList.remove('in-cinematic'); }
       if (t >= DURATION) { game.cinematic = null; finish(); }
     },
