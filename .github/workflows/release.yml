@@ -1,0 +1,39 @@
+# Builds the playable zip and attaches it to a GitHub Release when you push a
+# version tag (for example: git tag v1.1 && git push origin v1.1).
+# Players download Evolution.zip from the Releases page, unzip it and
+# double-click PLAY.bat (Windows) or play.command (Mac). They need Node.js.
+name: Release playable zip
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Version tag to release (e.g. v1.1)'
+        required: true
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run package
+      - name: Create the release with Evolution.zip
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" release/Evolution.zip --clobber
+          else
+            gh release create "$TAG" release/Evolution.zip \
+              --title "Evolution $TAG" \
+              --notes "Download Evolution.zip, unzip it, then double-click PLAY.bat (Windows) or play.command (Mac). Needs Node.js (free from nodejs.org). Or play online: https://makhil85.github.io/Evolution/" \
+              --target "$GITHUB_SHA"
+          fi
