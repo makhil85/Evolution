@@ -54,7 +54,7 @@ const DECIDE_S = 0.25; // a bot (or a child) acts about four times a second
 
 export const MODES = Object.freeze({
   easy: Object.freeze({ id: 'easy', label: ['Easy', 'Easy'], drift: 0.3, handles: 8, blocks: 1, parts: 3, throws: Infinity, time: 150, hint: true }),
-  medium: Object.freeze({ id: 'medium', label: ['Medium', 'Medium'], drift: 0.6, handles: 5, blocks: 2, parts: 3, throws: Infinity, time: 120, hint: false }),
+  medium: Object.freeze({ id: 'medium', label: ['Medium', 'Medium'], drift: 0.6, handles: 5, blocks: 2, parts: 3, throws: Infinity, time: 150, hint: false }),
   hard: Object.freeze({ id: 'hard', label: ['Hard', 'Hard'], drift: 0.9, handles: 3, blocks: 3, parts: 3, throws: 3, time: 100, hint: false }),
 });
 
@@ -209,7 +209,7 @@ export function throwTool(s, kind, to) {
   const dv = throwGain(kind);
   s.vel = { x: (s.stuck ? 0 : s.vel.x) + dv * u.x, y: (s.stuck ? 0 : s.vel.y) + dv * u.y };
   leaveHandle(s); s.throws -= 1; s.shots += 1;
-  s.callout = { kind, at: s.t }; // the card shows the two arrows and the sum for a few seconds
+  s.callout = { kind, at: s.t, dir: { x: u.x, y: u.y } }; // the card shows the two arrows (the direction is kept from the throw) and the sum for a few seconds
   s.note = `Threw the ${T.name[1].toLowerCase()}. It goes the other way, and so do you.`;
   return true;
 }

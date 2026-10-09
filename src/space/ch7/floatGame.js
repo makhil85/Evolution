@@ -56,8 +56,7 @@ function drawCallout(ctx, s, hx, hy) {
   const c = s.callout;
   if (!c || s.t < c.at || s.t - c.at > 4) return;
   const T = TOOLS[c.kind];
-  const sp = Math.hypot(s.vel.x, s.vel.y);
-  const u = sp > 1e-6 ? { x: s.vel.x / sp, y: s.vel.y / sp } : { x: 1, y: 0 };
+  const u = c.dir; // the direction she was sent in, from the throw
   ctx.save();
   ctx.globalAlpha = Math.min(1, 4 - (s.t - c.at));
   const toolLen = 60 + 25 * T.speed; // the tool: its speed
@@ -68,6 +67,7 @@ function drawCallout(ctx, s, hx, hy) {
   label(ctx, 'Zara', hx + u.x * (herLen + 26), hy + u.y * (herLen + 26), { size: 14, color: '#7fd3ff', halo: 'rgba(0,0,0,0.7)' });
   rect(ctx, 150, 16, 500, 36, 'rgba(5,6,10,0.8)', 10);
   label(ctx, t(throwSum(c.kind), 'Throw one way, float the other way!'), 400, 34, { size: 20, color: '#ffffff', halo: null });
+  label(ctx, t('Arrows not to scale', 'Arrows are not to scale'), 400, 62, { size: 13, color: '#cfe8ff', halo: 'rgba(0,0,0,0.7)' });
   ctx.restore();
 }
 

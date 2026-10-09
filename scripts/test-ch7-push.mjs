@@ -204,7 +204,7 @@ ok('createInteriorScene takes a gait (default earth: Chapter 6 unchanged); lope 
 console.log('the Part B question bank');
 const f1 = fallSeconds(PUSH.gentle).toFixed(1); const f2 = fallSeconds(PUSH.full).toFixed(2);
 ok('every Part B question has a Level 4 entry, one right answer of three, and a beat', () => {
-  assert.equal(Object.keys(CH7B_QUESTIONS).length, 5);
+  assert.equal(Object.keys(CH7B_QUESTIONS).length, 4);
   for (const [id, q] of Object.entries(CH7B_QUESTIONS)) {
     assert.equal(q.id, id);
     assert.equal(q.choices.length, 3, `${id}: 3 choices`);
@@ -244,25 +244,25 @@ ok('the full push question: 10 times quicker (4.5 s over 0.45 s), at both Levels
   assert.ok(q.parentHint.includes(`${f1} ÷ ${f2} = 10`));
   assert.ok(q.success.includes('10 times quicker'));
   const o = CH7B_LEVEL1.c7b_full_drop;
-  assert.ok(o.choices.some((c) => c.correct && c.text === 'about 2 times'));
-  assert.ok(o.parentHint.includes('√4 = 2'));
+  assert.ok(o.choices.some((c) => c.correct && c.text === 'about half a second'), 'Level 1: half a second');
+  assert.ok(o.prompt.includes(`${Math.round(fallSeconds(PUSH.gentle))} seconds`), 'Level 1 prompt uses the card’s about-5 seconds');
+  assert.ok(o.parentHint.includes(`${Math.round(fallSeconds(PUSH.gentle))} seconds ÷ 10`));
 });
-ok('the throw question: a wrench (3 kg × 2 m/s) gives her 0.2 m/s, a spanner (6 kg × 2 m/s) 0.4 m/s', () => {
+ok('the throw question: the heavier spanner (6 kg) pushes harder than the wrench (3 kg) at the same speed', () => {
   const q = CH7B_QUESTIONS.c7b_float_throw;
-  assert.ok(q.parentHint.includes('3 kg × 2 m/s = 6 kg m/s') && q.parentHint.includes('0.2 m/s'));
-  assert.ok(q.parentHint.includes('6 kg × 2 m/s') && q.parentHint.includes('0.4 m/s'));
-  assert.ok(q.choices.some((c) => c.correct && c.text.startsWith('Forwards')));
+  assert.ok(q.parentHint.includes("6 kg m/s (3 kg × 2 m/s)") && q.parentHint.includes('0.2 m/s'));
+  assert.ok(q.parentHint.includes('12 kg m/s') && q.parentHint.includes('0.4 m/s'));
+  assert.ok(q.prompt.includes('6 kg spanner') && q.prompt.includes('3 kg wrench'));
+  assert.ok(q.choices.some((c) => c.correct && c.text === 'The spanner: it is heavier'));
+  assert.ok(CH7B_LEVEL1.c7b_float_throw.choices.some((c) => c.correct && c.text === 'The big spanner'), 'Level 1: the big spanner');
 });
 ok('the sum question: Zara (30 kg) and a 3 kg wrench at 2 m/s: 0.2 m/s the other way', () => {
   const q = CH7B_QUESTIONS.c7b_throw_sum;
   assert.ok(q.prompt.includes('30 kg') && q.prompt.includes('3 kg') && q.prompt.includes('2 m/s'));
   assert.ok(q.choices.some((c) => c.correct && c.text === '0.2 m/s'));
   assert.ok(q.parentHint.includes('6 kg m/s ÷ 30 kg = 0.2 m/s'));
-  assert.ok(CH7B_LEVEL1.c7b_throw_sum.choices.some((c) => c.correct && c.text === 'Backwards'), 'Level 1: backwards');
-});
-ok('the speeding-up question: pressed back into the seat', () => {
-  const q = CH7B_QUESTIONS.c7b_speed_press;
-  assert.ok(q.choices.some((c) => c.correct && c.text === 'Back, into your seat'));
+  assert.ok(CH7B_LEVEL1.c7b_throw_sum.choices.some((c) => c.correct && c.text === 'Faster'), 'Level 1: the big spanner floats you faster');
+  assert.ok(!CH7B_QUESTIONS.c7b_speed_press && !CH7B_LEVEL1.c7b_speed_press, 'the speeding-up question is gone (lesson 7A has it)');
 });
 
 console.log('the Part B steps');
@@ -279,7 +279,7 @@ try {
     assert.equal(new Set(steps.map((s) => s.id)).size, steps.length);
   });
   ok('Part B: each question beat the steps ask is in the bank at both Levels', () => {
-    for (const beat of ['c7bGentleDrop', 'c7bSpeedPress', 'c7bFloatThrow', 'c7bFullDrop']) {
+    for (const beat of ['c7bGentleDrop', 'c7bFloatThrow', 'c7bThrowSum', 'c7bFullDrop']) {
       assert.ok(Object.values(bank4).some((q) => q.beat === beat), `Level 4: ${beat}`);
       assert.ok(Object.values(bank1).some((q) => q.beat === beat), `Level 1: ${beat}`);
     }

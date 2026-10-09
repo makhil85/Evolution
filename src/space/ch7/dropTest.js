@@ -73,7 +73,7 @@ function drawBay(ctx, { push, y, time }) {
   ctx.fillText('1 m', x0 - 16, (top + FLOOR_Y) / 2);
   // the push: an arrow under the floor, pointing up (the floor comes up to meet the ball)
   if (push !== 'off') {
-    const len = push === 'full' ? 120 : 46; const yb = FLOOR_Y + 60;
+    const len = push === 'full' ? 50 : 20; const yb = FLOOR_Y + 62; // under the floor line, so it never crosses it
     ctx.fillStyle = '#ff7a3d'; ctx.strokeStyle = '#ff7a3d'; ctx.lineWidth = 10; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(400, yb); ctx.lineTo(400, yb - len); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(400, yb - len - 6); ctx.lineTo(386, yb - len + 12); ctx.lineTo(414, yb - len + 12); ctx.closePath(); ctx.fill();

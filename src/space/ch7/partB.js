@@ -2,9 +2,10 @@
 // accelerating?"). Four steps in the ship, each with a question after it:
 //   1. Gentle push: a floaty walk (the Moon's step, createInteriorScene gait
 //      'lope') to the cargo bay, and the drop test (dropTest.js).
-//   2. Lesson 7A (how do you know you are speeding up?), then its question.
+//   2. Lesson 7A (how do you know you are speeding up?); its films carry the questions.
 //   3. Engine check: the drive goes off, zero g. The float game (floatGame.js)
-//      in the engine room, then its question.
+//      in the engine room, then its questions. She walks there on magnetic boots
+//      (the normal walk), as the dialogue says.
 //   4. Full push: back to the cargo bay (a normal walk) and the drop test again.
 // Each step is self-contained (a reload straight into one works): the walks
 // have a single spot, so there is no inner progress to save.
@@ -18,7 +19,7 @@ import { playFloatGame } from './floatGame.js';
 
 const WALK_CALM_S = 1.5; // the pause before a question asked on foot (as in Chapter 6)
 // The question beats (questions.partB.js); each is asked once its task is done.
-const BEAT = { gentle: 'c7bGentleDrop', float: 'c7bFloatThrow', sum: 'c7bThrowSum', full: 'c7bFullDrop', speed: 'c7bSpeedPress' };
+const BEAT = { gentle: 'c7bGentleDrop', float: 'c7bFloatThrow', sum: 'c7bThrowSum', full: 'c7bFullDrop' };
 // The spots: the cargo bay's place (pack) and the engine's (energy), on the engineering deck, led by Bolt.
 const DROP_GENTLE = { id: 'c7_drop', deck: 'engineering', near: 'pack', lead: 'builder', title: ['Drop the ball in the cargo bay', 'Drop the ball!'] };
 const ENGINE = { id: 'c7_engine', deck: 'engineering', near: 'energy', lead: 'builder', title: ['Engine check: float to the hatch', 'Float to the hatch!'] };
@@ -63,7 +64,6 @@ export function partBSteps(game) {
           { who: who('signal'), text: t('Watch closely. The ball and the floor will give it away.', 'Watch the ball and the floor!') },
         ]);
         await lessonOnce(LESSON_7A, { bus: game.bus });
-        await game.missions.ask(BEAT.speed);
       },
     },
     {
@@ -74,13 +74,15 @@ export function partBSteps(game) {
       async enter() {
         await hud.showDialogue([
           { who: who('builder'), text: t('Engine check! The drive goes OFF. No push, so we just drift on in a straight line.', 'Engine check! The drive goes OFF. We drift!') },
+          { who: who('builder'), text: t('Magnetic boots keep our feet on the floor, so we can still walk to the engine.', 'Magnetic boots: our feet stay on the floor.') },
           { who: 'girl', text: t('Then how do we move?', 'How do we move?') },
           { who: who('signal'), text: t('Remember the two ice chunks in Saturn’s rings? The small one shot off fast, and the big one moved slowly. You are the big one now, and the wrench is the small one.', 'Remember Saturn’s ice? The small chunk shot off fast. You are the big one, and the wrench is the small one!') },
           { who: who('builder'), text: t('A rocket does the same with its gas: the gas goes out the back, and the rocket goes forwards. Throw the wrench one way, and you float the other way.', 'Throw one way, and you float the other way!') },
+          { who: who('signal'), text: t('Remember the balloon in Chapter 3? Air goes back, and the balloon goes forward. Your wrench is the air.', 'Remember the balloon? Air goes back, the balloon goes forward!') },
         ]);
         const models = await preloadInterior();
         await game.runScene(createInteriorScene(game, {
-          models, gait: 'lope', spots: [ENGINE],
+          models, spots: [ENGINE],
           async onStation() {
             await playFloatGame({ bus: game.bus });
             hud.toast(t('Mission Control has a question...', 'A question is coming!'), { kind: 'info', ms: 1400 });
