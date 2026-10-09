@@ -16,7 +16,7 @@
 // motion holds each shot still at its middle. No sound (parked).
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { Mesher, makeGear, makeLabel, LIT, GLOW } from './worldKit.js';
+import { Mesher, makeGear, LIT, GLOW } from './worldKit.js';
 import { toonRamp, outlineMaterial } from '../game/toonPipeline.js';
 import { t as pick } from '../space/level.js';
 import { tileToWorld, TILE } from './contracts.js';
@@ -322,8 +322,8 @@ export async function playOpening({ run, scene, camera, newtonAt, chasePose, mar
   stage.add(cart, wheel.group, wheel.gear2, apple);
   const here = chasePose();
   const views = {
-    // A wide establishing shot high over the west edge, down the road into the city.
-    road: cam([-42.2, 20, 6.25], [-38.5, 18, 6.25], [-12, 0, 6.25], [-10, 0, 6.25]),
+    // A low, wide shot from the west edge, looking about 18 degrees down the road into the city.
+    road: cam([-42.2, 5, 6.25], [-40, 4.6, 6.25], [-26.8, 0, 6.25], [-24.5, 0, 6.25]),
     // Side-on from the south-west: the moat gap, the bridge's empty span and the stuck cart.
     bridge: cam([12.5, 4.2, 14.5], [14.5, 4.6, 13.5], [21.5, 0.6, 6.25], [23, 0.8, 6.25]),
     // Low, from the north: the wheel and its gears fill the middle of the frame.
@@ -372,10 +372,7 @@ export async function playEnding({ run, scene, camera, root, markers = () => {} 
   const cart = makeCart();
   const truss = buildTruss();
   const room = buildRoom();
-  const sign = makeLabel('Workshop open!', { icon: '⚙', height: 0.9, accent: '#8ce99a' });
-  sign.position.set(WORKSHOP.x, 6.6, WORKSHOP.z);
-  const sign0 = sign.scale.clone();
-  stage.add(cart, truss.mesh, sign);
+  stage.add(cart, truss.mesh);
   scene.add(room.group);
   const views = {
     open: cam([22.5, 8.0, 19], [40, 7.5, 12], [WORKSHOP.x, 2.2, WORKSHOP.z], [WORKSHOP.x, 2.2, WORKSHOP.z]),
@@ -389,12 +386,7 @@ export async function playEnding({ run, scene, camera, root, markers = () => {} 
     room.group.visible = inside;
   };
   const frames = {
-    open: (t, k) => {
-      aim(camera, views.open, still ? 0.5 : ease(k));
-      const pop = still ? 1 : ease(t / 0.6);                // the sign pops up, then bobs
-      sign.scale.copy(sign0).multiplyScalar(0.2 + 0.8 * pop);
-      sign.position.y = 6.6 + (still ? 0 : Math.sin(t * 2.4) * 0.08);
-    },
+    open: (t, k) => aim(camera, views.open, still ? 0.5 : ease(k)),
     truss: (t, k) => {
       const e = still ? 0.5 : ease(k);
       aim(camera, views.truss, e);

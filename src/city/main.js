@@ -245,6 +245,9 @@ function filmMarkers(on) {
   filming = on;
   world.setLabelsVisible(!on);
   world.highlight(null);
+  // The pickups (and the energy cells' yellow halos) are one group under the city root.
+  const pickupGroup = world.root.getObjectByName('pickups');
+  if (pickupGroup) pickupGroup.visible = !on;
   world.setPickupGlow(on ? false : mode.resourceGlow);
   world.setStationBeacons(on ? false : mode.targetBeacon);
   nav.setArrow(on ? false : mode.navArrow);
