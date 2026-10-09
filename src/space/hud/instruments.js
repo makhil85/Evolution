@@ -36,6 +36,13 @@ function buildBar(toneFn) {
   };
 }
 
+/** The camera's view names (camera.js modes), as the button says them. */
+const VIEW_NAMES = {
+  chase: () => t('Behind the ship', 'Behind her'),
+  orbit: () => t('Free look', 'Look round'),
+  top: () => t('Top view', 'From above'),
+};
+
 export function createInstruments(root, { onWarp, onAutoWarp } = {}) {
   // --- left column: speed, pull, solar --------------------------------
   const left = el('div', 'sp-instruments sp-instruments--left');
@@ -223,6 +230,20 @@ export function createInstruments(root, { onWarp, onAutoWarp } = {}) {
   warpPanel.appendChild(warpReason);
   left.appendChild(warpPanel);
 
+  // Camera view (lead 2026-10-09: the view button left the bottom row and sits here,
+  // in the same format as the warp). One button cycles the views the C key cycles.
+  const viewPanel = el('div', 'sp-panel sp-view-panel');
+  const viewTitle = el('div', 'sp-panel__title');
+  viewTitle.appendChild(svg(iconInner('orbit')));
+  viewTitle.appendChild(document.createTextNode(t('Camera view', 'Camera')));
+  viewPanel.appendChild(viewTitle);
+  const viewBtn = el('button', 'sp-view__btn', '');
+  viewBtn.type = 'button';
+  viewBtn.title = t('Change the camera view', 'Change how you see her');
+  // The click is wired by main.js (cameraButton): it asks for the next view.
+  viewPanel.appendChild(viewBtn);
+  left.appendChild(viewPanel);
+
   root.appendChild(left);
 
   // --- radiation banner --------------------------------------------------
@@ -378,8 +399,15 @@ export function createInstruments(root, { onWarp, onAutoWarp } = {}) {
       solarStatus.className = `sp-solar__status ${enough ? 'is-ok' : 'is-low'}`;
     }
 
+    // Camera view -----------------------------------------------------------
+    if (changed('camView', state.cameraMode)) {
+      viewBtn.textContent = (VIEW_NAMES[state.cameraMode] || VIEW_NAMES.chase)();
+    }
+
     // Time warp -----------------------------------------------------------
-    if (changed('warpUseful', state.warpUseful)) warpPanel.style.display = state.warpUseful === false ? 'none' : '';
+    // The pips stay in the column while she flies (lead 2026-10-09: warp moved
+    // here from the bottom row, where it was always there). The warp panel
+    // hides only in focus mode (hud.css).
     // Autopilot on: its speed buttons replace the pips, and the title says so.
     if (changed('apOn', state.autopilotOn)) {
       const flying = !!state.autopilotOn;
@@ -471,5 +499,17 @@ export function createInstruments(root, { onWarp, onAutoWarp } = {}) {
     solarCharge.className = `sp-gauge__charge${state === 'charging' ? ' is-charging' : ''}`;
   }
 
-  return { root, leftColumn: left, update, setOrbitInto, orbitPanel, setSolarCharge };
+  /**
+   * On foot the walk names its own view (main.js passes the name); null gives the
+   * button back to the flight view's name on the next update().
+   */
+  function setCameraLabel(text) {
+    if (text) {
+      if (viewBtn.textContent !== text) viewBtn.textContent = text;
+    } else {
+      delete last.camView;
+    }
+  }
+
+  return { root, leftColumn: left, update, setOrbitInto, orbitPanel, setSolarCharge, cameraButton: viewBtn, setCameraLabel };
 }

@@ -8,10 +8,18 @@
 // with a menu; this leaves the whole view up.
 //
 // It is not the same as a question card pausing the game: this one is hers,
-// and the only thing that lifts it is F or the button.
+// and the only thing that lifts it is the button (or F) or her steering.
+//
+// Lead (2026-10-09): Frozen is the pause, so the separate pause button went.
+// If she presses Space or a steering key while it is frozen, she carries on
+// and that key acts at once, so nothing looks broken.
 
 import { toggleBar, paintToggle } from './hud/toggleBar.js';
 import { anyCardOpen } from './hud/modalQueue.js';
+
+/** The keys that steer or fire: pressing one while frozen carries on. */
+const STEER_KEYS = new Set(['Space', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyX', 'KeyZ',
+  'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 
 /** @param {object} game  sets game.frozen; reads game.cinematic / activeScene */
 export function createFreezeButton(game) {
@@ -36,8 +44,9 @@ body.sp-is-frozen .sp-frozen-edge { display: block; }`;
   function paint() {
     btn.classList.toggle('is-frozen', game.frozen);
     document.body.classList.toggle('sp-is-frozen', game.frozen);
-    paintToggle(btn, 'F', game.frozen ? '❄ Frozen' : 'Freeze', game.frozen ? 'on' : 'off',
-      game.frozen ? 'Frozen: everything waits. F to carry on' : 'Freeze everything where it is (F)');
+    // No key letter on the button (lead 2026-10-09): the tooltip says what it does.
+    paintToggle(btn, '', game.frozen ? '❄ Frozen' : 'Freeze', game.frozen ? 'on' : 'off',
+      game.frozen ? 'Frozen: everything waits. Click to carry on, or steer' : 'Freeze everything where it is');
     btn.setAttribute('aria-pressed', String(game.frozen));
   }
   function set(v) {
@@ -45,17 +54,22 @@ body.sp-is-frozen .sp-frozen-edge { display: block; }`;
     if (game.frozen === next) return;
     game.frozen = next;
     paint();
-    game.hud?.toast?.(next
-      ? 'Frozen. Everything waits for you - press F when you want to carry on.'
-      : 'Off we go again!', { kind: 'info', ms: next ? 4000 : 2000 });
+    game.hud?.toast?.(next ? 'Frozen. Everything waits.' : 'Off we go again!', { kind: 'info', ms: next ? 4000 : 2000 });
   }
   function toggle() { set(!game.frozen); }
 
   btn.addEventListener('click', () => { btn.blur(); toggle(); });
   addEventListener('keydown', (e) => {
-    if (e.code !== 'KeyF' || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
     const t = e.target;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+    // She steers or fires while frozen: she carries on, and the key acts (the
+    // flight reads the keys it holds, so the next step moves her).
+    if (game.frozen && STEER_KEYS.has(e.code)) {
+      if (canCarryOn()) set(false);
+      return;
+    }
+    if (e.code !== 'KeyF') return;
     // A question card or the pause menu is already holding the game: let it.
     if (!canFreeze()) return;
     toggle();
@@ -68,6 +82,11 @@ body.sp-is-frozen .sp-frozen-edge { display: block; }`;
     return !game.cinematic && !game.activeScene && !game.paused
       && document.body.dataset.playModal !== '1'
       && !anyCardOpen();
+  }
+  // Carrying on by steering: a card (or the pause menu) keeps the game still, so
+  // her key must not lift the freeze under it; otherwise the same as freezing.
+  function canCarryOn() {
+    return !game.paused && document.body.dataset.playModal !== '1' && !anyCardOpen();
   }
 
   paint();

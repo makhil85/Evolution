@@ -78,6 +78,7 @@
 .sp-hud .sp-upgrade,
 .sp-hud .sp-warp__pip,
 .sp-hud .sp-warp__auto-btn,
+.sp-hud .sp-view__btn,
 .sp-hud .sp-energy__toggle,
 .sp-hud .sp-toggles > button,
 .sp-hud .sp-dialogue__next {
@@ -254,6 +255,12 @@
 .sp-hud button.sp-warp__pip:hover { border-color: var(--sp-accent); color: var(--sp-text); }
 .sp-hud button.sp-warp__pip:focus-visible { outline: 2px solid var(--sp-cool-glass); outline-offset: 1px; }
 .sp-hud .sp-warp__pip.is-active { background: var(--sp-accent-soft); border-color: var(--sp-accent); color: var(--sp-text); }
+/* The camera view button (instruments.js): one full-width button in the same format. */
+.sp-hud button.sp-view__btn { display: block; width: 100%; height: 26px; padding: 0 8px; border-radius: 7px; cursor: pointer;
+  font: 700 calc(11.5px * var(--hud-scale))/1 system-ui, sans-serif; color: var(--sp-text);
+  background: rgba(0,0,0,.32); border: 1px solid var(--sp-line); transition: border-color 120ms ease; }
+.sp-hud button.sp-view__btn:hover { border-color: var(--sp-accent); }
+.sp-hud button.sp-view__btn:focus-visible { outline: 2px solid var(--sp-cool-glass); outline-offset: 1px; }
 .sp-hud .sp-warp__reason { margin-top: 6px; font-size: calc(11.5px * var(--hud-scale)); color: var(--sp-bad); display: flex; gap: 5px; line-height: 1.35; }  /* -> 15px */
 .sp-hud .sp-warp__reason svg { width: calc(11.5px * var(--hud-scale)); height: calc(11.5px * var(--hud-scale)); flex: none; margin-top: 1px; }
 .sp-hud .sp-warp__reason.is-hidden { display: none; }
@@ -730,11 +737,11 @@
 .sp-hud .sp-choice.is-symbols { font-size: calc(20px * var(--hud-scale)); letter-spacing: 0.25em; line-height: 1.2; }
 
 /* --- touch controls (touch.js) ----------------------------------------------
- * Only on touch screens (.is-touch on the HUD). Left thumb: direction pad just
- * right of the instrument column; right thumb: AIM, E and the small buttons,
- * just left of the inset map. Translucent so the scene reads through them;
- * big enough for a child's thumb (64-86px). Pop-ups and the landing gauge
- * move up clear of them, and the warp panel gives way to the warp button. */
+ * Only on touch screens with no mouse or trackpad (.is-touch on the HUD). Left
+ * thumb: direction pad just right of the instrument column; right thumb: AIM
+ * and E, just left of the inset map. Translucent so the scene reads through
+ * them; big enough for a child's thumb (68-86px). Pop-ups and the landing gauge
+ * move up clear of them. */
 .sp-hud .sp-touch { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
 .sp-hud .sp-touch.is-hidden { display: none; }
 .sp-hud .sp-touch__btn {
@@ -762,21 +769,14 @@
 .sp-hud .sp-touch__actions {
   position: absolute; bottom: 16px;
   right: calc(28px + clamp(150px, min(26vh, 22vw), 250px));
-  display: grid; grid-template-columns: 68px 86px; grid-template-rows: auto 86px; gap: 8px; align-items: end;
+  display: flex; align-items: flex-end; gap: 8px;
 }
-.sp-hud .sp-touch__small { grid-column: 1 / span 2; justify-self: end; width: max-content; display: flex; gap: 6px; }
-.sp-hud .sp-touch__small .sp-touch__btn { height: 44px; min-width: 44px; padding: 0 10px; border-radius: 12px; font-size: 16px; }
 .sp-hud .sp-touch__actions .is-use { width: 68px; height: 68px; font-size: 26px; }
 .sp-hud .sp-touch__actions .is-aim { width: 86px; height: 86px; border-radius: 50%; font-size: 17px; letter-spacing: .04em; background: rgba(255, 120, 71, 0.28); border-color: var(--sp-accent); }
-.sp-hud .sp-touch__btn { position: relative; white-space: nowrap; }
-/* The key the game's text names ("hold W"), small in the corner. */
-.sp-hud .sp-touch__key { position: absolute; right: 6px; bottom: 3px; font-size: 10px; font-weight: 800; color: var(--sp-muted); letter-spacing: 0; }
-.sp-hud .sp-touch__small .sp-touch__key { display: none; }
-.sp-hud .sp-touch__actions .is-aim .sp-touch__key { right: 50%; transform: translateX(50%); bottom: 10px; }
+.sp-hud .sp-touch__btn { white-space: nowrap; }
 /* Make room for the pad: pop-ups and the landing gauge sit above it. */
 .sp-hud.is-touch .sp-toasts { bottom: 176px; }
 .sp-hud.is-touch .sp-landing { bottom: 176px; }
-.sp-hud.is-touch .sp-warp-panel { display: none; }
 @media (max-width: 1366px) { .sp-hud .sp-touch__dpad { left: 254px; } }
 
 /* --- orbit transfer help (transferPanel.js) ---------------------------------
@@ -943,7 +943,7 @@
  * are for flying: they go while she walks, and come back in flight. Kept: the mission card, the toasts,
  * the station prompt, the Retry button (a way back at any time, lead 2026-10-09) and the grown-up Jump.
  * Freeze stays while the game is frozen (so she can carry on). */
-body.sp-on-foot .sp-hud .sp-instruments,
+body.sp-on-foot .sp-hud .sp-instruments--left > :not(.sp-view-panel),
 body.sp-on-foot .sp-hud .sp-minimap,
 body.sp-on-foot .sp-hud .sp-xfer,
 body.sp-on-foot .sp-hud .sp-aim,
@@ -952,6 +952,8 @@ body.sp-on-foot .sp-hud .sp-orbit,
 body.sp-on-foot .sp-hud .sp-tally,
 body.sp-on-foot .sp-hud .sp-markers,
 body.sp-on-foot #burnCue { display: none !important; }
+/* The camera view button stays on foot (lead 2026-10-09): the walk's own view switch. */
+body.sp-on-foot .sp-hud .sp-view-panel { display: block !important; }
 body.sp-on-foot .sp-hud .sp-toggles > .sp-autopilot,
 body.sp-on-foot .sp-hud .sp-toggles > .sp-aimtoggle { display: none !important; }
 body.sp-on-foot:not(.sp-is-frozen) .sp-hud .sp-toggles { display: none !important; }
