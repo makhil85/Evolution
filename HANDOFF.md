@@ -705,6 +705,19 @@ lines are in place but not tuned.
   stands, and fades as the last resort (about 2% of walking frames, 14% when
   she backs into a corner). Option for the lead: allow a 0.8 m pull-in
   instead of the fade.
+- **Camera view button on foot**: the chapter pages' `body.in-scene` rule
+  (chapter4-7.html) used to hide the whole left column in any scene, so the
+  button never showed while she walked. Now the left column stays on foot
+  (hud.css hides every panel in it but the view panel), and `setCameraLabel`
+  hides the panel on a walk with no view switch (the Moon walk). Checked in a
+  browser in Ch6 at 1280x720 and 1912x911: the button is at the top left, a
+  real click switches "from above" / "behind her", and nothing overlaps.
+- **Touch pad check**: a scripted press of left/right/E/AIM read "not held".
+  That was the check, not the game: the presses landed while a reading pause
+  or a card held the game (flight keys are ignored then, by design). With
+  nothing paused every pad button is on top and holds. Pre-existing, not
+  fixed: on a touch screen the grown-up Jump badge overlaps the d-pad's left
+  arrow on foot at 1280x720.
 - **Aboard the starship**: from `c6_meet_crew` on, `game.aboardStarship` is
   set by the step (`aboard` in missions); the small rocket is hidden and the
   starship is her craft in every later film and part.
