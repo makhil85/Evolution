@@ -163,7 +163,7 @@ const LEVEL4_QUESTIONS = {
     success:
       'Correct. Aluminium alloy is strong enough to hold the rocket together and light enough to fly. Real rockets use it for the same reason.',
     doneMessage:
-      'The Forge fires up and builds itself piece by piece. You are now a Junior Engineer — the Build Menu is unlocked and iron ore has appeared around the village.',
+      'The Forge fires up and builds itself piece by piece. You are now a Junior Engineer — the Build Menu is unlocked and iron ore has appeared around the town.',
     reward: { xp: 25, resources: { iron: 6 }, part: 'Frame', rank: 'Junior Engineer' }
   },
 

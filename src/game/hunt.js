@@ -3,7 +3,7 @@
 // The engine that tracks clues and saves progress is src/play/hunt.js; this
 // file is Chapter 3's DATA - the clues per Level - and the launch rule.
 // Everything here is world coordinates and must be solvable from what is
-// really standing in the village (see the FACTS block). North is -z, up the
+// really standing in the town (see the FACTS block). North is -z, up the
 // map: she starts in the far south (z 55) and walks NORTH up the road to the
 // river (z about 3); east is +x, on her right when she faces north.
 //
@@ -57,7 +57,7 @@ function decoysFor(level, finalId) {
 const LEVEL_1 = {
   title: 'The Hidden Guidance Crystal',
   itemName: ITEM_NAME,
-  intro: 'The rocket needs a Guidance Crystal to steer. It is hidden inside one of the homes in this village. Read each clue and find the place. When you get there, stand close and press E.',
+  intro: 'The rocket needs a Guidance Crystal to steer. It is hidden inside one of the homes in this town. Read each clue and find the place. When you get there, stand close and press E.',
   steps: [
     {
       id: 'fountain',
@@ -96,7 +96,7 @@ const LEVEL_1 = {
 const LEVEL_4 = {
   title: 'The Hidden Guidance Crystal',
   itemName: ITEM_NAME,
-  intro: 'The rocket\'s guidance computer needs a Guidance Crystal, and it is hidden inside one of the homes in this village. These clues never name a place, so you have to work each one out. North is the way you face when you walk up the main road toward the river. Stand close to each place and press E.',
+  intro: 'The rocket\'s guidance computer needs a Guidance Crystal, and it is hidden inside one of the homes in this town. These clues never name a place, so you have to work each one out. North is the way you face when you walk up the main road toward the river. Stand close to each place and press E.',
   steps: [
     {
       id: 'midpoint',

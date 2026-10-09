@@ -117,8 +117,8 @@ export const STEP_TEXT_L1 = {
     statusText: 'Extra: which balloon was higher',
   },
   bonus_mass: {
-    lockedMessage: 'The smith is busy. Pick the metal first.',
-    missionText: `★ The smith has an iron block and a foam block. Which is heavier? ${EXTRA}`,
+    lockedMessage: 'The engineer is busy. Pick the metal first.',
+    missionText: `★ The engineer has an iron block and a foam block. Which is heavier? ${EXTRA}`,
     statusText: 'Extra: the two blocks',
   },
   bonus_volume: {

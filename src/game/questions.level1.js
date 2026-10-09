@@ -87,7 +87,7 @@ export const LEVEL1_QUESTIONS = {
       'The point is that the SAME object did two different things, so the cause must be the '
       + 'change — the sand — not anything permanent about the tin.',
     success: 'Correct. The tin itself never changed, so it had to be what was inside it.',
-    doneMessage: 'The Forge builds itself! You are a Junior Engineer now. The Build Menu is open. Iron is around the village.',
+    doneMessage: 'The Forge builds itself! You are a Junior Engineer now. The Build Menu is open. Iron is around the town.',
   },
 
   rocket_flow: {
