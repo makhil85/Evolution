@@ -29,6 +29,8 @@ import {
 } from './contracts.js';
 import { PICKUPS, stationsFor, WORKSHOP_BUILD_TILE, START_TILE, ROADS } from './layout.js';
 import { createNewtonTree } from './newtonTree.js';
+import { playOpening, playEnding } from './cutscenes.js';
+import { t } from '../space/level.js';
 import { lessonOnce, hasSeen as lessonSeen } from '../lesson/card.js';
 import { LESSON_2A, LESSON_2B } from '../lesson/lessons/ch2.js';
 
@@ -39,6 +41,10 @@ const mount = document.getElementById('stage');
 const logEl = document.getElementById('log');
 const say = (m) => { logEl.textContent += `${m}\n`; };
 
+// ?grab=1: screenshot mode. The frame loop waits for window.__cityRun, so a
+// grab of a film (window.__city.story) is exact. The drawing buffer is kept
+// for every page (the lab's shots read it).
+const GRAB = new URLSearchParams(location.search).has('grab');
 const renderer = configureRenderer(new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }));
 guardContext(renderer); // lost graphics: reload from the save, never a blank screen
 createFrameMonitor(); // ?fps or F9: real-screen frame graph (window.__frames)
@@ -253,9 +259,12 @@ function riseStructure(target, pieces, doneMessage, questKey) {
         const c = tileToWorld(WORKSHOP_BUILD_TILE.tx, WORKSHOP_BUILD_TILE.ty);
         story?.outro({
           title: 'The Engineering Workshop is built!',
-          line: `Amazing work, ${heroName()}! The city has water, power, a bridge and a workshop. Next: build a rocket.`,
+          line: t(`Amazing work, ${heroName()}! The city has water, power, a bridge and a workshop. Next: build a rocket.`,
+            `Great job, ${heroName()}! The city has water, power, a bridge and a workshop. Next: a rocket!`),
           focus: new THREE.Vector3(c.x, world.heightAt(c.x, c.z), c.z),
           next: { href: 'chapter3.html', label: 'Next: Chapter 3 — Ready for Lift-off' },
+          // The film: the workshop opens, the cart crosses the truss, the rocket plan.
+          scene: (run) => playEnding({ run, scene, camera, root: world.root }),
         });
       } else {
         hud.toast(doneMessage, 'good');
@@ -450,7 +459,8 @@ async function main() {
       fill() { for (const r of Object.keys(rules.state.resources)) rules.state.resources[r] = Math.max(rules.state.resources[r], 99); rules.save(); refreshHud(); },
     });
   }
-  // The opening: sweep down over the city to her, title card, a wave.
+  // The opening: a film (the road, the broken bridge, the wheel, Newton's apple),
+  // then the title card and a wave; a returning child gets the card only.
   story = createChapterStory({
     camera, chasePose, getAvatar: () => avatar, getPlayerPos: () => player.position, chapter: 2, level: LEVEL,
   });
@@ -458,8 +468,10 @@ async function main() {
   await story.intro({
     eyebrow: 'Chapter 2',
     title: 'Forces and Machines',
-    line: rules.state.builtFinal ? `Welcome back, ${heroName()}! The Engineering Workshop is built.` : `Time to engineer, ${heroName()}: fix the city, build the bridge and raise the Engineering Workshop.`,
+    line: rules.state.builtFinal ? `Welcome back, ${heroName()}! The Engineering Workshop is built.` : t(`Pushes, pulls and machines: fix the city, build the bridge and raise the Engineering Workshop, ${heroName()}.`,
+      `Pushes, pulls and machines! Fix the city and build the bridge, ${heroName()}.`),
     lookAt: new THREE.Vector3((BOUNDS.minX + BOUNDS.maxX) / 2, 0, (BOUNDS.minZ + BOUNDS.maxZ) / 2),
+    scene: (run) => playOpening({ run, scene, camera, newtonAt: newton.at, chasePose }),
   });
   // First time in a village chapter: ask how much help she wants (saved, shared by Chapters 1-3).
   if (savedPlayModeId() === null) {
@@ -536,6 +548,7 @@ function tick(dt) {
 }
 function frame() {
   requestAnimationFrame(frame);
+  if (GRAB) return; // ?grab=1: only window.__cityRun moves the clock
   const now = performance.now();
   const dt = Math.min((now - prev) / 1000, 0.1);
   prev = now;
