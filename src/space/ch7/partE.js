@@ -23,7 +23,7 @@ export function partESteps(game) {
   const { hud } = game;
   return [
     {
-      id: 'c7_full_push', act: ACT_E,
+      id: 'c7_cruise', act: ACT_E,
       title: t('Full push to 90%', 'Full push!'),
       objective: t('The drive stays on at full power. Watch the ship speed up towards the speed of light.', 'Full push! Watch the ship go!'),
       markers: [],

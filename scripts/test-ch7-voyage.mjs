@@ -252,7 +252,7 @@ try {
     const a = PA.partASteps(game).map((s) => s.id);
     assert.deepEqual(a, ['c7_opening', 'c7_star_map']);
     const e = PE.partESteps(game).map((s) => s.id);
-    assert.deepEqual(e, ['c7_full_push', 'c7_end']);
+    assert.deepEqual(e, ['c7_cruise', 'c7_end']);
     const beats = PE.partESteps(game)[0];
     assert.equal(beats.beat, 'c7PushSpeed');
     assert.deepEqual(beats.bonusBeats, ['c7Clocks']);
