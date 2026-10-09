@@ -90,7 +90,8 @@ export function createHunt({ data, storageKey, storage = globalThis.localStorage
     },
     /** Show the current clue again (the "Clue" button calls this). */
     showClue() {
-      if (state.found || !active) return;
+      // Not over another card: a second card would stack under the first (lead 2026-10-09).
+      if (state.found || !active || (typeof document !== 'undefined' && document.body.dataset.playModal === '1')) return;
       const s = data.steps[state.step];
       present(state.step === 0 && !state.started ? data.intro : '', s.clue, state.step);
     },
@@ -159,9 +160,6 @@ function clueCard({ eyebrow, index, total, lead, text }) {
   const ok = el('button', 'pl-bigbtn', 'Got it');
   ok.type = 'button';
   actions.appendChild(ok);
-  const hint = el('div', 'pl-clue__hint');
-  hint.append('Press ', el('span', 'pl-key', 'Enter'), ' to close. The 📜 Clue button shows it again.');
-  actions.appendChild(hint);
   card.appendChild(actions);
   const layer = openLayer(card, {
     onKey(e) {

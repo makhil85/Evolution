@@ -953,7 +953,7 @@ function tick(dt, now = performance.now()) {
       const isTarget = near && step && step.stationId === near.id;
       const mineable = pickups && !pickups.autoCollect ? pickups.nearestWithin(player.position, MINE_REACH) : null;
       if (hud.isModalOpen() || playBlocked()) hud.hideInteract();
-      else if (mineable) hud.setInteract(`Mine ${mineable.node.resource}`, 'E');
+      else if (mineable) hud.setInteract(`Mine ${mineable.node.resource} ${miner.progressOf(mineable.id)}/${playMode.mineHits}`, 'E');
       else if (huntZoneHere()) hud.setInteract('Look here', 'E');
       else if (!near) hud.hideInteract();
       else hud.setInteract(isTarget ? (step.title || 'Start') : 'Not yet', isTarget ? 'E' : '');

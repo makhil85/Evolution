@@ -4,13 +4,13 @@
 // (order, decoys, persistence, found, reset), and that the DOM-touching modules
 // import and no-op safely in node.
 
-import { PLAY_MODES, PLAY_MODE_KEY, describeMode, savedPlayModeId, loadPlayMode, savePlayMode, choosePlayMode } from '../src/play/modes.js';
+import { PLAY_MODES, PLAY_MODE_KEY, describeMode, savedPlayModeId, loadPlayMode, savePlayMode, choosePlayMode, createModeChip } from '../src/play/modes.js';
 import { createMiner } from '../src/play/mining.js';
 import { createHunt, createKeyBlockMesh } from '../src/play/hunt.js';
 import { lockPlayInput, unlockPlayInput, isPlayModalOpen } from '../src/play/ui.js';
 import { createNavArrow } from '../src/play/navArrow.js';
 import { createHeldKeys, REPEAT_QUIET_MS } from '../src/game/heldKeys.js';
-import { readMs, needsClick } from '../src/play/readTime.js';
+import { readMs, needsClick, READ_MIN_MS } from '../src/play/readTime.js';
 import { register } from 'node:module';
 
 let passed = 0;
@@ -411,9 +411,9 @@ ok(!isPlayModalOpen(), 'input lock is a no-op in node');
     const i = winListeners.findIndex((l) => l.type === type && l.fn === fn);
     if (i >= 0) winListeners.splice(i, 1);
   };
-  const pressKey = (key) => {
+  const pressKey = (key, repeat = false) => {
     for (const l of [...winListeners]) {
-      if (l.type === 'keydown') l.fn({ key, code: key === ' ' ? 'Space' : key, repeat: false, target: globalThis.document.body, preventDefault() {}, stopPropagation() {} });
+      if (l.type === 'keydown') l.fn({ key, code: key === ' ' ? 'Space' : key, repeat, target: globalThis.document.body, preventDefault() {}, stopPropagation() {} });
     }
   };
   globalThis.requestAnimationFrame = (fn) => { fn(); return 0; };
@@ -456,6 +456,7 @@ ok(!isPlayModalOpen(), 'input lock is a no-op in node');
       this._text = String(v);
     }
     appendChild(c) { c.parentNode = this; this.children.push(c); return c; }
+    append(...cs) { for (const c of cs) this.appendChild(c); }
     removeChild(c) { this.children = this.children.filter((x) => x !== c); c.parentNode = null; return c; }
     remove() { if (this.parentNode) this.parentNode.removeChild(this); }
     setAttribute(k, v) { this.attrs[k] = String(v); }
@@ -531,32 +532,53 @@ ok(!isPlayModalOpen(), 'input lock is a no-op in node');
   ok(hud._toasts.map((e) => e.message).join('|') === 'Beta two.|Gamma three.', 'when the first goes, the next in line comes up');
 
   // --- a long message is an OK card that pauses the game ------------------------
+  // OK (and Enter, Space) work only once the wait is over: she has to read it first.
   settle();
   ok(needsClick(LONG) && readMs(LONG) === 10000, 'a long line needs a click');
   hud.toast(LONG, 'info');
   ok(hud._read !== null && hud._read.message === LONG, 'a long message opens the read card');
   ok(!hud._readBackdrop.hidden && hud._readText.textContent === LONG, 'the card shows the whole text');
   ok(body.dataset.playModal === '1', 'the game is paused under the card');
+  ok(body.classList.contains('rv-question-open'), 'the Clue button and the Help chip step away (question focus class)');
   ok(hud._toasts.length === 0, 'the long message is not a toast');
+  ok(hud._readOk.disabled === true, 'OK is dimmed until the wait is over');
   hud.toast('Waits behind the card.', 'info');
   advance(3000);
   ok(hud._toasts.length === 0, 'nothing comes up while the card is open');
   hud._readOk.dispatch('click');
+  pressKey('Enter');
+  ok(hud._read !== null, 'OK and Enter do nothing before the wait is over');
+  advance(READ_MIN_MS - 3000);
+  ok(hud._readOk.disabled === false, 'OK works once the wait is over');
+  hud._readOk.dispatch('click');
   ok(hud._read === null && hud._readBackdrop.hidden, 'OK closes the card');
   ok(body.dataset.playModal === undefined, 'OK lets the game run again');
+  ok(!body.classList.contains('rv-question-open'), 'the Clue button and the Help chip come back');
   advance(1600);
   ok(hud._toasts.length === 1 && hud._toasts[0].message === 'Waits behind the card.', 'the waiting message comes up after the card');
 
-  // Enter and Space close the card too, from anywhere on the page.
+  // Enter and Space close the card too, from anywhere on the page, once it is ready.
   settle();
   hud.toast(`${LONG} Enter closes it.`, 'info');
   ok(hud._read !== null, 'a second long message opens the card');
+  advance(READ_MIN_MS);
   pressKey('Enter');
   ok(hud._read === null && body.dataset.playModal === undefined, 'Enter closes the card');
-  advance(1600);   // the 1.5 s gap between messages
+  advance(1600);
   hud.toast(`${LONG} Space closes it.`, 'info');
+  advance(READ_MIN_MS);
   pressKey(' ');
   ok(hud._read === null && body.dataset.playModal === undefined, 'Space closes the card');
+  settle();
+
+  // A held key repeats: its repeats never close the card; only a fresh press does.
+  hud.toast(`${LONG} Held key.`, 'info');
+  advance(READ_MIN_MS);
+  pressKey(' ', true);
+  pressKey(' ', true);
+  ok(hud._read !== null, 'a held Space does not close the card');
+  pressKey(' ');
+  ok(hud._read === null, 'a fresh Space press closes it');
   settle();
 
   // A long message waits its turn behind a short one on screen (no overlap).
@@ -566,7 +588,58 @@ ok(!isPlayModalOpen(), 'input lock is a no-op in node');
   ok(hud._read === null, 'the card waits while a toast is on screen');
   advance(readMs('A short one first.'));
   ok(hud._read !== null, 'and opens once the screen is clear');
+  advance(READ_MIN_MS);
   hud._readOk.dispatch('click');
+  ok(hud._read === null, 'OK closes it once the wait is over');
+
+  // --- pickup lines: merge while they wait, messages that matter go first ----------
+  settle();
+  hud.toast('Full screen one.', 'info');
+  advance(1600);
+  hud.toast('Full screen two.', 'info');   // both slots taken
+  hud.toast('+1 wood', 'good');
+  hud.toast('+1 wood', 'good');             // a second wood merges into the waiting line
+  hud.toast('+2 stone', 'good');
+  hud.toast('Guidance Crystal found! The rocket can launch now.', 'good');
+  eq(hud._toastQueue.map((q) => q.message), ['+2 wood', '+2 stone', 'Guidance Crystal found! The rocket can launch now.'],
+    'two wood pickups wait as one line, and the crystal waits in line');
+  advance(readMs('Full screen one.') - 1600);   // the first toast leaves
+  ok(hud._toasts.some((e) => e.message.startsWith('Guidance Crystal')), 'the crystal goes ahead of the pickup lines');
+  ok(hud._toastQueue.map((q) => q.message).join('|') === '+2 wood|+2 stone', 'the pickup lines keep waiting behind it');
+  settle();
+  ok(hud._toastQueue.length === 0 && hud._toasts.length === 0, 'the pickup lines show in the end, nothing is stuck');
+
+  // A message that is not a pickup is never dropped for age while it waits.
+  hud.toast('Hold one.', 'info');
+  advance(1600);
+  hud.toast('Hold two.', 'info');
+  hud.toast('Keep this one for later.', 'info');
+  hud._toastQueue[0].at -= 60000;
+  advance(1600);
+  ok(hud._toastQueue.some((q) => q.message === 'Keep this one for later.'), 'an old non-pickup message is still waiting, not dropped');
+  advance(READ_MIN_MS * 2);
+  ok(hud._toasts.some((e) => e.message === 'Keep this one for later.') || hud._toastQueue.length === 0, 'and it comes up once there is room');
+  settle();
+
+  // A pickup line that waited 20 s is dropped (it is no longer about what she is doing).
+  hud.toast('Hold three.', 'info');
+  advance(1600);
+  hud.toast('Hold four.', 'info');
+  hud.toast('+1 iron', 'good');
+  hud._toastQueue[0].at -= 60000;
+  advance(READ_MIN_MS);
+  ok(!hud._toasts.some((e) => e.message === '+1 iron') && !hud._toastQueue.some((q) => q.message === '+1 iron'), 'an old pickup line is dropped');
+  settle();
+
+  // The Help chip does not open the chooser over a card.
+  {
+    const chip = createModeChip({ level: 4 });
+    const before = body.children.length;
+    body.dataset.playModal = '1';
+    chip.el.dispatch('click');
+    ok(body.children.length === before, 'the Help chip does nothing while a card is up');
+    delete body.dataset.playModal;
+  }
 
   // --- the HUD is torn down cleanly ----------------------------------------------
   hud.destroy();

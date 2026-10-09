@@ -194,6 +194,8 @@ export function createModeChip({ level = 4, onChange = () => {}, top, right } = 
   };
   set(loadPlayMode().id);
   chip.addEventListener('click', async () => {
+    // Not over another card: the chooser would stack under it (lead 2026-10-09).
+    if (typeof document !== 'undefined' && document.body.dataset.playModal === '1') return;
     const id = await choosePlayMode({ level, current: loadPlayMode().id });
     set(id);
     onChange(id);
