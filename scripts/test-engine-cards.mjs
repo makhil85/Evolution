@@ -18,6 +18,7 @@
 // 11. On foot (a walk, a cabin), a question waits until she has stopped walking
 //     for IDLE_MS (readGate), not return at once.
 // 12. In flight, mouse drag and any key count as not quiet: the QUIET_S wait starts over.
+// 13. On foot, a question that has waited 15 s is asked at her first short natural stop.
 //
 // Runs the real Chapter 4 chain (missions.js, acts/act1.js) headless, with a
 // stub DOM and a stub hud. The card modules (retry, overlays, toggles) run as
@@ -465,6 +466,33 @@ await check('12. in flight, a drag or a key in the last moment restarts the QUIE
   m.tickCalm(QUIET_S + 1, false);
   await flush(10);
   assert.equal(quietNow, true, 'quiet once she has let go and QUIET_S has passed');
+});
+
+// --- 13: on foot, a question that has waited 15 s is asked at her first short stop ---
+await check('13. on foot, a question waiting 15 s is asked at her first short natural stop (not lost)', async () => {
+  const game = makeGame();
+  game.activeScene = { tick() {} };
+  const m = createMissions(game);
+  // A fake clock for performance.now (readGate and missions read it), restored after.
+  const realNow = performance.now;
+  let t = 1e6;
+  performance.now = () => t;
+  try {
+    noteInput();
+    let asked = false;
+    m.untilQuiet().then(() => { asked = true; });
+    const tick = async (ms) => { t += ms; noteInput(); m.tickCalm(ms / 1000, false); await Promise.resolve(); };
+    for (let i = 0; i < 64; i++) await tick(250);       // 16 s of walking
+    assert.equal(asked, false, 'still walking after 16 s: not asked yet');
+    for (let i = 0; i < 3; i++) { t += 250; m.tickCalm(0.25, false); await Promise.resolve(); }   // she stops
+    assert.equal(asked, false, 'stopped only 0.75 s: the natural stop (1 s) is not yet');
+    t += 250; m.tickCalm(0.25, false); await Promise.resolve();
+    await Promise.resolve();
+    assert.equal(asked, true, 'stopped for 1 s after the cap: asked');
+  } finally {
+    performance.now = realNow;
+    game.activeScene = null;
+  }
 });
 
 console.error = realError;

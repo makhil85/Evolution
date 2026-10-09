@@ -255,6 +255,7 @@ advance(11000);
   check('a goal banner stays up for at least 6.5 s', hud._goal.classList.contains('is-on'), `readMs ${readMs([title, text])}`);
   advance(300);
   check('...then goes', hud._goal.classList.contains('is-gone'));
+  advance(3000); // a read pause is followed by a 3 s gap before the next words (PAUSE_GAP_MS)
   hud.announce('Next goal: Jupiter', LONG);
   await flush();
   check('a long goal banner becomes a card with a click', cardOpen() && hud._modalHost.card.textContent.includes('Next goal: Jupiter'));
@@ -456,33 +457,122 @@ const GUIDE = 'Keep the arrow on the planet and wait for the ring to close, then
   advance(20000);
 }
 {
-  // The mission card folds to its title line while she flies, and unfolds once she is idle.
+  // The mission card folds to its title line at once while she flies, unfolds after 3 s
+  // without input, and stays open 1.5 s before it may fold again (critic 2026-10-09).
   const card = hud._missionCard;
   const folded = () => card.classList.contains('is-collapsed');
   hud.setMission({ act: 'Act 1', title: 'Reach Mars', objective: 'Fly to Mars and wait by it.', steps: [] });
-  advance(2600);
+  advance(3100);
   check('the mission card is open while she is idle', !folded());
   noteInput();
   advance(300);
-  check('the mission card folds to its title line while she flies', folded());
+  check('the mission card folds to its title line at once while she flies', folded());
   check('...and the title line names the step', hud._missionPeek.textContent === 'Reach Mars', hud._missionPeek.textContent);
-  advance(2600);
-  check('it unfolds once she has been idle for IDLE_MS', !folded());
+  advance(2500);
+  check('it does not unfold before 3 s without input', folded());
+  advance(700);
+  check('it unfolds once she has been idle for 3 s', !folded());
   noteInput();
   advance(300);
-  check('it folds again while she flies', folded());
+  check('a tap just after it unfolds does not fold it (1.5 s hold)', !folded());
+  for (let i = 0; i < 6; i++) { noteInput(); advance(250); }
+  check('it folds again once it has been open for 1.5 s and she plays', folded());
   hud._missionToggle.click();
   check('a click opens the folded card in full', !folded());
-  advance(2600);
+  advance(3100);
   check('...and it stays open once she is idle', !folded());
   hud._missionToggle.click();
   check('a click shuts the card (her choice)', folded());
   check('the choice is remembered (MISSION_OPEN_KEY 0)', localStorage.getItem('space_ch4_mission_open') === '0');
   noteInput();
   advance(300);
-  advance(2600);
+  advance(3100);
   check('a shut card stays shut, flying or idle', folded());
   hud._missionToggle.click();
+  advance(20000);
+}
+{
+  // Taps every 2.25 s (the critic's P8) fold the card once; they do not flicker it.
+  const card = hud._missionCard;
+  const folded = () => card.classList.contains('is-collapsed');
+  let changes = 0;
+  let prev = folded();
+  for (let k = 0; k < 8; k++) {
+    noteInput();
+    for (let i = 0; i < 9; i++) { advance(250); if (folded() !== prev) { changes += 1; prev = folded(); } }
+  }
+  check(`taps every 2.25 s change the card once, not 16 times (${changes})`, changes <= 1, `changes ${changes}`);
+  advance(20000);
+}
+// --- 14. no lost guidance, no back-to-back freezes, no bus card unpausing a read (critic) ---
+const TXT_LINE = (k) => `${k}: Bees carry pollen from flower to flower so that seeds and fruit get made on the farm every day.`;
+{
+  // A line queued while she steers for 25 s is not dropped: it shows at her first short natural stop.
+  advance(20000);
+  noteInput();
+  hud.toast(GUIDE, { kind: 'info' });
+  for (let i = 0; i < 100; i++) { advance(250); noteInput(); }   // 25 s of steering, past the 15 s cap
+  check('after 15 s, a line still waits while she is steering (no natural stop yet)', hud._toasts.length === 0);
+  let t = 0;
+  while (hud._toasts.length === 0 && t < 4000) { advance(50); t += 50; }
+  check(`it shows at her first short natural stop (${t} ms after she stops)`, hud._toasts.length === 1 && hud._toasts[0].message === GUIDE && t <= 1500, `after ${t} ms`);
+  advance(20000);
+}
+{
+  // The same cap for the goal banner: a goal set during a long burn shows at the first natural stop.
+  advance(20000);
+  noteInput();
+  hud.announce('Next goal: Saturn', 'Steer toward Saturn and burn.');
+  for (let i = 0; i < 100; i++) { advance(250); noteInput(); }
+  check('a goal banner set during a 25 s burn is not lost', !(hud._goal && hud._goal.classList.contains('is-on')));
+  let t = 0;
+  while (!(hud._goal && hud._goal.classList.contains('is-on')) && t < 4000) { advance(50); t += 50; }
+  check(`the goal banner shows at her first short natural stop (${t} ms after she stops)`, t <= 1500);
+  advance(20000);
+}
+{
+  // Four lines while idle: four pauses, each its own reading time, a 3 s gap between them.
+  advance(20000);
+  emitted.length = 0;
+  const t0 = fakeNow;
+  for (const k of ['A', 'B', 'C', 'D']) hud.toast(TXT_LINE(k), { kind: 'info' });
+  const spans = [];
+  let open = null;
+  for (let i = 0; i < 2400; i++) {
+    advance(50);
+    const v = emittedModal().at(-1);
+    if (v === true && open === null) open = fakeNow;
+    if (v === false && open !== null) { spans.push([open - t0, fakeNow - t0]); open = null; }
+  }
+  check('four lines pause the game four times, not as one freeze', spans.length === 4, `${spans.length} pauses ${JSON.stringify(spans)}`);
+  check('no pause is longer than one reading time (10 s)', spans.every(([a, b]) => b - a <= 10000), JSON.stringify(spans));
+  check('a 3 s gap separates the pauses (no back-to-back freeze)', spans.slice(1).every(([a], i) => a - spans[i][1] >= 3000), JSON.stringify(spans));
+  advance(20000);
+}
+{
+  // A bus card (a station, a quest) that opens and closes during a reading pause does not unpause under it.
+  advance(20000);
+  emitted.length = 0;
+  hud.toast(GUIDE, { kind: 'info' });
+  advance(300);
+  bus.emit('ui-modal', true);     // a play-mode card opens on the bus
+  bus.emit('ui-modal', false);    // and closes while the text is still being read
+  check('a bus card that opens and closes during a read pause keeps the game paused', emittedModal().at(-1) === true);
+  advance(readMs(GUIDE));
+  check('the reading pause ends and the game runs on', emittedModal().at(-1) === false);
+  advance(20000);
+}
+{
+  // A bus card still open when the reading pause ends keeps the game paused until it closes.
+  advance(20000);
+  emitted.length = 0;
+  hud.toast(GUIDE, { kind: 'info' });
+  advance(300);
+  bus.emit('ui-modal', true);
+  advance(readMs(GUIDE) + 500);
+  check('a bus card open after the reading pause keeps the game paused', emittedModal().at(-1) === true);
+  bus.emit('ui-modal', false);
+  check('...and closing it un-pauses the game', emittedModal().at(-1) === false);
   advance(20000);
 }
 advance(20000);
