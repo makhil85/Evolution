@@ -129,8 +129,8 @@ export function act1Steps(game) {
         await playZeroG(ctx);
         await ctx.hud.showFact({
           title: 'Everything is floating!',
-          body: heroText(t(`${heroName()}'s pencil drifts past her nose and a drop of water wobbles like jelly. ` +
-            'But up here, Earth’s gravity is still almost as strong as on the ground...',
+          body: heroText(t(`${heroName()}'s pencil drifts past her nose. Water wobbles like jelly. ` +
+            'But Earth’s gravity is almost as strong as on the ground...',
             `${heroName()}'s pencil floats past her nose. A drop of water wobbles like jelly!`)),
         });
       },
@@ -141,7 +141,7 @@ export function act1Steps(game) {
       title: 'Your first orbits',
       // Two laps before the sunrise question (lead 2026-10-07: slow the
       // early questions down, let her enjoy the view first).
-      objective: t('Ride two full laps around Earth. Don’t fire the engine; just watch the dotted line and the sunrises.', 'Go around Earth two times. Don’t press Space. Just watch!'),
+      objective: t('Ride two laps round Earth. Don’t fire the engine. Just watch the sunrises.', 'Go around Earth two times. Don’t press Space. Just watch!'),
       markers: ['earth'],
       enter() { lapStart(); game.target = 'moon'; },
       check(ctx, states) { return lapped(states, 2); },
@@ -150,7 +150,7 @@ export function act1Steps(game) {
     {
       id: 'a1_satellite_meet', act: 1,
       title: 'Catch the satellite',
-      objective: t('A weather satellite is in a slightly higher orbit. Wait for the BURN NOW banner, then hold Space to rise up to meet it.', 'A satellite is just above you. When the green BURN NOW sign shows, hold Space to go up to it.'),
+      objective: t('When the BURN NOW banner shows, hold Space to rise up to the satellite.', 'Green BURN NOW! Hold Space to go up to it.'),
       aim: 'prograde',
       transfer: 'satellite',
       enter(ctx) {
@@ -198,7 +198,7 @@ export function act1Steps(game) {
     {
       id: 'a1_satellite_fix', act: 1,
       title: 'Fix the dead wing',
-      objective: t('Press E. Both panels swing: turn left to catch the top one and right to catch the bottom one while each faces the Sun.', 'Press E. Turn left and right to catch both wings when they face the Sun.'),
+      objective: t('Press E. Turn left for the top panel, right for the bottom one.', 'Press E. Catch the wings when they face the Sun.'),
       // After a reload straight into this step the docking thrusters creep
       // her back alongside (and the model is rebuilt) before E does anything.
       enter(ctx) {
@@ -234,8 +234,8 @@ export function act1Steps(game) {
         // It comes along: it glides onto her ship's back, and its arrays look
         // like an extra pair of solar wings on her ship.
         rig.attach();
-        hud.toast(t('Mission Control: panels back online, thank you! The satellite will ride on your ship to the Moon. While you coast, its solar wings slowly make fuel for your tank.',
-          'It works again. Thank you! The satellite rides with you to the Moon. Its sun wings fill up your fuel while you glide.'), { kind: 'good', ms: 6500 });
+        hud.toast(t('Mission Control: panels back online, thank you! The satellite rides with you to the Moon and makes fuel while you coast.',
+          'It works again! Thanks. It rides with you to the Moon and makes fuel.'), { kind: 'good', ms: 6500 });
         // Let her watch it settle on before anything else opens.
         await rig.whenAttached();
       },
@@ -245,7 +245,7 @@ export function act1Steps(game) {
     {
       id: 'a1_ride', act: 1,
       title: 'A lap with the satellite',
-      objective: t('The satellite rides on your ship now. Enjoy one lap round Earth while its wings charge your tank.', 'Go round Earth once with the satellite on your ship.'),
+      objective: t('Enjoy one lap round Earth. The satellite’s wings charge your tank.', 'Go round Earth once with the satellite on your ship.'),
       markers: ['earth'],
       enter() { lapStart(); rig.ensureAttached(); },
       check(ctx, states, stepTime) { ridingStep(ctx, stepTime); return lapped(states, 1); },
@@ -257,7 +257,7 @@ export function act1Steps(game) {
     {
       id: 'a1_lesson', act: 1,
       title: t('Flight school', 'Flight school'),
-      objective: t('Watch Mission Control’s quick lesson on how to fly to the Moon, and answer a question after each film.', 'Watch how to fly to the Moon. Then answer the questions.'),
+      objective: t('Watch the lesson on flying to the Moon. Answer the question after each film.', 'Watch how to fly to the Moon, then answer.'),
       markers: ['moon'],
       async enter() {
         await lessonOnce(LESSON_4F, { bus: game.bus });
@@ -267,7 +267,7 @@ export function act1Steps(game) {
     {
       id: 'a1_raise', act: 1,
       title: 'Aim for the Moon',
-      objective: t('Point along your path. Wait for the green BURN signal, then hold Space until the dotted line reaches the Moon.', 'Wait for the green BURN NOW sign. Then hold Space until the dotted line reaches the Moon.'),
+      objective: t('Point along your path. On green BURN, hold Space until it reaches the Moon.', 'Time warp to green BURN NOW, then hold Space.'),
       markers: ['moon'],
       aim: 'prograde',
       transfer: 'moon',

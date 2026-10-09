@@ -11,7 +11,7 @@ export function partCSteps(game) {
     {
       id: 'c6_lesson_tiny_earth', act: 3,
       title: t('A ship that is a tiny Earth', 'A tiny Earth'),
-      objective: t('Watch the lesson on how the ship keeps everyone alive, and answer a question after each film.', 'Watch the lesson about our ship.'),
+      objective: t('Watch the lesson on keeping everyone alive. Answer a question after each film.', 'Watch the lesson about our ship.'),
       markers: [],
       async enter() {
         await hud.showDialogue([

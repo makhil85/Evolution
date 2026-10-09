@@ -38,7 +38,7 @@ export function act5Steps(game) {
     {
       id: 'a5_lesson', act: 5,
       title: t('What makes something alive?', 'What is life made of?'),
-      objective: t('Watch the Mission Biologist’s lesson on cells, DNA and proteins, and answer a question after each film.', 'Watch the lesson about living things. Then answer the questions.'),
+      objective: t('Watch the Biologist’s lesson on cells and DNA. Answer a question after each film.', 'Watch the lesson about living things. Then answer the questions.'),
       markers: ['europa'],
       async enter() {
         await lessonOnce(LESSON_4G, { bus: game.bus });
@@ -48,7 +48,7 @@ export function act5Steps(game) {
     {
       id: 'a5_surface', act: 5,
       title: 'Drill the ice',
-      objective: t('Walk to the crack (lineae), drill, and check the habitability list.', 'Walk to the crack in the ice and drill. Could anything live here?'),
+      objective: t('Walk to the crack (lineae), drill, and check the habitability list.', 'Walk to the crack and drill. Could anything live here?'),
       markers: ['europa'],
       async enter() {
         const scene = await loadSurfaceScene(game, { body: 'europa', onBeat: (beat) => askBeat(game, beat) });

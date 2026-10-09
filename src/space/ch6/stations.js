@@ -115,8 +115,8 @@ function shieldBody(changed) {
     const steps = [];
     for (let k = 0; k <= Math.min(m, 6); k++) steps.push(String(+raysThrough(k).toFixed(2)));
     info.textContent = t(
-      `This spot is ${m} m thick. Of every 100 rays: ${steps.join(' → ')} get through. Safe is ${SHIELD.safe} m (fewer than 2 in 100). Worst spot now lets ${worstLeak(sh).toFixed(1)} in.`,
-      `This spot is ${m} m thick. Each metre stops half the rays. Make every spot ${SHIELD.safe} m.`,
+      `This spot: ${m} m thick. Of 100 rays, ${steps.join(' → ')} get through. Safe: ${SHIELD.safe} m (under 2 in 100).`,
+      `This spot is ${m} m thick. Each metre stops half. Make it ${SHIELD.safe} m.`,
     );
   }
   return {
@@ -138,8 +138,8 @@ function oxygenBody(changed) {
   const airN = el('div', 'st-num'); const powN = el('div', 'st-num');
   const r1 = el('div', 'st-row'); r1.append(airN, air.el);
   const r2 = el('div', 'st-row'); r2.append(powN, pow.el);
-  const note = el('div', 'st-note', t(`Each lamp: ${OXYGEN.lamp.litres} L of oxygen a day for ${OXYGEN.lamp.power} unit of power. Each splitter step: ${OXYGEN.split.litres} L for ${OXYGEN.split.power} units. ${CREW_SIZE} of us breathe ${OXYGEN.perPerson} L each a day.`,
-    `A lamp makes ${OXYGEN.lamp.litres} L of air. The splitter makes ${OXYGEN.split.litres} L. We need ${oxygenNeed()} L.`));
+  const note = el('div', 'st-note', t(`Lamp: ${OXYGEN.lamp.litres} L of oxygen a day for ${OXYGEN.lamp.power} unit. Splitter: ${OXYGEN.split.litres} L for ${OXYGEN.split.power} units. ${CREW_SIZE} of us breathe ${OXYGEN.perPerson} L a day.`,
+    `A lamp makes ${OXYGEN.lamp.litres} L. Splitter makes ${OXYGEN.split.litres} L. We need ${oxygenNeed()} L.`));
   const top = el('div', 'st-row'); top.append(lamps.el, split.el);
   wrap.append(top, r1, r2, note);
   function refresh() {
@@ -154,7 +154,7 @@ function oxygenBody(changed) {
     el: wrap, ok: () => oxygenTotals(s).ok,
     solve() { Object.assign(s, oxygenAnswers()[0]); changed(); },
     state: () => ({ ...s }), refresh,
-    tip: t('Plants breathe out oxygen, and splitting ice makes it too, but the splitter is power-hungry. Find a mix that makes enough without going over the power.', 'Plants and ice both make air. Make enough, but don’t use too much power.'),
+    tip: t('Plants breathe out oxygen, and splitting ice makes it too. Find a mix that makes enough without too much power.', 'Plants and ice both make air. Make enough, but don’t use too much power.'),
   };
 }
 

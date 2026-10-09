@@ -15,7 +15,7 @@ export function act4Steps(game) {
     {
       id: 'a4_approach', act: 4,
       title: 'Approach Jupiter',
-      objective: t('Coast to Jupiter. Time warp helps on the long coast. If the banner asks for a small burn, it’s fine-tuning your path.', 'Fly to Jupiter and wait. Time warp makes time go fast.'),
+      objective: t('Coast to Jupiter. Time warp helps. Small burns just fine-tune your path.', 'Fly to Jupiter. Time warp makes time go fast.'),
       markers: ['jupiter'],
       // Playtest: a slightly-off transfer arrived 6,000 u out, just outside
       // Jupiter's pull, with nothing to correct it. The planner cue stays on
@@ -37,9 +37,9 @@ export function act4Steps(game) {
       async enter() {
         await hud.showFact({
           title: 'The guardian giant',
-          body: t('Jupiter is more than twice as heavy as every other planet put together. '
-            + 'Its huge gravity flings comets aside, shepherds the asteroid belt, and wraps the planet in deadly radiation.',
-            'Jupiter is the biggest planet of all. Its strong pull grabs comets. It pushes rocks around.'),
+          body: t('Jupiter is more than twice as heavy as all the other planets together. '
+            + 'Its gravity flings comets aside and wraps it in deadly radiation.',
+            'Jupiter is the biggest planet. Its pull grabs comets. It pushes rocks around.'),
         });
       },
       beat: 'jupiterImportance',
@@ -47,7 +47,7 @@ export function act4Steps(game) {
     {
       id: 'a4_radiation_warning', act: 4,
       title: t('Danger: radiation zone', 'Danger: radiation!'),
-      objective: t('Between here and the inner moons is a belt of deadly radiation. Build a Radiation Shield before flying in close.', 'Jupiter has bad rays close in. Your Radiation Shield keeps you safe.'),
+      objective: t('Deadly radiation lies between here and the inner moons. Build a Radiation Shield first.', 'Bad rays close in. Your Radiation Shield keeps you safe.'),
       markers: ['jupiter'],
       enter() {
         // Already built (play-test: the warning said "you will need" anyway).
@@ -75,7 +75,7 @@ export function act4Steps(game) {
       // Moon: first let Jupiter catch her, then a timed burn to Europa.
       id: 'a4_jupiter_orbit', act: 4,
       title: t('Let Jupiter catch you', 'Go around Jupiter'),
-      objective: t('Brake at your lowest point (follow the banner) so Jupiter’s gravity catches you in orbit. Your Radiation Shield keeps you safe close in.', 'Slow down when the sign says, so Jupiter catches you.'),
+      objective: t('Brake at your lowest point so Jupiter’s gravity catches you in orbit.', 'Slow down when the sign says, so Jupiter catches you.'),
       markers: ['jupiter'],
       aim: 'retrograde',
       capture: 'jupiter',
@@ -90,7 +90,7 @@ export function act4Steps(game) {
     {
       id: 'a4_europa_orbit', act: 4,
       title: t('Capture into Europa orbit', 'Go around Europa'),
-      objective: t('Swing close past Jupiter for a gravity-assist boost (Radiation Shield required), then steer into a loop around Europa.', 'Fly to Europa and go around it. Follow the signs.'),
+      objective: t('Swing past Jupiter for a boost (Radiation Shield needed), then loop round Europa.', 'Fly to Europa and go around it. Follow the signs.'),
       markers: ['europa'],
       aim: 'retrograde',
       // Inside Jupiter's pull: a timed transfer to Europa (the burn banner),

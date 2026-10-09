@@ -130,7 +130,7 @@ export function playRockHunt({ bus = null } = {}) {
     }
     picked = id;
     fb.className = 'ls-feedback is-good';
-    fb.textContent = t(`${r.name} passes every check! 140 m of icy, metal-rich rock: ice for water and fuel, metal for parts, and a cap to shield us at the front.`, `${r.name} has all the ticks! This is our ship!`);
+    fb.textContent = t(`${r.name} passes every check! 140 m of icy, metal-rich rock: ice for water and fuel, metal for parts.`, `${r.name} has all the ticks! This is our ship!`);
     fb.hidden = false;
     chooseBtn.textContent = t('Start building!', 'Build it!'); chooseBtn.disabled = false;
     chooseBtn.onclick = finish;

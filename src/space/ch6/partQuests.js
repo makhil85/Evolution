@@ -23,7 +23,7 @@ export function partQuestsSteps(game) {
     {
       id: 'c6_life_on_board', act: 2,
       title: t('Life on board', 'Life on board'),
-      objective: t('Keep the crew well: the sick bay, the coolant leak, a message home, and the farm bay. Walk to each with its crewmate.', 'Keep the crew well. Visit the sick bay, the engine room, the bridge and the farm.'),
+      objective: t('Keep the crew well. Walk to the sick bay, coolant, message home and farm.', 'Keep the crew well. Visit each one with its crewmate.'),
       markers: [],
       async enter() {
         await hud.showDialogue([
@@ -43,8 +43,7 @@ export function partQuestsSteps(game) {
             await playQuest(id, { bus: game.bus });
             // The question first, then the quest counts as done: two missed
             // tries restart the act, and then she redoes this quest too. On
-            // foot a short pause with a toast, so she knows it is coming.
-            hud.toast(t('Mission Control has a question...', 'A question is coming!'), { kind: 'info' });
+            // foot the question still waits for a calm moment.
             await game.missions.ask(QUEST_BEAT[id], { calm: WALK_CALM_S });
             done.add(id); saveDone([...done]);
           },

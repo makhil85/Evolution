@@ -37,18 +37,18 @@ export function partBuildSteps(game) {
         await hud.showDialogue([
           { who: 'Mission Control', text: t('Welcome home to the asteroid belt! This is where we will build your ship for the stars.', 'Welcome back to the asteroid belt! We will build a ship for the stars here.') },
           { who: 'girl', text: t('Why here, and not out at the edge where I was?', 'Why here?') },
-          { who: 'Mission Control', text: t('Rock, ice and metal are all around you, the Sun still gives your panels power, and supply ships from Earth can reach you. Out at the edge, every tonne would have to be flown all the way out.', 'There are rocks, ice and metal here. The Sun gives power. And ships from Earth can reach us.') },
+          { who: 'Mission Control', text: t('Rock, ice and metal are all around, and the Sun gives power. Ships from Earth can reach us here.', 'Rocks, ice and metal are here. The Sun gives power. Ships can reach us.') },
         ]);
       },
     },
     {
       id: 'c6_design_ship', act: ACT_BUILD,
       title: t('Design a ship for the stars', 'Make a ship for the stars'),
-      objective: t('Answer Mission Control’s questions to design the ship: each answer adds a part to the plan.', 'Answer the questions. Each one adds a part to the ship.'),
+      objective: t('Answer the questions to design the ship. Each answer adds a part.', 'Answer the questions. Each one adds a part.'),
       markers: [],
       async enter() {
         await hud.showDialogue([
-          { who: 'Mission Control', text: t('One day people will fly to another star. That trip takes many years, so the ship has to be a home, a shield and a fuel tank all at once. Let’s design one together.', 'One day people will fly to the stars. Let’s design a ship for that trip!') },
+          { who: 'Mission Control', text: t('One day people will fly to another star. The ship must be a home, a shield and a fuel tank at once.', 'One day people will fly to the stars. Let’s design a ship for that trip!') },
           { who: 'girl', text: t('There is rock and ice everywhere here... could we use that?', 'There are lots of rocks here. Can we use one?') },
         ]);
         await playDesignBoard({ bus: game.bus });
@@ -57,7 +57,7 @@ export function partBuildSteps(game) {
     {
       id: 'c6_rock_hunt', act: ACT_BUILD,
       title: t('Find the right rock', 'Find the rock'),
-      objective: t('Scan the four rocks near you and choose the one that passes every check on the list.', 'Scan the rocks. Pick the one with all ticks.'),
+      objective: t('Scan the four rocks. Choose the one that passes every check.', 'Scan the rocks. Pick the one with all ticks.'),
       markers: [],
       async enter() {
         await playRockHunt({ bus: game.bus });
@@ -68,7 +68,7 @@ export function partBuildSteps(game) {
     {
       id: 'c6_engine', act: ACT_BUILD,
       title: t('Build the engine half', 'Build the engine'),
-      objective: t('Mine the rock, make the fuel, print the magnet rings, fit them, and test fire.', 'Dig, make fuel, make parts, then fire the engine!'),
+      objective: t('Mine the rock, make fuel, print magnet rings, fit them, test fire.', 'Dig, make fuel, make parts, then fire the engine!'),
       markers: [],
       async enter() {
         await playWorkshop({ bus: game.bus });
