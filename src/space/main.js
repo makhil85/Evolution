@@ -1533,6 +1533,7 @@ function tick(realDt, render = true) {
   // She holds her attitude while warping; no burn can happen then anyway.
   const landSteer = landSteerOn() && input.turn === 0;
   aimToggle.update();
+  let aimHoldFlame = false; // Easy holds the engine while it swings round: show a small flame then
   if ((game.mode.autoAim || landSteer) && !game.manualAim && game.warpIndex === 0 && (input.steady || xferSteer || landSteer) && aimAngle !== null && !ship.landedOn) {
     // Easy mode: hold Space and the ship turns itself to where the step wants
     // it pointed. A damped P-controller on the heading error; the physics'
@@ -1542,7 +1543,9 @@ function tick(realDt, render = true) {
     physInput.steady = false;
     // While it's still swinging round, hold the engine: firing sideways wasted
     // most of the fuel in playtest (a landing cost 3 t instead of ~1).
-    if (Math.abs(err) > 0.45) physInput.thrust = 0;
+    // The flame still shows a little while it swings (lead: "pressing Space it
+    // doesn't show the exhaust anymore"), so she sees the engine answer.
+    if (Math.abs(err) > 0.45 && physInput.thrust > 0) { physInput.thrust = 0; aimHoldFlame = true; }
   }
   // Easy and Medium landings: the engine only ever BRAKES. Holding W too long
   // used to stop her and then push her back up and forward, away from the
@@ -1635,7 +1638,7 @@ function tick(realDt, render = true) {
 
   // Ship visuals.
   shipView.group.rotation.y = yawFor(ship.angle);
-  shipView.setThrottle(paused ? 0 : physInput.thrust * (input.precision ? 0.35 : 1));
+  shipView.setThrottle(paused ? 0 : (aimHoldFlame ? 0.25 : physInput.thrust) * (input.precision ? 0.35 : 1));
   shipView.setTurn(paused ? 0 : input.turn);
   shipView.setPrecision(input.precision);
   _sunDir.set(-ship.x, 0, -ship.z).normalize();
