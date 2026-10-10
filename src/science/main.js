@@ -120,6 +120,7 @@ let tools = null; // axe / hammer / ... in her hand while mining (play/tools.js)
 let hunt = null;
 let modeChip = null;
 let navTimer = 0;
+let navGoal = null; // the target the arrow shows (its sign is kept on screen first)
 const PICKUP_BY_ID = new Map(PICKUPS.map((p) => [p.id, p]));
 
 const RESOURCE_ROWS = [
@@ -543,13 +544,14 @@ function tick(dt) {
   if (avatar) avatar.update(dt, motion);
   if (nav && world && rules) {
     navTimer -= gdt;
-    if (navTimer <= 0) { navTimer = 0.2; nav.setTarget(currentTarget()); }
+    if (navTimer <= 0) { navTimer = 0.2; navGoal = currentTarget(); nav.setTarget(navGoal); }
     nav.update(gdt, player.position);
   }
   if (miner) miner.update(gdt);
   if (tools) tools.update(gdt);
   if (world) {
     world.update(dt, elapsed, player.position, camera.position);
+    world.fitLabels(camera, navGoal);
     const n = rules && nearestUsable(player.position.x, player.position.z);
     const key = n ? `${n.kind}:${n.id}` : '';
     if (!filming && key !== lastNear) {

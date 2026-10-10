@@ -7,6 +7,7 @@
 // board with navy letters (Chapters 1 and 2 keep city/worldKit.js makeLabel's
 // dark board). Same sprite, same fading, same sizes.
 import * as THREE from 'three';
+import { fitLabels } from './labelFit.js';
 
 const FONT = '"Segoe UI", system-ui, -apple-system, sans-serif';
 const EMOJI = '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
@@ -128,8 +129,11 @@ export function createNameSigns(scene, { structures, placements, pad = null, hei
 
   return {
     root,
-    /** Fade with distance from her, and out when the camera is almost on one. */
-    update(playerPos, camPos) {
+    /**
+     * Fade with distance from her, and out when the camera is almost on one.
+     * Then labelFit keeps the shown ones off the HUD and off each other.
+     */
+    update(playerPos, camPos, camera = null, goal = null) {
       for (const sprite of signs) {
         const d = Math.hypot(sprite.position.x - playerPos.x, sprite.position.z - playerPos.z);
         let a = THREE.MathUtils.clamp((62 - d) / 14, 0, 1);
@@ -144,8 +148,9 @@ export function createNameSigns(scene, { structures, placements, pad = null, hei
         const k = THREE.MathUtils.clamp(d / 16, 1, 2.6);
         sprite.scale.set(sprite.userData.base.x * k, sprite.userData.base.y * k, 1);
         sprite.material.opacity = a;
-        sprite.visible = a > 0.02;
+        sprite.userData.want = a > 0.02;
       }
+      fitLabels(signs, camera, goal);
     },
   };
 }
