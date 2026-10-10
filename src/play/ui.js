@@ -272,9 +272,28 @@ export function isPlayModalOpen() {
   return locks > 0;
 }
 
-/** How many locks are held (cards, reading pauses): the HUD counts its own pauses out of this. */
+/** How many locks are held (cards): the HUD counts its own cards out of this. */
 export function playLockCount() {
   return locks;
+}
+
+// --- reading (lead 2026-10-09): a line on screen does NOT lock the game ----------
+// She keeps walking, turning, running and jumping while a message is up, so a
+// reading line is not a lock. It only tells the cards that open later to wait
+// (readGate.whenIdle), and body.dataset.readPause shows it to anything else.
+let reading = 0;
+
+/** Count one reading line up (true) or down (false). Set by the Chapters 1-3 HUD. */
+export function markReading(on) {
+  reading = Math.max(0, reading + (on ? 1 : -1));
+  if (!hasDom()) return;
+  if (reading) document.body.dataset.readPause = '1';
+  else delete document.body.dataset.readPause;
+}
+
+/** Is a line to read on screen right now? (Not a lock: movement is free.) */
+export function isReading() {
+  return reading > 0;
 }
 
 export function prefersReducedMotion() {

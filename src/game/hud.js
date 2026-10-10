@@ -33,7 +33,7 @@ import { MARKER_COLOR } from './stations.js';
 import { audio } from './audio.js';
 import { loadProfile } from '../launcher/profile.js';
 import { skipButton } from '../play/grownUp.js';
-import { lockPlayInput, unlockPlayInput, playLockCount } from '../play/ui.js';
+import { playLockCount, markReading } from '../play/ui.js';
 import { readMs, needsClick, READ_MIN_MS } from '../play/readTime.js';
 import { install, idleMs, isShort, IDLE_MS } from '../play/readGate.js';
 import { IS_LEVEL1 as IS_L1 } from '../space/level.js';
@@ -86,8 +86,9 @@ const MISSION_FLASH_MS = 7000;
 
 /** Messages (lead 2026-10-09: "kids need time reading"). A message stays up
  *  readMs(text): 5-10 s by its word count (src/play/readTime.js). One that
- *  needs more than 10 s is a card with an OK button, and the game pauses under
- *  it until she clicks (or presses Enter or Space). Messages queue in order:
+ *  needs more than 10 s is a card with an OK button that stays until she clicks
+ *  it. A message is also cleared by a click on it. Neither locks her walking
+ *  (lead 2026-10-09). Messages queue in order:
  *  at most 2 toasts at once, a new one 1.5 s after the last, none while a
  *  question or play card is open (warnings pass). Pickup lines ("+1 wood")
  *  merge while they wait, go after the other messages, and are dropped after
@@ -95,8 +96,9 @@ const MISSION_FLASH_MS = 7000;
  *
  *  Lead 2026-10-09 (src/play/readGate.js): a short status (isShort: "+3 wood",
  *  "Built!") shows at once and never pauses. Anything else is a line to read:
- *  it waits until she has had no input for IDLE_MS, then the game is paused
- *  for its reading time (her movement is locked, src/play/ui.js). */
+ *  it waits until she has had no input for IDLE_MS, then it stays up for its
+ *  reading time. Her walk, turns and jumps stay free while it shows; the game's
+ *  own clocks (rocket, mining, nav) pause for it (isReadPaused). */
 const MAX_VISIBLE_TOASTS = 2;
 const TOAST_GAP_MS = 1500;
 const TOAST_STALE_MS = 20000;
@@ -250,7 +252,6 @@ export class Hud {
     this._toastNextAt = 0;     // performance.now() before which a new toast waits
     this._toastSeen = new Map(); // message -> when it was last shown
     this._read = null;         // the click card for a long message, while it is up: {message}
-    this._onReadKey = null;
     this._inventory = {};
     this._modal = null;      // {question, cb, validate, wrongCount, token}
     this._destroyed = false;
@@ -769,20 +770,11 @@ export class Hud {
     this._readBackdrop.appendChild(card);
     this.root.appendChild(this._readBackdrop);
 
-    this._readOk.addEventListener('click', () => {
+    // A click on the card closes it (OK is one part of the card). Keys do not:
+    // she keeps walking and jumping while it is up (lead 2026-10-09).
+    card.addEventListener('click', () => {
       if (this._read && this._read.ready) this._closeReadCard();
     });
-    // Enter or Space closes it from anywhere, not only when OK has the focus.
-    // Registered while the card is up (see _showReadCard). Swallowed for the
-    // game in every case; only a fresh press after the wait closes the card,
-    // so a held key cannot close it.
-    this._onReadKey = (e) => {
-      if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
-      e.preventDefault();
-      e.stopPropagation();
-      if (e.repeat || !this._read || !this._read.ready) return;
-      this._closeReadCard();
-    };
   }
 
   // --- contract: progress -------------------------------------------------
@@ -972,15 +964,16 @@ export class Hud {
    * A repeat of the newest toast bumps a ×N counter instead of stacking, so
    * picking up five crates does not bury the mission card.
    *
-   * Each message stays up readMs(text) (5-10 s). One that needs more than 10 s
-   * to read becomes a card with an OK button, and the game waits for the click.
+   * Each message stays up readMs(text) (5-10 s), or until she clicks it. One that
+   * needs more than 10 s to read becomes a card with an OK button that stays until
+   * she clicks it. Neither stops her walking.
    * Messages wait in line behind each other, so none is pushed off early. A
    * pickup line waiting in line ("+1 wood") merges with the next of the same
    * kind ("+2 wood"), and messages that matter go ahead of pickup lines.
    *
    * A short status ("+3 wood", "Built!": isShort at her Level) shows at once and
    * never pauses. Any other line waits until she has had no input for IDLE_MS,
-   * then the game pauses for its reading time. Pass `{ status: false }` for a
+   * then it stays up for its reading time. Pass `{ status: false }` for a
    * line that must wait even when it is short ("Next goal: ...").
    *
    * @param {string} text
@@ -1111,36 +1104,37 @@ export class Hud {
     countEl.hidden = true;
     node.appendChild(countEl);
 
-    // A line to read pauses the game while it is up (a status does not).
+    // A line to read is a reading pause while it is up (a status is not). It does not lock her walk.
     const entry = { node, countEl, message, repeat: 1, timer: 0, shownAt: now, paused: !status };
     if (entry.paused) this._hold(entry);
     entry.timer = setTimeout(() => this._dismissToast(entry), readMs(message));
+    // A click or tap on a message clears it (lead 2026-10-09: "until she clicks it").
+    node.addEventListener('click', () => this._dismissToast(entry));
     this._toasts.push(entry);
     this._toastLayer.appendChild(node);
   }
 
   /**
-   * A reading pause: her movement and the world's play input are locked while
-   * anything holds one (the same lock as the play cards, src/play/ui.js). The
-   * token is the toast or the cue; `_release` gives the lock back once.
+   * A reading pause: a line to read is up. It does NOT lock her movement (lead
+   * 2026-10-09): the token is the toast; `_release` ends its count once. The game's
+   * own clocks stop for it (isReadPaused), and the next line waits PAUSE_GAP_MS.
    */
   _hold(token) {
     if (this._holds.has(token)) return;
     this._holds.add(token);
-    lockPlayInput();
+    markReading(true);
   }
 
   _release(token) {
     if (!this._holds.delete(token)) return;
     this._lastPauseEnd = performance.now();
-    unlockPlayInput();
+    markReading(false);
   }
 
   /**
-   * Open the read-it card for a long message. The game pauses (the input lock
-   * is the same one the play-mode cards use) and the Clue button and the Help
-   * chip step away (the question cards' focus class), until OK, Enter or Space
-   * once the wait is over (READ_MIN_MS: she has to read it before OK works).
+   * Open the read-it card for a long message. It stays up, without a backdrop,
+   * until she clicks it, once the wait is over (READ_MIN_MS: she has to read it
+   * before a click works). She can walk while it is up.
    */
   _showReadCard(message) {
     this._read = { message, ready: false, timer: 0 };
@@ -1152,10 +1146,7 @@ export class Hud {
     void this._readMeter.offsetWidth; // restart the fill
     this._readMeter.classList.add('is-timing');
     this._readBackdrop.hidden = false;
-    this._readBackdrop.classList.add('is-open');
-    document.body.classList.add('rv-question-open');
-    lockPlayInput();
-    if (typeof addEventListener === 'function') addEventListener('keydown', this._onReadKey, true);
+    markReading(true);
     this._read.timer = setTimeout(() => this._readReady(), READ_MIN_MS);
   }
 
@@ -1166,8 +1157,7 @@ export class Hud {
     this._readOk.disabled = false;
     this._readOk.classList.add('is-ready');
     this._readMeter.hidden = true;
-    // Focus OK so a keyboard or tab user is on the button (after the paint).
-    setTimeout(() => { try { this._readOk.focus(); } catch { /* detached */ } }, 0);
+    // No focus here: a focused OK would take Space or Enter as a click, and those keys are the game's.
   }
 
   /** Close the read-it card and let the next message come up. Safe to call twice. */
@@ -1176,11 +1166,8 @@ export class Hud {
     clearTimeout(this._read.timer);
     this._read = null;
     this._readBackdrop.hidden = true;
-    this._readBackdrop.classList.remove('is-open');
-    if (typeof removeEventListener === 'function') removeEventListener('keydown', this._onReadKey, true);
-    if (!this._modal) document.body.classList.remove('rv-question-open');
     this._lastPauseEnd = performance.now();
-    unlockPlayInput();
+    markReading(false);
     this._toastNextAt = performance.now() + TOAST_GAP_MS;
     this._showQueued();
   }
@@ -1190,11 +1177,10 @@ export class Hud {
    * reading pause also sets the play lock, but it is not a card: it does not count.
    */
   _focusNow() {
-    // Counted locks beyond our own pauses are cards (a chooser, a lesson, the tuner). A film
-    // sets the flag directly (chapterStory.js, cutscenes.js), so the flag alone counts when no pause is up.
-    const external = playLockCount() > this._holds.size;
-    const film = typeof document !== 'undefined' && document.body.dataset.playModal === '1' && this._holds.size === 0;
-    return !!this._modal || !!this._read || external || film;
+    // Counted locks are cards (a chooser, a lesson, the tuner, a film). A film sets the flag directly
+    // (chapterStory.js, cutscenes.js), so the flag alone counts too. Reading lines take no lock.
+    const card = playLockCount() > 0 || (typeof document !== 'undefined' && document.body.dataset.playModal === '1');
+    return !!this._modal || !!this._read || card;
   }
 
   _dismissToast(entry) {

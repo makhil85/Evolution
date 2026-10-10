@@ -26,224 +26,64 @@ import { createKit } from './kit.js';
 import { createWalkMap } from './walkmap.js';
 import { DECKS, DECK_MODELS, deckOf, START_DECK } from './decks.js';
 import { loadModels } from './models.js';
+import { createNavArrow } from '../../../play/navArrow.js';
 
 const REACH = 1.6;     // how close to a station's spot to press E
 const LIFT = { x0: -1.2, x1: 1.2, z0: -2.4, z1: 0 };
 const LIFT_TIME = 1.4; // doors shut, fade, travel, fade in
-export const LIFT_OUT = { x: 0, z: 2, face: 0 }; // where she steps out: 2 m past the door, facing away from it (the camera has room behind her, outside the car)
-// The chase camera (lead 2026-10-09: "the camera comes too close to the girl if she hits something", "the camera
-// turning is not smooth"). A bump eases the camera in, never snaps it; it never comes nearer her eyes than CAM_MIN,
-// since closer the view fills with her hair or a wall; and her turn is a damped follow.
-const CAM_PULL = 5;       // how fast the chase camera pulls in towards a wall or a roof (1/s): a bump eases in
-const CAM_LET = 6;        // how fast it lets out again (1/s)
-const CAM_LET_MAX = 1;    // and by no more than this share of its distance a second (1/s)
-const CAM_PULL_MAX = 0.8; // ... and pulls in by no more than this share a second (1/s)
-export const CAM_MIN = 1.6;      // never nearer her eyes than this (m): a wall that leaves less room lifts the camera, then turns the view
-export const CAM_PITCH_UP = 1.5; // the most it lifts to look down over a wall (rad): nearly straight above (0.11 m behind her at CAM_MIN)
-const CAM_PITCH_STEP = 0.05; // the steps it tries on the way up
-const CAM_TURNS = [0.3, 0.6, 0.9, 1.2, 1.5, 1.8, 2.1, 2.4]; // when lifting is not enough (a corner), the view turns this far (rad), the smallest first
-const CAM_TURN_RATE = 3; // how fast the view turns to open space (rad/s)
-const CAM_AHEAD = 0.4; // the view starts to turn while the room is this much more than CAM_MIN (m): the turn ends before a wall takes the camera nearer than that
-const CAM_PITCH_RISE = 15; // how fast it rises (1/s): a wall must not wait for the pitch
-const CAM_PITCH_EASE = 2.5; // how fast the pitch settles back (1/s); it rises faster (CAM_PITCH_RISE): a wall must not wait for it
-const CAM_FADE = 6;       // how fast she fades out when the camera has no room (1/s), and back in
-export const OVER_PITCH = 1.3; // the 'over' view (toggleView): a steep look down on her at CAM_MIN (a 3.2 m roof allows it)
-export const CAM_NEAR = 0.1; // the camera's near plane (m): less than BODY_R, so the walls it keeps are never clipped
+export const LIFT_OUT = { x: 0, z: 2.8, face: 0 }; // where she steps out: 2.8 m past the door (the most that fits on every deck), facing away from it
+// The follow camera (lead 2026-10-09: "the camera should be behind her by default, like Chapter 3 following the girl").
+// The chase camera before it lifted, turned and faded her, and she was hidden. This one is plain and fixed: the camera
+// stands behind her back, CAM_DIST away and CAM_RISE above her feet, and looks at her upper body (TARGET_UP), so her
+// whole body is in view. It never moves its distance or pitch by itself, never collides, and never fades her: a wall on
+// the sight line is cut away instead (cutAway below). Its yaw eases to her heading only while she walks forward, so a
+// drag, a strafe or a step back holds it, and a bump leaves it where it is.
+export const CAM_DIST = 3.0; // behind her (m)
+export const CAM_RISE = 1.5; // the camera's height above her feet (m): from 3 m back her whole body is in view
+export const CAM_OVER = { dist: 2.6, rise: 2.8 }; // the 'over' view (toggleView): the same follow, higher and steeper
+export const CAM_NEAR = 0.1; // the near plane (m)
+const TARGET_UP = 1.1; // she is looked at this far above her feet (her upper body)
+const CUT_R = 0.45; // the cut-away tube round the sight line (m): walls on that line inside it are not drawn
 const CHASE_SMOOTH = 0.15; // the point the camera looks at trails her by this (s, critically damped)
-const CHASE_SNAP = 2;      // ... and jumps to her when she is this far off (m): a lift ride, a place()
-const FOLLOW_GAIN = 0.9;   // how fast the camera turns to her heading (1/s of the angle)
-const YAW_RATE_MAX = 1.1;  // ... and never faster than this (rad/s)
-const FOLLOW_LO = 0.3;     // it follows only while she walks: from FOLLOW_LO up to FOLLOW_HI (m/s)
+const CHASE_SNAP = 2; // ... and jumps to her when she is this far off (m): a lift ride, a place()
+const FOLLOW_GAIN = 0.9; // how fast the camera turns to her heading (1/s of the angle)
+const YAW_RATE_MAX = 1.1; // ... and never faster than this (rad/s)
+const FOLLOW_LO = 0.3; // it follows only while she walks forward: from FOLLOW_LO up to FOLLOW_HI (m/s)
 const FOLLOW_HI = 1.2;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const angDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
 const inLift = (x, z) => x > LIFT.x0 && x < LIFT.x1 && z > LIFT.z0 && z < LIFT.z1 - 0.2;
-// The lift car's footprint, as a solid for the chase camera only (not for her walk): outside the car the camera must not
-// sit in it (its open door would let the camera line run through). Inside the car the camera uses the plain walk map.
-const LIFT_CAR_BOX = [{ rect: [0, -1.2, 2.6, 2.6] }];
-// The camera button (toggleView) keeps its choice for the session: 'behind' (her chase view, the default, as in
-// Chapters 1-2) or 'over' (a steeper look down on her, the same steering).
+// The camera button (toggleView) keeps its choice for the session: 'behind' (her follow view, the default, as in
+// Chapters 1-2) or 'over' (a higher, steeper look down on her, the same follow).
 let viewMode = 'behind';
 
-// The chase camera's sight line (chaseDistance). These scratch values are set per call, so a frame allocates nothing.
-const SIGHT = { map: null, roof: null, x: 0, z: 0, ty: 0, fx: 0, fz: 0, cp: 1, sp: 0 };
-export const BODY_R = 0.15; // the camera keeps this far from a wall: the hard limit
-export const CAM_CLEAR = 0.15;     // and over a low solid (a bed, a desk) it keeps this far above its top
-const CAM_ROOF = 0.2; // and under the roof it keeps this far: 3.2 m allows a camera straight above her at CAM_MIN (eye 1.0 + 0.3 + 1.6)
-const CLEAR = { x: 0, z: 0, r: 0, y: 0, m: CAM_CLEAR }; // the camera's clearance query (walkmap.js clearAt)
-const SOFT_R = 0.6;  // and eases to this margin, so a door frame or corner it is about to pass pulls it in early
-/** Set the sight line: from her point p, at this pitch, along this yaw (her yaw, or a turn of the view from it). */
-function aimSight(map, roof, p, pitch, yaw) {
-  const s = SIGHT;
-  s.map = map; s.roof = roof; s.x = p.x; s.z = p.z; s.ty = p.ty;
-  s.fx = Math.sin(yaw); s.fz = Math.cos(yaw); s.cp = Math.cos(pitch); s.sp = Math.sin(pitch);
+// The cut-away: every deck material discards the fragments inside a tube from the camera to her upper body (a wall, a
+// prop or a lift car on that line), so nothing stands between the camera and her. One set of uniforms for all of them.
+const CUT = { a: { value: new THREE.Vector3() }, b: { value: new THREE.Vector3() }, r: { value: CUT_R } };
+/** Patch one material so its fragments in the cut-away tube are dropped (the walls are merged per material, so this cuts a piece, not a wall). */
+function cutAway(m) {
+  if (m.userData.cutAway) return;
+  m.userData.cutAway = true;
+  m.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, { uCutA: CUT.a, uCutB: CUT.b, uCutR: CUT.r });
+    shader.vertexShader = `varying vec3 vCutPos;\n${shader.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n  vCutPos = (modelMatrix * vec4(transformed, 1.0)).xyz;')}`;
+    shader.fragmentShader = `uniform vec3 uCutA;\nuniform vec3 uCutB;\nuniform float uCutR;\nvarying vec3 vCutPos;\n${shader.fragmentShader.replace('void main() {', `void main() {
+  { vec3 ab = uCutB - uCutA; float tt = dot(vCutPos - uCutA, ab) / dot(ab, ab);
+    if (tt >= 0.0 && tt <= 1.0 && length(vCutPos - (uCutA + ab * tt)) < uCutR) discard; }`)}`;
+  };
+  m.customProgramCacheKey = () => `cutaway:${m.type}`;
 }
-/** Is the camera clear at distance d on her sight line, with margin r (no wall, and under the roof)? */
-function sightClear(d, r) {
-  const s = SIGHT; const c = CLEAR;
-  const cx = s.x - s.fx * d * s.cp; const cz = s.z - s.fz * d * s.cp;
-  const cy = s.ty + 0.3 + d * s.sp;
-  // Over a solid with a height (walkmap.js) the camera may pass; a wall (full height) still stops it.
-  // The soft margin is for the camera away from her: this close (under SOFT_R) its ring would reach past her to a wall in front.
-  c.x = cx; c.z = cz; c.r = d < SOFT_R ? Math.min(r, BODY_R) : r; c.y = cy;
-  return s.map.clearAt(c) && cy < s.roof(cx, cz) - CAM_ROOF;
-}
-/** How far along the sight line (at most `want`) the camera stays clear with margin r, found to a few mm. */
-function clearDist(want, r) {
-  // Out from her in 0.1 m steps until the sight line is blocked (or the wanted distance), then bisected. The first
-  // 0.2 m are not tested: a post a hand's width from her (inside the margin) must not block every view of her.
-  let ok = 0; let bad = null;
-  for (let d = 0.2; ; d += 0.1) {
-    const x = Math.min(d, want);
-    if (sightClear(x, r)) { ok = x; if (x >= want) return want; } else { bad = x; break; }
-  }
-  for (let i = 0; i < 6; i++) { const m = (ok + bad) / 2; if (sightClear(m, r)) ok = m; else bad = m; }
-  return ok;
-}
-/** How often the hard limit had to hold the camera back (the tests read it). */
-export const chaseStats = { held: 0 };
-
-/**
- * The chase camera's distance this frame (m), along her sight line. `p` = { x, z, ty (her eye
- * height), yaw, pitch, want (the distance she asked for) }; `map` her walk map; `roof(x, z)` the roof
- * above a point (deck.roof); `prev` last frame's distance.
- * The hard limit is the first wall or roof on the line, at the body's margin: the camera is never past
- * it. Its target is the same line at the bigger margin SOFT_R, and the camera eases to that: in (CAM_PULL,
- * and by no more than CAM_PULL_MAX of its distance a second), out (CAM_LET, and by no more than CAM_LET_MAX).
- * The target never goes below CAM_MIN while the hard limit allows it (chaseView lifts the camera for that).
- */
-// How far the hard limit cut the last chaseDistance (m): a cut that big is faded at once (chaseView).
-let _cut = 0;
-export function chaseDistance(map, roof, p, prev, dt) {
-  aimSight(map, roof, p, p.pitch, p.yaw);
-  const want = Math.max(0, p.want);
-  const need = Math.min(CAM_MIN, want);
-  const hard = clearDist(want, BODY_R);
-  const soft = sightClear(0, SOFT_R) ? Math.min(hard, clearDist(want, SOFT_R)) : hard;
-  // The soft margin pulls the camera in early, but not below CAM_MIN while the hard limit still allows it.
-  const target = Math.max(soft, Math.min(hard, need));
-  let next = prev + (target - prev) * (1 - Math.exp(-dt * (target < prev ? CAM_PULL : CAM_LET)));
-  // Each way is also held to a share of the distance a second: a corner swept into the line glides in. Letting out
-  // is at least a share of the minimum (or 0.5 m), so a camera that was pulled right in (or to 0) is back at CAM_MIN
-  // in about half a second.
-  // A view that has held (p.hold: its room is found) lets out four times as fast: she is not left faded for long.
-  const letMax = CAM_LET_MAX * (p.hold ? 4 : 1);
-  next = next < prev ? Math.max(next, prev * (1 - CAM_PULL_MAX * dt)) : Math.min(next, prev + letMax * dt * Math.max(prev, need, 0.5));
-  // The camera is never past the hard limit (a wall or the roof) and never under 0. When the wall comes in at once, the
-  // distance is cut to it (the camera must not sit in the wall): _cut says by how much, and chaseView fades her then.
-  let c = Math.max(0, Math.min(next, hard));
-  if (c < next) chaseStats.held += 1;
-  _cut = next - c;
-  // The walk map is a grid (0.2 m cells), so the clear distances are not always one run: a blocked value between clear
-  // ones steps back (1 cm at a time) to the nearest clear one; if none is clear, the camera is at her (0) and she fades.
-  for (let i = 0; i < 40 && c > 0 && !sightClear(c, BODY_R); i++) c = Math.max(0, c - 0.01);
-  return sightClear(c, BODY_R) ? c : 0;
+/** Cut away every material under a group (her own materials are not passed here). */
+function cutAwayUnder(group) {
+  group.traverse((o) => { if (o.isMesh) for (const m of [].concat(o.material)) if (m) cutAway(m); });
 }
 
-/**
- * The lowest pitch from `from` up to CAM_PITCH_UP at which the camera has room (at least need, with margin r) on this
- * yaw, else -1.
- */
-function riseFor(map, roof, p, yaw, from, want, need, r) {
-  for (let q = from; q <= CAM_PITCH_UP + 1e-9; q += CAM_PITCH_STEP) {
-    aimSight(map, roof, p, q, yaw);
-    if (clearDist(want, r) >= need) return q;
-  }
-  return -1;
-}
+// Scratch objects for the camera (no allocation a frame): the pose chaseFrame reads, and her walk's axes (tick).
+const _her = { x: 0, y: 0, z: 0, heading: 0, speed: 0, want: 0, rise: 0, follow: false };
+const _f = { x: 0, z: 0 }; const _rt = { x: 0, z: 0 }; const _cam = { x: 0, y: 0, z: 0 };
 
-// What pickView found (scratch, so a frame allocates nothing): the pitch to aim, and the view's turn from her yaw.
-const _pick = { aim: 0, turn: 0 };
-/**
- * A view with room (at least need, with margin r): the lift at her yaw if that is enough, else the smallest turn of
- * the view that has room, the way it turned last (dir) first. Sets _pick; false when no view has room.
- */
-function pickView(map, roof, p, want, need, r, dir, turns) {
-  const lift = riseFor(map, roof, p, p.yaw, p.pitch + CAM_PITCH_STEP, want, need, r);
-  if (lift >= 0) { _pick.aim = lift; _pick.turn = 0; return true; }
-  if (!turns) return false;
-  for (let m = 0; m < CAM_TURNS.length; m++) {
-    for (let k = 0; k < 2; k++) {
-      const turn = (k ? -dir : dir) * CAM_TURNS[m];
-      const q = riseFor(map, roof, p, p.yaw + turn, p.pitch, want, need, r);
-      if (q >= 0) { _pick.aim = q; _pick.turn = turn; return true; }
-    }
-  }
-  return false;
-}
-
-/**
- * The chase camera's pitch, view turn and distance this frame, into `st` ({ dist, pitch, fade, turn, lost, dir },
- * kept between frames). The pitch is her camera's (p.pitch) unless a wall or roof is close on that line (within
- * SOFT_R): then it rises, a little a frame, to look down over the wall (up to CAM_PITCH_UP). Where even that leaves
- * no room (a corner, a wall close behind her), the view turns (st.turn, rad, from her yaw) to the smallest turn that
- * has room; chaseFrame turns the camera by it. Only when there is no room within the body margin either (`lost`)
- * does `fade` go to 1 and she fades out (ship.js), rather than the view filling with her hair or the wall.
- */
-export function chaseView(map, roof, p, st, dt) {
-  const want = Math.max(0, p.want);
-  const need = Math.min(CAM_MIN, want);
-  // The searches start from the pitch the camera has now (st.pitch), so the view it picks is the one it rises to.
-  const base = p.pitch; p.pitch = st.pitch;
-  let aim = base;
-  st.turn = 0; st.lost = false;
-  // She may turn the view only while she is stopped (p.canTurn, chaseFrame): a held W keeps its direction.
-  const turns = p.canTurn !== false;
-  if (!turns) { st.goal = null; st.hold = false; }
-  const ahead = Math.min(CAM_AHEAD, Math.max(0, want - need));
-  aimSight(map, roof, p, p.pitch, p.yaw);
-  const room = clearDist(want, SOFT_R);
-  // Holding a view, it is picked again only when the body margin has no room (the soft margin is for the look-ahead).
-  let picking = st.goal == null && (st.hold ? clearDist(want, BODY_R) < need : room < need + ahead);
-  if (st.goal != null) {
-    // A turn under way goes on to the yaw it chose (st.goal), unless she has walked on and that yaw is blocked now.
-    aimSight(map, roof, p, st.aim, st.goal);
-    if (clearDist(want, BODY_R) < need) { st.goal = null; picking = true; }
-    else {
-      st.turn = angDiff(st.goal, p.yaw); aim = st.aim;
-      // Done once the view here has room (it holds there) or the camera has turned to the goal.
-      if (room >= need + ahead || Math.abs(st.turn) < 0.01) { st.goal = null; st.hold = true; }
-    }
-  }
-  if (picking) {
-    // Her view is closing in. A lift first, at every margin (the steep look is always better than a turn); a turn to a yaw
-    // with room only when she may turn (stopped), the way it turned last first.
-    const dir = st.dir || 1;
-    // A view with the look-ahead's room first, then the minimum; the body margin last.
-    const lifted = pickView(map, roof, p, want, need + ahead, SOFT_R, dir, false) || pickView(map, roof, p, want, need, SOFT_R, dir, false) || pickView(map, roof, p, want, need, BODY_R, dir, false);
-    const found = lifted || (turns && (pickView(map, roof, p, want, need + ahead, SOFT_R, dir, true) || pickView(map, roof, p, want, need, SOFT_R, dir, true) || pickView(map, roof, p, want, need, BODY_R, dir, true)));
-    if (found) {
-      aim = Math.max(_pick.aim, st.pitch); // never lower the pitch while the view is blocked (a low post dithers it)
-      st.aim = aim;
-      if (_pick.turn) { st.turn = _pick.turn; st.goal = p.yaw + _pick.turn; st.dir = _pick.turn < 0 ? -1 : 1; st.hold = false; }
-      else { st.hold = true; } // a lift holds (the pitch stays up, and the camera lets out faster) until the view below is clear
-    } else { aim = CAM_PITCH_UP; st.lost = true; st.hold = false; st.goal = null; }
-  } else if (st.hold && st.goal == null) {
-    // A lift holds while the view below is short; it comes down once there is room again.
-    aimSight(map, roof, p, base, p.yaw);
-    if (clearDist(want, SOFT_R) >= need + ahead) { st.hold = false; aim = base; } else { aim = st.aim; }
-  }
-  st.pitch += (aim - st.pitch) * (1 - Math.exp(-dt * (aim > st.pitch ? CAM_PITCH_RISE : CAM_PITCH_EASE)));
-  p.pitch = st.pitch; // the distance is for the pitch the camera has this frame
-  p.hold = st.hold;
-  st.dist = chaseDistance(map, roof, p, st.dist, dt);
-  p.pitch = base;
-  // A wall that came in at once (the hard limit cut the distance by more than a step): she is faded at once, so the camera
-  // does not visibly jump into the wall with her in view.
-  if (_cut > 0.25) st.fade = 1;
-  // She fades while the camera is nearer than CAM_MIN and no view gives it room: the last resort (a corner start, a closet,
-  // a turn under way from a blocked spot). Once the view has room the camera is out to CAM_MIN and she comes back.
-  const cornered = st.dist < need - 0.05;
-  st.fade += ((cornered ? 1 : 0) - st.fade) * (1 - Math.exp(-dt * CAM_FADE));
-}
-
-// Scratch objects for the chase (no allocation a frame): the pose chaseView reads, and her state updateCamera fills.
-const _pose = { x: 0, z: 0, ty: 0, yaw: 0, pitch: 0, want: 0, canTurn: true, hold: false };
-const _her = { x: 0, y: 0, z: 0, heading: 0, speed: 0, want: 0, follow: false, pitch: null, canTurn: true };
-const _f = { x: 0, z: 0 }; const _rt = { x: 0, z: 0 }; // her walk's axes (tick)
-
-// The chase rig: the point the camera looks at (a critically damped follow), the turn that follows her heading,
-// and chaseView's pitch, distance and fade. One per scene, reused each frame.
+// The follow rig: the point the camera looks at (a critically damped follow), the turn that follows her heading.
+// One per scene, reused each frame.
 let _dampV = 0; // the velocity the last damped() left
 /** Critically damped follow (Unity's SmoothDamp) of one axis: the new value; its velocity goes to _dampV. */
 function damped(cur, vel, target, dt) {
@@ -253,43 +93,36 @@ function damped(cur, vel, target, dt) {
   _dampV = (vel - w * tmp) * e;
   return target + (ch + tmp) * e;
 }
-/** A fresh rig for a camera at cam's distance and pitch. */
-export function createChaseRig(cam) {
-  return { live: false, fx: 0, fy: 0, fz: 0, vx: 0, vy: 0, vz: 0, follow: 0, yawRate: 0, dist: cam.dist, pitch: cam.pitch, fade: 0, turn: 0, lost: false, dir: 1, swing: 0, goal: null, aim: 0, hold: false };
+/** A fresh rig: the camera's distance and height are set by chaseFrame (dist, cy). */
+export function createChaseRig() {
+  return { live: false, fx: 0, fy: 0, fz: 0, vx: 0, vy: 0, vz: 0, follow: 0, yawRate: 0, dist: CAM_DIST, cy: CAM_RISE };
 }
 /**
- * One frame of the chase camera. `s` = { x, y, z (her feet, and y her eye height), heading, speed, want (the
- * distance she asked for), follow (false while the mouse drags or a card is up), pitch (optional: the pitch
- * she asks for, else cam.pitch) }; `cam` = { yaw, pitch } is turned in place. The rig then holds the point to
- * look at (fx, fy, fz), the pitch, the distance and the fade; the view turns to open space when it must (chaseView).
+ * One frame of the follow camera. `s` = { x, y, z (her feet), heading, speed, want (the distance behind her), rise (the
+ * height above her feet), follow (true while she walks forward: the view turns to her heading) }; `cam` = { yaw } is
+ * turned in place. The rig then holds the point to look at (fx, fy, fz), the distance (dist) and the camera's height
+ * (cy). The distance and height are the ones asked for, always: nothing moves them.
  */
-export function chaseFrame(rig, cam, map, roof, s, dt) {
+export function chaseFrame(rig, cam, s, dt) {
   // The point to look at trails her, and jumps to her only after a teleport (a lift ride, a place()).
   if (!rig.live || Math.hypot(s.x - rig.fx, s.z - rig.fz) > CHASE_SNAP) {
     rig.live = true; rig.fx = s.x; rig.fy = s.y; rig.fz = s.z; rig.vx = 0; rig.vy = 0; rig.vz = 0;
-    // A cut: the camera starts again at the distance and pitch she asks for, and no turn or lift from the place she left.
-    rig.dist = s.want; rig.pitch = s.pitch ?? cam.pitch; rig.turn = 0; rig.swing = 0; rig.goal = null; rig.hold = false; rig.lost = false;
+    rig.yawRate = 0; rig.follow = 0;
   } else {
     rig.fx = damped(rig.fx, rig.vx, s.x, dt); rig.vx = _dampV;
     rig.fy = damped(rig.fy, rig.vy, s.y, dt); rig.vy = _dampV;
     rig.fz = damped(rig.fz, rig.vz, s.z, dt); rig.vz = _dampV;
   }
-  // The turn: the camera comes round to her heading only while she walks, and that weight eases in slowly and out
-  // quickly, so a bump (her speed gone) stops the swing at once instead of snapping it, and a start is not a jerk.
+  rig.dist = s.want; rig.cy = s.y + s.rise;
+  // The turn: the camera comes round to her heading only while she walks forward, and that weight eases in slowly and out
+  // quickly, so a stop ends the swing at once. A held strafe or a step back keeps the view (a turn that follows her
+  // keys would spin the view under her).
   const k0 = s.follow ? clamp((s.speed - FOLLOW_LO) / (FOLLOW_HI - FOLLOW_LO), 0, 1) : 0;
   const k = k0 * k0 * (3 - 2 * k0);
   rig.follow += (k - rig.follow) * (1 - Math.exp(-dt * (k > rig.follow ? 3 : 8)));
   const rate = clamp(angDiff(s.heading, cam.yaw) * FOLLOW_GAIN, -YAW_RATE_MAX, YAW_RATE_MAX) * rig.follow;
   rig.yawRate += (rate - rig.yawRate) * (1 - Math.exp(-dt * 6));
   cam.yaw += clamp(rig.yawRate, -YAW_RATE_MAX, YAW_RATE_MAX) * dt;
-  // Where the walls leave no room, the view turns to open space (rig.turn, from the last frame's chaseView): at a set rate,
-  // and it eases out when the room is found. It turns before the view is chosen, so the distance is for the yaw the camera has.
-  // Steering uses cam.yaw too, so the keys still match the screen.
-  const goal = rig.turn === 0 ? 0 : Math.sign(rig.turn) * CAM_TURN_RATE;
-  rig.swing += (goal - rig.swing) * (1 - Math.exp(-dt * 10));
-  cam.yaw += rig.swing * dt;
-  _pose.x = rig.fx; _pose.z = rig.fz; _pose.ty = rig.fy; _pose.yaw = cam.yaw; _pose.pitch = s.pitch ?? cam.pitch; _pose.want = s.want; _pose.canTurn = s.canTurn !== false;
-  chaseView(map, roof, _pose, rig, dt);
 }
 
 /** The lift car every deck shares (built once per deck, at the origin). */
@@ -350,7 +183,6 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
     // The roof above each point: the deck's own (its rooms are not all one height), else its ceiling.
     d.roof = d.ceilingAt ?? (() => d.ceiling ?? 3.2);
     d.map = createWalkMap({ floors: [...d.floors, lift.floor], solids: d.solids });
-    d.camMap = createWalkMap({ floors: [...d.floors, lift.floor], solids: [...d.solids, ...LIFT_CAR_BOX] });
     decks[spec.id] = d;
   }
 
@@ -378,9 +210,14 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
     d.group.add(c.root);
     d.solids.push({ disc: [spot.x, spot.z, 0.4] });
     d.map = createWalkMap({ floors: [...d.floors, d.lift.floor], solids: d.solids });
-    d.camMap = createWalkMap({ floors: [...d.floors, d.lift.floor], solids: [...d.solids, ...LIFT_CAR_BOX] });
   }
 
+  // The cut-away (chaseFrame's camera): every deck material, the crew and the lift car included (her own are not in the decks yet).
+  for (const d of Object.values(decks)) cutAwayUnder(d.group);
+  // The direction arrow: the Chapter 1-3 ground chevron, pointing to the next station (or the lift, when it is on another deck).
+  const nav = createNavArrow(scene);
+  nav.setBeacon(false); // the beacon below marks the station
+  const navTarget = { x: 0, z: 0, label: '' };
   // The beacon: a glowing ring on the floor where she stands, and a small
   // arrow bobbing over it (a tall see-through column hid the console and
   // tinted the whole view once the camera was inside it).
@@ -390,6 +227,7 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
   beaconRing.position.y = 0.03;
   const beaconArrow = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.32, 4).rotateX(Math.PI), beaconMat);
   beacon.add(beaconRing, beaconArrow);
+  cutAwayUnder(beacon);
 
   // Her.
   // 'lope' (the gentle push's walk) is the Moon's floaty hop: a look, not the push. The pull she feels in the
@@ -398,12 +236,6 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
   walker.helmet.visible = false;
   if (walker.pack) walker.pack.visible = false;
   walker.root.traverse((o) => { if (o.isMesh && o.geometry?.type === 'TorusGeometry') o.visible = false; });
-  // Her materials, so they can fade (updateCamera): transparent from the start, so a fade never changes the sort.
-  const herMats = [];
-  walker.root.traverse((o) => {
-    if (!o.isMesh) return;
-    for (const m of [].concat(o.material)) if (m && !herMats.includes(m)) { m.transparent = true; herMats.push(m); }
-  });
   const terrain = { heightAt: () => 0 };
 
   let deck = null;
@@ -422,8 +254,8 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
   }
 
   const overlay = createOverlay();
-  const cam = { yaw: 0, pitch: 0.3, dist: 4.6 };
-  const rig = createChaseRig(cam); // where the camera looks, how far and how high (chaseFrame)
+  const cam = { yaw: 0 };
+  const rig = createChaseRig(); // where the camera looks, how far and how high (chaseFrame)
   const _move = new THREE.Vector2();
   const _v = new THREE.Vector3();
   let clock = 0; let busy = false; let disposed = false; let prevE = false; let prevJump = false;
@@ -519,28 +351,23 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
     }
   }
 
-  function updateCamera(dt, mouse, canTurn) {
-    if (mouse) {
-      cam.yaw -= (mouse.dx || 0) * 0.0055;
-      cam.pitch = clamp(cam.pitch + (mouse.dy || 0) * 0.0042, -0.05, 0.9);
-      if (mouse.wheel) cam.dist = clamp(cam.dist * Math.exp(mouse.wheel * 0.0012), 2.2, 7);
-    }
-    // Her point, the turn to her heading, and the pitch and distance that keep the walls and roof off the view
-    // (chaseFrame). The camera follows the rig's point, not her feet, so a bump does not jerk it.
-    _her.x = walker.pos.x; _her.y = walker.pos.y + 1.0; _her.z = walker.pos.z; _her.heading = walker.heading;
-    _her.speed = Math.hypot(walker.vel.x, walker.vel.y); _her.follow = !!mouse && !mouse.dragging;
+  // forward: she walks forward on her own keys (no strafe, no step back), so the view may turn to her heading.
+  function updateCamera(dt, mouse, forward) {
+    if (mouse) cam.yaw -= (mouse.dx || 0) * 0.0055; // a drag turns the view; it swings back to her heading as she walks
+    // Her feet and heading. The camera follows the rig's point, not her feet, so a bump does not jerk it.
+    _her.x = walker.pos.x; _her.y = walker.pos.y; _her.z = walker.pos.z; _her.heading = walker.heading;
+    _her.speed = Math.hypot(walker.vel.x, walker.vel.y); _her.follow = !!mouse && !mouse.dragging && forward;
     const over = viewMode === 'over';
-    _her.want = over ? CAM_MIN : cam.dist;
-    _her.pitch = over ? OVER_PITCH : null;
-    _her.canTurn = canTurn;
-    chaseFrame(rig, cam, inLift(walker.pos.x, walker.pos.z) ? deck.map : deck.camMap, deck.roof, _her, dt);
-    const fx = Math.sin(cam.yaw); const fz = Math.cos(cam.yaw);
-    const tx = rig.fx; const ty = rig.fy; const tz = rig.fz;
-    camera.position.set(tx - fx * rig.dist * Math.cos(rig.pitch), ty + 0.3 + rig.dist * Math.sin(rig.pitch), tz - fz * rig.dist * Math.cos(rig.pitch));
-    camera.lookAt(tx, ty, tz);
-    // Her body fades only when no view has room (chaseView, a closet): her hair filling the view is not a view.
-    walker.root.visible = rig.fade < 0.98;
-    for (const m of herMats) m.opacity = 1 - rig.fade;
+    _her.want = over ? CAM_OVER.dist : CAM_DIST;
+    _her.rise = over ? CAM_OVER.rise : CAM_RISE;
+    chaseFrame(rig, cam, _her, dt);
+    _cam.x = rig.fx - Math.sin(cam.yaw) * rig.dist; _cam.y = rig.cy; _cam.z = rig.fz - Math.cos(cam.yaw) * rig.dist;
+    camera.position.set(_cam.x, _cam.y, _cam.z);
+    camera.lookAt(rig.fx, rig.fy + TARGET_UP, rig.fz);
+    CUT.a.value.set(_cam.x, _cam.y, _cam.z);
+    CUT.b.value.set(rig.fx, rig.fy + TARGET_UP, rig.fz);
+    // She is always in view: the camera never fades her or hides her; a wall on the sight line is cut away (CUT).
+    walker.root.visible = true;
   }
 
   const collide = (p, v) => deck.map.collide(p, v);
@@ -580,9 +407,16 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
     const nx = nextStation();
     beacon.visible = !!nx && !(nx.deck !== deck.spec.id && hz < 1.0 && Math.abs(hx) < 1.6);
     if (lift) runLift(dt);
-    // She turns the view on her own only while she stands still (no move key, slower than 0.3 m/s): a held key keeps its way.
-    const holding = (inp.thrust || 0) !== 0 || (inp.turn || 0) !== 0;
-    updateCamera(dt, modal && !lift ? null : mouse, modal || (!holding && speed < 0.3));
+    // The view turns to her heading only while she walks forward on her own keys (updateCamera).
+    updateCamera(dt, modal && !lift ? null : mouse, !modal && (inp.thrust || 0) > 0 && (inp.turn || 0) === 0);
+    // The direction arrow: to the next station on this deck, else to the lift (the next station is on another deck).
+    if (nx) {
+      const here = nx.deck === deck.spec.id;
+      navTarget.x = here ? nx.x : 0; navTarget.z = here ? nx.z : -1.2;
+      navTarget.label = here ? t(nx.title[0], nx.title[1]) : t(`Take the lift to Deck ${decks[nx.deck].spec.n}`, `Lift to Deck ${decks[nx.deck].spec.n}`);
+      nav.setTarget(navTarget);
+    } else nav.setTarget(null);
+    nav.update(dt, walker.pos);
 
     // In the lift: the deck panel. At a station: its prompt.
     const w = renderer.domElement.clientWidth || innerWidth; const h = renderer.domElement.clientHeight || innerHeight;
@@ -608,7 +442,7 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
     walker,
     stations,
     decks,
-    rig, cam, // the chase camera's state (dist, pitch, fade, turn, yaw)
+    rig, cam, // the follow camera's state (dist, cy: its height, yaw)
     get deck() { return deck.spec.id; },
     get done() { return stations.filter((s) => s.done).map((s) => s.id); },
     place(x, z) { walker.place(x, 0, z); deck.map.reset(x, z); },
@@ -655,6 +489,7 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
       overlay.canvas.remove();
       crew.dispose();
       walker.dispose?.();
+      nav.dispose();
       for (const d of Object.values(decks)) d.dispose?.();
       beaconRing.geometry.dispose(); beaconArrow.geometry.dispose(); beaconMat.dispose();
       kit.dispose();

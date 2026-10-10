@@ -9,9 +9,9 @@
 // to every station spot and quest spot (the sick bay's among them) and every
 // crew spot; every station and quest of decks.js has a spot on its deck and a
 // status lamp. She steps out of the lift in the open (LIFT_OUT, not inside the
-// car). The chase camera (ship.js chaseDistance): along a wall it moves at most
-// 4% a frame at 60 and 30 fps, and never sits in the wall. In a corner or against a wall the view turns or lifts,
-// never nearer than CAM_MIN and not faded (she fades only with no room at all); toggleView switches 'behind' and 'over'.
+// car). The follow camera (ship.js chaseFrame): behind her at a fixed distance and height, her whole body in view, the
+// view turning to her heading only while she walks forward, nothing moved on its own (no fade, no pull-in); walls on the
+// sight line are cut away by the decks' materials (ship.js cutAway). toggleView switches 'behind' and 'over'.
 import assert from 'node:assert/strict';
 import { createServer } from 'vite';
 import { createRequire } from 'node:module';
@@ -33,8 +33,10 @@ const ctx2d = new Proxy({}, {
   set() { return true; },
 });
 globalThis.document = {
-  createElement: () => ({ width: 0, height: 0, style: {}, getContext: () => ctx2d, appendChild() {}, addEventListener() {}, remove() {} }),
+  createElement: () => ({ width: 0, height: 0, style: {}, classList: { toggle() {} }, setAttribute() {}, getContext: () => ctx2d, appendChild() {}, addEventListener() {}, remove() {} }),
   body: { appendChild() {} },
+  head: { appendChild() {} },
+  getElementById: () => null,
 };
 // The scene's tick reads the window's size and pixel ratio (ship.js); a plain desktop's values.
 Object.assign(globalThis, { innerWidth: 800, innerHeight: 600, devicePixelRatio: 1 });
@@ -75,7 +77,7 @@ try {
   // A deck's walk map comes from its own layout, never from the meshes.
   const THREE = await vite.ssrLoadModule('three');
   const { DECK_MODELS } = await vite.ssrLoadModule('/src/space/ch6/interior/decks.js');
-  const { chaseDistance, chaseView, chaseFrame, createChaseRig, chaseStats, createInteriorScene, LIFT_OUT, CAM_MIN, CAM_PITCH_UP, CAM_NEAR, CAM_CLEAR, BODY_R } = await vite.ssrLoadModule('/src/space/ch6/interior/ship.js');
+  const { chaseFrame, createChaseRig, createInteriorScene, LIFT_OUT, CAM_DIST, CAM_RISE, CAM_OVER, CAM_NEAR } = await vite.ssrLoadModule('/src/space/ch6/interior/ship.js');
   const inLiftCar = (x, z) => x > -1.2 && x < 1.2 && z > -2.4 && z < -0.2; // ship.js's lift test
   const models = {
     style: 'toon', names: () => [...DECK_MODELS], add() {}, object: () => new THREE.Group(),
@@ -159,155 +161,6 @@ try {
     d.dispose?.(); kit.dispose();
   }
 
-  // The chase camera (ship.js chaseDistance): the real function, on a walk map with one wall, on a pillar
-  // she walks past, and under the real decks' roofs. Her walk is 1.55 m/s (walker.js WALK_SPEED), and the
-  // camera eases round to her heading as in ship.js.
-  const WALL_Z = 3.2;
-  const roof32 = () => 3.2; // a flat roof 3.2 m up (the camera's ceiling is 0.2 m under it)
-  const wallMap = map.createWalkMap({ floors: [{ rect: [0, 0, 80, 40] }], solids: [{ rect: [0, WALL_Z, 80, 0.4] }] });
-  const pillarMap = map.createWalkMap({ floors: [{ rect: [0, 0, 80, 40] }], solids: [{ disc: [3.0, 2.2, 0.4] }] });
-  // Walks the camera along or away from a wall (or past a pillar): the largest frame-to-frame change (% of the
-  // distance) after the first second, leaving out the frames the hard limit held it (`clamped`), whether it
-  // ever sat in a solid, and the frames the hard limit did hold it.
-  function walkCam({ m = wallMap, roof = roof32, fps, dir, x0 = -20, z0, lag, secs = 9, speed = 1.55 }) {
-    const dt = 1 / fps; const heading = Math.atan2(dir[0], dir[1]);
-    let x = x0; let z = z0; let yaw = heading + lag; let dist = 4.6; let prev = null; let worst = 0; let inSolid = false; let clamped = 0; let minDist = 9;
-    const angDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
-    for (let f = 0; f < fps * secs; f++) {
-      x += dir[0] * speed * dt; z += dir[1] * speed * dt;
-      yaw += angDiff(heading, yaw) * Math.min(1, dt * 0.9);
-      const held = chaseStats.held;
-      const next = chaseDistance(m, roof, { x, z, ty: 1.0, yaw, pitch: 0.3, want: 4.6 }, dist, dt);
-      const wasHeld = chaseStats.held !== held; if (wasHeld) clamped += 1;
-      if (prev != null && f >= fps && !wasHeld) worst = Math.max(worst, Math.abs(next - prev) / prev);
-      prev = next; dist = next; minDist = Math.min(minDist, dist);
-      const cx = x - Math.sin(yaw) * dist * Math.cos(0.3); const cz = z - Math.cos(yaw) * dist * Math.cos(0.3);
-      if (!m.fits(cx, cz, 0.15)) inSolid = true;
-    }
-    return { worst, inSolid, clamped, minDist };
-  }
-  ok('the chase camera: walking along a wall it moves at most 4% a frame at 60 and 30 fps, and never sits in the wall', () => {
-    for (const fps of [60, 30]) {
-      for (const lag of [0.2, 0.5, 0.9]) for (const z0 of [2.2, 2.6]) {
-        const r = walkCam({ fps, dir: [1, 0], z0, lag });
-        assert.ok(r.worst <= 0.04, `${fps} fps lag ${lag} z ${z0}: ${(100 * r.worst).toFixed(2)}%`);
-        assert.ok(!r.inSolid, `${fps} fps lag ${lag} z ${z0}: in the wall`);
-      }
-      const away = walkCam({ fps, dir: [0, -1], z0: 2.0, lag: 0.4 });
-      assert.ok(away.worst <= 0.04 && !away.inSolid, `${fps} fps walking away from the wall: ${(100 * away.worst).toFixed(2)}%`);
-    }
-  });
-  ok('the chase camera: a corner swept into the sight line (a pillar she walks past) glides: at most 4% a frame, except the frames the hard limit holds it', () => {
-    for (const fps of [60, 30]) {
-      const r = walkCam({ m: pillarMap, fps, dir: [1, 0], x0: -4, z0: 1.2, lag: 0.2 }); // the pillar's edge sweeps the line
-      assert.ok(r.minDist < 2, `${fps} fps: the sweep pulls the camera in (closest ${r.minDist.toFixed(2)} m)`);
-      assert.ok(r.worst <= 0.04, `${fps} fps: ${(100 * r.worst).toFixed(2)}% (held ${r.clamped} frames)`);
-      assert.ok(!r.inSolid, `${fps} fps: in the pillar`);
-    }
-  });
-  ok('the chase camera: a wall ahead on the sight line pulls it in to just short of the wall; open floor lets it out to the wanted distance', () => {
-    const open = chaseDistance(wallMap, roof32, { x: 0, z: 0, ty: 1.0, yaw: 0, pitch: 0.3, want: 4.6 }, 4.6, 1);
-    assert.equal(open, 4.6);
-    // Facing -z (yaw pi), the camera sits on the +z side of her, between her and the wall. The body's
-    // margin (0.15) keeps the hard limit at z 2.85 (the wall starts at z 3.0); the soft margin (0.6) at z 2.4.
-    // (She stands 1 m from the wall: the soft margin still fits her there; at 0.5 m it would fall back to the hard limit.)
-    const hardCam = chaseDistance(wallMap, roof32, { x: 0, z: 2.0, ty: 1.0, yaw: Math.PI, pitch: 0.3, want: 4.6 }, 4.6, 0);
-    const hardZ = 2.0 + hardCam * Math.cos(0.3);
-    assert.ok(hardZ <= 2.85 + 1e-6 && hardZ > 2.83, `the hard limit: z ${hardZ.toFixed(3)}`);
-    // The soft margin would put the camera 0.4 m from her eyes here: the minimum (CAM_MIN) holds it out instead,
-    // by lifting it (chaseView), so the view is never filled by her hair (lead 2026-10-09).
-    const softCam = chaseDistance(wallMap, roof32, { x: 0, z: 2.0, ty: 1.0, yaw: Math.PI, pitch: 0.3, want: 4.6 }, 4.6, 10);
-    assert.ok(softCam <= 0.9 && softCam > 0.88, `at her pitch the wall holds it at the hard limit: ${softCam.toFixed(3)}`);
-  });
-  ok('the chase camera: a wall 1 m behind her: it rises or turns to look over or past it: never nearer than CAM_MIN, not in the wall, not faded', () => {
-    // Through chaseFrame (as the scene runs it), so a turn of the view is applied to the camera too.
-    const cam = { yaw: Math.PI, pitch: 0.3, dist: 4.6 }; const rig = createChaseRig(cam);
-    const her = { x: 0, y: 1.0, z: 2.0, heading: Math.PI, speed: 0, want: 4.6, follow: false };
-    let minD = 9; let maxFade = 0; let inWall = false;
-    for (let f = 0; f < 600; f++) {
-      chaseFrame(rig, cam, wallMap, roof32, her, 1 / 60);
-      if (f < 120) continue;
-      minD = Math.min(minD, rig.dist); maxFade = Math.max(maxFade, rig.fade);
-      const cx = rig.fx - Math.sin(cam.yaw) * rig.dist * Math.cos(rig.pitch); const cy = rig.fy + 0.3 + rig.dist * Math.sin(rig.pitch);
-      const cz = rig.fz - Math.cos(cam.yaw) * rig.dist * Math.cos(rig.pitch);
-      if (!wallMap.clearAt({ x: cx, z: cz, r: BODY_R, y: cy, m: CAM_CLEAR })) inWall = true;
-    }
-    assert.ok(minD >= CAM_MIN - 0.02, `closest while in view ${minD.toFixed(3)} m`);
-    assert.ok(maxFade < 0.01, `she stays in view: fade ${maxFade.toFixed(3)}`);
-    assert.ok(!inWall, 'the camera is never in the wall');
-  });
-  // A low solid (a bench, a bed: walkmap.js's h) is not a wall for the camera: it may go over it. A tall solid
-  // (no h, full height) still is. The bench is 0.35..0.85 m behind her, on the camera's side.
-  ok('the chase camera: a low solid behind her (a bench 1 m high) lets the camera rise over it: never nearer than CAM_MIN, not faded', () => {
-    const low = map.createWalkMap({ floors: [{ rect: [0, 0, 80, 40] }], solids: [{ rect: [0, 2.6, 4, 0.5], h: 1.0 }] });
-    const cam = { yaw: Math.PI, pitch: 0.3, dist: 4.6 }; const rig = createChaseRig(cam);
-    const her = { x: 0, y: 1.0, z: 2.0, heading: Math.PI, speed: 0, want: 4.6, follow: false };
-    let minD = 9;
-    for (let f = 0; f < 240; f++) { chaseFrame(rig, cam, low, roof32, her, 1 / 60); if (f > 60) minD = Math.min(minD, rig.dist); }
-    assert.ok(minD >= CAM_MIN - 0.02, `closest ${minD.toFixed(3)} m over the bench`);
-    assert.ok(rig.fade < 0.05, `faded ${rig.fade.toFixed(3)} over a bench`);
-  });
-  ok('the chase camera: a tall wall behind her turns the view to the open floor: she is not faded, the camera is never nearer than CAM_MIN', () => {
-    const tall = map.createWalkMap({ floors: [{ rect: [0, 0, 80, 40] }], solids: [{ rect: [0, 2.6, 4, 0.5] }] });
-    const cam = { yaw: Math.PI, pitch: 0.3, dist: 4.6 }; const rig = createChaseRig(cam);
-    const her = { x: 0, y: 1.0, z: 2.0, heading: Math.PI, speed: 0, want: 4.6, follow: false };
-    let minD = 9; let turned = 0;
-    for (let f = 0; f < 240; f++) { chaseFrame(rig, cam, tall, roof32, her, 1 / 60); if (rig.turn !== 0) turned += 1; if (f > 90) minD = Math.min(minD, rig.dist); }
-    assert.ok(rig.fade < 0.01, `faded ${rig.fade.toFixed(3)} behind a wall`);
-    assert.ok(turned > 0 || rig.pitch > 1.2, `the view turned or rose over the wall (pitch ${rig.pitch.toFixed(2)})`);
-    assert.ok(minD >= CAM_MIN - 0.02, `closest ${minD.toFixed(3)} m`);
-  });
-  // The corner, the wall and the view (lead 2026-10-09): she is in a corner (two walls) or against a wall, and the
-  // camera, run by chaseFrame as the scene runs it, never comes nearer her eyes than CAM_MIN in 3-D, is never in a
-  // wall, and she is not faded. Her eye is at her feet + 1.0 m (ship.js).
-  const CORNER = map.createWalkMap({ floors: [{ rect: [0, 0, 80, 40] }], solids: [{ rect: [-20, -1.0, 40, 0.4] }, { rect: [-1.0, -20, 0.4, 40] }] });
-  // Her frames: she stands (then, walk m/s > 0, walks straight along her yaw). Returns the closest camera to her eye, the most
-  // she was faded, and whether the camera was ever inside a solid, over the frames from `from` seconds on.
-  function chaseRun({ m, x, z, yaw, walk = 0, secs = 4, fps = 60, from = 1 }) {
-    const cam = { yaw, pitch: 0.3, dist: 4.6 }; const rig = createChaseRig(cam);
-    const s = { x, y: 1.0, z, heading: yaw, speed: 0, want: 4.6, follow: true, pitch: null };
-    const dt = 1 / fps; let minEye = 9; let maxFade = 0; let inSolid = false;
-    for (let f = 0; f < fps * secs; f++) {
-      if (walk && f >= fps) { s.x += Math.sin(yaw) * walk * dt; s.z += Math.cos(yaw) * walk * dt; s.speed = walk; }
-      chaseFrame(rig, cam, m, roof32, s, dt);
-      const cx = rig.fx - Math.sin(cam.yaw) * rig.dist * Math.cos(rig.pitch); const cy = rig.fy + 0.3 + rig.dist * Math.sin(rig.pitch);
-      const cz = rig.fz - Math.cos(cam.yaw) * rig.dist * Math.cos(rig.pitch);
-      if (f >= from * fps) {
-        minEye = Math.min(minEye, Math.hypot(cx - s.x, cy - s.y, cz - s.z)); maxFade = Math.max(maxFade, rig.fade);
-        if (!m.clearAt({ x: cx, z: cz, r: BODY_R, y: cy, m: CAM_CLEAR })) inSolid = true;
-      }
-    }
-    return { minEye, maxFade, inSolid };
-  }
-  ok('the chase camera in a corner (two walls behind her): once the view has turned, never nearer than CAM_MIN, never in a wall, not faded', () => {
-    // She stands in the corner facing out (the walls are behind her): the view turns to open floor (about 135 degrees) and
-    // then holds CAM_MIN. While it turns the camera eases in (no fade, never in a wall); then she walks out along her yaw.
-    for (const yaw of [Math.PI / 4, Math.PI / 4 + 0.3, Math.PI / 4 - 0.3]) {
-      const turning = chaseRun({ m: CORNER, x: -0.45, z: -0.45, yaw, from: 0 });
-      // (The turn itself takes about a second from a blocked start: the camera is never in a wall, and she is faded only
-      // while the camera would be on her head. The settled view below is strict.)
-      assert.ok(!turning.inSolid, `turning in the corner (yaw ${yaw.toFixed(2)}): in a wall`);
-      const stand = chaseRun({ m: CORNER, x: -0.45, z: -0.45, yaw, from: 2.5 });
-      assert.ok(stand.minEye >= CAM_MIN - 0.02, `stood in the corner (yaw ${yaw.toFixed(2)}): closest ${stand.minEye.toFixed(3)} m`);
-      assert.ok(stand.maxFade < 0.01 && !stand.inSolid, `stood in the corner (yaw ${yaw.toFixed(2)}): faded ${stand.maxFade.toFixed(3)}, in a wall ${stand.inSolid}`);
-      const walk = chaseRun({ m: CORNER, x: -0.45, z: -0.45, yaw, walk: 1.55, from: 2.5 });
-      assert.ok(walk.minEye >= CAM_MIN - 0.02, `walked out of the corner (yaw ${yaw.toFixed(2)}): closest ${walk.minEye.toFixed(3)} m`);
-      assert.ok(walk.maxFade < 0.01 && !walk.inSolid, `walked out of the corner (yaw ${yaw.toFixed(2)}): faded ${walk.maxFade.toFixed(3)}, in a wall ${walk.inSolid}`);
-    }
-    // Facing into the corner (the camera behind her is in the room): never nearer than CAM_MIN from the start.
-    const into = chaseRun({ m: CORNER, x: -0.45, z: -0.45, yaw: Math.PI * 1.25, from: 0 });
-    assert.ok(into.minEye >= CAM_MIN - 0.02 && into.maxFade < 0.01 && !into.inSolid, `facing into the corner: closest ${into.minEye.toFixed(3)} m`);
-  });
-  ok('the chase camera against a wall (0.4 m behind her): it turns or rises, never nearer than CAM_MIN, not faded', () => {
-    const wall = map.createWalkMap({ floors: [{ rect: [0, 0, 80, 40] }], solids: [{ rect: [0, 3.2, 80, 0.4] }] });
-    const stand = chaseRun({ m: wall, x: 0, z: 2.6, yaw: Math.PI, from: 2.5 });
-    assert.ok(stand.minEye >= CAM_MIN - 0.02 && stand.maxFade < 0.01 && !stand.inSolid, `stood against the wall: closest ${stand.minEye.toFixed(3)} m, faded ${stand.maxFade.toFixed(3)}`);
-    const walk = chaseRun({ m: wall, x: 0, z: 2.6, yaw: Math.PI, walk: 1.55, from: 2 });
-    assert.ok(walk.minEye >= CAM_MIN - 0.02 && walk.maxFade < 0.01 && !walk.inSolid, `walked away from the wall: closest ${walk.minEye.toFixed(3)} m, faded ${walk.maxFade.toFixed(3)}`);
-  });
-  // The scene itself (ship.js createInteriorScene): the camera button (toggleView) switches 'behind' (the default, her chase
-  // view) and 'over' (a steeper look down on her) and back, the choice is kept for the session, and the steering matches the
-  // screen in both: forward is away from the camera, right is screen right, in each view.
   const fakeGame = { renderer: { domElement: { clientWidth: 800, clientHeight: 600 } }, controls: { isDown: () => false }, hud: null };
   const noMouse = { dx: 0, dy: 0, wheel: 0, dragging: false };
   // A floor cell with 2 m of clear floor in eight directions (every 0.25 m along each): she can walk a little either way.
@@ -326,19 +179,90 @@ try {
     }
     return null;
   }
+  // The follow camera (ship.js chaseFrame, as the scene runs it): behind her at a fixed distance and height, her whole body
+  // in view, the view turning to her heading only while she walks forward, and nothing moving the camera on its own.
+  const LOOK_UP = 1.1; // ship.js TARGET_UP
+  const roof32 = () => 3.2;
+  const camAt = (rig, cam) => ({ x: rig.fx - Math.sin(cam.yaw) * rig.dist, y: rig.cy, z: rig.fz - Math.cos(cam.yaw) * rig.dist });
+  // Her feet and head are within 30 degrees of the view's centre (the lens is 60 degrees tall).
+  function inView(c, look, her) {
+    const vx = look.x - c.x; const vy = look.y - c.y; const vz = look.z - c.z; const vl = Math.hypot(vx, vy, vz);
+    return [0, 1.3].every((h) => {
+      const px = her.x - c.x; const py = her.y + h - c.y; const pz = her.z - c.z; const pl = Math.hypot(px, py, pz);
+      return (px * vx + py * vy + pz * vz) / (pl * vl) >= Math.cos(Math.PI / 6);
+    });
+  }
+  ok('the follow camera: behind her on her heading, CAM_DIST back and CAM_RISE up, her whole body in view, and still', () => {
+    const cam = { yaw: 0 }; const rig = createChaseRig();
+    const her = { x: 0, y: 0, z: 0, heading: 0, speed: 0, want: CAM_DIST, rise: CAM_RISE, follow: false };
+    for (let f = 0; f < 120; f++) chaseFrame(rig, cam, her, 1 / 60);
+    assert.equal(rig.dist, CAM_DIST);
+    assert.equal(rig.cy, CAM_RISE);
+    const c = camAt(rig, cam);
+    assert.ok(Math.abs(c.x) < 1e-9 && Math.abs(c.z + CAM_DIST) < 1e-9, `on her back side: ${c.x}, ${c.z}`);
+    assert.ok(inView(c, { x: 0, y: LOOK_UP, z: 0 }, her), 'her feet and head in view');
+  });
+  ok('the view turns to her heading only while she walks forward (a drag or a strafe holds it), never faster than the comfortable rate', () => {
+    const dt = 1 / 60; const cam = { yaw: 1.2 }; const rig = createChaseRig();
+    const her = { x: 0, y: 0, z: 0, heading: 0, speed: 0, want: CAM_DIST, rise: CAM_RISE, follow: false };
+    for (let f = 0; f < 120; f++) chaseFrame(rig, cam, her, dt);
+    assert.equal(cam.yaw, 1.2, 'held while she stands (after a drag)');
+    her.follow = true; her.speed = 1.5; let worst = 0; let last = cam.yaw;
+    for (let f = 0; f < 240; f++) {
+      chaseFrame(rig, cam, her, dt);
+      worst = Math.max(worst, Math.abs(cam.yaw - last) / dt); last = cam.yaw;
+    }
+    assert.ok(Math.abs(cam.yaw) < 0.05, `behind her after 4 s walking forward: yaw ${cam.yaw.toFixed(3)}`);
+    assert.ok(worst <= 1.1 + 1e-6, `turn ${worst.toFixed(3)} rad/s`);
+  });
+  ok('a bump leaves the camera where it is: its distance and height do not change when she stops or walks into things', () => {
+    const cam = { yaw: 0.4 }; const rig = createChaseRig();
+    const her = { x: 0, y: 0, z: 0, heading: 0.4, speed: 1.5, want: CAM_DIST, rise: CAM_RISE, follow: true };
+    for (let f = 0; f < 120; f++) chaseFrame(rig, cam, her, 1 / 60);
+    const before = { ...camAt(rig, cam) };
+    her.speed = 0; her.follow = false; // the bump: she is stopped
+    for (let f = 0; f < 120; f++) chaseFrame(rig, cam, her, 1 / 60);
+    const after = camAt(rig, cam);
+    assert.ok(Math.abs(after.y - before.y) < 1e-9 && Math.abs(rig.dist - CAM_DIST) < 1e-9, 'distance and height kept');
+  });
+  ok('the camera\'s distance and pitch never move: CAM_DIST and CAM_RISE, or CAM_OVER in the over view', () => {
+    const cam = { yaw: 0 }; const rig = createChaseRig();
+    const her = { x: 0, y: 0, z: 0, heading: 0, speed: 1, want: CAM_OVER.dist, rise: CAM_OVER.rise, follow: true };
+    for (let f = 0; f < 120; f++) { her.z = f * 0.01; chaseFrame(rig, cam, her, 1 / 60); }
+    assert.equal(rig.dist, CAM_OVER.dist);
+    assert.equal(rig.cy, CAM_OVER.rise);
+  });
+  ok('the cut-away: every deck material (walls, props, lift car, crew) drops the fragments on the sight line', () => {
+    const sc = createInteriorScene(fakeGame, { models: null, onStation: async () => {}, startDeck: 'crew' });
+    let n = 0; let bad = 0;
+    const her = sc.debug.walker.root; // her own materials are not cut (the camera must see her)
+    for (const d of Object.values(sc.debug.decks)) d.group.traverse((o) => {
+      if (!o.isMesh) return;
+      for (let p = o; p; p = p.parent) if (p === her) return;
+      for (const m of [].concat(o.material)) { n += 1; if (!m.userData.cutAway || typeof m.onBeforeCompile !== 'function') bad += 1; }
+    });
+    assert.ok(n > 50, `${n} materials`);
+    assert.equal(bad, 0, `${bad} materials without the cut-away`);
+  });
+  ok('the camera source: no pull-in, no fade, no turn of its own (the rig has no distance or pitch rule of its own)', () => {
+    const fs = require('node:fs');
+    const src = fs.readFileSync(new URL('../src/space/ch6/interior/ship.js', import.meta.url), 'utf8');
+    const code = src.slice(src.indexOf('// The follow camera'), src.indexOf('/** The lift car every deck shares')).replace(/\/\/.*$/gm, '');
+    assert.ok(!/fade\s*[+=]|rig\.fade|herMats|chaseDistance|clearBehind|riseAt|pitch|camMap/.test(code), 'a camera rule left over');
+  });
+  ok('the camera\'s near plane is at most 0.1 m', () => { assert.ok(CAM_NEAR <= 0.1 + 1e-9); });
+  // The scene (ship.js createInteriorScene): the camera button (toggleView) switches 'behind' (the default) and 'over' (a
+  // higher look down on her) and back, the choice is kept for the session, and the steering matches the screen in both.
   ok('toggleView: behind (the default) <-> over and back, kept for the session; the steering matches the screen in both views', () => {
     const sc = createInteriorScene(fakeGame, { models: null, onStation: async () => {}, startDeck: 'life' });
     const at = openSpot(sc.debug.decks.life); assert.ok(at, 'an open spot on the life deck');
     sc.debug.place(at[0], at[1]);
     const settle = (n, input) => { for (let i = 0; i < n; i++) sc.tick(1 / 30, input, noMouse, false); };
-    // Her forward and screen-right, from the camera (the screen's forward is from the camera to her, flat).
     const screen = () => {
       const c = sc.camera.position; const w = sc.debug.walker.pos;
       const fx = w.x - c.x; const fz = w.z - c.z; const l = Math.hypot(fx, fz);
       return { fx: fx / l, fz: fz / l, rx: -fz / l, rz: fx / l };
     };
-    // Her velocity 0.6 s into a key, against the screen as the key goes down (the camera follows her heading once she
-    // walks, so the screen is read before it turns).
     const moves = (input) => {
       sc.debug.place(at[0], at[1]);
       settle(30, { thrust: 0, turn: 0 });
@@ -353,13 +277,14 @@ try {
       assert.ok(f.fwd > 0.95, `${name}: forward key walks away from the screen (${f.fwd.toFixed(2)})`);
       const r = moves({ thrust: 0, turn: 1 });
       assert.ok(r.right > 0.9, `${name}: the right key walks to screen right (${r.right.toFixed(2)})`);
-      assert.ok(sc.debug.rig.fade < 0.05, `${name}: she is in view`);
+      assert.ok(sc.debug.walker.root.visible, `${name}: she is in view`);
     };
     assert.equal(sc.view, 'behind', 'the default view');
     check('behind');
+    const yBehind = sc.camera.position.y;
     assert.equal(sc.toggleView(), 'over', 'the button switches to over');
     check('over');
-    assert.ok(sc.debug.rig.pitch > 1.2, `the over view looks down: pitch ${sc.debug.rig.pitch.toFixed(2)}`);
+    assert.ok(sc.camera.position.y > yBehind + 0.5, `the over view is higher: ${sc.camera.position.y.toFixed(2)} m`);
     assert.equal(sc.toggleView(), 'behind', 'and back');
     check('behind again');
     sc.toggleView(); // over: kept for the session
@@ -368,123 +293,53 @@ try {
     again.toggleView();
     assert.equal(again.view, 'behind', 'the one choice for the session: toggling it back in the new scene');
   });
-  // Frame by frame (chaseFrame, as the scene runs it): where the camera is, and whether it is in a wall or under 0. A frame
-  // counts as seen when she is not faded; the camera must then be at least CAM_MIN from her eye (3-D).
-  function cornerFrames({ m, x, z, yaw, walk = 0, secs = 1.5, fps = 60, canTurn = true }) {
-    const cam = { yaw, pitch: 0.3, dist: 4.6 }; const rig = createChaseRig(cam);
-    const s = { x, y: 1.0, z, heading: yaw, speed: 0, want: 4.6, follow: true, pitch: null, canTurn };
-    const dt = 1 / fps; const r = { minSeen: 9, minDist: 9, inSolid: 0, faded: 0 };
-    for (let f = 0; f < fps * secs; f++) {
-      if (walk) { s.x += Math.sin(yaw) * walk * dt; s.z += Math.cos(yaw) * walk * dt; s.speed = Math.abs(walk); }
-      chaseFrame(rig, cam, m, roof32, s, dt);
-      const cx = rig.fx - Math.sin(cam.yaw) * rig.dist * Math.cos(rig.pitch); const cy = rig.fy + 0.3 + rig.dist * Math.sin(rig.pitch);
-      const cz = rig.fz - Math.cos(cam.yaw) * rig.dist * Math.cos(rig.pitch);
-      r.minDist = Math.min(r.minDist, rig.dist);
-      if (rig.fade >= 0.5) { r.faded += 1; continue; }
-      r.minSeen = Math.min(r.minSeen, Math.hypot(cx - s.x, cy - s.y, cz - s.z));
-      if (!m.clearAt({ x: cx, z: cz, r: BODY_R, y: cy, m: CAM_CLEAR })) r.inSolid += 1;
-    }
-    return r;
-  }
-  ok('the chase camera from a corner start: in the first second she is faded or the camera is at least CAM_MIN away (3-D); never under 0; never in a wall', () => {
-    for (const yaw of [Math.PI / 4, Math.PI / 4 + 0.3, Math.PI / 4 - 0.3]) {
-      const r = cornerFrames({ m: CORNER, x: -0.45, z: -0.45, yaw });
-      assert.ok(r.minDist >= -1e-9, `yaw ${yaw.toFixed(2)}: distance ${r.minDist.toFixed(3)} under 0`);
-      assert.ok(r.minSeen >= CAM_MIN - 0.02, `yaw ${yaw.toFixed(2)}: seen at ${r.minSeen.toFixed(3)} m (faded frames ${r.faded})`);
-      assert.equal(r.inSolid, 0, `yaw ${yaw.toFixed(2)}: the camera in a wall`);
-    }
-  });
-  ok('the chase camera backing out of a corner (S, walking away from the walls): seen only at CAM_MIN or more; never under 0; never in a wall', () => {
-    // Facing into the corner, she backs out along S (the camera ends up in the room, behind her as she goes).
-    const r = cornerFrames({ m: CORNER, x: -0.45, z: -0.45, yaw: Math.PI * 1.25, walk: -1.55, secs: 2 });
-    assert.ok(r.minDist >= -1e-9, `distance ${r.minDist.toFixed(3)} under 0`);
-    assert.ok(r.minSeen >= CAM_MIN - 0.02, `seen at ${r.minSeen.toFixed(3)} m (faded frames ${r.faded})`);
-    assert.equal(r.inSolid, 0, 'the camera in a wall');
-  });
-  // The scene (ship.js): a held W from a corner keeps its direction (the view does not swing under her while she walks),
-  // and the camera is never inside the lift car after a ride.
-  function cornerSpot(deck) {
-    const m = deck.map; const ext = m.extent;
-    for (let x = ext.x0 + 1.5; x < ext.x1 - 1.5; x += 0.1) for (let z = ext.z0 + 1.5; z < ext.z1 - 1.5; z += 0.1) {
-      if (!m.fits(x, z, 0.3)) continue;
-      if (!m.walkable(x + 0.6, z) && !m.walkable(x, z + 0.6) && m.walkable(x - 1.5, z - 1.5)) return [x, z];
-    }
-    return null;
-  }
-  ok('held W from a corner keeps her heading (the view does not swing her round the wall) within 5 degrees', () => {
-    const sc = createInteriorScene(fakeGame, { models: null, onStation: async () => {}, startDeck: 'engineering' });
-    const spot = cornerSpot(sc.debug.decks.engineering); assert.ok(spot, 'a corner on the engineering deck');
-    const yaw = -Math.PI * 0.75; // facing out of the corner (the walls behind her)
-    sc.debug.walker.place(spot[0], 0, spot[1], yaw); sc.debug.decks.engineering.map.reset(spot[0], spot[1]);
-    sc.debug.cam.yaw = yaw; sc.debug.rig.live = false;
-    const h0 = sc.debug.walker.heading; const y0 = sc.debug.cam.yaw;
-    let worst = 0;
-    for (let i = 0; i < 60; i++) {
-      sc.tick(1 / 30, { thrust: 1, turn: 0 }, noMouse, false);
-      worst = Math.max(worst, Math.abs(sc.debug.cam.yaw - y0), Math.abs(sc.debug.walker.heading - h0));
-    }
-    assert.ok(worst < 5 * Math.PI / 180, `the view or her heading turned ${(worst * 180 / Math.PI).toFixed(1)} degrees`);
-  });
-  ok('after a lift ride the camera is not inside the lift car (the car walls are camera solids)', () => {
-    const sc = createInteriorScene(fakeGame, { models: null, onStation: async () => {}, startDeck: 'life' });
-    sc.debug.walker.place(LIFT_OUT.x, 0, LIFT_OUT.z, 0); sc.debug.decks.life.map.reset(LIFT_OUT.x, LIFT_OUT.z);
-    sc.debug.cam.yaw = 0; sc.debug.rig.live = false;
-    let inCar = 0;
-    for (let i = 0; i < 180; i++) {
-      sc.tick(1 / 30, { thrust: 0, turn: 0 }, noMouse, false);
-      const c = sc.camera.position;
-      if (i > 20 && c.x > -1.3 && c.x < 1.3 && c.z > -2.5 && c.z < 0) inCar += 1;
-    }
-    assert.equal(inCar, 0, `the camera was inside the car in ${inCar} frames`);
-  });
-  ok('the chase camera: on every deck, standing and walking in a sample of open cells, she is never faded', () => {
+  ok('the follow camera on every deck: a 20 s wander (walks, strafes, steps back, drags, bumps): she is always in view, the camera keeps CAM_DIST and CAM_RISE', () => {
     const sc = createInteriorScene(fakeGame, { models: null, onStation: async () => {}, startDeck: 'crew' });
-    let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
     for (const id of ['crew', 'bridge', 'life', 'engineering']) {
       sc.debug.showDeck(id);
-      const deck = sc.debug.decks[id]; const ext = deck.map.extent;
-      let cells = 0; let tries = 0;
-      while (cells < 6 && tries < 40000) {
-        tries += 1;
-        const x = ext.x0 + rnd() * (ext.x1 - ext.x0); const z = ext.z0 + rnd() * (ext.z1 - ext.z0);
-        if (!isOpen(deck, x, z)) continue;
-        cells += 1;
-        for (let h = 0; h < 4; h++) {
-          const yaw = (h / 4) * Math.PI * 2;
-          sc.debug.walker.place(x, 0, z, yaw); deck.map.reset(x, z);
-          for (let i = 0; i < 30; i++) sc.tick(1 / 30, { thrust: 0, turn: 0 }, noMouse, false);
-          let maxFade = 0;
-          for (let i = 0; i < 60; i++) { sc.tick(1 / 30, { thrust: 1, turn: 0 }, noMouse, false); maxFade = Math.max(maxFade, sc.debug.rig.fade); }
-          assert.ok(maxFade < 0.05, `${id} (${x.toFixed(2)}, ${z.toFixed(2)}) heading ${h}: faded ${maxFade.toFixed(3)}`);
+      const deck = sc.debug.decks[id]; const at = openSpot(deck); assert.ok(at, `${id}: an open spot`);
+      sc.debug.walker.place(at[0], 0, at[1]); deck.map.reset(at[0], at[1]);
+      let seed = 11 + id.length; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+      let input = { thrust: 0, turn: 0 }; let mouse = noMouse; let hidden = 0; let offView = 0; let badDist = 0; let badRise = 0;
+      for (let f = 0; f < 600; f++) {
+        if (f % 30 === 0) {
+          const r = rnd();
+          input = { thrust: r < 0.5 ? 1 : r < 0.6 ? -1 : 0, turn: rnd() < 0.3 ? (rnd() < 0.5 ? -1 : 1) : 0 };
+          mouse = rnd() < 0.2 ? { dx: (rnd() - 0.5) * 160, dy: 0, wheel: 0, dragging: false } : noMouse;
         }
+        sc.tick(1 / 30, input, mouse, false);
+        mouse = noMouse;
+        const rig = sc.debug.rig; const c = sc.camera.position; const w = sc.debug.walker.pos;
+        if (!sc.debug.walker.root.visible) hidden += 1;
+        if (Math.abs(rig.dist - CAM_DIST) > 1e-9) badDist += 1;
+        if (Math.abs(c.y - CAM_RISE) > 1e-9) badRise += 1;
+        if (f > 30 && !inView(c, { x: rig.fx, y: rig.fy + LOOK_UP, z: rig.fz }, { x: w.x, y: 0, z: w.z })) offView += 1;
       }
-      assert.ok(cells >= 6, `${id}: found ${cells} open cells`);
+      assert.equal(hidden, 0, `${id}: hidden in ${hidden} frames`);
+      assert.equal(badDist, 0, `${id}: the distance moved in ${badDist} frames`);
+      assert.equal(badRise, 0, `${id}: the height moved in ${badRise} frames`);
+      assert.equal(offView, 0, `${id}: her feet or head out of the view in ${offView} frames`);
     }
   });
-
-  // The chase makes no objects a frame: its per-frame functions build no object literals (checked in the source), and
-  // a long run adds little to the heap. (V8 still boxes the numbers it passes to a call, a few hundred bytes a frame
-  // at most, so the heap bound is loose: it catches a regression, not a single boxed number.)
-  ok('the chase camera builds no object literal a frame (source check of its per-frame functions)', () => {
+  ok('the follow camera builds no object literal a frame (source check of its per-frame functions)', () => {
     const fs = require('node:fs');
     const src = fs.readFileSync(new URL('../src/space/ch6/interior/ship.js', import.meta.url), 'utf8');
     const body = (name) => { const i = src.indexOf(`function ${name}(`); assert.ok(i >= 0, name); return src.slice(i, src.indexOf('\n}', i)).replace(/\/\/.*$/gm, ''); };
-    for (const name of ['aimSight', 'sightClear', 'clearDist', 'chaseDistance', 'chaseView', 'damped', 'chaseFrame']) {
+    for (const name of ['damped', 'chaseFrame']) {
       assert.ok(!/[=(,:?]\s*\{|return\s*\{|\[\s*\{/.test(body(name)), `${name} builds an object`);
     }
-    assert.ok(!/Object\.assign|new Array|\.map\(|\.filter\(/.test(body('chaseFrame') + body('chaseView')), 'no per-frame copies');
   });
-  ok('the chase camera: 5000 frames add under 15 MB to the heap (a loose bound: it catches a regression)', () => {
+  ok('the follow camera: 5000 frames add under 15 MB to the heap (a loose bound: it catches a regression)', () => {
     const v8 = require('node:v8'); const vm = require('node:vm');
     v8.setFlagsFromString('--expose-gc');
     const gc = vm.runInNewContext('gc');
-    const cam = { yaw: 0, pitch: 0.3, dist: 4.6 };
-    const rig = createChaseRig(cam);
-    const her = { x: 0, y: 1, z: 2, heading: 0, speed: 2, want: 4.6, follow: true };
+    const cam = { yaw: 0 };
+    const rig = createChaseRig();
+    const her = { x: 0, y: 0, z: 2, heading: 0, speed: 2, want: CAM_DIST, rise: CAM_RISE, follow: true };
     const frames = (n) => {
       for (let i = 0; i < n; i++) {
         her.z = 2 + Math.sin(i * 0.01); her.x = Math.cos(i * 0.013); her.heading = Math.sin(i * 0.02) * 0.5; her.speed = 1 + (i % 3);
-        chaseFrame(rig, cam, wallMap, roof32, her, 1 / 60);
+        chaseFrame(rig, cam, her, 1 / 60);
       }
     };
     frames(3000); gc();
@@ -492,80 +347,6 @@ try {
     frames(5000);
     const grew = process.memoryUsage().heapUsed - before;
     assert.ok(grew < 15 * 1024 * 1024, `the heap grew ${grew} bytes over 5000 frames`);
-  });
-
-  // Her walk, frame by frame as ship.js runs it: her speed eases to the walk, the walk map's collide() stops her at
-  // a wall (the speed goes), and chaseFrame moves the camera. Returns what the lead saw go wrong.
-  function walkChase({ fps, start, dir, cam0 = 0, secs = 4, speed = 3.2, pre = 0, release = Infinity }) {
-    const dt = 1 / fps; const cam = { yaw: cam0, pitch: 0.3, dist: 4.6 };
-    const rig = createChaseRig(cam);
-    const p = { x: start[0], z: start[1] }; const v = { x: 0, y: 0 };
-    const heading = Math.atan2(dir[0], dir[1]);
-    const r = { jump: 0, camJump: 0, yawRate: 0, rateStep: 0, minDist: 9, fadeMax: 0, yawLate: 0, cam: null };
-    let px = null; let pz = null; let cx = null; let cz = null; let rate = 0; let yawAt = null;
-    for (let f = 0; f < fps * secs; f++) {
-      const t = f * dt;
-      const d = t < pre || t >= release ? [0, 0] : dir; // she stands for `pre`, and lets go at `release` (her heading stays)
-      v.x += (d[0] * speed - v.x) * Math.min(1, 8 * dt); v.y += (d[1] * speed - v.y) * Math.min(1, 8 * dt);
-      p.x += v.x * dt; p.z += v.y * dt; wallMap.collide(p, v);
-      const yaw0 = cam.yaw;
-      chaseFrame(rig, cam, wallMap, roof32, { x: p.x, y: 1.0, z: p.z, heading, speed: Math.hypot(v.x, v.y), want: 4.6, follow: true }, dt);
-      const camX = rig.fx - Math.sin(cam.yaw) * rig.dist * Math.cos(rig.pitch);
-      const camZ = rig.fz - Math.cos(cam.yaw) * rig.dist * Math.cos(rig.pitch);
-      if (px != null) {
-        r.jump = Math.max(r.jump, Math.hypot(rig.fx - px, rig.fz - pz) / (speed * dt));
-        r.camJump = Math.max(r.camJump, Math.hypot(camX - cx, camZ - cz));
-        const dr = Math.abs(rig.yawRate - rate);
-        r.rateStep = Math.max(r.rateStep, dr);
-      }
-      r.yawRate = Math.max(r.yawRate, Math.abs(cam.yaw - yaw0) / dt);
-      if (f > fps * 1.5 && yawAt == null) yawAt = cam.yaw; // a second after the bump (she is stopped by then)
-      if (yawAt != null && f <= fps * 2.5) r.yawLate = Math.max(r.yawLate, Math.abs(cam.yaw - yawAt));
-      if (f > (pre + 0.5) * fps) r.minDist = Math.min(r.minDist, rig.dist);
-      if (f > (pre + 0.5) * fps) r.fadeMax = Math.max(r.fadeMax, rig.fade);
-      px = rig.fx; pz = rig.fz; cx = camX; cz = camZ; rate = rig.yawRate;
-    }
-    r.cam = cam; r.rig = rig;
-    return r;
-  }
-  ok('the chase camera: a head-on walk into a wall: the point it looks at never moves faster than she does, the camera glides, the turn stays bounded', () => {
-    for (const fps of [60, 30]) {
-      const dt = 1 / fps;
-      const r = walkChase({ fps, start: [0, 0], dir: [0, 1], secs: 4 });
-      assert.ok(r.jump <= 1 + 1e-6, `${fps} fps: the point moved faster than her: ${r.jump.toFixed(3)} x her speed`);
-      assert.ok(r.camJump <= 3.2 * dt + 0.02, `${fps} fps: the camera moved ${r.camJump.toFixed(4)} m a frame`);
-      assert.ok(r.yawRate <= 1.1 + 1e-9, `${fps} fps: the turn ${r.yawRate.toFixed(3)} rad/s`);
-      assert.ok(r.minDist > 4.5, `${fps} fps: head-on, the camera keeps its distance (${r.minDist.toFixed(2)} m)`);
-      assert.ok(r.fadeMax === 0, `${fps} fps: she does not fade head-on`);
-    }
-  });
-  ok('the chase camera: a bump at an angle does not swing it: once she is stopped against the wall, the turn stops too', () => {
-    for (const fps of [60, 30]) {
-      // She walks at 0.7 rad off the camera's line, meets the wall at about 1 s and lets go there (she is stopped).
-      const r = walkChase({ fps, start: [0, 0], dir: [Math.sin(0.7), Math.cos(0.7)], secs: 4, release: 1.0 });
-      assert.ok(r.yawLate < 0.05, `${fps} fps: the camera still turned after the bump: ${r.yawLate.toFixed(3)} rad`);
-      assert.ok(r.yawRate <= 1.1 + 1e-9, `${fps} fps: the turn ${r.yawRate.toFixed(3)} rad/s`);
-    }
-  });
-  ok('the chase camera: the turn eases in and out: its rate changes by at most 2 rad/s2 a frame, and the point it looks at trails her', () => {
-    for (const fps of [60, 30]) {
-      const dt = 1 / fps;
-      const r = walkChase({ fps, start: [-8, 0], dir: [0.7, 0.7], cam0: 0, secs: 2 });
-      assert.ok(r.rateStep <= 2 * dt + 1e-9, `${fps} fps: rate step ${r.rateStep.toFixed(4)} rad/s`);
-    }
-  });
-  ok('the chase camera: she stands 1 m from a wall behind her (the camera is lifted over it), then walks away: it stays at its minimum, she is not faded', () => {
-    const r = walkChase({ fps: 60, start: [0, 2.0], dir: [0, -1], cam0: Math.PI, pre: 2.0, secs: 4.5 });
-    assert.ok(r.minDist >= CAM_MIN - 0.05, `closest ${r.minDist.toFixed(3)} m`);
-    assert.ok(r.fadeMax < 0.05, `fade ${r.fadeMax.toFixed(3)}`);
-  });
-  ok('the chase camera: the near plane is less than the body margin, so the walls the camera keeps are never clipped', () => {
-    assert.ok(CAM_NEAR < BODY_R, `${CAM_NEAR} vs ${BODY_R}`);
-    assert.ok(CAM_NEAR <= 0.1 + 1e-9, 'a near plane of 0.1 m or less');
-  });
-  ok('the chase camera: a low roof takes the camera down to her, never up through it', () => {
-    const d = chaseDistance(wallMap, roof32, { x: 0, z: 0, ty: 2.4, yaw: 0, pitch: 0.9, want: 4.6 }, 4.6, 10);
-    assert.ok(2.4 + 0.3 + d * Math.sin(0.9) <= 3.0 + 1e-6, `height ${(2.4 + 0.3 + d * Math.sin(0.9)).toFixed(3)}`);
   });
   for (const id of ['engineering', 'bridge', 'life']) {
     ok(`${id}: the chase camera under its own roofs: a corridor roof is low, the rooms beside it are not`, () => {
@@ -577,21 +358,6 @@ try {
       assert.ok(Math.min(...heights) >= 3.2 - 1e-9 && Math.max(...heights) <= 7 + 1e-9, `${id} roofs: ${[...heights].join(', ')}`);
     });
   }
-  ok('engineering: under the corridor roof (3.2 m) the camera comes down; in the hall (7 m) it keeps its distance', () => {
-    const { m, roof } = built.engineering;
-    assert.equal(roof(0, 2.5), 3.2, 'corridor');
-    assert.equal(roof(0, 15), 7, 'hall');
-    assert.equal(roof(0, 30), 5, 'bay');
-    // She faces +z and looks down: the camera's sight line runs back towards the lift.
-    const pitch = 0.6; const cp = Math.cos(pitch); const sp = Math.sin(pitch);
-    const low = chaseDistance(m, roof, { x: 0, z: 4.6, ty: 1.0, yaw: 0, pitch, want: 4.6 }, 4.6, 10);
-    assert.ok(low < 3.2, `corridor: ${low.toFixed(3)} m`);
-    assert.ok(1.3 + low * sp <= 3.2 - 0.2 + 1e-6, 'the camera under the corridor roof');
-    assert.ok(4.6 - low * cp >= 0, 'still in the corridor');
-    // (Clear of the core's disc at z 14, and of the props either side of the hall.)
-    const hall = chaseDistance(m, roof, { x: -6, z: 18, ty: 1.0, yaw: 0, pitch, want: 4.6 }, 4.6, 10);
-    assert.ok(Math.abs(hall - 4.6) < 1e-9, `hall: ${hall.toFixed(3)} m`);
-  });
 } finally {
   await vite.close();
 }
