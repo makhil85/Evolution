@@ -28,8 +28,8 @@
  */
 
 .rv-hud {
-  --rv-panel: rgba(16, 22, 30, 0.88);
-  --rv-panel-2: rgba(26, 36, 52, 0.92);
+  --rv-panel: rgba(16, 22, 30, 0.96);
+  --rv-panel-2: rgba(26, 36, 52, 0.98);
   --rv-line: rgba(255, 255, 255, 0.14);
   --rv-text: #eef4ff;
   --rv-muted: #a9b8d2;
@@ -571,51 +571,6 @@
 
 /* --- spawn direction cue ------------------------------------------------- */
 
-/* One-time nudge: echoes the mission card's own first line, once, big and
- * central, a beat after load — then fades for good. Never shown again. */
-.rv-hud .rv-onboard {
-  position: absolute;
-  top: 108px;
-  /* Centred on the PLAY area, not the raw viewport: the sidebar (292px wide,
-   * 12px off the right edge) would otherwise sit under the right end of this
-   * banner at normal desktop widths. Shifting the centre point left by half
-   * the sidebar's claimed width keeps the two from ever overlapping. */
-  left: calc((100% - 320px) / 2);
-  z-index: 4;
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  max-width: min(70vw, 500px);
-  padding: 12px 20px;
-  border-radius: 999px;
-  background: rgba(14, 20, 28, 0.92);
-  border: 1px solid rgba(86, 212, 255, 0.55);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1.3;
-  opacity: 0;
-  transform: translate(-50%, -6px);
-  transition: opacity 380ms ease, transform 380ms ease;
-}
-
-.rv-hud .rv-onboard.is-in {
-  opacity: 1;
-  transform: translate(-50%, 0);
-}
-
-.rv-hud .rv-onboard.is-out {
-  opacity: 0;
-  transform: translate(-50%, -6px);
-}
-
-.rv-hud .rv-onboard__arrow {
-  flex: none;
-  font-size: 22px;
-  color: var(--rv-cool);
-  animation: rv-nudge 1.1s ease-in-out infinite;
-}
-
 /* --- toasts ------------------------------------------------------------- */
 
 .rv-hud .rv-toasts {
@@ -912,12 +867,13 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* The Camera pill (chapters 1-3, hud.js): a small one, under the quest list. */
+/* The Camera pill (chapters 1-3, hud.js): a small one, beside the quest list. */
 .rv-hud .rv-camera {
-  padding: 4px 12px;
+  padding: 4px 10px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 800;
+  white-space: nowrap;
 }
 
 .rv-hud .rv-btn:disabled {
@@ -1028,11 +984,6 @@
   75%      { transform: translateX(5px); }
 }
 
-@keyframes rv-nudge {
-  0%, 100% { transform: translateX(0); }
-  50%      { transform: translateX(4px); }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .rv-hud .rv-badge.is-active,
   .rv-hud .rv-res__cell.is-gain,
@@ -1040,13 +991,8 @@
   .rv-hud .rv-choice.is-shake,
   .rv-hud .rv-toast,
   .rv-hud .rv-interact,
-  .rv-hud .rv-modal__card,
-  .rv-hud .rv-onboard__arrow {
+  .rv-hud .rv-modal__card {
     animation: none;
-  }
-
-  .rv-hud .rv-onboard {
-    transition: opacity 120ms linear;
   }
 }
 
@@ -1085,14 +1031,6 @@
     bottom: 12px;
     left: 12px;
     width: 148px;
-  }
-
-  /* The sidebar moves to the bottom of the screen on a narrow layout (see
-   * .rv-side above), so the desktop-only left offset that dodges it would
-   * just push this off-centre for no reason here. */
-  .rv-hud .rv-onboard {
-    left: 50%;
-    max-width: min(90vw, 420px);
   }
 
   /* On a phone the cards claim the bottom of the screen and their height varies
@@ -1234,7 +1172,7 @@
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
-.rv-hud .rv-card { background: rgba(16, 22, 30, 0.8); padding: 9px 11px; }
+.rv-hud .rv-card { background: rgba(16, 22, 30, 0.96); padding: 9px 11px; }
 .rv-hud .rv-answer__input { font-family: inherit; }
 
 /* --- the top: one slim row (title, rank, progress), right side left free
@@ -1258,9 +1196,8 @@
   width: var(--side-w);
   max-height: calc(100vh - 60px);
   gap: 6px;
-  opacity: 0.95;
 }
-.rv-hud .rv-side .rv-topline { justify-content: flex-end; }
+.rv-hud .rv-side .rv-topline { justify-content: flex-end; flex-wrap: nowrap; gap: 6px; }
 .rv-hud .rv-quests { margin-left: 0; }
 .rv-hud .rv-quests__summary { font-size: max(10px, calc(12px * var(--side-scale))); padding: 3px 10px; }
 .rv-hud .rv-card__title { font-size: max(10px, calc(12px * var(--side-scale))); margin-bottom: 4px; }
@@ -1275,27 +1212,18 @@
 .rv-hud .rv-res__icon { font-size: max(12px, calc(15px * var(--side-scale))); }
 .rv-hud .rv-res__label { font-size: 10px; letter-spacing: 0.2px; }
 .rv-hud .rv-res__value { font-size: max(12px, calc(16px * var(--side-scale))); }
-.rv-hud .rv-side .rv-key {
-  gap: 2px 10px;
-  padding: 0 4px;
+.rv-hud .rv-quests__panel .rv-key {
+  gap: 4px 12px;
+  margin-bottom: 8px;
+  padding: 2px 4px 8px;
+  border-bottom: 1px solid var(--rv-line);
   font-size: max(10px, calc(12px * var(--side-scale)));
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
   color: rgba(238, 244, 255, 0.85);
 }
-.rv-hud .rv-side .rv-key__dot { width: 9px; height: 9px; }
-.rv-hud .rv-parent__summary { font-size: 10px; }
-
-/* --- the one-time direction cue moves to the bottom centre (Chapter 4 keeps
- *     its one-line instruction there), just above the "→ place · 12 m" pill,
- *     below her (it only lives 9 s, so the rare mining hint may share it). */
-.rv-hud .rv-onboard {
-  top: auto;
-  bottom: 184px;
-  left: 50%;
-  max-width: min(56vw, 540px);
-  padding: 10px 18px;
-  font-size: 15px;
-}
+.rv-hud .rv-quests__panel .rv-key__dot { width: 9px; height: 9px; }
+/* Parent hints: a quiet chip, out of the child's way. */
+.rv-hud .rv-parent__summary { font-size: 9px; opacity: 0.7; }
 
 /* --- messages: bottom left, kept clear of the centre pills ------------------ */
 .rv-hud .rv-toasts { max-width: min(36vw, 500px); gap: 6px; }
@@ -1305,7 +1233,6 @@
  *     interact pill, the cue and ordinary messages step away (warnings stay);
  *     hud.js holds new messages back until the card closes. */
 .rv-hud.rv-hud--modal .rv-interact,
-.rv-hud.rv-hud--modal .rv-onboard,
 .rv-hud.rv-hud--modal .rv-quests__panel,
 .rv-hud.rv-hud--modal .rv-toast:not(.is-warn):not(.is-bad) { display: none !important; }
 .rv-hud.rv-hud--modal .rv-top,
