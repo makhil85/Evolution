@@ -895,9 +895,9 @@ function frame() {
 
 /** One frame of everything. Split from frame() so tests can step it by hand. */
 function tick(dt, now = performance.now()) {
-  // A reading pause (a line on screen, the OK card) freezes the game: the rocket,
-  // pickups, stations, nav, mining and her walk get no time. The ambient world keeps dt.
-  const gdt = hud && hud.isReadPaused() ? 0 : dt;
+  // A line on screen (a toast, the read card) stays up its reading time but freezes nothing:
+  // she walks, mines and uses the stations while it shows (lead 2026-10-09).
+  const gdt = dt; // a line on screen no longer stops the game (lead 2026-10-09): she plays on while it shows
   elapsed += dt;
   gameTime += gdt;
 
@@ -937,7 +937,7 @@ function tick(dt, now = performance.now()) {
   }
   let motion = null;
   if (controller && !flying) {
-    motion = controller.step(gdt, emotes ? emotes.input(readInput(), gdt) : readInput());
+    motion = controller.step(dt, emotes ? emotes.input(readInput(), dt) : readInput());
     if (motion && motion.moving && motion.onGround) audio.footstep(motion.running);
     if (!opening?.update(dt) && !story?.update(dt)) updateCamera(dt);
   }

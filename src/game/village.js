@@ -118,6 +118,13 @@ const BRIDGE_WIDTH = 2.2;
 /** How far past the waterline the deck lands on each bank. */
 const BRIDGE_BANK_MARGIN = 2.6;
 
+/**
+ * How far in from each end the deck climbs from the bank up to its planks. The
+ * deck used to hang at full height right to the bank, so the road stopped in a
+ * step of about half a unit under it. A gentle slope lets the road run up onto it.
+ */
+const BRIDGE_RAMP = 3;
+
 
 export const CROSSINGS = [
   { id: 'bridge', x: 0, planks: 5 },
@@ -382,7 +389,10 @@ export function streetGeometry(village) {
     if (len < 1e-4) return;
     const ux = (bx - ax) / len, uz = (bz - az) / len;
     const nx = -uz, nz = ux;
-    const steps = Math.max(1, Math.ceil(len / 0.5));
+    // Pieces of 0.1, not 0.5: a piece that touches the water is dropped whole,
+    // so long pieces left a gap up to 0.5 at each bridge end, and short ones
+    // also follow the bank's slope with more height samples.
+    const steps = Math.max(1, Math.ceil(len / 0.1));
     for (let i = 0; i < steps; i++) {
       const s0 = (len * i) / steps, s1 = (len * (i + 1)) / steps;
       const sm = (s0 + s1) / 2;
@@ -765,15 +775,24 @@ export class Village {
       // Same margin the deck is built with, so the walkable surface and the
       // planks under it end at the same place.
       const half = RIVER.widthAt(c.x) + BRIDGE_BANK_MARGIN;
-      const d = Math.abs(z - centre);
-      if (d > half) continue;
-      const deckY = this.heightAt(c.x, centre) + BRIDGE_DECK_Y;
-      // Ramp on and off over the last unit of deck, so stepping onto the
-      // bridge is a step up rather than a teleport.
-      const blend = Math.min(1, (half - d) / 1.0);
-      return ground + (deckY - ground) * blend;
+      if (Math.abs(z - centre) > half) continue;
+      return this.deckTopAt(c, z);
     }
     return ground;
+  }
+
+  /**
+   * Top of a crossing's deck at world z: the planks where the bridge is level,
+   * and the bank itself at each end. bridge.js drops its boards and rails by the
+   * same amount, so the mesh and the walk surface are the same surface.
+   */
+  deckTopAt(c, z) {
+    const centre = RIVER.centreAt(c.x);
+    const half = RIVER.widthAt(c.x) + BRIDGE_BANK_MARGIN;
+    const deckY = this.heightAt(c.x, centre) + BRIDGE_DECK_Y;
+    const bank = this.heightAt(c.x, z);
+    const t = Math.max(0, Math.min(1, (half - Math.abs(z - centre)) / BRIDGE_RAMP));
+    return bank + (deckY - bank) * t;
   }
 
   /** Drive the water. Called once per frame. */
@@ -1106,6 +1125,7 @@ export class Village {
         deckY,
         waterY: this.heightAt(c.x, centre),
         pieces: c.planks,
+        surfaceAt: (z) => this.deckTopAt(c, z),
       });
       this.group.add(built.mesh);
 
