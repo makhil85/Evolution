@@ -11,7 +11,7 @@
 // status lamp. She steps out of the lift in the open (LIFT_OUT, not inside the
 // car). The follow camera (ship.js chaseFrame): behind her at a fixed distance and height, her whole body in view, the
 // view turning to her heading only while she walks forward, nothing moved on its own (no fade, no pull-in); walls on the
-// sight line are cut away by the decks' materials (ship.js cutAway). toggleView switches 'behind' and 'over'.
+// sight line are cut away by the decks' materials (ship.js cutAway). toggleView cycles 'behind', 'follow' and 'over'.
 import assert from 'node:assert/strict';
 import { createServer } from 'vite';
 import { createRequire } from 'node:module';
@@ -282,16 +282,66 @@ try {
     assert.equal(sc.view, 'behind', 'the default view');
     check('behind');
     const yBehind = sc.camera.position.y;
-    assert.equal(sc.toggleView(), 'over', 'the button switches to over');
+    assert.equal(sc.toggleView(), 'follow', 'the button switches to follow (checked below)');
+    assert.equal(sc.toggleView(), 'over', 'and then to over');
     check('over');
     assert.ok(sc.camera.position.y > yBehind + 0.5, `the over view is higher: ${sc.camera.position.y.toFixed(2)} m`);
-    assert.equal(sc.toggleView(), 'behind', 'and back');
+    assert.equal(sc.toggleView(), 'behind', 'and back to behind');
     check('behind again');
-    sc.toggleView(); // over: kept for the session
+    sc.toggleView(); // follow: kept for the session
     const again = createInteriorScene(fakeGame, { models: null, onStation: async () => {}, startDeck: 'life' });
-    assert.equal(again.view, 'over', 'a new scene keeps the choice for the session');
+    assert.equal(again.view, 'follow', 'a new scene keeps the choice for the session');
     again.toggleView();
-    assert.equal(again.view, 'behind', 'the one choice for the session: toggling it back in the new scene');
+    assert.equal(again.view, 'over', 'the one choice for the session: the cycle goes on in the new scene');
+  });
+  ok('the follow view: Left turns her on the spot ~1.9 rad in 1 s, the camera stays directly behind her every frame, Up walks her along her heading', () => {
+    const angDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
+    const sc = createInteriorScene(fakeGame, { models: null, onStation: async () => {}, startDeck: 'life' });
+    const at = openSpot(sc.debug.decks.life); assert.ok(at, 'an open spot on the life deck');
+    sc.debug.place(at[0], at[1]);
+    // The choice is kept for the session (the scenes before this one left it elsewhere): cycle to follow.
+    for (let i = 0; i < 3 && sc.view !== 'follow'; i++) sc.toggleView();
+    assert.equal(sc.view, 'follow');
+    const w = sc.debug.walker; const cam = sc.debug.cam; const dt = 1 / 30;
+    let worst = 0; // the camera's yaw off her back, worst frame (rad)
+    const step = (n, input, mouse = noMouse) => {
+      for (let i = 0; i < n; i++) {
+        sc.tick(dt, input, mouse, false);
+        worst = Math.max(worst, Math.abs(angDiff(cam.yaw, w.heading)));
+      }
+    };
+    step(30, { thrust: 0, turn: 0 }); // the view comes round to her back
+    worst = 0;
+    const h0 = w.heading;
+    step(30, { thrust: 0, turn: -1 }); // Left, 1 s
+    const turned = w.heading - h0;
+    assert.ok(turned > 1.8 && turned < 2.2, `Left turned her ${turned.toFixed(2)} rad in 1 s`);
+    assert.ok(worst < 5 * Math.PI / 180, `the camera left her back by ${(worst * 180 / Math.PI).toFixed(1)} degrees while she turned`);
+    const rightBefore = w.heading;
+    step(30, { thrust: 0, turn: 1 }); // Right, 1 s: back the way she came
+    assert.ok(rightBefore - w.heading > 1.5, `Right turned her back ${(rightBefore - w.heading).toFixed(2)} rad`);
+    step(30, { thrust: 0, turn: 0 }); // settle
+    worst = 0;
+    const p0 = { x: w.pos.x, z: w.pos.z }; const hF = w.heading;
+    step(30, { thrust: 1, turn: 0 }); // Up, 1 s: along her heading
+    const dx = w.pos.x - p0.x; const dz = w.pos.z - p0.z; const l = Math.hypot(dx, dz);
+    assert.ok(l > 2, `Up walked her ${l.toFixed(2)} m`);
+    assert.ok(Math.abs(angDiff(w.heading, hF)) < 0.01, 'Up does not turn her');
+    assert.ok((dx * Math.sin(hF) + dz * Math.cos(hF)) / l > 0.98, 'she walks along her heading');
+    assert.ok(worst < 5 * Math.PI / 180, `the camera left her back by ${(worst * 180 / Math.PI).toFixed(1)} degrees while she walked`);
+    const c = sc.camera.position;
+    assert.ok(Math.abs(angDiff(Math.atan2(c.x - w.pos.x, c.z - w.pos.z), hF + Math.PI)) < 0.1, 'the camera is on her back line');
+    assert.equal(sc.debug.rig.dist, CAM_DIST, 'the same distance as behind');
+    assert.equal(c.y, CAM_RISE, 'the same height as behind');
+    // Back (Down) walks her backwards and does not turn her round.
+    const hB = w.heading;
+    step(15, { thrust: -1, turn: 0 });
+    assert.ok(Math.abs(angDiff(w.heading, hB)) < 0.01, 'a step back does not turn her');
+    // A drag looks round; the view eases back to her back.
+    step(1, { thrust: 0, turn: 0 }, { dx: 200, dy: 0, wheel: 0, dragging: true });
+    assert.ok(Math.abs(angDiff(cam.yaw, w.heading)) > 0.3, 'the drag turned the view');
+    step(90, { thrust: 0, turn: 0 });
+    assert.ok(Math.abs(angDiff(cam.yaw, w.heading)) < 0.02, `the view eased back: ${(angDiff(cam.yaw, w.heading) * 180 / Math.PI).toFixed(1)} degrees off`);
   });
   ok('the follow camera on every deck: a 20 s wander (walks, strafes, steps back, drags, bumps): she is always in view, the camera keeps CAM_DIST and CAM_RISE', () => {
     const sc = createInteriorScene(fakeGame, { models: null, onStation: async () => {}, startDeck: 'crew' });

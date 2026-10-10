@@ -42,6 +42,12 @@ export const CAM_DIST = 3.0; // behind her (m)
 export const CAM_RISE = 1.5; // the camera's height above her feet (m): from 3 m back her whole body is in view
 export const CAM_OVER = { dist: 2.6, rise: 2.8 }; // the 'over' view (toggleView): the same follow, higher and steeper
 export const CAM_NEAR = 0.1; // the near plane (m)
+// The 'follow' view (toggleView): the camera is locked behind her back like a spaceship's, and she steers like one:
+// Left/Right turn her on the spot (TURN_RATE rad/s, eased by TURN_EASE), Up/Down walk along her heading.
+export const TURN_RATE = 2.1;
+const TURN_EASE = 12; // how fast her turn comes up to speed and stops (1/s)
+const FOLLOW_VIEW = 40; // the camera turns with her heading at this rate (1/s): a tiny smoothing, about 3 degrees behind in a turn
+const LOOK_BACK = 1.5; // a drag looks round in this view, and eases back to her back at this rate (1/s)
 const TARGET_UP = 1.1; // she is looked at this far above her feet (her upper body)
 const CUT_R = 0.45; // the cut-away tube round the sight line (m): walls on that line inside it are not drawn
 const CHASE_SMOOTH = 0.15; // the point the camera looks at trails her by this (s, critically damped)
@@ -53,8 +59,10 @@ const FOLLOW_HI = 1.2;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const angDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
 const inLift = (x, z) => x > LIFT.x0 && x < LIFT.x1 && z > LIFT.z0 && z < LIFT.z1 - 0.2;
-// The camera button (toggleView) keeps its choice for the session: 'behind' (her follow view, the default, as in
-// Chapters 1-2) or 'over' (a higher, steeper look down on her, the same follow).
+// The camera button (toggleView) keeps its choice for the session and cycles: 'behind' (her follow view, the default, as in
+// Chapters 1-2), 'follow' (locked behind her back, tank steering: see TURN_RATE) or 'over' (a higher, steeper look down on
+// her, the same follow).
+const VIEWS = ['behind', 'follow', 'over'];
 let viewMode = 'behind';
 
 // The cut-away: every deck material discards the fragments inside a tube from the camera to her upper body (a wall, a
@@ -254,11 +262,12 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
   }
 
   const overlay = createOverlay();
-  const cam = { yaw: 0 };
+  const cam = { yaw: 0, look: 0 }; // look: a drag's turn in the follow view (eases back)
   const rig = createChaseRig(); // where the camera looks, how far and how high (chaseFrame)
   const _move = new THREE.Vector2();
   const _v = new THREE.Vector3();
   let clock = 0; let busy = false; let disposed = false; let prevE = false; let prevJump = false;
+  let turnRate = 0; // her turn on Left/Right in the follow view (rad/s, eased)
   let lift = null; // { to, t } while the lift runs
   let finish;
   const finished = new Promise((r) => { finish = r; });
@@ -353,10 +362,17 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
 
   // forward: she walks forward on her own keys (no strafe, no step back), so the view may turn to her heading.
   function updateCamera(dt, mouse, forward) {
-    if (mouse) cam.yaw -= (mouse.dx || 0) * 0.0055; // a drag turns the view; it swings back to her heading as she walks
+    const follow = viewMode === 'follow';
+    if (follow) {
+      // Locked behind her back: the view is her heading plus a drag's look, which eases back. Only the tiny smoothing.
+      if (mouse) cam.look -= (mouse.dx || 0) * 0.0055;
+      cam.look *= Math.exp(-dt * LOOK_BACK);
+      cam.yaw += angDiff(walker.heading + cam.look, cam.yaw) * (1 - Math.exp(-dt * FOLLOW_VIEW));
+      rig.yawRate = 0; rig.follow = 0; // chaseFrame's own turn is not used in this view
+    } else if (mouse) cam.yaw -= (mouse.dx || 0) * 0.0055; // a drag turns the view; it swings back to her heading as she walks
     // Her feet and heading. The camera follows the rig's point, not her feet, so a bump does not jerk it.
     _her.x = walker.pos.x; _her.y = walker.pos.y; _her.z = walker.pos.z; _her.heading = walker.heading;
-    _her.speed = Math.hypot(walker.vel.x, walker.vel.y); _her.follow = !!mouse && !mouse.dragging && forward;
+    _her.speed = Math.hypot(walker.vel.x, walker.vel.y); _her.follow = !follow && !!mouse && !mouse.dragging && forward;
     const over = viewMode === 'over';
     _her.want = over ? CAM_OVER.dist : CAM_DIST;
     _her.rise = over ? CAM_OVER.rise : CAM_RISE;
@@ -381,14 +397,26 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
     const inp = input || { thrust: 0, turn: 0 };
     let speed;
     if (!modal) {
-      const f = _f; const rt = _rt; // her walk's axes (camera-relative), no allocation a frame
-      f.x = Math.sin(cam.yaw); f.z = Math.cos(cam.yaw); rt.x = -f.z; rt.z = f.x;
-      _move.set(f.x * (inp.thrust || 0) + rt.x * (inp.turn || 0), f.z * (inp.thrust || 0) + rt.z * (inp.turn || 0));
-      if (_move.lengthSq() > 1) _move.normalize();
       const run = !!inp.precision || isDown('ShiftLeft') || isDown('ShiftRight');
+      let face = null; // the follow view: her heading after this frame's turn
+      if (viewMode === 'follow') {
+        // Tank steering: Right turns her right (her heading runs the other way: a bigger heading faces her left), Up/Down walk along it.
+        turnRate += (-(inp.turn || 0) * TURN_RATE - turnRate) * (1 - Math.exp(-dt * TURN_EASE));
+        face = walker.heading + turnRate * dt;
+        walker.heading = face;
+        _move.set(Math.sin(face) * (inp.thrust || 0), Math.cos(face) * (inp.thrust || 0));
+      } else {
+        const f = _f; const rt = _rt; // her walk's axes (camera-relative), no allocation a frame
+        f.x = Math.sin(cam.yaw); f.z = Math.cos(cam.yaw); rt.x = -f.z; rt.z = f.x;
+        _move.set(f.x * (inp.thrust || 0) + rt.x * (inp.turn || 0), f.z * (inp.thrust || 0) + rt.z * (inp.turn || 0));
+      }
+      if (_move.lengthSq() > 1) _move.normalize();
       speed = walker.move(dt, { dir: _move, run, jump: !!inp.steady && !prevJump, terrain, collide });
+      // Walking back does not turn her round: her heading is what the turn set (the walk eases her face to her step).
+      if (face !== null) walker.heading = face;
       prevJump = !!inp.steady;
     } else {
+      turnRate = 0;
       _move.set(0, 0);
       speed = walker.move(dt, { dir: _move, run: false, jump: false, terrain, collide });
     }
@@ -469,8 +497,8 @@ export function createInteriorScene(game, { spots = STATIONS, order = spots.map(
     camera,
     debug,
     onFoot: true, // a walk: main.js puts warp back to x1 when she is back at the controls
-    /** The camera button (HUD, when she is on foot): 'behind' <-> 'over', kept for the session. Returns the new view. */
-    toggleView() { viewMode = viewMode === 'behind' ? 'over' : 'behind'; return viewMode; },
+    /** The camera button (HUD, when she is on foot): 'behind' -> 'follow' -> 'over' -> 'behind', kept for the session. Returns the new view. */
+    toggleView() { viewMode = VIEWS[(VIEWS.indexOf(viewMode) + 1) % VIEWS.length]; return viewMode; },
     get view() { return viewMode; },
     start() {
       hud?.toast?.(t('On board! The lift joins the decks; press E at a station.', 'On board! Press E at a station.'), { kind: 'info', ms: 5200 });
