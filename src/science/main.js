@@ -371,12 +371,8 @@ async function main() {
     radius: 0.3,
     heightField: (x, z) => world.heightAt(x, z),
     bounds: { minX: BOUNDS.minX + 0.4, maxX: BOUNDS.maxX - 0.4, minZ: BOUNDS.minZ + 0.4, maxZ: BOUNDS.maxZ - 0.4 },
-    resolveHorizontal: (cur, next) => {
-      if (!world.blocked(next.x, next.z)) return;
-      if (!world.blocked(next.x, cur.z)) { next.z = cur.z; return; }
-      if (!world.blocked(cur.x, next.z)) { next.x = cur.x; return; }
-      next.x = cur.x; next.z = cur.z;
-    },
+    // Her body (radius 0.3), not her centre: world.moveBody stops her at the face and slides her along it.
+    resolveHorizontal: (cur, next, radius) => world.moveBody(cur, next, radius),
   });
   const p0 = rules.state.player && Number.isFinite(rules.state.player.x) ? rules.state.player : { x: START_TILE.tx, y: START_TILE.ty };
   const start = tileToWorld(p0.x, p0.y);

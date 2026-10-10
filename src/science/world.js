@@ -125,6 +125,32 @@ export async function buildScienceWorld({ scene, level = 4, renderer, shadowExte
     return false;
   }
 
+  // She is a body, not a point: blocked() tests her centre, so her edge sank into walls and trees.
+  // bodyBlocked tests the centre and 8 points on her radius; moveBody slides her along whatever stops her.
+  const BODY_R = 0.3;
+  const RING = Array.from({ length: 8 }, (_, i) => [Math.cos(i * Math.PI / 4), Math.sin(i * Math.PI / 4)]);
+  function bodyBlocked(x, z, r = BODY_R) {
+    if (blocked(x, z)) return true;
+    for (const [dx, dz] of RING) if (blocked(x + dx * r, z + dz * r)) return true;
+    return false;
+  }
+  /** Last clear point on the way from a to b (bisected, so she stops at the face, not a step short). */
+  function clearLeg(ax, az, bx, bz, r) {
+    if (!bodyBlocked(bx, bz, r) || bodyBlocked(ax, az, r)) return [bx, bz];
+    let lo = 0, hi = 1;
+    for (let i = 0; i < 8; i++) {
+      const m = (lo + hi) / 2;
+      if (bodyBlocked(ax + (bx - ax) * m, az + (bz - az) * m, r)) hi = m; else lo = m;
+    }
+    return [ax + (bx - ax) * lo, az + (bz - az) * lo];
+  }
+  /** Moves next in place: x first, then z, so a wall she walks into slides her along its face. */
+  function moveBody(cur, next, r = BODY_R) {
+    const [x, z] = clearLeg(cur.x, cur.z, next.x, cur.z, r);
+    const [nx, nz] = clearLeg(x, z, x, next.z, r);
+    next.x = nx; next.z = nz;
+  }
+
   function heightAt(x, z) {
     if (built < 1) return 0;
     const dx = Math.abs(x - CENTER.x), dz = Math.abs(z - CENTER.z);
@@ -297,6 +323,8 @@ export async function buildScienceWorld({ scene, level = 4, renderer, shadowExte
     sun,
     heightAt,
     blocked,
+    bodyBlocked,
+    moveBody,
     setCollected,
     setStationSolved,
     setGateOpen,
