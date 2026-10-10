@@ -36,6 +36,7 @@ const PLUME_FRAG = /* glsl */`
   uniform float uEdge;
   uniform float uDiamonds;
   uniform float uFadeIn;
+  uniform float uFloor;
   uniform vec3 uHot;
   uniform vec3 uCool;
   varying float vT;
@@ -51,7 +52,8 @@ const PLUME_FRAG = /* glsl */`
   void main() {
     #include <logdepthbuf_fragment>
     float facing = abs( dot( normalize( vN ), normalize( vV ) ) );
-    float edge = pow( facing, uEdge );
+    // The floor keeps the cone lit when it is seen end-on (the chase camera sits behind the nozzle).
+    float edge = mix( uFloor, 1.0, pow( facing, uEdge ) );
     float t = vT;
     float along = smoothstep( 0.0, uFadeIn, t ) * pow( 1.0 - t, 1.35 );
     vec2 q = vec2( t * 6.0 - uTime * 9.0, vObj.x * 3.1 + vObj.y * 2.3 );
@@ -62,7 +64,7 @@ const PLUME_FRAG = /* glsl */`
     gl_FragColor = vec4( col, a );
   }`;
 
-function plumeMaterial({ hot, cool, edge = 1.4, diamonds = 0.0, fadeIn = 0.05 }) {
+function plumeMaterial({ hot, cool, edge = 1.4, floor = 0.0, diamonds = 0.0, fadeIn = 0.05 }) {
   return new THREE.ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
@@ -70,6 +72,7 @@ function plumeMaterial({ hot, cool, edge = 1.4, diamonds = 0.0, fadeIn = 0.05 })
       uEdge: { value: edge },
       uDiamonds: { value: diamonds },
       uFadeIn: { value: fadeIn },
+      uFloor: { value: floor },
       uHot: { value: new THREE.Vector3(...hot) },
       uCool: { value: new THREE.Vector3(...cool) },
     },
@@ -176,8 +179,8 @@ export function createShipFx({ mainNozzle, reverseNozzles, rcs, strobe }) {
   // swells a touch just past the lip, then tapers to a point.
   const outerGeo = own(plumeGeometry((t) => R0 * 0.78 * (1 + 0.18 * Math.sin(Math.min(1, t * 5) * Math.PI * 0.5)) * Math.pow(1 - t, 0.9) + 0.01, 32, 28));
   const coreGeo = own(plumeGeometry((t) => R0 * 0.36 * Math.pow(1 - t, 1.1) + 0.005, 32, 20));
-  const outerMat = own(plumeMaterial({ hot: [0.7, 1.4, 3.2], cool: [0.12, 0.3, 1.7], edge: 1.6, fadeIn: 0.12 }));
-  const coreMat = own(plumeMaterial({ hot: [3.4, 3.6, 4.0], cool: [0.5, 1.2, 3.2], edge: 2.4, diamonds: 0.25, fadeIn: 0.2 }));
+  const outerMat = own(plumeMaterial({ hot: [0.7, 1.4, 3.2], cool: [0.12, 0.3, 1.7], edge: 1.6, floor: 0.5, fadeIn: 0.03 }));
+  const coreMat = own(plumeMaterial({ hot: [3.4, 3.6, 4.0], cool: [0.5, 1.2, 3.2], edge: 2.4, floor: 0.4, diamonds: 0.25, fadeIn: 0.04 }));
   const outer = new THREE.Mesh(outerGeo, outerMat);
   const core = new THREE.Mesh(coreGeo, coreMat);
   for (const m of [outer, core]) {
@@ -188,6 +191,17 @@ export function createShipFx({ mainNozzle, reverseNozzles, rcs, strobe }) {
   }
   outer.name = 'plumeOuter';
   core.name = 'plumeCore';
+
+  // Flare: a short skirt of flame that fans out round the bell rim, so the burn
+  // reads from straight behind (the chase camera looks down the plume).
+  const flareGeo = own(plumeGeometry((t) => R0 * (1.05 + 1.1 * t) + 0.01, 16, 28));
+  const flareMat = own(plumeMaterial({ hot: [0.9, 1.6, 3.0], cool: [0.25, 0.6, 1.8], edge: 1.2, floor: 0.6, fadeIn: 0.02 }));
+  const flare = new THREE.Mesh(flareGeo, flareMat);
+  flare.position.copy(mainNozzle.pos);
+  flare.frustumCulled = false;
+  flare.renderOrder = 3;
+  flare.name = 'plumeFlare';
+  group.add(flare);
 
   // Throat glow: a hot disc deep in the bell, always faintly warm.
   const throatMat = own(new THREE.MeshBasicMaterial({ map: glowTex, color: 0xffffff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
@@ -339,8 +353,15 @@ export function createShipFx({ mainNozzle, reverseNozzles, rcs, strobe }) {
     core.scale.set(wscale, wscale, Math.max(L * 0.45, 0.01));
     outerMat.uniforms.uTime.value = time;
     coreMat.uniforms.uTime.value = time;
-    outerMat.uniforms.uIntensity.value = 0.38 * Math.min(1, fwd * gentle * 3);
+    outerMat.uniforms.uIntensity.value = 0.75 * Math.min(1, fwd * gentle * 3);
     coreMat.uniforms.uIntensity.value = 0.55 * Math.min(1, fwd * gentle * 3);
+
+    // Flare: a short skirt round the rim, flickering with the plume.
+    const FL = fwd * gentle * 0.9 * flick;
+    flare.visible = FL > 0.04;
+    flare.scale.set(1, 1, Math.max(FL, 0.01));
+    flareMat.uniforms.uTime.value = time;
+    flareMat.uniforms.uIntensity.value = 0.6 * Math.min(1, fwd * gentle * 3);
 
     // Throttle 0: nothing glows at all.
     const heat = fwd * gentle;
