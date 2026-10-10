@@ -164,6 +164,36 @@ export async function buildCityWorld({ scene, level = 4, renderer, shadowExtent 
     return false;
   }
 
+  // She is a body, not a point: blocked() tests her centre, so her edge sank into walls and trees.
+  // bodyBlocked tests the centre and 8 points on her radius; moveBody slides her along whatever stops her.
+  // `extra` adds a blocker the world doesn't own (Newton's tree).
+  const BODY_R = 0.3;
+  const RING = Array.from({ length: 8 }, (_, i) => [Math.cos(i * Math.PI / 4), Math.sin(i * Math.PI / 4)]);
+  function bodyBlocked(x, z, r = BODY_R, extra = null) {
+    if (blocked(x, z) || (extra && extra(x, z))) return true;
+    for (const [dx, dz] of RING) {
+      const px = x + dx * r, pz = z + dz * r;
+      if (blocked(px, pz) || (extra && extra(px, pz))) return true;
+    }
+    return false;
+  }
+  /** Last clear point on the way from a to b (bisected, so she stops at the face, not a step short). */
+  function clearLeg(ax, az, bx, bz, r, extra) {
+    if (!bodyBlocked(bx, bz, r, extra) || bodyBlocked(ax, az, r, extra)) return [bx, bz];
+    let lo = 0, hi = 1;
+    for (let i = 0; i < 8; i++) {
+      const m = (lo + hi) / 2;
+      if (bodyBlocked(ax + (bx - ax) * m, az + (bz - az) * m, r, extra)) hi = m; else lo = m;
+    }
+    return [ax + (bx - ax) * lo, az + (bz - az) * lo];
+  }
+  /** Moves next in place: x first, then z, so a wall she walks into slides her along its face. */
+  function moveBody(cur, next, r = BODY_R, extra = null) {
+    const [x, z] = clearLeg(cur.x, cur.z, next.x, cur.z, r, extra);
+    const [nx, nz] = clearLeg(x, z, x, next.z, r, extra);
+    next.x = nx; next.z = nz;
+  }
+
   const DECK = { minX: P(25.9, 0).x, maxX: P(29.1, 0).x, minZ: P(0, 16.8).z, maxZ: P(0, 18.2).z };
   function heightAt(x, z) {
     if (built.bridge >= MAX_PIECES.bridge && x >= DECK.minX && x <= DECK.maxX && z >= DECK.minZ && z <= DECK.maxZ) return DECK_TOP;
@@ -336,6 +366,8 @@ export async function buildCityWorld({ scene, level = 4, renderer, shadowExtent 
     root,
     heightAt,
     blocked,
+    bodyBlocked,
+    moveBody,
     /** The footprint a structure closes once it stands (the box `blocked` uses), or null (bridge, unknown). */
     siteFootprint: (target) => siteRects.find((r) => r.id === target) || null,
     setBuilt,
