@@ -206,12 +206,12 @@ try {
     assert.ok(checkSpaceAnswer(L4.c6_berries_each, String((60 * 12) / 5)));
     assert.ok(!checkSpaceAnswer(L4.c6_berries_each, String(60 * 12)), 'the whole farm, not each');
   });
-  ok('Level 1 numbers: halving 8 twice, counting by twos to 10, 5 minutes per 100 million km, 10 times 2', () => {
-    assert.ok(checkSpaceAnswer(L1.c6_dose_half, String(8 / 2 / 2)));
-    assert.ok(!checkSpaceAnswer(L1.c6_dose_half, String(8 / 2)), 'one metre gives 4, not the answer');
-    assert.ok(checkSpaceAnswer(L1.c6_leak_minutes, String(10 / 2)));
-    assert.ok(checkSpaceAnswer(L1.c6_light_delay, String(4 * 5))); // about 5 minutes per 100 million km
-    assert.ok(checkSpaceAnswer(L1.c6_berries_each, String(10 * 2)));
+  ok('Level 1 numbers: small take-aways and adding (pretend numbers), no halving or times', () => {
+    assert.ok(checkSpaceAnswer(L1.c6_dose_half, String(8 - 3)));
+    assert.ok(!checkSpaceAnswer(L1.c6_dose_half, '3'), 'the rock stops 3: not the answer');
+    assert.ok(checkSpaceAnswer(L1.c6_leak_minutes, String(10 - 3)));
+    assert.ok(checkSpaceAnswer(L1.c6_light_delay, String(5 + 6)));
+    assert.ok(checkSpaceAnswer(L1.c6_berries_each, String(4 + 5)));
   });
   ok('each quest has its question (its beat), each beat once', () => {
     for (const q of Q.QUESTS) {

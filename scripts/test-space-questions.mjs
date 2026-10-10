@@ -218,7 +218,7 @@ for (const id of Object.keys(CH5_QUESTIONS)) {
   check(`ch5 L1 ${id}: short hint (≤ 20 words)`, q.hint.split(/\s+/).length <= 20, `${q.hint.split(/\s+/).length} words`);
   if (q.type === 'choice') {
     check(`ch5 L1 ${id}: exactly one correct choice`, q.choices.filter((c) => c.correct === true).length === 1);
-    check(`ch5 L1 ${id}: 4 choices`, q.choices.length === 4);
+    check(`ch5 L1 ${id}: 2 or 3 choices`, q.choices.length >= 2 && q.choices.length <= 3);
     check(`ch5 L1 ${id}: correct choice accepted`, checkSpaceAnswer(q, q.choices.find((c) => c.correct).text));
     for (const c of q.choices.filter((c) => !c.correct)) check(`ch5 L1 ${id}: wrong choice rejected (${c.text.slice(0, 24)}…)`, !checkSpaceAnswer(q, c.text));
   } else {
@@ -229,29 +229,29 @@ for (const id of Object.keys(CH5_QUESTIONS)) {
 // The Level 1 sums, re-derived from each prompt's own numbers.
 const derivedCh5L1 = {
   c5_saturn_size: 9 - 3, // 9 Earths across, 3 already in a row
-  c5_hexagon: 6 * 2, // 6 sides, 2 steps each
-  c5_uranus_pole_day: 84 / 2, // half of 84
-  c5_sunlight_neptune: 8 * 3, // 8 minutes, three times as far (pretend)
+  c5_hexagon: 6 - 4, // 6 sides, Zara walks 4
+  c5_uranus_pole_day: 9 + 9, // 9 years of sun, then 9 of night (pretend)
+  c5_sunlight_neptune: 8 + 6, // 8 minutes, then 6 more (pretend)
   c5_voyager: 1980 - 1977, // count on from 1977 to 1980
-  c5_deuterium: 30 / 10, // 1 in every 10 is heavy (pretend), 30 atoms
+  c5_deuterium: 5 + 4, // 5 heavy atoms, then 4 more (pretend)
 };
 for (const [id, v] of Object.entries(derivedCh5L1)) check(`ch5 L1 ${id}: derived ${v} accepted`, checkSpaceAnswer(CH5_L1[id], String(v)));
 const temptingCh5L1 = {
   c5_saturn_size: [],
-  c5_hexagon: ['6', '2'],
-  c5_uranus_pole_day: ['84'],
+  c5_hexagon: ['6', '4'],
+  c5_uranus_pole_day: ['84', '9'],
   c5_sunlight_neptune: ['8', '11'],
   c5_voyager: ['1980', '35'],
-  c5_deuterium: ['30', '10'],
+  c5_deuterium: ['5', '4'],
 };
 for (const [id, wrong] of Object.entries(temptingCh5L1)) for (const w of wrong) check(`ch5 L1 ${id}: rejects tempting "${w}"`, !checkSpaceAnswer(CH5_L1[id], w));
 // Honest science: a made-up number must say so.
 check('ch5 L1 c5_sunlight_neptune: says "pretend"', /pretend/i.test(CH5_L1.c5_sunlight_neptune.prompt));
 check('ch5 L1 c5_deuterium: says "pretend", never a fact of 1 in 10', /pretend/i.test(CH5_L1.c5_deuterium.prompt) && !/1 in every 10 (hydrogen )?atoms is/i.test(CH5_L1.c5_deuterium.prompt.replace(/Pretend[^.]*\./, '')));
-check('ch5 L1 c5_saturn_size: says 9 Earths (the real width, rounded)', /about 9 Earths/.test(CH5_L1.c5_saturn_size.prompt));
-check('ch5 L1 c5_hexagon: says "pretend" for the 2 steps a side (no made-up fact)', /Pretend each side is 2 steps long/.test(CH5_L1.c5_hexagon.prompt));
+check('ch5 L1 c5_saturn_size: says Saturn is 9 Earths wide', /Saturn is 9 Earths wide/.test(CH5_L1.c5_saturn_size.prompt));
+check('ch5 L1 c5_hexagon: the real shape, 6 sides (no made-up fact)', /has 6 sides/.test(CH5_L1.c5_hexagon.prompt));
 check('ch5 L1 c5_voyager: the sum has an event (1977 to 1980, Saturn)', /reached Saturn in 1980/.test(CH5_L1.c5_voyager.prompt));
-check('ch5 L1 c5_neptune_1846: "scientists", not "astronomers", and "roughly"', !/astronomers/.test(CH5_L1.c5_neptune_1846.prompt) && /scientists knew roughly/.test(CH5_L1.c5_neptune_1846.prompt));
+check('ch5 L1 c5_neptune_1846: says "Scientists found Neptune", no "astronomers"', !/astronomers/.test(CH5_L1.c5_neptune_1846.prompt) && /Scientists found Neptune/.test(CH5_L1.c5_neptune_1846.prompt));
 check('ch5 L4 c5_neptune_1846: "roughly", not "exactly"', /knew roughly/.test(CH5_QUESTIONS.c5_neptune_1846.prompt));
 check('ch5 L1 c5_pluto: success names Charon', /Charon/.test(CH5_L1.c5_pluto.success));
 check('ch5 L4 c5_voyager: names the heliopause', /heliopause/.test(CH5_QUESTIONS.c5_voyager.prompt));
