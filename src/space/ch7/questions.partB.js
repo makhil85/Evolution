@@ -85,31 +85,31 @@ export const CH7B_QUESTIONS = {
 export const CH7B_LEVEL1 = {
   c7b_gentle_drop: {
     title: 'Slow drop', subject: 'Slow motion', difficulty: 'Level 1 • slow',
-    prompt: 'A ball is let go 1 m up, with a very gentle push. About how long until it lands?',
+    prompt: 'A ball falls with a gentle push. About how long until it lands?',
     choices: [
       { text: 'about 1 second' },
       { text: 'about 5 seconds', correct: true },
       { text: 'about 50 seconds' },
     ],
-    hint: 'On Earth a ball like this lands in less than a second. This push is much gentler, so it takes longer.',
+    hint: 'A gentle push is slow. Earth’s pull is quick.',
     parentHint: `It takes about ${G1} seconds (${f1} s exactly).`,
     success: `Yes! About ${G1} seconds. Slow enough to watch it.`,
   },
   c7b_full_drop: {
     title: 'Quick landing', subject: 'Sharing', difficulty: 'Level 1 • tens',
-    prompt: `The gentle push took about ${G1} seconds. The full push is ${QUICKER} times quicker. About how long does the full push take?`,
+    prompt: `Gentle push: about ${G1} seconds. Full push: ${QUICKER} times quicker. How long?`,
     choices: [
       { text: `about ${G1} whole seconds` },
       { text: 'about 50 seconds' },
       { text: 'about half a second', correct: true },
     ],
-    hint: `Share the ${G1} seconds into ${QUICKER} equal parts. How long is one part?`,
+    hint: `Faster means less time. More or less than ${G1} seconds?`,
     parentHint: `${G1} seconds ÷ ${QUICKER} = ${G1 / QUICKER} of a second: half a second (${f2} s exactly).`,
-    success: 'Yes! Half a second: the full push lands the ball quickly, like on Earth.',
+    success: 'Yes! Half a second. Quick, like on Earth.',
   },
   c7b_float_throw: {
     title: 'Big and small', subject: 'Heavy things', difficulty: 'Level 1 • heavier, harder',
-    prompt: 'You throw a big spanner or a small wrench, at the same speed. Which one pushes you back harder?',
+    prompt: 'Same speed: a big spanner or a small wrench. Which pushes you harder?',
     choices: [
       { text: 'The big spanner', correct: true },
       { text: 'The small wrench' },
@@ -121,7 +121,7 @@ export const CH7B_LEVEL1 = {
   },
   c7b_throw_sum: {
     title: 'Spanner or wrench', subject: 'Bigger push', difficulty: 'Level 1 • faster or slower',
-    prompt: 'You throw a big spanner instead of the small wrench, at the same speed. Do you float faster or slower?',
+    prompt: 'Same throw speed: a big spanner, not a small wrench. Faster or slower?',
     choices: [
       { text: 'Faster', correct: true },
       { text: 'Slower' },

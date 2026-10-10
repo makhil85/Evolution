@@ -158,14 +158,20 @@ try {
   console.log('questions');
   for (const level of [4, 1]) {
     const A = bankA(level); const E = bankE(level);
-    ok(`Level ${level}: the tenth-of-light trip is 119 years (Level 1: 12 light-years, ten times slower: 120)`, () => {
+    ok(`Level ${level}: the tenth-of-light trip is 119 years (Level 1: light 12 years, pretend 3 more: 15, adding only)`, () => {
       const q = A.c7_tau_years;
-      const want = level === 1 ? '120' : '119';
+      const want = level === 1 ? '15' : '119';
       assert.deepEqual(q.answers.slice(0, 1), [want]);
       assert.ok(q.answers.includes(`${want} years`));
       assert.equal(q.type, 'text');
-      if (level === 1) assert.match(q.prompt, /12 years/);
-      else assert.match(q.prompt, /11\.9 years/);
+      if (level === 1) {
+        // Level 1: numbers up to 20, only adding: 12 + 3
+        assert.match(q.prompt, /12 years/);
+        assert.match(q.prompt, /3 years more/);
+        assert.equal(12 + 3, Number(want));
+        assert.ok(Number(want) <= 20, 'Level 1 answer is up to 20');
+        assert.doesNotMatch(q.prompt, /times|÷|×|\//, 'Level 1 prompt has no multiplying or dividing');
+      } else assert.match(q.prompt, /11\.9 years/);
     });
     ok(`Level ${level}: the nearest star is Alpha Centauri, and it is the third choice, not the longest`, () => {
       const q = A.c7_nearest_star;
@@ -176,20 +182,26 @@ try {
       assert.equal(q.choices.indexOf(correct[0]), 2, 'the right choice is not always first');
       const longest = Math.max(...q.choices.map((c) => c.text.length));
       assert.ok(correct[0].text.length < longest, `right choice ${correct[0].text.length} vs longest ${longest}`);
-      // the numbers shown are the table's
+      // the names are the table's; Level 4 shows the light-years in the choice, Level 1 shows them in the success line
       for (const c of q.choices) {
         const star = V.NEIGHBOURS.find((s) => c.text.startsWith(s.name[0]));
         assert.ok(star, `a star for: ${c.text}`);
-        const shown = level === 1 ? `about ${Math.round(star.ly)} light-years` : `${star.ly.toFixed(1)} light-years`;
-        assert.ok(c.text.includes(shown), `${c.text} should show ${shown}`);
+        if (level === 1) assert.equal(c.text, star.name[1], 'Level 1 choice is the star name only');
+        else assert.ok(c.text.includes(`${star.ly.toFixed(1)} light-years`), `${c.text} should show its light-years`);
       }
     });
-    ok(`Level ${level}: the nearest question offers the four stars on the card, says "of these", and never "five"`, () => {
+    ok(`Level ${level}: the nearest question offers ${level === 1 ? 'three star names' : 'the four stars on the card'}, says "of these", and never "five"`, () => {
       const q = A.c7_nearest_star;
-      assert.equal(q.choices.length, 4);
+      assert.equal(q.choices.length, level === 1 ? 3 : 4);
       for (const text of [q.prompt, q.success, q.parentHint].filter(Boolean)) {
         assert.doesNotMatch(text, /five/);
         assert.doesNotMatch(text, /Alpha Centauri is (the )?nearest(?! of these)/);
+      }
+      if (level === 1) {
+        // Level 1: the light-years go in the success line, about 4 for Alpha Centauri (4.4)
+        const alpha = V.NEIGHBOURS.find((s) => s.id === 'alpha');
+        assert.match(q.success, /nearest of these/);
+        assert.ok(q.success.includes(`about ${Math.round(alpha.ly)} light-years`), q.success);
       }
     });
     ok(`Level ${level}: the push speed after a minute is about 600 m/s, the right choice is the closest to 588`, () => {
@@ -198,18 +210,21 @@ try {
       const correct = q.choices.filter((c) => c.correct);
       assert.equal(correct.length, 1);
       if (level === 1) {
-        // Level 1: after 5 seconds, 10 a second: 50
-        assert.match(correct[0].text, /^50 metres per second$/);
-        assert.equal(5 * 10, 50);
+        // Level 1: after 2 seconds, 10 a second: 20 (adding only, up to 20)
+        assert.match(correct[0].text, /^20 metres per second$/);
+        assert.equal(10 + 10, 20);
+        assert.ok(!q.hint.includes('20'), `Level 1 hint names the answer: ${q.hint}`);
+        const wrong = Math.max(...q.choices.filter((c) => !c.correct).map((c) => c.text.length));
+        assert.ok(correct[0].text.length <= wrong, 'Level 1: the right choice is not the uniquely longest');
       } else {
         assert.match(correct[0].text, /^About 600 metres per second$/);
         const values = q.choices.map((c) => num(c.text));
         const closest = values.reduce((a, b) => (Math.abs(b - 588) < Math.abs(a - 588) ? b : a));
         assert.equal(closest, 600);
         assert.ok(Math.abs(9.8 * 60 - 588) < 1e-9);
+        const longest = Math.max(...q.choices.map((c) => c.text.length));
+        assert.ok(correct[0].text.length < longest, 'the right choice is not the longest');
       }
-      const longest = Math.max(...q.choices.map((c) => c.text.length));
-      assert.ok(correct[0].text.length < longest, 'the right choice is not the longest');
     });
     if (level === 1) ok('Level 1: the push speed card says "about 10" metres per second, every second', () => {
       assert.match(E.c7_push_speed.prompt, /goes up by about 10 metres per second, every second/);

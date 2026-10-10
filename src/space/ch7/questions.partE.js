@@ -7,7 +7,10 @@
 //
 // Parent hint (both questions): the drive is pretend. No drive we can build
 // today could do this.
-import { MINUTE_SPEED_STORY, MINUTE_SPEED_EXACT, FIVE_SECOND_SPEED, SHIP_YEARS_STORY, EARTH_YEARS_STORY, TRIP } from './voyage.js';
+import { MINUTE_SPEED_STORY, MINUTE_SPEED_EXACT, STORY_ACCEL, SHIP_YEARS_STORY, EARTH_YEARS_STORY, CLOCK_GAP_STORY, TRIP } from './voyage.js';
+
+/** Level 1: two seconds at the story's 10 metres per second, every second: 20 (adding only, up to 20). */
+const TWO_SECOND_SPEED = STORY_ACCEL * 2;
 
 /** Earth's years for each ship year on the trip, rounded (about 2: 14.4 / 7.4). The question asks for the Earth years, not the gap. */
 const EARTH_RATIO = Math.round(TRIP.earthYears / TRIP.shipYears);
@@ -61,23 +64,22 @@ export const CH7E_QUESTIONS = {
 export const CH7E_LEVEL1 = {
   c7_push_speed: {
     title: 'Speeding up', subject: 'Counting by tens', difficulty: 'Level 1 • counting by tens',
-    prompt: 'Starting from standing still, the speed goes up by about 10 metres per second, every second. After 5 seconds, how fast is the ship going?',
+    prompt: 'Speed goes up by about 10 metres per second, every second. After 2 seconds?',
     choices: [
-      { text: `${MINUTE_SPEED_STORY / 60} metres per second` },
-      { text: `${FIVE_SECOND_SPEED} metres per second`, correct: true },
-      { text: `${FIVE_SECOND_SPEED * 2} metres per second` },
-      { text: `${FIVE_SECOND_SPEED / 10} metres per second` },
+      { text: `${STORY_ACCEL} metres per second` },
+      { text: `${TWO_SECOND_SPEED} metres per second`, correct: true },
+      { text: `${TWO_SECOND_SPEED / 4} metres per second` },
     ],
-    hint: 'Count by 10s, once for each second: 10, then 20, and so on.',
-    parentHint: `10 + 10 + 10 + 10 + 10 = ${FIVE_SECOND_SPEED}. ${PRETEND}`,
-    success: `Yes! ${FIVE_SECOND_SPEED} metres per second. Every second, the ship speeds up by 10 more.`,
+    hint: 'Each second adds 10. Two seconds: add 10 twice.',
+    parentHint: `10 + 10 = ${TWO_SECOND_SPEED}. ${PRETEND}`,
+    success: `Yes! ${TWO_SECOND_SPEED} metres per second. Ten more each second.`,
   },
   c7_clock_gap: {
     title: 'Two timers', subject: 'Two lots', difficulty: 'Level 1 • two lots',
-    prompt: `The ship's clock counts ${SHIP_YEARS_STORY} years. Earth's clocks count ${EARTH_RATIO} years for every 1 on the ship. How many years pass on Earth? (Type a number.)`,
+    prompt: `The ship counts ${SHIP_YEARS_STORY} years. Earth counts ${CLOCK_GAP_STORY} more years. How many on Earth?`,
     answers: [String(EARTH_YEARS_STORY), `${EARTH_YEARS_STORY} years`],
-    hint: 'Count the ship’s years twice, and add the two lots together.',
+    hint: `Start with ${SHIP_YEARS_STORY}. Then add ${CLOCK_GAP_STORY} more.`,
     parentHint: `${SHIP_YEARS_STORY} × ${EARTH_RATIO} = ${EARTH_YEARS_STORY}. Very fast clocks tick slower: that is only a story.`,
-    success: `Yes! ${EARTH_YEARS_STORY} years on Earth, while the ship's clock counted ${SHIP_YEARS_STORY}.`,
+    success: `Yes! ${EARTH_YEARS_STORY} years on Earth. The ship's clock counted ${SHIP_YEARS_STORY}.`,
   },
 };
