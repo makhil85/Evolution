@@ -547,12 +547,12 @@ let elapsed = 0;
 let lastNear = '';
 function tick(dt) {
   elapsed += dt;
-  // A reading pause (a line on screen, the OK card) freezes her walk and the game's own
-  // timers (nav, mining, the tools, the apple); the ambient world and camera keep dt.
-  const gdt = hud && hud.isReadPaused() ? 0 : dt;
+  // A line on screen (a toast, the read card) stays up its reading time but freezes nothing:
+  // she walks, mines and uses the tools while it shows (lead 2026-10-09).
+  const gdt = dt; // a line on screen no longer stops the game (lead 2026-10-09): she plays on while it shows
   let motion = null;
   if (controller) {
-    motion = controller.step(gdt, emotes ? emotes.input(readInput(), gdt) : readInput());
+    motion = controller.step(dt, emotes ? emotes.input(readInput(), dt) : readInput());
     if (!story?.update(dt)) updateCamera(dt);
   }
   if (avatar) avatar.update(dt, motion);

@@ -10,15 +10,17 @@
 //  - a live action cue ("Let go of Space!") shows at once because she needs it
 //    right now, and must itself be short (TEXT_LIMITS.cue);
 //  - everything else (guidance, story, step banners, questions) waits until she
-//    has not touched the controls for IDLE_MS (whenIdle), and while it is up the
-//    game is paused for its reading time (readMs, src/play/readTime.js).
-// Each chapter's HUD does the pausing (src/game/hud.js for Chapters 1-3,
+//    has not touched the controls for IDLE_MS (whenIdle), and while it is up it
+//    stays for its reading time (readMs, src/play/readTime.js). It does not stop
+//    her walking (lead 2026-10-09: "let the girl move while the message shows").
+// Each chapter's HUD does the waiting (src/game/hud.js for Chapters 1-3,
 // src/space/hud/hud.js for 4-7); this file only knows about input and words.
 // Input comes from the key, pointer, wheel and touch listeners (install). The
 // Chapters 1-3 loops add nothing; the Chapters 4-7 main.js also calls noteInput
 // while she steers, walks or drags the view.
 
 import { wordCount } from './readTime.js';
+import { isReading } from './ui.js';
 
 /** No input for this long counts as "not actively playing". */
 export const IDLE_MS = 2000;
@@ -55,8 +57,8 @@ function playLocked() {
 }
 
 /**
- * Resolve once she has not touched the controls for `ms` AND no card or reading
- * pause is up (a card she did not ask for waits behind the one on screen).
+ * Resolve once she has not touched the controls for `ms` AND no card or line to
+ * read is up (a card she did not ask for waits behind the one on screen).
  * `signal.cancelled` stops waiting.
  */
 export function whenIdle(ms = IDLE_MS, signal = null) {
@@ -65,7 +67,7 @@ export function whenIdle(ms = IDLE_MS, signal = null) {
     const check = () => {
       if (signal?.cancelled) { resolve(false); return; }
       const left = ms - idleMs();
-      const locked = playLocked();
+      const locked = playLocked() || isReading();
       if (left <= 0 && !locked) { resolve(true); return; }
       setTimeout(check, locked ? 250 : Math.min(250, Math.max(50, left)));
     };
