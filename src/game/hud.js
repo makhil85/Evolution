@@ -123,9 +123,6 @@ function pickupOf(text) {
   return m ? { n: Number(m[1]), what: m[2] } : null;
 }
 
-/** How long the one-time spawn nudge stays up before it fades for good. */
-const ONBOARD_DELAY_MS = 500;
-
 // ---------------------------------------------------------------------------
 // Small DOM helpers
 // ---------------------------------------------------------------------------
@@ -257,8 +254,6 @@ export class Hud {
     this._destroyed = false;
     this._rankLabel = null;        // set once so setRank never flashes on the FIRST read
     this._interactActionable = false; // whether an actionable "Press E" pill is up right now
-    this._onboardShown = false;
-    this._onboardTimers = [];
     /** Tries per question (lead rule, all chapters): after this many wrong
      *  answers the chapter starts again. */
     this.maxTries = 2;
@@ -275,7 +270,6 @@ export class Hud {
     this._buildSide();
     this._restoreMissionOpen();
     this._bindMissionKey();
-    this._buildOnboard();
     this._buildFlight();
     this._buildInteract();
     this._buildToasts();
@@ -291,15 +285,6 @@ export class Hud {
     this.setInventory({});
     if (options.compact) this.root.classList.add('rv-hud--compact');
 
-    // Spec problem: a child spawns on an open road with nothing on screen
-    // saying which way to go. The mission card already carries the answer
-    // (quests.js authors it — "Walk north up the road... on the left"), but
-    // it lives in ~13px text in a corner, which a first-time player has no
-    // reason yet to read. So: surface that SAME line once, big and central,
-    // a beat after the real quest text has loaded, then let it go for good.
-    // Never hardcode a direction here — that would drift from quests.js the
-    // moment either one changes.
-    this._onboardTimers.push(setTimeout(() => this._showOnboard(), ONBOARD_DELAY_MS));
     this._watch();
   }
 
@@ -331,10 +316,10 @@ export class Hud {
     // to be (spec §5.4 wants "one pill per step", but at this chain length
     // that was a quarter of the viewport for the ONE surface a child glances
     // at least — the progress bar already says "how far", the mission card
-    // already says "what's next"). The signpost legend stays visible always,
-    // because "what does that dot mean" is a look-it-up-mid-play question.
-    // The full ladder becomes reference material behind a native <details>,
-    // so it stays keyboard- and screen-reader-operable for free.
+    // already says "what's next"). The signpost legend lives inside the Quest
+    // list, so it shows only while that list is open. The full ladder becomes
+    // reference material behind a native <details>, so it stays keyboard- and
+    // screen-reader-operable for free.
     const topline = el('div', 'rv-topline');
 
     // What the signpost colours mean.
@@ -364,7 +349,6 @@ export class Hud {
     // Chapter 3's signpost colours; the chapters without signposts pass
     // signpostKey: false.
     if (opts.signpostKey === false) key.hidden = true;
-    topline.appendChild(key);
 
     this._quests = el('details', 'rv-quests');
     const summary = el('summary', 'rv-quests__summary');
@@ -376,6 +360,9 @@ export class Hud {
     const panel = el('div', 'rv-quests__panel');
     this._badgeRow = el('div', 'rv-badges');
     this._badgeRow.setAttribute('role', 'list');
+    // The colour key goes first: it is only read while the list is open, and
+    // the badge list below scrolls.
+    panel.appendChild(key);
     panel.appendChild(this._badgeRow);
     this._quests.appendChild(panel);
     topline.appendChild(this._quests);
@@ -383,8 +370,9 @@ export class Hud {
     // The Camera pill (chapters 1-3 pass options.cameraView): switches the camera
     // between looking round and right behind her (src/game/cameraView.js). C does the same.
     if (opts.cameraView) {
-      this._camBtn = el('button', 'rv-btn rv-btn--ghost rv-camera');
+      this._camBtn = el('button', 'rv-btn rv-btn--ghost rv-camera', '📷 View');
       this._camBtn.type = 'button';
+      this._camBtn.title = 'Change the camera view';
       this._camBtn.addEventListener('click', () => {
         this._camBtn.blur(); // so the Enter that interacts does not press it again
         this.onCamera?.();
@@ -393,24 +381,11 @@ export class Hud {
       this.showCameraView(opts.cameraView, { toast: false });
     }
 
-    // The quest chip and the signpost key move to the right-hand column
+    // The quest chip and the camera pill move to the right-hand column
     // (_buildSide), so the top of the screen is just the title row.
     this._topline = topline;
-    this._signKey = key;
-    topline.removeChild(key);
 
     this.root.appendChild(top);
-  }
-
-  _buildOnboard() {
-    this._onboard = el('div', 'rv-onboard');
-    this._onboard.hidden = true;
-    this._onboard.setAttribute('aria-hidden', 'true'); // decorative echo of the mission card, not new info
-    this._onboardArrow = el('span', 'rv-onboard__arrow', '➜');
-    this._onboardText = el('span', 'rv-onboard__text', '');
-    this._onboard.appendChild(this._onboardArrow);
-    this._onboard.appendChild(this._onboardText);
-    this.root.appendChild(this._onboard);
   }
 
   _buildSide() {
@@ -465,7 +440,6 @@ export class Hud {
     this._parentInner = el('div', 'rv-parent__inner');
     this._parent.appendChild(this._parentInner);
     this.setParentHints([]);
-    side.appendChild(this._signKey);
     side.appendChild(this._parent);
 
     this.root.appendChild(side);
@@ -754,6 +728,20 @@ export class Hud {
       // has been answered.
       if (e.key === 'Escape' && this._modal?.answered) this.closeQuestion();
     });
+    // Choice questions: Arrow or Tab moves focus along the choices (Shift+Tab
+    // back). Capture phase, so it runs before the backdrop stops the event;
+    // Enter on a focused choice is the browser's own click, as before.
+    this._onChoiceKey = (e) => {
+      if (!this._modal || this._qChoices.hidden) return;
+      const dir = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key] ?? (e.key === 'Tab' ? (e.shiftKey ? -1 : 1) : 0);
+      const buttons = [...this._qChoices.querySelectorAll('button')];
+      if (!dir || !buttons.length) return;
+      e.preventDefault();
+      const at = buttons.indexOf(document.activeElement);
+      const next = at < 0 ? (dir > 0 ? 0 : buttons.length - 1) : (at + dir + buttons.length) % buttons.length;
+      try { buttons[next].focus(); } catch { /* detached */ }
+    };
+    addEventListener('keydown', this._onChoiceKey, true);
   }
 
   /**
@@ -1293,10 +1281,10 @@ export class Hud {
     // live on <body> and hide under this class (src/play/ui.js).
     document.body.classList.add('rv-question-open');
 
-    // Focus the first control so a keyboard/tab user is inside the dialog, and
-    // so typing goes to the answer box instead of the movement handler.
-    const first = this._qTextRow.hidden ? this._qChoices.querySelector('button') : this._qInput;
-    if (first) setTimeout(() => { try { first.focus(); } catch { /* detached */ } }, 0);
+    // A text answer takes focus, so typing goes to the box instead of the
+    // movement handler. A choice question focuses nothing on open: a focused
+    // first choice looked already picked. Arrow or Tab moves into the list.
+    if (!this._qTextRow.hidden) setTimeout(() => { try { this._qInput.focus(); } catch { /* detached */ } }, 0);
   }
 
   /**
@@ -1575,15 +1563,15 @@ export class Hud {
   }
 
   /**
-   * The Camera pill's label names the view; a toast says what changed (C does
-   * the same). Chapters 1-3 only.
+   * The Camera pill keeps one short label; a toast says which view it is now
+   * (C does the same). Chapters 1-3 only.
    * @param {'chase'|'follow'} view
    * @param {{toast?: boolean}} [opts]
    */
   showCameraView(view, { toast = true } = {}) {
     if (!this._camBtn) return;
     const follow = view === 'follow';
-    this._camBtn.textContent = follow ? 'Camera: right behind her' : 'Camera: look round';
+    this._camBtn.setAttribute('aria-pressed', String(follow));
     if (toast) this.toast(follow ? 'Camera: right behind her' : 'Camera: free look', 'info');
   }
 
@@ -1650,59 +1638,15 @@ export class Hud {
     if (typeof engine.reachedQuestionIds === 'function') this.setParentHints(engine.reachedQuestionIds());
   }
 
-  // --- spawn direction cue -------------------------------------------------
-
-  /**
-   * Surface the mission card's own first line once, big and central, so a
-   * child who just spawned on an open road has something impossible to miss
-   * telling them which way to go. Reads whatever `setMission` already put in
-   * the sidebar — never authors its own text — so it can never say something
-   * quests.js does not.
-   */
-  _showOnboard() {
-    if (this._onboardShown || this._destroyed) return;
-    // Behind the chapter opening or a play card it would be wasted: wait. It is
-    // a line to read, so it also waits until she has stopped playing (lead
-    // 2026-10-09), and it pauses the game while it is up.
-    if (this._focusNow() || !this._canPause(this._createdAt, performance.now())) {
-      this._onboardTimers.push(setTimeout(() => this._showOnboard(), this._focusNow() ? 600 : WATCH_MS));
-      return;
-    }
-    const first = this._missionLines && this._missionLines.querySelector('.rv-mission__line');
-    const text = first ? first.textContent.trim() : '';
-    if (!text) return; // nothing authored yet — say nothing rather than guess
-
-    this._onboardShown = true;
-    // Too long to read in 10 s: the same line as a card she clicks away.
-    if (needsClick(text)) { this._showReadCard(text); return; }
-    this._onboardText.textContent = text;
-    this._onboard.hidden = false;
-    this._hold(this._onboard);
-    // rAF so the browser paints the hidden->visible flip before the
-    // transition starts, or the fade-in never runs.
-    requestAnimationFrame(() => this._onboard.classList.add('is-in'));
-    this._onboardTimers.push(setTimeout(() => this._hideOnboard(), readMs(text)));
-  }
-
-  _hideOnboard() {
-    if (this._onboard) this._release(this._onboard);
-    if (!this._onboard || this._onboard.hidden) return;
-    this._onboard.classList.remove('is-in');
-    this._onboard.classList.add('is-out');
-    this._onboardTimers.push(setTimeout(() => {
-      if (this._onboard) this._onboard.hidden = true;
-    }, 420));
-  }
-
   /** Remove every node and timer this HUD owns. */
   destroy() {
     if (this._onMissionKey) removeEventListener('keydown', this._onMissionKey);
+    if (this._onChoiceKey) removeEventListener('keydown', this._onChoiceKey, true);
     this._destroyed = true;
     clearTimeout(this._watchTimer);
     for (const entry of this._toasts.slice()) this._dismissToast(entry);
     clearTimeout(this._toastQueueTimer);
     this._toastQueue = [];
-    for (const t of this._onboardTimers.splice(0)) clearTimeout(t);
     for (const token of [...this._holds]) this._release(token);
     this._closeReadCard();
     this.closeQuestion();
