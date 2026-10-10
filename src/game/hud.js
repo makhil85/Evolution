@@ -266,6 +266,8 @@ export class Hud {
     this.onOutOfTries = null;
     /** Called on a right answer (the chapter makes her cheer, with a little confetti). */
     this.onCorrect = null;
+    /** Called by the Camera pill (chapters 1-3, options.cameraView): the chapter switches the view. */
+    this.onCamera = null;
 
     /** The one-line chapter goal on the mission card (Chapter 2 passes its own). */
     this._missionGoal = options.missionGoal || MISSION_GOAL;
@@ -377,6 +379,19 @@ export class Hud {
     panel.appendChild(this._badgeRow);
     this._quests.appendChild(panel);
     topline.appendChild(this._quests);
+
+    // The Camera pill (chapters 1-3 pass options.cameraView): switches the camera
+    // between looking round and right behind her (src/game/cameraView.js). C does the same.
+    if (opts.cameraView) {
+      this._camBtn = el('button', 'rv-btn rv-btn--ghost rv-camera');
+      this._camBtn.type = 'button';
+      this._camBtn.addEventListener('click', () => {
+        this._camBtn.blur(); // so the Enter that interacts does not press it again
+        this.onCamera?.();
+      });
+      topline.appendChild(this._camBtn);
+      this.showCameraView(opts.cameraView, { toast: false });
+    }
 
     // The quest chip and the signpost key move to the right-hand column
     // (_buildSide), so the top of the screen is just the title row.
@@ -1557,6 +1572,19 @@ export class Hud {
   /** Convenience alias. @param {string} text @param {string} [key] */
   showInteract(text, key) {
     this.setInteract(text, key);
+  }
+
+  /**
+   * The Camera pill's label names the view; a toast says what changed (C does
+   * the same). Chapters 1-3 only.
+   * @param {'chase'|'follow'} view
+   * @param {{toast?: boolean}} [opts]
+   */
+  showCameraView(view, { toast = true } = {}) {
+    if (!this._camBtn) return;
+    const follow = view === 'follow';
+    this._camBtn.textContent = follow ? 'Camera: right behind her' : 'Camera: look round';
+    if (toast) this.toast(follow ? 'Camera: right behind her' : 'Camera: free look', 'info');
   }
 
   /** Hide the interact pill. */

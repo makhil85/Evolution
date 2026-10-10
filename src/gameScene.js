@@ -7,6 +7,7 @@ import { buildAllStructures, PLACEMENTS } from './game/structures.js';
 import { configureRenderer, buildLightRig, freezeShadows, refreshStaticShadows } from './game/toonPipeline.js';
 import { createCharacterController } from './game/physics.js';
 import { createHeldKeys } from './game/heldKeys.js';
+import { createCameraView } from './game/cameraView.js';
 import { addJumpPanel, isGrownUp } from './play/grownUp.js';
 import { loadAvatar } from './game/avatar.js';
 import { createQuestEngine, loadSave, saveGame, QUEST_CHAIN, STORE_KEY } from './game/quests.js';
@@ -98,6 +99,7 @@ addEventListener('keydown', (e) => {
   if (['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','ShiftLeft'].includes(e.code)) e.preventDefault();
   // A key pressed while the game is paused (a card, a reading pause) is not kept: nothing walks after it.
   if (!playBlocked() && !(hud && hud.isModalOpen())) keys.add(e.code, e.repeat);
+  if (e.code === 'KeyC' && !e.repeat && !playBlocked() && !(hud && hud.isModalOpen())) toggleCamera();
 });
 addEventListener('keyup', (e) => keys.delete(e.code));
 
@@ -114,13 +116,12 @@ addEventListener('keydown', (e) => {
 // The camera sits at +Z behind her, so "forward" is -Z: north, up the road,
 // toward the village. Spawning with yaw = PI put the camera on the far side
 // and walked her off the south edge of the board.
-let cameraYaw = 0;
 let dragging = false, lastX = 0;
 renderer.domElement.addEventListener('pointerdown', (e) => { dragging = true; lastX = e.clientX; });
 addEventListener('pointerup', () => { dragging = false; });
 addEventListener('pointermove', (e) => {
   if (!dragging) return;
-  cameraYaw -= (e.clientX - lastX) * 0.006;
+  camView.drag(e.clientX - lastX);
   lastX = e.clientX;
 });
 
@@ -201,20 +202,25 @@ function readInput() {
   // building. The previous build had exactly this bug - it kept feeding
   // movement keys to the controller while a modal was open.
   if ((hud && hud.isModalOpen()) || playBlocked()) {
-    return { forward: 0, strafe: 0, cameraYaw, run: false, jump: false };
+    return { forward: 0, strafe: 0, run: false, jump: false };
   }
   const forward = (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) - (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0);
   const strafe = (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) - (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0);
   return {
-    forward, strafe, cameraYaw,
+    forward, strafe,
     run: keys.has('ShiftLeft') || keys.has('ShiftRight'),
     jump: keys.has('Space'),
   };
+}
+/** C or the HUD's Camera pill: chase <-> follow (src/game/cameraView.js). */
+function toggleCamera() {
+  hud?.showCameraView(camView.toggle());
 }
 
 // ---------------------------------------------------------------------------
 const village = new Village();
 const player = new THREE.Group();
+const camView = createCameraView(player); // 'chase' or 'follow' (C, the Camera pill)
 let controller = null;
 let structures = null;
 let engine = null;
@@ -459,7 +465,8 @@ async function main() {
     footprint: { x: 0, z: 0, radius: 0 },
   });
 
-  hud = createHud({ mount: document.body, title: 'Chapter 3 - Ready for Lift-off' });
+  hud = createHud({ mount: document.body, title: 'Chapter 3 - Ready for Lift-off', cameraView: camView.view });
+  hud.onCamera = toggleCamera;
   // Two wrong tries on a question (lead rule): the chapter starts again.
   hud.onCorrect = () => { avatar?.play?.('cheer'); confetti(1800); };
   hud.onOutOfTries = () => {
@@ -831,7 +838,7 @@ function chasePose() {
   const p = player.position;
   const dist = 7.2, height = 3.4;
   return {
-    pos: new THREE.Vector3(p.x + Math.sin(cameraYaw) * dist, p.y + height, p.z + Math.cos(cameraYaw) * dist),
+    pos: new THREE.Vector3(p.x + Math.sin(camView.yaw) * dist, p.y + height, p.z + Math.cos(camView.yaw) * dist),
     look: new THREE.Vector3(p.x, p.y + 1.1, p.z),
   };
 }
@@ -843,7 +850,7 @@ function updateCamera(dt) {
   if (window.__freezeCamera) return;
   const p = player.position;
   const { pos: want, look } = chasePose();
-  camera.position.lerp(want, 1 - Math.pow(0.0001, dt));
+  camera.position.lerp(want, camView.ease(dt));
   camera.lookAt(look);
 
   // Shadow frustum follows the player, so a big board keeps a tight map.
@@ -937,7 +944,7 @@ function tick(dt, now = performance.now()) {
   }
   let motion = null;
   if (controller && !flying) {
-    motion = controller.step(dt, emotes ? emotes.input(readInput(), dt) : readInput());
+    motion = controller.step(dt, camView.input(emotes ? emotes.input(readInput(), dt) : readInput(), dt));
     if (motion && motion.moving && motion.onGround) audio.footstep(motion.running);
     if (!opening?.update(dt) && !story?.update(dt)) updateCamera(dt);
   }
@@ -988,7 +995,7 @@ function tick(dt, now = performance.now()) {
 /** Test hook: run `seconds` of game time now (the pane only animates while visible). */
 window.__gameRun = (seconds, dt = 1 / 60) => { for (let t = 0; t < seconds; t += dt) tick(dt); };
 /** Test hook: turn the chase camera (radians; 0 looks north up the road). */
-window.__gameSetYaw = (y) => { cameraYaw = y; };
+window.__gameSetYaw = (y) => { camView.yaw = y; };
 
 fit();
 frame();

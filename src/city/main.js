@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { configureRenderer, freezeShadows, refreshStaticShadows } from '../game/toonPipeline.js';
 import { createCharacterController } from '../game/physics.js';
 import { createHeldKeys } from '../game/heldKeys.js';
+import { createCameraView } from '../game/cameraView.js';
 import { addVillageJump } from '../play/grownUp.js';
 import { loadAvatar } from '../game/avatar.js';
 import { createEmotes } from '../game/emotes.js';
@@ -70,18 +71,18 @@ addEventListener('keydown', (e) => {
   // A key pressed while the game is paused (a card, a reading pause) is not kept: nothing walks after it.
   if (!playBlocked()) keys.add(e.code, e.repeat);
   if ((e.code === 'KeyE' || e.code === 'Enter') && !e.repeat && !playBlocked()) interact();
+  if (e.code === 'KeyC' && !e.repeat && !playBlocked()) toggleCamera();
 });
 addEventListener('keyup', (e) => keys.delete(e.code));
 
 // The camera starts behind her looking north (-z), up the main road.
-let cameraYaw = 0;
 let dragging = false;
 let lastX = 0;
 renderer.domElement.addEventListener('pointerdown', (e) => { dragging = true; lastX = e.clientX; });
 addEventListener('pointerup', () => { dragging = false; });
 addEventListener('pointermove', (e) => {
   if (!dragging) return;
-  cameraYaw -= (e.clientX - lastX) * 0.006;
+  camView.drag(e.clientX - lastX);
   lastX = e.clientX;
 });
 
@@ -91,10 +92,14 @@ function playBlocked() {
 }
 
 function readInput() {
-  if (playBlocked()) return { forward: 0, strafe: 0, cameraYaw, run: false, jump: false };
+  if (playBlocked()) return { forward: 0, strafe: 0, run: false, jump: false };
   const forward = (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) - (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0);
   const strafe = (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) - (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0);
-  return { forward, strafe, cameraYaw, run: keys.has('ShiftLeft') || keys.has('ShiftRight'), jump: keys.has('Space') };
+  return { forward, strafe, run: keys.has('ShiftLeft') || keys.has('ShiftRight'), jump: keys.has('Space') };
+}
+/** C or the HUD's Camera pill: chase <-> follow (src/game/cameraView.js). */
+function toggleCamera() {
+  hud?.showCameraView(camView.toggle());
 }
 
 // --- state ------------------------------------------------------------------
@@ -109,6 +114,7 @@ let tools = null;  // axe / hammer / ... in her hand while mining (play/tools.js
 let newton = null; // Newton's apple tree, a bonus story (newtonTree.js)
 let sun = null;
 const player = new THREE.Group();
+const camView = createCameraView(player); // 'chase' or 'follow' (C, the Camera pill)
 const QUESTIONS = questionsFor(LEVEL);
 const STATIONS = stationsFor(LEVEL);
 const building = new Set(); // structures rising right now
@@ -456,7 +462,8 @@ async function main() {
     toast: (m, k) => hud.toast(m, k),
   });
 
-  hud = createHud({ mount: document.body, title: 'Chapter 2 - Forces and Machines', resourceRows: RESOURCE_ROWS, missionGoal: 'Build the Engineering Workshop.', rank: false, signpostKey: false });
+  hud = createHud({ mount: document.body, title: 'Chapter 2 - Forces and Machines', resourceRows: RESOURCE_ROWS, missionGoal: 'Build the Engineering Workshop.', rank: false, signpostKey: false, cameraView: camView.view });
+  hud.onCamera = toggleCamera;
   // Two wrong tries on a question (lead rule): the chapter starts again.
   hud.onCorrect = () => { avatar?.play?.('cheer'); confetti(1800); };
   hud.onOutOfTries = () => {
@@ -546,7 +553,7 @@ function chasePose() {
   const dist = 7.2;
   const height = 3.6;
   return {
-    pos: new THREE.Vector3(p.x + Math.sin(cameraYaw) * dist, p.y + height, p.z + Math.cos(cameraYaw) * dist),
+    pos: new THREE.Vector3(p.x + Math.sin(camView.yaw) * dist, p.y + height, p.z + Math.cos(camView.yaw) * dist),
     look: new THREE.Vector3(p.x, p.y + 1.1, p.z),
   };
 }
@@ -554,7 +561,7 @@ function chasePose() {
 function updateCamera(dt) {
   const p = player.position;
   const { pos, look } = chasePose();
-  camera.position.lerp(pos, 1 - Math.pow(0.0001, dt));
+  camera.position.lerp(pos, camView.ease(dt));
   camera.lookAt(look);
   world?.focusShadows(p.x, p.z);
 }
@@ -580,7 +587,7 @@ function tick(dt) {
   const gdt = dt; // a line on screen no longer stops the game (lead 2026-10-09): she plays on while it shows
   let motion = null;
   if (controller) {
-    motion = controller.step(dt, emotes ? emotes.input(readInput(), dt) : readInput());
+    motion = controller.step(dt, camView.input(emotes ? emotes.input(readInput(), dt) : readInput(), dt));
     if (!story?.update(dt)) updateCamera(dt);
   }
   if (avatar) avatar.update(dt, motion);
@@ -618,7 +625,7 @@ function frame() {
 /** Test hook: run `seconds` of game time now (the pane only animates while visible). */
 window.__cityRun = (seconds, dt = 1 / 60) => { for (let t = 0; t < seconds; t += dt) tick(dt); };
 /** Test hook: turn the chase camera (radians; -PI/2 looks east). */
-window.__citySetYaw = (y) => { cameraYaw = y; };
+window.__citySetYaw = (y) => { camView.yaw = y; };
 
 fit();
 frame();
