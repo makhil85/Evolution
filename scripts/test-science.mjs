@@ -125,7 +125,7 @@ for (const level of [1, 4]) {
   ok(o1.ok && o1.question.id === 'm1', `${tag}: open m1`);
   const s1 = r.solveQuest('m1');
   eq(s1.reward, { science: qs.m1.reward.science }, `${tag}: m1 reward`);
-  ok(s1.text === `${qs.m1.success} You also gained +${qs.m1.reward.science} science.`, `${tag}: m1 toast`);
+  ok(s1.text === `${qs.m1.success} You also gained +${qs.m1.reward.science} science`, `${tag}: m1 toast`);
   eq(r.state.recipeMode, 'unknown', `${tag}: one board does not reveal the plan`);
   r.solveQuest('m2');
   eq(r.state.recipeMode, 'unknown', `${tag}: two boards do not reveal the plan`);
@@ -166,9 +166,9 @@ for (const level of [1, 4]) {
   // Labs.
   const l = fresh(level);
   const f = l.solveQuest('force');
-  ok(f.text === `${qs.force.success} +3 science.` && l.state.solved.force && l.state.resources.science === 3, `${tag}: force lab toast and reward`);
+  ok(f.text === `${qs.force.success} +3 science` && l.state.solved.force && l.state.resources.science === 3, `${tag}: force lab toast and reward`);
   const e = l.solveQuest('energy');
-  ok(e.text === `${qs.energy.success} +4 science.` && l.state.solved.energy && l.state.resources.science === 7, `${tag}: energy lab toast and reward`);
+  ok(e.text === `${qs.energy.success} +4 science` && l.state.solved.energy && l.state.resources.science === 7, `${tag}: energy lab toast and reward`);
   eq(l.state.recipeMode, 'unknown', `${tag}: labs do not choose a plan`);
   ok(l.openQuest('force').text === 'Force lab already passed.', `${tag}: force already passed`);
   ok(l.openQuest('energy').text === (level === 1 ? 'Light & Plants lab already passed.' : 'Chemical energy lab already passed.'), `${tag}: energy already passed`);

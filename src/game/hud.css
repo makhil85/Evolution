@@ -786,8 +786,7 @@
   transition: background 120ms ease, border-color 120ms ease;
 }
 
-.rv-hud .rv-choice:hover,
-.rv-hud .rv-choice:focus-visible {
+.rv-hud .rv-choice:hover {
   background: #273653;
   border-color: var(--rv-good);
   outline: none;

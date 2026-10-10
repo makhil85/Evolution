@@ -237,7 +237,7 @@ export function createScienceRules({ level, storage } = {}) {
           ? 'All 3 puzzles done! Cheap plan: Wood 12, Stone 24, Iron 60, Science 12.'
           : 'Smart path complete! Efficient recipe revealed. Iron target uses the plan: 2 × (wood + science) + stone = 84.';
       } else {
-        text = `${question.success} You also gained +${science} science.`;
+        text = `${question.success} You also gained +${science} science`;
       }
     } else if (q === 'key') {
       state.key = true;
@@ -246,7 +246,7 @@ export function createScienceRules({ level, storage } = {}) {
         ? `${question.success} The big plan is open.`
         : `${question.success} Brute-force recipe unlocked, but it needs many more resources.`;
     } else {
-      text = `${question.success} +${science} science.`;
+      text = `${question.success} +${science} science`;
     }
     say(text);
     save();
