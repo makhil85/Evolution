@@ -386,7 +386,7 @@ function cycleView() {
   if (!scene) { cycleFlightView(); return; }
   if (!scene.toggleView) return;
   const v = scene.toggleView();
-  hud.toast(v === 'over' || v === 'top' || v === 'above' ? 'Camera: from above' : v === 'follow' ? 'Camera: right behind her' : v ? 'Camera: behind her' : 'Camera: changed', { kind: 'info', ms: 2000 });
+  hud.toast(v === 'over' || v === 'top' || v === 'above' ? 'Camera: from above' : v ? 'Camera: behind her' : 'Camera: changed', { kind: 'info', ms: 2000 });
 }
 bus.on('camera-cycle', cycleView);
 bus.on('rewind', () => {
