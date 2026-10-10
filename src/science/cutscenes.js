@@ -20,6 +20,9 @@
 //   12.6-18.6 the villagers walk in from their homes and gather in front of her.
 //   18.6-29.8 the camera looks west down the road, over the bridge, to the far
 //          city (Chapter 2, Forces and Machines: bridges and gears).
+//   Level 1 only: a 7 s piñata beat (17.6-24.6, after the villagers gather) in
+//          which she whacks a piñata on a rope three times; the last blow
+//          breaks it and candy pops out. The road west comes 7 s later (36.8 s).
 //
 // Captions are timed so each one has its reading time (readMs, src/play/readTime.js)
 // before the next starts; chapterStory.js holds the film if a gap is too short.
@@ -454,11 +457,171 @@ export function playOpening(ctx) {
   };
 }
 
+// --- Level 1's piñata (the ending's beat) -------------------------------------------
+
+const UP = new THREE.Vector3(0, 1, 0);
+const PINATA_R = 0.34;
+const HIT_AT = [1.2, 2.3, 3.4];        // her blows land, in beat time; the last one breaks it
+const HIT_WOBBLE = [0.14, 0.2, 0.28];  // how far each blow tips it (radians)
+const BREAK_AT = HIT_AT[HIT_AT.length - 1];
+const SWING_LEAD = 0.31;               // the chop clip's strike comes 0.31 s into the swing (clips.js chopPose)
+const BITS = 90;                       // candies (60) and confetti (30); 30 on reduced motion
+const GRAVITY = 9.8;
+const CANDY_COLORS = [0xff6b9a, 0x4dd0e1, 0xffd43b, 0x9be564, 0xb388ff];
+const _p = new THREE.Vector3();
+const _s = new THREE.Vector3();
+const _q = new THREE.Quaternion();
+const _b = new THREE.Quaternion();
+const _m = new THREE.Matrix4();
+
+/**
+ * The piñata: a spiky toon star-ball on a rope from a branch on a post, just in
+ * front of her. `hero` is her feet and `fwd` her facing (x, z), so it works
+ * whichever way she stands. Built in world space under `group`, hidden until
+ * the beat. update(bq) takes the beat's time: the blows wobble it, the last one
+ * breaks it into three pieces that fall, and candies and confetti pop out, fall
+ * and fade. Nothing allocates per frame. Reduced motion: no sway or wobble.
+ */
+function buildPinata({ hero, fwd, reduced }) {
+  const group = new THREE.Group();
+  group.visible = false;
+  const gY = hero.y;
+  const side = new THREE.Vector3(fwd.z, 0, -fwd.x);
+  const at = (f, s, h) => new THREE.Vector3(hero.x + fwd.x * f + side.x * s, gY + h, hero.z + fwd.z * f + side.z * s);
+  const vel = (f, s, up) => new THREE.Vector3(fwd.x * f + side.x * s, up, fwd.z * f + side.z * s);
+  const A = at(1.15, 0, 2.45);   // the rope's top, on the branch
+
+  // The post and the branch (still).
+  const wood = new Mesher({ outlineT: 0.03 });
+  const foot = at(1.5, -0.9, 0), top = at(1.5, -0.9, 2.7);
+  wood.cyl(0.075, 0.075, 2.7, foot.x, foot.y, foot.z, 0x8a5a34, { seg: 8 });
+  wood.tube(top.x, top.y, top.z, A.x, A.y, A.z, 0.05, 0x8a5a34, { seg: 6 });
+  group.add(wood.build());
+
+  // The rope and the piñata hang from A. The yaw turns local +z to her facing,
+  // and the sway swings the piñata in that plane, so she hits it head on.
+  const yaw = new THREE.Group();
+  yaw.position.copy(A);
+  yaw.rotation.y = Math.atan2(fwd.x, fwd.z);
+  const pend = new THREE.Group();
+  yaw.add(pend);
+  group.add(yaw);
+  const rope = new Mesher();
+  rope.tube(0, 0, 0, 0, -0.42, 0, 0.018, 0xd9b87a, { seg: 5 });
+  pend.add(rope.build());
+  const body = new THREE.Group();
+  body.position.y = -0.42 - PINATA_R;
+  pend.add(body);
+
+  // Three pieces: the top half with three spikes, the bottom half with one, and two loose spikes.
+  const pink = new THREE.MeshToonMaterial({ color: 0xff7eb6, gradientMap: toonRamp, transparent: true });
+  const spikeMats = [0xffd43b, 0x4dd0e1, 0x9be564].map((c) => new THREE.MeshToonMaterial({ color: c, gradientMap: toonRamp, transparent: true }));
+  const cone = new THREE.ConeGeometry(0.11, 0.26, 8);
+  const spike = (x, y, z, mat) => {
+    const dir = new THREE.Vector3(x, y, z);
+    const m = new THREE.Mesh(cone, mat);
+    m.position.copy(dir).multiplyScalar(PINATA_R + 0.08);
+    m.quaternion.setFromUnitVectors(UP, dir);
+    return m;
+  };
+  const half = (thetaStart) => new THREE.Mesh(new THREE.SphereGeometry(PINATA_R, 16, 10, 0, Math.PI * 2, thetaStart, Math.PI / 2), pink);
+  const topPiece = new THREE.Group();
+  topPiece.add(half(0), spike(0, 1, 0, spikeMats[0]), spike(1, 0, 0, spikeMats[1]), spike(-1, 0, 0, spikeMats[2]));
+  const bottomPiece = new THREE.Group();
+  bottomPiece.add(half(Math.PI / 2), spike(0, -1, 0, spikeMats[0]));
+  const sidePiece = new THREE.Group();
+  sidePiece.add(spike(0, 0, 1, spikeMats[1]), spike(0, 0, -1, spikeMats[2]));
+  body.add(topPiece, bottomPiece, sidePiece);
+  const pieces = [
+    { obj: topPiece, v: vel(0.9, 0.5, 1.6), axis: new THREE.Vector3(0.3, 1, 0.2).normalize(), w: 6 },
+    { obj: bottomPiece, v: vel(0.5, -0.6, 0.9), axis: new THREE.Vector3(1, 0.2, 0.4).normalize(), w: -7 },
+    { obj: sidePiece, v: vel(0.2, 1.2, 2.1), axis: new THREE.Vector3(0, 0, 1), w: 9 },
+  ].map((p) => ({ ...p, p0: new THREE.Vector3(), q0: new THREE.Quaternion() }));
+
+  // The candies and confetti: one instanced mesh, each bit with a launch speed, a spin and a colour.
+  const rng = makeRng(91);
+  const bitMat = new THREE.MeshToonMaterial({ color: 0xffffff, gradientMap: toonRamp, transparent: true });
+  const bits = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), bitMat, BITS);
+  bits.count = reduced ? 30 : BITS;
+  bits.frustumCulled = false;
+  const scl = new Float32Array(BITS * 3);
+  const launch = new Float32Array(BITS * 3);
+  const base = new Float32Array(BITS * 4);
+  const spin = new Float32Array(BITS);
+  const col = new THREE.Color();
+  for (let i = 0; i < BITS; i++) {
+    const confetti = i >= 60;   // the last 30 are flat confetti, the rest little sweets
+    const k = 0.8 + 0.4 * rng();
+    _s.set(confetti ? 0.11 * k : 0.07 * k, confetti ? 0.012 : 0.07 * (0.8 + 0.4 * rng()), confetti ? 0.06 * (0.8 + 0.4 * rng()) : 0.07 * (0.8 + 0.4 * rng()));
+    _s.toArray(scl, i * 3);
+    const ang = rng() * Math.PI * 2;
+    const hs = confetti ? 0.4 + 0.5 * rng() : 0.6 + 1.6 * rng();
+    const up = confetti ? 0.9 + 0.6 * rng() : 2.2 + 2.0 * rng();
+    launch.set([Math.cos(ang) * hs, up, Math.sin(ang) * hs], i * 3);
+    _q.setFromEuler(new THREE.Euler(rng() * 6, rng() * 6, rng() * 6)).toArray(base, i * 4);
+    spin[i] = (rng() - 0.5) * 16;
+    bits.setColorAt(i, col.setHex(CANDY_COLORS[i % CANDY_COLORS.length]));
+    bits.setMatrixAt(i, _m.compose(_p.set(0, 0, 0), _q.identity(), _s.set(0, 0, 0)));   // hidden until the break
+  }
+  group.add(bits);
+
+  const fadeMats = [pink, bitMat, ...spikeMats];
+  const origin = new THREE.Vector3();
+  let split = false;
+  const wobble = (bq) => {
+    let w = 0;
+    for (let i = 0; i < HIT_AT.length; i++) {
+      const d = bq - HIT_AT[i];
+      if (d > 0) w += HIT_WOBBLE[i] * Math.sin(15 * d) * Math.exp(-5 * d);
+    }
+    return w;
+  };
+
+  function update(bq) {
+    if (!split) {
+      if (bq < BREAK_AT) {
+        pend.rotation.x = reduced ? 0 : 0.06 * Math.sin(1.6 * bq) + wobble(bq);
+        return;
+      }
+      split = true;
+      body.getWorldPosition(origin);
+      for (const p of pieces) { group.attach(p.obj); p.p0.copy(p.obj.position); p.q0.copy(p.obj.quaternion); }
+    }
+    const tau = bq - BREAK_AT;
+    const ta = Math.min(tau, 0.6);
+    for (const p of pieces) {
+      p.obj.position.set(p.p0.x + p.v.x * ta, Math.max(gY + 0.14, p.p0.y + p.v.y * tau - 0.5 * GRAVITY * tau * tau), p.p0.z + p.v.z * ta);
+      p.obj.quaternion.copy(p.q0).multiply(_q.setFromAxisAngle(p.axis, p.w * ta));
+    }
+    const ca = Math.min(tau, 1.1);
+    for (let i = 0; i < bits.count; i++) {
+      const k = i * 3;
+      _p.set(origin.x + launch[k] * ca, Math.max(gY + 0.05, origin.y + launch[k + 1] * tau - 0.5 * GRAVITY * tau * tau), origin.z + launch[k + 2] * ca);
+      _b.fromArray(base, i * 4);
+      _q.setFromAxisAngle(UP, spin[i] * Math.min(tau, 0.6)).multiply(_b);
+      _s.fromArray(scl, k);
+      bits.setMatrixAt(i, _m.compose(_p, _q, _s));
+    }
+    bits.instanceMatrix.needsUpdate = true;
+    const fade = 1 - smooth((bq - 5.7) / 1.1);   // gone by the end of the beat
+    for (const m of fadeMats) m.opacity = fade;
+  }
+
+  return {
+    group,
+    camera: { pos: at(0.6, 4.2, 2.1), look: at(0.5, 0, 1.0) },   // from her side, both in shot
+    update,
+    dispose() { disposeTree(group); bits.dispose(); },
+  };
+}
+
 // --- the ending ---------------------------------------------------------------------
 
-/** Seconds: the ending's scene (the "Chapter complete" card follows it). */
+/** Seconds: the ending's scene (the "Chapter complete" card follows it). Level 1 adds the piñata beat. */
 export const ENDING_LENGTH = 29.8;
 const END_LEN = ENDING_LENGTH;
+const BEAT_LEN = LEVEL === 1 ? 7 : 0;   // the piñata beat (Level 1 only)
+const BEAT_AT = 17.6;                    // its film time: the villagers have gathered and their caption has had its time
 /** The ending's captions: [start time, [Level 4, Level 1]]. */
 export const CAPS_END = [
   [0, ['The Science Center is finished! Dusk falls over the village.', 'The Science Center is done! The sun goes down.']],
@@ -467,6 +630,13 @@ export const CAPS_END = [
   [18.6, ['Cheers, scientist! The road goes west, over the bridge, to a great city.', 'Hooray! The road goes to a big city.']],
   [24.6, ['Next: Chapter 2, Forces and Machines: bridges and gears!', 'Next: bridges and gears!']],
 ];
+const PINATA_CAP = 'Hooray! You did it!';
+/** The captions this Level plays: Level 1 has the beat's caption, and the ones after it come BEAT_LEN later. */
+const CAPS_END_ON = BEAT_LEN ? [
+  ...CAPS_END.filter(([t0]) => t0 < BEAT_AT),
+  [BEAT_AT, [PINATA_CAP, PINATA_CAP]],
+  ...CAPS_END.filter(([t0]) => t0 >= BEAT_AT).map(([t0, pair]) => [t0 + BEAT_LEN, pair]),
+] : CAPS_END;
 const DOME_Y = CENTER.slabTop + 2.4 + 0.14 + 1.1 + 0.14;   // the Science Center's dome base (centre.js)
 const MOON_AT = { x: CENTER.x - 20, y: 40, z: CENTER.z - 120 };
 const SCOPE_BASE = { x: -0.5, y: DOME_Y + 1.62, z: 0.3 };  // telescope pivot, in the piece's frame
@@ -499,6 +669,11 @@ export function playEnding(ctx) {
   const sunDisc = buildDisc(11, 0xffa45a, 18, 0.2);
   const shore = buildShore();
   root.add(sea, shore, city.group, stars, moon, sunDisc);
+  // Level 1's beat: she faces the way her player does (the avatar sits under it).
+  const heading = getAvatar()?.group?.parent?.rotation?.y ?? 0;
+  const pinata = BEAT_LEN ? buildPinata({ hero, fwd: new THREE.Vector3(Math.sin(heading), 0, Math.cos(heading)), reduced }) : null;
+  if (pinata) root.add(pinata.group);
+  const swung = HIT_AT.map(() => false);
   scene.add(root);
 
   // The dome opens (two halves slide apart over a dark drum) and the telescope
@@ -566,10 +741,21 @@ export function playEnding(ctx) {
   let done = false;
 
   return {
-    duration: END_LEN,
+    duration: END_LEN + BEAT_LEN,
     step(t, say) {
-      const tq = reduced ? Math.floor(t / 6) * 6 : t;
+      // The beat holds the village's clock at BEAT_AT; the film clock runs on past it.
+      const bt = t - BEAT_AT;
+      const inBeat = bt >= 0 && bt < BEAT_LEN;
+      const tOld = !BEAT_LEN || t < BEAT_AT ? t : inBeat ? BEAT_AT : t - BEAT_LEN;
+      // Reduced motion: stills every 6 s (after the beat, the stills count on from BEAT_AT).
+      const tq = reduced ? (BEAT_LEN && tOld >= BEAT_AT ? BEAT_AT + Math.floor((tOld - BEAT_AT) / 6) * 6 : Math.floor(tOld / 6) * 6) : tOld;
       track(KEYS, tq, pos, look);
+      if (inBeat) {
+        // The camera eases into the beat and back out (a cut on reduced motion).
+        const w = reduced ? 1 : smooth(Math.min(bt, BEAT_LEN - bt));
+        pos.lerp(pinata.camera.pos, w);
+        look.lerp(pinata.camera.look, w);
+      }
       camera.position.copy(pos);
       camera.lookAt(look);
 
@@ -608,7 +794,21 @@ export function playEnding(ctx) {
       }
       if (!cheered && tq >= 18) { cheered = true; getAvatar()?.play?.('cheer', { hold: 4 }); }
 
-      say(captionAt(CAPS_END, t));
+      // The piñata beat: she whacks it three times, and the last blow breaks it.
+      if (pinata) {
+        pinata.group.visible = inBeat;
+        if (inBeat) {
+          // Reduced motion: two stills, hanging then broken, and no blows.
+          pinata.update(reduced ? Math.floor(bt / 3.5) * 3.5 : bt);
+          if (!reduced) {
+            for (let i = 0; i < HIT_AT.length; i++) {
+              if (!swung[i] && bt >= HIT_AT[i] - SWING_LEAD) { swung[i] = true; getAvatar()?.play?.('chop', { fade: 0.1 }); }
+            }
+          }
+        }
+      }
+
+      say(captionAt(CAPS_END_ON, t));
     },
     dispose() {
       if (done) return;
@@ -621,6 +821,7 @@ export function playEnding(ctx) {
       disposeTree(moon);
       disposeTree(sunDisc);
       disposeTree(wrap);
+      pinata?.dispose();
       for (const f of folk) disposeTree(f.p.g);
       shellMat.dispose();
       restoreVillage();
