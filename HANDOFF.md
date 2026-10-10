@@ -1,7 +1,7 @@
 # Evolution (formerly Rocket Village): handoff
 
-Updated 2026-09-29. Start here, then `PLAN.md` for the list of items (done
-and next). Rules for working in this repo (models, folders, sound parked):
+Updated 2026-09-29. Start with `AGENT_HANDOFF.md` (the whole picture and the
+work list, section 8). Rules for working in this repo (models, folders, sound parked):
 `CLAUDE.md`. Everything is on `main` (the newest notes are at the end of this file).
 
 ## The game in one screen
@@ -127,7 +127,7 @@ browser tool times out at 45 s; the run keeps going in the page).
 
 ## Pending
 
-Moved to `PLAN.md` ("Next items"), the one list for the whole game.
+Moved to `AGENT_HANDOFF.md` section 8, the one list for the whole game.
 
 ## Gotchas learned the hard way
 
@@ -202,7 +202,7 @@ brute recipe). Hooks: `window.__science`, `__scienceRun`, `__scienceSetYaw`,
 - Frame times at 1024x768 (in-page, incl. GPU finish): Ch1 ~4-9 ms, Ch2
   ~4-8 ms, Ch3 ~11 ms (145 calls, 446k tris). All under 16.7 ms.
 
-(Open items from this session are tracked in `PLAN.md`.)
+(Open items are tracked in `AGENT_HANDOFF.md` section 8.)
 
 ## Session 2026-09-29 (evening): smile, fun moves, Chapter 4 time warp
 
