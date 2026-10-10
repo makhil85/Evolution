@@ -1637,7 +1637,11 @@ function tick(realDt, render = true) {
   _origin.z = ship.z;
 
   // Ship visuals.
-  shipView.group.rotation.y = yawFor(ship.angle);
+  // Set the whole rotation, not just .y: a film that restores her ship with quaternion.copy (Ch5's
+  // ending, replayed in Ch6's engine step) leaves Euler x and z at PI for a heading past 90 degrees,
+  // and with those kept the ship is drawn mirrored: it turns against the chase camera (lead 2026-10-10:
+  // "Ch6 says Behind the ship but it behaves like a free rotation").
+  shipView.group.rotation.set(0, yawFor(ship.angle), 0);
   shipView.setThrottle(paused ? 0 : (aimHoldFlame ? 0.25 : physInput.thrust) * (input.precision ? 0.35 : 1));
   shipView.setTurn(paused ? 0 : input.turn);
   shipView.setPrecision(input.precision);
