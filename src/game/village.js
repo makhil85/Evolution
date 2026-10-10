@@ -361,6 +361,73 @@ function plazaEdgeAt(a) {
   return 8.5 + wobble;
 }
 
+/** How far either side of a crossing's centre the paving is cut straight across. */
+const BRIDGE_PAVE_REACH = 2.5;
+
+/**
+ * Where the paving stops at the river, as z on each bank (north and south).
+ *
+ * Off the bridges this is the river's corridor: the water plus the bank margin.
+ * Across a crossing it is straight, taken at the bridge's own x, so the road
+ * stops flush with the deck's end. The corridor's meander made that edge wobble
+ * by about 0.2 across the road's width, which left a ragged hole at each end.
+ * Exported for scripts/test-ch3-streets.mjs, which checks against this edge.
+ */
+export function riverEdgeAt(x) {
+  const crossing = CROSSINGS.find((c) => Math.abs(x - c.x) <= BRIDGE_PAVE_REACH);
+  return edgeMeasuredAt(crossing ? crossing.x : x);
+}
+
+/** The corridor's north and south edge, measured at x = `at`. */
+function edgeMeasuredAt(at) {
+  const reach = RIVER.widthAt(at) + BRIDGE_BANK_MARGIN;
+  const centre = RIVER.centreAt(at);
+  return { north: centre + reach, south: centre - reach };
+}
+
+/** The part of a convex polygon where g(x, z) >= 0 (Sutherland-Hodgman, one edge). */
+function clipPolygon(poly, g) {
+  const out = [];
+  for (let i = 0; i < poly.length; i++) {
+    const [px, pz] = poly[i];
+    const [qx, qz] = poly[(i + 1) % poly.length];
+    const gp = g(px, pz), gq = g(qx, qz);
+    if (gp >= 0) out.push([px, pz]);
+    if ((gp >= 0) !== (gq >= 0)) {
+      const t = gp / (gp - gq);
+      out.push([px + (qx - px) * t, pz + (qz - pz) * t]);
+    }
+  }
+  return out;
+}
+
+/**
+ * The pieces of a triangle that lie off the river. A triangle that straddles
+ * riverEdgeAt is cut along the edge, not dropped, so the paving meets the
+ * water's edge (or the deck's end) with no gap.
+ */
+function offRiver(poly) {
+  // The edge jumps where a crossing's straight stretch starts and ends, so cut
+  // the triangle at those x first; each piece then has one edge to clip to.
+  let pieces = [poly];
+  for (const c of CROSSINGS) {
+    for (const x0 of [c.x - BRIDGE_PAVE_REACH, c.x + BRIDGE_PAVE_REACH]) {
+      pieces = pieces.flatMap((q) => [clipPolygon(q, (x) => x - x0), clipPolygon(q, (x) => x0 - x)])
+        .filter((q) => q.length >= 3);
+    }
+  }
+  return pieces.flatMap((q) => {
+    // A piece lies on one side of every cut, so its centre picks the edge for all of it.
+    const mx = q.reduce((sum, p) => sum + p[0], 0) / q.length;
+    const crossing = CROSSINGS.find((c) => Math.abs(mx - c.x) <= BRIDGE_PAVE_REACH);
+    const edge = (x) => edgeMeasuredAt(crossing ? crossing.x : x);
+    return [
+      clipPolygon(q, (x, z) => z - edge(x).north),
+      clipPolygon(q, (x, z) => edge(x).south - z),
+    ].filter((r) => r.length >= 3);
+  });
+}
+
 /**
  * Vertices and normals for the street mesh, built as flat triangles.
  * Exported for scripts/test-ch3-streets.mjs, which checks where it lands.
@@ -378,7 +445,13 @@ export function streetGeometry(village) {
     col.push(c.r, c.g, c.b);
   };
   const tri = (ax, az, bx, bz, cx, cz, hex, lift) => {
-    vert(ax, az, lift, hex); vert(bx, bz, lift, hex); vert(cx, cz, lift, hex);
+    for (const poly of offRiver([[ax, az], [bx, bz], [cx, cz]])) {
+      for (let k = 1; k < poly.length - 1; k++) {
+        vert(poly[0][0], poly[0][1], lift, hex);
+        vert(poly[k][0], poly[k][1], lift, hex);
+        vert(poly[k + 1][0], poly[k + 1][1], lift, hex);
+      }
+    }
   };
 
   // A band across a straight run from A to B, between offsets lo..hi from its
@@ -389,9 +462,8 @@ export function streetGeometry(village) {
     if (len < 1e-4) return;
     const ux = (bx - ax) / len, uz = (bz - az) / len;
     const nx = -uz, nz = ux;
-    // Pieces of 0.1, not 0.5: a piece that touches the water is dropped whole,
-    // so long pieces left a gap up to 0.5 at each bridge end, and short ones
-    // also follow the bank's slope with more height samples.
+    // Pieces of 0.1 so the paving follows the bank's slope with more height
+    // samples. The river cuts each triangle in tri(), not each piece here.
     const steps = Math.max(1, Math.ceil(len / 0.1));
     for (let i = 0; i < steps; i++) {
       const s0 = (len * i) / steps, s1 = (len * (i + 1)) / steps;
@@ -429,12 +501,11 @@ export function streetGeometry(village) {
     const dx = x - hub.x, dz = z - hub.z;
     return Math.hypot(dx, dz) < plazaEdgeAt(Math.atan2(dz, dx)) - 0.5;
   };
-  const inRiver = (x, z) => Math.abs(RIVER.offsetAt(x, z)) < RIVER.widthAt(x) + 2.6;
   // Walls are about 2.0 from a building's centre; a road stops just short of them.
   const inBuilding = (x, z) => ROCKET_VILLAGE.buildings.some((b) => Math.hypot(x - b.x, z - b.z) < 2.4);
-  // The road stops where the bridge deck takes over, the plaza begins, or a
-  // building's walls are - never laid over water, a wall or the square.
-  const roadKeep = (x, z) => !inRiver(x, z) && !onPlaza(x, z) && !inBuilding(x, z);
+  // The road stops where the plaza begins or a building's walls are. The river
+  // edge is cut per triangle in tri(), so it is not checked here.
+  const roadKeep = (x, z) => !onPlaza(x, z) && !inBuilding(x, z);
 
   // --- roads -----------------------------------------------------------------
   VILLAGE_PATHS.forEach((path, idx) => {

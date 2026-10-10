@@ -33,7 +33,7 @@ function ok(cond, name) {
 const sha = (v) => createHash('sha1').update(JSON.stringify(v)).digest('hex').slice(0, 12);
 
 try {
-  const { Village, BOUNDS, RIVER, streetGeometry } = await server.ssrLoadModule('/src/game/village.js');
+  const { Village, BOUNDS, RIVER, CROSSINGS, streetGeometry, riverEdgeAt } = await server.ssrLoadModule('/src/game/village.js');
   const { decorateVillage } = await server.ssrLoadModule('/src/game/decoration.js');
   const { ROCKET_VILLAGE, VILLAGE_PATHS } = await server.ssrLoadModule('/src/game/rocketVillageLayout.js');
   const { stationPositions } = await server.ssrLoadModule('/src/game/stations.js');
@@ -123,13 +123,37 @@ try {
       if (Math.abs(y - v.heightAt(x, z)) > 0.07) level = false;
       cx += x / 3; cz += z / 3;
     }
-    // The paving stops short of the water: no triangle centre inside the river corridor.
-    if (Math.abs(RIVER.offsetAt(cx, cz)) < RIVER.widthAt(cx) + 2.6) offRiver = false;
+    // The paving is cut to riverEdgeAt (the edge streetGeometry uses): no sampled
+    // point of a triangle lies on open water, or on the river side of that edge by
+    // more than 0.05 (across a crossing that edge is the deck's own end).
+    const corners = [0, 1, 2].map((k) => [p[t * 9 + k * 3], p[t * 9 + k * 3 + 2]]);
+    for (let i = 0; i <= 4; i++) for (let j = 0; j <= 4 - i; j++) {
+      const u = i / 4, w = j / 4, r = 1 - u - w;
+      const x = corners[0][0] * r + corners[1][0] * u + corners[2][0] * w;
+      const z = corners[0][1] * r + corners[1][1] * u + corners[2][1] * w;
+      const edge = riverEdgeAt(x);
+      if (Math.abs(RIVER.offsetAt(x, z)) < RIVER.widthAt(x)) offRiver = false;
+      if (z < edge.north - 0.05 && z > edge.south + 0.05) offRiver = false;
+    }
     if (ROCKET_VILLAGE.buildings.some((b) => Math.hypot(cx - b.x, cz - b.z) < 2.2)) offBuildings = false;
   }
   ok(finite, 'street vertices are finite');
   ok(level, 'street vertices follow the ground (no floating or sunk paving)');
   ok(offRiver, 'no paving over the river or the bridge approach');
+  // Each bridge end with a road is flush: the road has vertices on the deck's end line,
+  // across the crossing's own x, so the road meets the deck with no gap.
+  for (const c of CROSSINGS) {
+    const edge = riverEdgeAt(c.x);
+    const onEdge = (zEdge) => {
+      for (let k = 0; k < p.length / 3; k++) {
+        if (Math.abs(p[k * 3] - c.x) <= 2 && Math.abs(p[k * 3 + 2] - zEdge) < 1e-6) return true;
+      }
+      return false;
+    };
+    // The main crossing has a road at each end; the east one meets the spur at its north end only.
+    const ends = c.id === 'bridge' ? [edge.north, edge.south] : [edge.north];
+    ok(ends.every(onEdge), `the road meets the ${c.id} deck flush at its road end(s)`);
+  }
   ok(offBuildings, 'no paving inside a building');
 
   // A main-road lane line exists somewhere on the north road (the mesh is not empty there).
