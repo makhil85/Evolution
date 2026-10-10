@@ -186,8 +186,8 @@ try {
   });
   ok('Level 1 numbers (small, counting on and by tens)', () => {
     const L1 = banks[1];
-    assert.ok(checkSpaceAnswer(L1.c6_fuel_left, String(derived.c6_fuel_left)));
-    assert.ok(checkSpaceAnswer(L1.c6_percent_light, String(100 / 20)), 'light 20 blocks, ours 1: out of 100 that is 5');
+    assert.ok(checkSpaceAnswer(L1.c6_fuel_left, String(11 - 9)), 'pretend 9 without Neptune, 11 with it: 2 more');
+    assert.ok(checkSpaceAnswer(L1.c6_percent_light, String(20 - 1)), 'pretend light goes 20 blocks, ours 1: 19 more');
     assert.ok(checkSpaceAnswer(L1.c6_star_years, String(40 / 4)), '40 years at 4 years of light: 10 fours');
   });
 
