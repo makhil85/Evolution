@@ -1,4 +1,4 @@
-// Real-screen frame check (PLAN.md item 9): a small live graph of how long
+// Real-screen frame check (AGENT_HANDOFF.md section 8): a small live graph of how long
 // each frame took, with the worst frames and what the game was doing then.
 //
 // It measures REAL frames (requestAnimationFrame to requestAnimationFrame),

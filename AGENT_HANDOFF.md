@@ -12,10 +12,9 @@ file and the newest `HANDOFF.md` session notes win.
 
 | Doc | What it is |
 |---|---|
-| `AGENT_HANDOFF.md` (this) | The whole picture: vision, features, architecture, style, plan, bugs, lessons learned |
+| `AGENT_HANDOFF.md` (this) | The whole picture: vision, features, architecture, style, the work list (section 8), bugs, lessons learned. `PLAN.md` was folded in here and deleted (2026-10-10). |
 | `CLAUDE.md` | Standing rules for agents (models, subagents, folders, sound parked). Always loaded. |
 | `HANDOFF.md` | Running log of every session: what changed, how things work, how to test. Newest sections at the bottom. |
-| `PLAN.md` | The work list (older; "Next items" still valid, see section 8 below) |
 | `LESSONS_PLAN.md` | The teaching-lesson design (films + questions) |
 | `CHAPTER5_PLAN.md`, `CHAPTER6_PLAN.md`, `CHAPTER7_PLAN.md` | Chapter designs (Ch6 restructured 10-07: see the note at its top; Ch7 is built, section 8) |
 
@@ -313,24 +312,32 @@ family tree (fossils, common ancestors), and what alien life on a Tau Ceti
 planet might share with us or not. Plan it like Chapter 7 (CHAPTERx_PLAN.md
 with the numbers, a chain, work packages and metrics) when the lead says go.
 
-After that, from the lead and `PLAN.md`, roughly in order:
-1. **A child plays every chapter**: watch where they get stuck.
-2. **Real-screen pass** of everything built since 10-06 (none of it was seen
-   on a real screen by an agent): Ch6 deck frame rates (ship-lab info())  and cutscenes, the
-   Ch6 build steps in their new place, the route planner and flight card,
-   Ch5 ring-run flicker fix, the edge/new Ch5 end, markers + "Next" box,
-   escape top-down view, catch zone at Jupiter and Saturn, Hard mode (no catch
-   zone), the full Moon lap -> land -> walk flow, the two-panel solar game.
-3. **Level 1 tuning** of Chapters 5 and 6 (`npm run reading`; mini-games at Level 1).
-4. **Level 1 Chapter 4 Medium/Hard re-runs.**
-5. **Hard clue wording** review (treasure hunts in Ch1-3).
-6. Open design questions left with the lead (10-07):
-   - Sun dive closest pass: 4 Sun-widths is allowed (risky, heat warning);
-     Parker Solar Probe got to ~10. Block 4, or keep?
-   - "Sun dive + 2 planets" was built as Jupiter-then-Sun (planets wouldn't
-     line up again after the Sun). Add a second planet?
-   - The Sun dive wins at both 10 t and 100 t (true physics). OK as is?
-7. Parked: touch/tablets, phone layout, sound.
+**The work list** (this replaces `PLAN.md`, 2026-10-10). Standing decisions: sound is parked;
+keyboard and mouse first (touch is parked); PRs take 30-60 minutes; the game is played from GitHub Pages,
+the Releases zip, or `npm run dev` (on the lead's PC also the `Rocket Village.bat` shortcut).
+
+Needs the lead (play-testing):
+1. **A child plays every chapter** (a 1st-2nd grader at Level 1, a 5th grader at Level 4): watch where
+   they get stuck (clues, burns, controls, reading).
+2. **Treasure-hunt clue wording** (Ch1-3, `src/science/hunt.js`, `src/city/hunt.js`, `src/game/hunt.js`):
+   the lead says which are too easy or too hard.
+3. **Real-screen frame check**: `chapter4.html?fps` (or F9) shows a live frame graph; fly at x1 and x64
+   and look for red bars (`window.__frames.summary()`). Cloud sessions can't do this (software GL).
+
+Small (one PR each):
+4. Level 1 Chapter 4 Medium and Hard re-runs (Easy passed 09-30).
+5. Level 1 tuning of Chapters 5-6 mini-games (`npm run reading`); a real-screen pass of the Ch6 walk and
+   cutscenes.
+6. Open from 10-10: the starship flame on screen; crew and robots present in Ch6 (not checked); the oval
+   cut-away hole in a green station tube; a 0.35 step on the Ch3 east-bridge bank; the touch Jump badge
+   over the left arrow on foot; Ch3 homes (156 calls / 305k tris) and wide (171 / 331k) views over budget;
+   long question success lines.
+7. Open design questions (10-07): Sun dive at 4 Sun-widths (block it?); "Sun dive + 2 planets" was built as
+   Jupiter-then-Sun (add a second planet?); the Sun dive wins at 10 t and 100 t (OK?).
+
+Bigger (when the lead says go): the in-between chapter (above), genetics and evolution (above), an
+iPhone/touch version (estimate 2-4 days). Parked: touch/tablets, phone layout, pinch zoom, sound, the NASA
+Europa texture.
 
 ## 9. Known bugs and risks
 
@@ -551,3 +558,67 @@ went wrong once.
 - New lead requests mid-batch go to the next PR; at the end of a batch, audit
   every ask the lead made (DONE / PARTIAL / MISSING with file:line) before
   calling it finished.
+
+## 12. Problems that took several tries (and what finally fixed them)
+
+From the PRs of 10-07 to 10-10. Read these before touching the same area.
+
+**Cameras and views**
+- *She vanished inside the ship (Ch6-7).* A clever chase camera (pull in at walls, lift, turn the view by
+  itself, fade her out when cornered) hid her and tipped to the floor. Fix (#46): a plain follow camera at a
+  fixed 3 m and 1.5 m, and a shader cut-away of the walls on the sight line. Rule: she is visible in every
+  frame; prefer simple fixed rules to clever ones.
+- *"Behind the ship" behaved like free rotation (Ch6).* Two makers read the code and found nothing; a browser
+  probe logging `rotation.x/z` found it in one run. A film restored the ship with `quaternion.copy`, which
+  leaves Euler x = z = PI for a heading past 90 degrees, and the loop set only `rotation.y`, so the ship was
+  drawn mirrored (#51). Rule: set the whole rotation; when a view looks wrong, probe the live numbers first.
+- *The Camera button was "shown" but invisible on foot.* Its parent column was `display: none` from an
+  inline rule in `chapter4-7.html` (#43). Rule: check the whole parent chain is visible, not just the element.
+- *A camera that turns with her (Ch1-3)* spun when she side-stepped; the working design (#53) turns her
+  with Left/Right (tank style) only in the optional 'follow' view.
+
+**Pausing and reading**
+- *The game looked frozen (Ch1-3).* The reading pause took the play lock, so a message on screen stopped her
+  walking (#44). Rule: reading lines never lock movement or the game clocks; only real question cards,
+  choosers, lessons and films lock.
+- *No flame when pressing Space.* Three causes at once: Frozen on, a card holding the game, and Easy's
+  auto-aim holding thrust at 0 while turning; then the plume itself was invisible end-on from the chase
+  camera (edge shading went to 0, the first part was faded in) (#50). Rule: judge an effect from the real
+  gameplay camera, with the game unpaused.
+
+**Walking and the world**
+- *She walked through things (Ch1-2).* The block test used her centre point; her body sank into walls.
+  Fix (#48): test the body ring, move x then z so she slides, and flood-fill to prove every station is
+  still reachable.
+- *A step at each Ch3 bridge end.* The walk surface had a ramp but the mesh didn't; one function now feeds
+  both (#47). Rule: physics and drawing read the same height function.
+- *Ragged road holes at the river.* Whole road pieces were dropped when any corner touched the river; clip
+  triangles to the edge instead (#49).
+- *A new building landed on her (Ch2).* Step her out of the footprint before it rises (#45).
+
+**Git, PRs and agents**
+- Stacked PRs merge into their BASE branch: `main` stopped at #27 while #28-#39 merged into claude/*
+  bases (#40 brought them over). Always base on `main`.
+- A detached HEAD in a worktree (`git checkout origin/main --`) sent merges to HEAD while pushes went to a
+  stale branch. Check `git branch --show-current` before merging.
+- Parallel PRs that each add a test to the `package.json` test line conflict; add tests to existing
+  scripts, or chain the PRs.
+- A variable `import()` with `@vite-ignore` was never bundled (`surface.js` missing in the built game); use
+  a literal import path.
+- A duplicate step id (`c7_full_push` in Parts B and E) broke the chain; ids must be unique per chapter.
+- The PR tool can't make drafts here: a "WIP" title didn't stop a merge. Keep unfinished work on a branch
+  with no PR.
+- Makers: a 4-hour critic and a container restart lost a whole check; cap every maker (30-45 min). Some
+  makers loop or resend their report: stop them. Makers make judgement calls the lead didn't ask for
+  (reading paused the game clocks; a toast said "A and D turn her"): the coordinator reads every diff.
+- Don't leave the session's shell in a worktree with uncommitted maker work (the stop hook fires); keep it in
+  a clean worktree.
+
+**Browser checks in the cloud**
+- Software GL is slow: a space chapter takes 2-15 minutes to boot. Run one browser at a time, and kill
+  leftover vite servers (they slowed everyone).
+- `missions.jumpTo` reloads the page: wait for navigation, then for `window.__space` again.
+- Keys are ignored while a card or reading pause holds the game: wait for `_pausedBy` empty and no
+  `playModal`, or drive state directly (`ship.angle`, `shipView.setThrottle`) to test drawing.
+- Ch2's opening film can hold the play lock for minutes there: test Ch1 or Ch3 first.
+

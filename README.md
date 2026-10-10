@@ -48,4 +48,4 @@ npm run build     # production build into dist/
 - `CLAUDE.md`: working rules for Claude sessions (models, standing rules).
 - `HANDOFF.md`: how everything works, what changed each session, how to test
   in the browser (lab helpers under `src/**/lab/`), open issues.
-- `PLAN.md`: the work list. `LESSONS_PLAN.md`: the teaching-lessons plan.
+- `AGENT_HANDOFF.md` section 8: the work list. `LESSONS_PLAN.md`: the teaching-lessons plan.

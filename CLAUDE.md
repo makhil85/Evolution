@@ -22,7 +22,7 @@
 - **New agent? Read `AGENT_HANDOFF.md` first** (vision, features, architecture,
   style, plan, known bugs, lessons learned).
 - How everything works, how to test it, open issues: `HANDOFF.md`. Work list:
-  `PLAN.md`; teaching lessons: `LESSONS_PLAN.md`.
+  `AGENT_HANDOFF.md` section 8; teaching lessons: `LESSONS_PLAN.md`.
 
 ## Repo and cloud sessions
 
