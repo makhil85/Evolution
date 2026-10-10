@@ -1100,7 +1100,6 @@ export const LEVEL1_SPACE_QUESTIONS = {
     subject: 'Light and distance',
     difficulty: 'Level 1 • spreading out',
     prompt: 'Zara shines a flashlight at a wall up close. She sees a small, bright circle. She steps far back. The circle gets much BIGGER. What happens to how bright it is?',
-    visual: null,
     visual: {
       rows: [
         { label: 'Close', tiles: ['■'], arrow: true },

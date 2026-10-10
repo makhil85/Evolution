@@ -543,6 +543,11 @@ went wrong once.
 - Agents: stop one that loops its report; check what an agent staged before
   committing; they must not create cloud sessions or commit; remove stale
   worktrees when done.
+- **PRs take 30-60 minutes** (lead 2026-10-10, token budget): one fix or a small group per PR, makers
+  capped at 30-45 minutes, open the PR as soon as it is proven. Don't stack PRs; base each on `main`.
+- A measured cause beats a static read: two makers "found nothing" in Ch6's camera by reading code; a
+  browser probe logging `rotation.x/z` found the mirrored ship in one run. Probe first when a view looks wrong.
+- Set a whole rotation, never one Euler axis, on an object a film may restore by quaternion.
 - New lead requests mid-batch go to the next PR; at the end of a batch, audit
   every ask the lead made (DONE / PARTIAL / MISSING with file:line) before
   calling it finished.
