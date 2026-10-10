@@ -153,6 +153,14 @@ try {
     // The main crossing has a road at each end; the east one meets the spur at its north end only.
     const ends = c.id === 'bridge' ? [edge.north, edge.south] : [edge.north];
     ok(ends.every(onEdge), `the road meets the ${c.id} deck flush at its road end(s)`);
+    // The bank edge eases from the deck's end to the corridor: no step between
+    // neighbouring samples for 8 units either side of the crossing.
+    let jump = 0;
+    for (let x = c.x - 8; x < c.x + 8; x += 0.05) {
+      const a = riverEdgeAt(x), b = riverEdgeAt(x + 0.05);
+      jump = Math.max(jump, Math.abs(a.north - b.north), Math.abs(a.south - b.south));
+    }
+    ok(jump <= 0.05, `the river edge has no step near the ${c.id} crossing (max jump ${jump.toFixed(4)})`);
   }
   ok(offBuildings, 'no paving inside a building');
 

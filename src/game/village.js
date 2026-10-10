@@ -365,17 +365,41 @@ function plazaEdgeAt(a) {
 const BRIDGE_PAVE_REACH = 2.5;
 
 /**
+ * How far past a crossing's straight stretch the edge eases back to the corridor.
+ * It used to switch at a hard x, which stepped the bank edge by about 0.35 at
+ * the east bridge (and 0.55 at the main one). Easing over this distance keeps
+ * neighbouring samples within a few hundredths of each other.
+ */
+const EDGE_EASE = 1.5;
+
+/** Width of the strips offRiver cuts an eased stretch into, so each clip is near the curve. */
+const EDGE_STRIP = 0.25;
+
+/**
  * Where the paving stops at the river, as z on each bank (north and south).
  *
  * Off the bridges this is the river's corridor: the water plus the bank margin.
  * Across a crossing it is straight, taken at the bridge's own x, so the road
  * stops flush with the deck's end. The corridor's meander made that edge wobble
  * by about 0.2 across the road's width, which left a ragged hole at each end.
+ * Beside that straight stretch it eases (smoothstep) from the straight edge to
+ * the corridor over EDGE_EASE, so the bank edge never steps.
  * Exported for scripts/test-ch3-streets.mjs, which checks against this edge.
  */
 export function riverEdgeAt(x) {
-  const crossing = CROSSINGS.find((c) => Math.abs(x - c.x) <= BRIDGE_PAVE_REACH);
-  return edgeMeasuredAt(crossing ? crossing.x : x);
+  for (const c of CROSSINGS) {
+    const past = Math.abs(x - c.x) - BRIDGE_PAVE_REACH;
+    if (past > EDGE_EASE) continue;
+    const straight = edgeMeasuredAt(c.x);
+    if (past <= 0) return straight;
+    const t = past / EDGE_EASE, s = t * t * (3 - 2 * t);
+    const bank = edgeMeasuredAt(x);
+    return {
+      north: straight.north + (bank.north - straight.north) * s,
+      south: straight.south + (bank.south - straight.south) * s,
+    };
+  }
+  return edgeMeasuredAt(x);
 }
 
 /** The corridor's north and south edge, measured at x = `at`. */
@@ -407,25 +431,29 @@ function clipPolygon(poly, g) {
  * water's edge (or the deck's end) with no gap.
  */
 function offRiver(poly) {
-  // The edge jumps where a crossing's straight stretch starts and ends, so cut
-  // the triangle at those x first; each piece then has one edge to clip to.
-  let pieces = [poly];
+  // The edge is a curve across each ease, so cut the triangle into strips there
+  // (EDGE_STRIP wide, from the straight stretch's end out to the corridor), and
+  // at the straight stretch's own ends. A piece is then close to straight, so
+  // clipping it to the edge at its vertices follows the curve.
+  const cuts = [];
   for (const c of CROSSINGS) {
-    for (const x0 of [c.x - BRIDGE_PAVE_REACH, c.x + BRIDGE_PAVE_REACH]) {
-      pieces = pieces.flatMap((q) => [clipPolygon(q, (x) => x - x0), clipPolygon(q, (x) => x0 - x)])
-        .filter((q) => q.length >= 3);
+    for (let k = 0; k <= EDGE_EASE / EDGE_STRIP; k++) {
+      const d = BRIDGE_PAVE_REACH + k * EDGE_STRIP;
+      cuts.push(c.x - d, c.x + d);
     }
   }
-  return pieces.flatMap((q) => {
-    // A piece lies on one side of every cut, so its centre picks the edge for all of it.
-    const mx = q.reduce((sum, p) => sum + p[0], 0) / q.length;
-    const crossing = CROSSINGS.find((c) => Math.abs(mx - c.x) <= BRIDGE_PAVE_REACH);
-    const edge = (x) => edgeMeasuredAt(crossing ? crossing.x : x);
-    return [
-      clipPolygon(q, (x, z) => z - edge(x).north),
-      clipPolygon(q, (x, z) => edge(x).south - z),
-    ].filter((r) => r.length >= 3);
-  });
+  let pieces = [poly];
+  for (const x0 of cuts) {
+    pieces = pieces.flatMap((q) => {
+      const xs = q.map((p) => p[0]);
+      if (Math.min(...xs) >= x0 || Math.max(...xs) <= x0) return [q];
+      return [clipPolygon(q, (x) => x - x0), clipPolygon(q, (x) => x0 - x)];
+    }).filter((q) => q.length >= 3);
+  }
+  return pieces.flatMap((q) => [
+    clipPolygon(q, (x, z) => z - riverEdgeAt(x).north),
+    clipPolygon(q, (x, z) => riverEdgeAt(x).south - z),
+  ].filter((r) => r.length >= 3));
 }
 
 /**
