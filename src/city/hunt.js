@@ -47,22 +47,22 @@ const L1 = {
   steps: [
     {
       id: 'cityHall', at: doorAt('City Hall'), radius: 2.2,
-      clue: 'Find the clock building. It has 4 white posts. Press E at its door.',
+      clue: 'Find the clock with 4 white posts. Press E there.',
       found: 'Tick tock! You found the clock building.',
     },
     {
       id: 'scienceCenter', at: doorAt('Science Center'), radius: 2.2,
-      clue: 'Find the round purple roof with a gold star. Press E at its door.',
+      clue: 'Find the purple dome with a gold star. Press E.',
       found: 'A purple dome and a gold star. This is the Science Center!',
     },
     {
       id: 'moatEnd', at: CROSS3, radius: 2.2,
-      clue: 'Follow the road east until it ends at the water. Press E there.',
+      clue: 'Follow the long road to the water. Press E there.',
       found: 'The road stops at the water. A moat goes around an island!',
     },
     {
       id: 'townHouse', at: TOWN, radius: 2.2,
-      clue: 'The Master Gear is in the home far from the purple roof. Press E.',
+      clue: 'Find the home far from the purple roof. Press E.',
       found: 'You found the Master Gear! It clicks and spins. Now the Workshop can be built!',
     },
   ],

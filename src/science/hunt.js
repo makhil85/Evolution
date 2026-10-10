@@ -48,22 +48,22 @@ const L1 = {
   steps: [
     {
       id: 'well', at: at(9, 20), radius: 2.6,
-      clue: 'Find the well with a red roof and bucket. Press E next to it.',
+      clue: 'Find the well with a red roof. Press E there.',
       found: 'Splash! You found the well.',
     },
     {
       id: 'board3', at: at(12, 20), radius: 1.7,
-      clue: 'Count the teal labs and add 1. Find that numbered Puzzle. Press E.',
+      clue: 'Count teal labs. Add 1. Press E at that Puzzle.',
       found: 'Puzzle 3! Two labs and one more makes three. Nice adding!',
     },
     {
       id: 'blacksmith', at: doorOf('blacksmith', 12, 17), radius: 1.7,
-      clue: 'Find the tall grey chimney with fire. Press E at its door.',
+      clue: 'Find the chimney with fire. Press E at its door.',
       found: 'Clang, clang! The blacksmith makes things from hot iron.',
     },
     {
       id: 'townHouse', at: TOWN.at, radius: 2.0,
-      clue: 'Find the house closest to the blacksmith. Press E at its door.',
+      clue: 'Find the house closest to the blacksmith. Press E.',
       found: 'You found the Golden Core! The Science Center can be built now.',
     },
   ],

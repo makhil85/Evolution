@@ -1,29 +1,15 @@
-// Chapter 3's question bank at LEVEL 1 difficulty — Math Kangaroo / CogAT
-// idiom, pitched at a competitive 1st grader.
+// Chapter 3's question bank at LEVEL 1 difficulty (a 6-7 year old who reads slowly).
 //
 // This is an OVERLAY, not a second bank. Each entry replaces only the content
 // of the matching question in questions.js: the id, the answer type, the
-// station it lives at, its title and its reward are all inherited. That
-// matters because the quest chain, the signposts and the economy are all keyed
-// off those fields - a second full copy would be four more things to keep in
-// step, and the first one to drift would break the chain silently.
+// station it lives at and its reward are all inherited, so the quest chain and
+// the economy stay keyed off the same fields. A question with no `doneMessage`
+// here keeps the Level 4 line.
 //
-// WHAT "LEVEL 1" MEANS HERE. Not easy. The arithmetic stays inside a 1st
-// grader's reach - counting, skip counting, adding and taking away within
-// twenty - and the DIFFICULTY lives in the reasoning instead:
-//
-//   - the answer needs two steps, not one
-//   - the obvious answer is wrong, and wrong for a reason worth learning
-//     (the line of five rockets is the clearest: almost every child says six)
-//   - the child has to notice something rather than compute something
-//
-// That is the Kangaroo pattern: insight over procedure, small numbers, short
-// prompts. A question a 1st grader can READ in fifteen seconds and think about
-// for two minutes is the target; a question that just needs bigger sums is a
-// failure of this brief however hard it looks.
-//
-// Answer types are kept alternating exactly as the Level 4 bank has them, so a
-// child never meets two blank text boxes in a row.
+// Level 1 rules (lead 2026-10-10): prompts at most 12 words, short everyday
+// words, whole numbers up to 20 with one + or - step, 2-3 choices of 1-3 words,
+// success lines at most 10 words, done lines at most 8 words. The reasoning
+// stays, the wording and the sums get smaller.
 
 export const LEVEL1_QUESTIONS = {
   // --- the main chain ------------------------------------------------------
@@ -31,28 +17,24 @@ export const LEVEL1_QUESTIONS = {
   cadet_oath: {
     subject: 'How science works',
     difficulty: 'Level 1 • fair tests',
-    prompt:
-      'Zara drops two paper rockets to see which one falls more slowly. One has wings. ' +
-      'One has no wings. She drops them both from the same chair, at the same moment. ' +
-      'Why does she use the SAME chair for both?',
+    prompt: 'Two rockets, one with wings. Why keep the chair the same?',
     choices: [
-      { text: 'So the only thing different is the wings', correct: true },
-      { text: 'So both rockets stay clean' },
-      { text: 'So the test finishes faster' },
-      { text: 'So she has somewhere to sit' },
+      { text: 'To finish faster' },
+      { text: 'Only wings change', correct: true },
+      { text: 'To sit down' },
     ],
-    hint: 'A fair test changes only ONE thing. Everything else has to stay the same.',
+    hint: 'Hint: a fair test changes only ONE thing.',
     parentHint:
       'This is the whole idea of a controlled experiment, in a form a 6-year-old can hold. '
       + 'Ask: "if she dropped one from a chair and one from a table, would we know it was the wings?"',
-    success: 'Right. Change just one thing. Keep the rest the same. That makes it a fair test.',
-    doneMessage: 'Cadet badge! The school doors open. A rocket picture lights up across the river.',
+    success: 'Correct. Change one thing. Keep the rest the same.',
+    doneMessage: 'Cadet badge! The school doors open.',
   },
 
   rocket_scale: {
     subject: 'Counting',
     difficulty: 'Level 1 • counting',
-    prompt: 'Rockets stand in a line. Zara\'s rocket is 2nd from the front. It is also 4th from the back. How many rockets are in the line?',
+    prompt: 'Zara is 2nd from the front, 4th from the back. How many?',
     visual: {
       rows: [
         { label: 'From the front', tiles: ['1', 'ZARA', '?', '?', '?'] },
@@ -60,100 +42,88 @@ export const LEVEL1_QUESTIONS = {
       ],
     },
     answers: ['5', 'five', '5 rockets', 'five rockets'],
-    hint: 'Draw a dot for each rocket. Put Zara\'s where it has to be, then count ALL the dots.',
+    hint: 'Hint: draw each rocket, then count them all.',
     parentHint:
       'The classic answer is 6, from adding 2 + 4. Zara\'s own rocket gets counted twice that way — '
       + 'once from each end — so the answer is 2 + 4 − 1 = 5. Drawing it settles it instantly.',
-    success:
-      'Yes — 5. Adding 2 and 4 gives 6, but that counts Zara\'s rocket twice, once from each end.',
-    doneMessage: 'The plan is done! The rocket picture shows its real size. The Lab lights its fire.',
+    success: 'Correct. Zara is counted twice. So the answer is 5.',
+    doneMessage: 'Plan done! The Lab lights its fire.',
   },
 
   rocket_materials: {
     subject: 'Materials and floating',
     difficulty: 'Level 1 • thinking',
-    prompt:
-      'Zara puts four things in water. A wooden block floats. A stone sinks. ' +
-      'An empty tin with the lid on floats. The same tin filled with sand sinks. ' +
-      'What decides whether the tin floats?',
+    prompt: 'Empty, the tin floats. Full of sand, it sinks. Why?',
     choices: [
-      { text: 'What is inside it', correct: true },
-      { text: 'What colour it is' },
-      { text: 'How shiny it is' },
-      { text: 'How loud it is when you tap it' },
+      { text: 'Its colour' },
+      { text: 'What is inside', correct: true },
+      { text: 'How shiny' },
     ],
-    hint: 'The tin did not change. Only one thing about it changed. What was it?',
+    hint: 'Hint: the tin did not change. Only the inside did.',
     parentHint:
       'The point is that the SAME object did two different things, so the cause must be the '
       + 'change — the sand — not anything permanent about the tin.',
-    success: 'Correct. The tin itself never changed, so it had to be what was inside it.',
-    doneMessage: 'The Lab builds itself! You are a Junior Engineer now. The Build Menu is open. Iron is around the town.',
+    success: 'Correct. The tin stayed the same. Sand made it sink.',
+    doneMessage: 'Junior Engineer! The Build Menu is open.',
   },
 
   rocket_flow: {
     subject: 'Counting back',
     difficulty: 'Level 1 • skip counting',
-    prompt: 'The test tank holds 12 litres of water. Every minute, 3 litres leak out. How many minutes until the tank is empty?',
+    prompt: 'Water leaks 3 cups a minute from 12 cups. How many minutes?',
     visual: {
       rows: [
-        { label: 'Tank', tiles: ['12 L'], arrow: true },
-        { label: 'Each minute', tiles: ['− 3 L'], arrow: true },
+        { label: 'Tank', tiles: ['12 cups'], arrow: true },
+        { label: 'Each minute', tiles: ['− 3 cups'], arrow: true },
         { label: 'Empty in?', tiles: ['? minutes'] },
       ],
     },
     answers: ['4', 'four', '4 minutes', 'four minutes', '4 min'],
-    hint: 'Count down in threes: 12, 9, 6, … How many jumps before you reach 0?',
+    hint: 'Hint: count down by 3s from 12 to 0.',
     parentHint:
       'Counting back in 3s is the grade-1 route to 12 ÷ 3. Let her use fingers — the jumps ARE '
       + 'the division, and seeing that is worth more than the answer.',
-    success: 'Correct — 12, 9, 6, 3, 0. That is 4 jumps, so 4 minutes.',
+    success: 'Correct. 12, 9, 6, 3, 0. That is 4 minutes.',
   },
 
   rocket_drag: {
     subject: 'Air pushing back',
     difficulty: 'Level 1 • predict and explain',
-    prompt: 'Zara has two sheets of paper. One is flat. One is squashed into a tight ball. She drops them both at the same time. Which one lands first?',
+    prompt: 'Drop a flat sheet and a paper ball. Which lands first?',
     choices: [
-      { text: 'The squashed ball', correct: true },
       { text: 'The flat sheet' },
-      { text: 'They land at exactly the same moment' },
-      { text: 'Neither one falls' },
+      { text: 'The paper ball', correct: true },
+      { text: 'They land together' },
     ],
-    hint: 'Both sheets weigh the same. Which one has more air pushing up against it?',
+    hint: 'Hint: which one has less air pushing back?',
     parentHint:
       'Same paper, same weight, different shape — so the difference has to be the air. This is a '
       + 'lovely one to actually do at the table.',
-    success: 'Right. They weigh the same. But the flat sheet has more air pushing back on it.',
-    doneMessage: 'The Wind Tunnel is done! The big fan turns. Now you can build the rocket body.',
+    success: 'Correct. The flat sheet has more air pushing back.',
+    doneMessage: 'Wind Tunnel done! The big fan turns.',
   },
 
   rocket_thrust: {
     subject: 'Push and push back',
     difficulty: 'Level 1 • forces',
-    prompt:
-      'Zara blows up a balloon and lets go without tying it. The air rushes OUT of the back ' +
-      'of the balloon. Which way does the balloon itself fly?',
+    prompt: 'Air rushes out the back. Which way does the balloon fly?',
     choices: [
-      { text: 'Forwards — the opposite way to the air', correct: true },
-      { text: 'Backwards — the same way as the air' },
-      { text: 'Straight down to the floor' },
-      { text: 'It stays still in the air' },
+      { text: 'Backwards' },
+      { text: 'Forwards', correct: true },
+      { text: 'Straight down' },
     ],
-    hint: 'Push something one way, and it pushes you the other way. Think of pushing off a wall.',
+    hint: 'Hint: pushing one way pushes you the other way.',
     parentHint:
       'This is exactly how a rocket engine works, and the balloon is the demonstration. '
       + 'Worth doing once for real — the surprise is the lesson.',
-    success:
-      'Correct. The air goes one way, the balloon goes the other. That is how a real rocket flies.',
-    doneMessage: 'The Science Center is done! The engine fires on its test stand.',
+    success: 'Correct. Air goes back, so the balloon goes forward.',
+    doneMessage: 'Science Center done! The engine fires.',
   },
 
   rocket_fuel: {
     subject: 'Groups and ratio',
     difficulty: 'Level 1 • repeated groups',
-    prompt:
-      'Zara\'s fuel recipe is: for every 1 cup of BLUE, add 2 cups of GREEN. ' +
-      'She pours in 3 cups of blue. How many cups of green does she need?',
+    prompt: 'Each blue cup needs 2 green. Pour 3 blue. How much green?',
     visual: {
       rows: [
         { label: 'Recipe', tiles: ['1 blue', '2 green'], arrow: true },
@@ -162,19 +132,17 @@ export const LEVEL1_QUESTIONS = {
       ],
     },
     answers: ['6', 'six', '6 cups', 'six cups'],
-    hint: 'Every ONE blue brings TWO green with it. Count the green in pairs: 2, 4, …',
+    hint: 'Hint: each blue brings 2 green. Count in 2s.',
     parentHint:
       'Ratio before multiplication has a name: repeated groups. Three groups of two. Let her '
       + 'draw three pairs rather than reach for 3 × 2.',
-    success: 'Correct — 3 blue means 3 pairs of green, and that is 6.',
+    success: 'Correct. 3 blue, 2 green each, makes 6 green.',
   },
 
   rocket_guidance: {
     subject: 'Turns and direction',
     difficulty: 'Level 1 • Kangaroo turning',
-    prompt:
-      'Zara\'s rocket is pointing NORTH. She turns it right. Then she turns it right again. ' +
-      'Which direction is the rocket pointing now?',
+    prompt: 'Zara\'s rocket faces north. She turns right twice. Which way now?',
     visual: {
       rows: [
         { label: 'Start', tiles: ['N ↑'], arrow: true },
@@ -184,48 +152,48 @@ export const LEVEL1_QUESTIONS = {
       ],
     },
     answers: ['south', 'South', 's'],
-    hint: 'Stand up and try it. Face north, turn right once — now turn right once more.',
+    hint: 'Hint: stand up and turn right two times.',
     parentHint:
       'Two right turns make a half turn, which always lands on the opposite direction. Doing it '
       + 'with her body is far better than a diagram at this age.',
-    success: 'Correct — two right turns make a half turn, so north becomes south.',
-    doneMessage: 'The Guidance Tower is done! Its dish turns. Now you can build the engine and the tanks.',
+    success: 'Correct. Two right turns face the opposite way: south.',
+    doneMessage: 'Guidance Tower done! Its dish turns.',
   },
 
   rocket_launch: {
     subject: 'Counting gaps',
     difficulty: 'Level 1 • counting',
-    prompt: 'A rope is 10 metres long. It has a knot every 2 metres. There is a knot at each end too. How many knots are on the rope?',
+    prompt: 'Knots are 2 apart, with one at each end. How many knots?',
     visual: {
       rows: [
-        { label: 'Rope', tiles: ['0m', '2m', '4m', '6m', '8m', '10m'] },
+        { label: 'Knots', tiles: ['0', '2', '4', '6', '8', '10'] },
       ],
     },
     answers: ['6', 'six', '6 knots', 'six knots'],
-    hint: 'Do not count the gaps — count the KNOTS. There are 5 gaps. Draw them and see.',
+    hint: 'Hint: count the knots, not the gaps.',
     parentHint:
       'The fencepost problem, and almost everyone answers 5. There is always one more post than '
       + 'gap. Drawing the rope end to end makes it obvious and it sticks for years.',
-    success: 'Yes, 6! There are 5 gaps of 2 metres. Knots sit at both ends. So there is one more knot than gaps.',
+    success: 'Correct. 6 knots. There is one more knot than gaps.',
   },
 
   chief_engineer: {
     subject: 'Steps forward and back',
     difficulty: 'Level 1 • up and down',
-    prompt: 'A test rocket goes up 3 metres. Then it slips down 1 metre. It does this again and again. How high is it after 3 ups and 3 slips?',
+    prompt: 'Up 3, down 1. Do it 3 times. How high now?',
     visual: {
       rows: [
         { label: 'Each try', tiles: ['up 3', 'down 1'], arrow: true },
-        { label: 'After 3 tries', tiles: ['? metres'] },
+        { label: 'After 3 tries', tiles: ['? high'] },
       ],
     },
     answers: ['6', 'six', '6 m', '6 metres', '6 meters'],
-    hint: 'Each full try gains 3 − 1 = 2 metres. Now count three of those gains.',
+    hint: 'Hint: each try gains 2. Count 2, 4, 6.',
     parentHint:
       'The Kangaroo staple. Each cycle is a net +2, so three cycles is 6. Tracking it on fingers — '
       + '3, 2, 5, 4, 7, 6 — is a real win for a 1st grader.',
-    success: 'Correct — each try gains 2 metres, and three tries make 6.',
-    doneMessage: 'The tower dome opens and the telescope comes out! A box of rare parts is yours. You are a Chief Engineer!',
+    success: 'Correct. Each try gains 2, so 3 tries make 6.',
+    doneMessage: 'Chief Engineer! The tower dome opens.',
   },
 
   // --- bonus puzzles -------------------------------------------------------
@@ -233,25 +201,25 @@ export const LEVEL1_QUESTIONS = {
   bonus_pattern: {
     subject: 'Patterns',
     difficulty: 'Level 1 • Kangaroo pattern',
-    prompt: 'The lights blink in this order again and again: RED, BLUE, BLUE, RED, BLUE, BLUE, … What colour is the 9th light?',
+    prompt: 'Red, blue, blue, red, blue, blue... What colour is light 9?',
     visual: {
       rows: [
         { label: 'Lights', tiles: ['1 red', '2 blue', '3 blue', '4 red', '5 blue', '6 blue', '7 ?', '8 ?', '9 ?'] },
       ],
     },
     answers: ['blue', 'Blue'],
-    hint: 'The pattern repeats every 3 lights. Which numbers are always red?',
+    hint: 'Hint: the pattern repeats every 3 lights.',
     parentHint:
       'Reds land on 1, 4, 7 — every third one starting at 1. 9 is not in that set, so it is blue. '
       + 'Counting the repeat out loud finds it faster than any rule.',
-    success: 'Correct — reds are at 1, 4 and 7, so the 9th light is blue.',
-    doneMessage: 'A box of spare parts is left at the school steps. Good thinking!',
+    success: 'Correct. Reds come every 3rd. Light 9 is blue.',
+    doneMessage: 'Good thinking! A box of spare parts.',
   },
 
   bonus_place_value: {
     subject: 'Making numbers',
     difficulty: 'Level 1 • Kangaroo digits',
-    prompt: 'Zara writes a number with two digits on the balloon. The two digits add up to 5. She makes the number as BIG as she can. What number did she write?',
+    prompt: 'Two digits add to 5. Make it as big as you can.',
     visual: {
       rows: [
         { label: 'Digits', tiles: ['?', '+', '?', '=', '5'], arrow: true },
@@ -260,44 +228,40 @@ export const LEVEL1_QUESTIONS = {
       ],
     },
     choices: [
-      { text: '50', correct: true },
-      { text: '41' },
-      { text: '32' },
       { text: '14' },
+      { text: '50', correct: true },
+      { text: '32' },
     ],
-    hint: 'To make the number big, make the FIRST digit as big as you can.',
+    hint: 'Hint: make the first digit as big as you can.',
     parentHint:
-      'All four options have digits summing to 5. The insight is that the tens digit is worth more '
+      'All the options have digits summing to 5. The insight is that the tens digit is worth more '
       + 'than the ones digit, so pile everything into it: 5 and 0.',
-    success: 'Correct, 50! The first digit counts for more. So make it as big as you can.',
+    success: 'Correct! 50. The first digit counts for more.',
     title: '★ Bonus: Balloon Numbers',
-    doneMessage: 'A helper at the school leaves you a few gems.',
+    doneMessage: 'A helper leaves you some gems.',
   },
 
   bonus_mass: {
     subject: 'Heavy and light',
     difficulty: 'Level 1 • heavy and light',
-    prompt:
-      'Three crates sit on the dock. The RED crate is heavier than the BLUE crate. ' +
-      'The BLUE crate is heavier than the GREEN crate. Which crate is the lightest?',
+    prompt: 'Red is heavier than blue, and blue than green. Which is lightest?',
     choices: [
+      { text: 'The red crate' },
       { text: 'The green crate', correct: true },
       { text: 'The blue crate' },
-      { text: 'The red crate' },
-      { text: 'They all weigh the same' },
     ],
-    hint: 'Put them in a line, heaviest first. Which one ends up at the very end?',
+    hint: 'Hint: put them in a line, heaviest first.',
     parentHint:
       'Chained comparison — if red > blue and blue > green, the order is forced. Lining up three '
       + 'objects by hand is the way in at this age.',
-    success: 'Correct — red, then blue, then green. Green is at the light end.',
-    doneMessage: 'A man at the Lab nods and leaves some iron by the fire.',
+    success: 'Correct. Red, then blue, then green. Green is lightest.',
+    doneMessage: 'A man leaves some iron by the fire.',
   },
 
   bonus_volume: {
     subject: 'Equal groups',
     difficulty: 'Level 1 • skip counting',
-    prompt: 'Zara fills the tank with a cup. Each cup holds 2 litres. She pours in 5 full cups. How many litres are in the tank?',
+    prompt: 'Each cup holds 2 litres. Pour in 5 cups. How many litres?',
     visual: {
       rows: [
         { label: '1 cup', tiles: ['2 L'], arrow: true },
@@ -306,18 +270,16 @@ export const LEVEL1_QUESTIONS = {
       ],
     },
     answers: ['10', 'ten', '10 litres', 'ten litres', '10 liters', '10 L'],
-    hint: 'Count up in twos, once for each cup: 2, 4, 6, …',
+    hint: 'Hint: count up in twos, 5 times.',
     parentHint: 'Five twos. Skip counting is the grade-1 road to multiplication.',
-    success: 'Correct — 2, 4, 6, 8, 10. Five cups of 2 litres is 10 litres.',
-    doneMessage: 'The tank light blinks green. A helper leaves some fuel by the door.',
+    success: 'Correct. 2, 4, 6, 8, 10. That is 10 litres.',
+    doneMessage: 'The tank light blinks green. Fuel is ready!',
   },
 
   bonus_division: {
     subject: 'Sharing into groups',
     difficulty: 'Level 1 • grouping',
-    prompt:
-      'Zara has 12 bolts. She puts them into boxes, and every box holds exactly 4 bolts. ' +
-      'How many boxes does she fill?',
+    prompt: 'Zara has 12 bolts. Each box holds 4. How many boxes?',
     visual: {
       rows: [
         { label: 'Bolts', tiles: ['12'], arrow: true },
@@ -326,74 +288,69 @@ export const LEVEL1_QUESTIONS = {
       ],
     },
     answers: ['3', 'three', '3 boxes', 'three boxes'],
-    hint: 'Take away 4 at a time: 12, 8, 4, 0. How many times did you take some away?',
+    hint: 'Hint: take away 4 at a time until 0.',
     parentHint:
       'This is division asked the grouping way ("how many boxes?") rather than the sharing way '
       + '("how many each?"). Both are 12 ÷ 4, and meeting both is worth a lot later.',
-    success: 'Correct — 3 boxes. 12 take away 4, three times over, lands on 0.',
-    doneMessage: 'The four tanks fill up the same. A helper gives Zara a thumbs up!',
+    success: 'Correct. 4, 8, 12: that makes 3 boxes.',
+    doneMessage: 'The four tanks fill up. Great job!',
   },
 
   bonus_shape: {
     subject: 'Shape and air',
     difficulty: 'Level 1 • predict',
-    prompt: 'Four rockets are the same, but their noses are different. Which nose goes through the air most easily?',
+    prompt: 'Four rockets have different noses. Which slides through air best?',
     choices: [
-      { text: 'A smooth pointed nose', correct: true },
-      { text: 'A flat square nose' },
-      { text: 'A nose shaped like an open cup' },
-      { text: 'A wide bumpy nose' },
+      { text: 'Flat square nose' },
+      { text: 'Smooth pointed nose', correct: true },
+      { text: 'Wide bumpy nose' },
     ],
-    hint: 'Think about which shape has to shove the most air out of the way.',
+    hint: 'Hint: which nose pushes the least air?',
     parentHint:
       'Pointed shapes part the air instead of pushing it. Ask which one she would rather push '
       + 'through water — same idea, easier to picture.',
-    success: 'Correct. A point slides the air aside. A flat face has to push all the air.',
-    doneMessage: 'Smoke slides past the card. A helper leaves some wood to say thanks.',
+    success: 'Correct. A pointed nose slides the air aside.',
+    doneMessage: 'Smoke slides past. A helper leaves wood.',
   },
 
   bonus_forces: {
     subject: 'Balanced forces',
     difficulty: 'Level 1 • thinking',
-    prompt:
-      'Two teams play tug of war. Each team pulls exactly as hard as the other. ' +
-      'What happens to the rope?',
+    prompt: 'Two teams pull a rope equally hard. What happens?',
     choices: [
-      { text: 'It does not move at all', correct: true },
-      { text: 'It moves slowly to the left' },
-      { text: 'It moves slowly to the right' },
-      { text: 'It goes faster and faster' },
+      { text: 'Moves left' },
+      { text: 'Does not move', correct: true },
+      { text: 'Moves right' },
     ],
-    hint: 'Two pushes that are equal and opposite cancel each other out.',
+    hint: 'Hint: equal pulls the opposite way cancel out.',
     parentHint:
       'Balanced forces produce no change in motion. The rope being still does not mean no force — '
       + 'it means the forces are equal, which is a genuinely deep idea.',
-    success: 'Correct. The two pulls are the same, and they pull opposite ways. So nothing moves!',
-    doneMessage: 'The board says READY. A scientist leaves some spare circuits on the bench.',
+    success: 'Correct. Equal pulls cancel out. Nothing moves!',
+    doneMessage: 'The board says READY. Spare circuits for you.',
   },
 
   bonus_states: {
     subject: 'States of matter',
     difficulty: 'Level 1 • observe and name',
-    prompt: 'Zara heats a pan of water. Steam rises off it. What happened to the water?',
+    prompt: 'Zara heats water. Steam rises. What happened to the water?',
     choices: [
-      { text: 'A liquid turned into a gas', correct: true },
-      { text: 'A gas turned into a liquid' },
-      { text: 'A solid turned into a liquid' },
-      { text: 'Nothing changed at all' },
+      { text: 'Gas to liquid' },
+      { text: 'Liquid to gas', correct: true },
+      { text: 'Nothing changed' },
     ],
-    hint: 'Water you can pour is a liquid. Steam floats away — what is that?',
+    hint: 'Hint: pourable water is a liquid.',
     parentHint:
       'Liquid to gas is evaporation. The kettle is the demonstration, and naming the two states is '
       + 'the whole task here.',
-    success: 'Correct. The water turned into a gas. Rocket fuel does that when it burns.',
-    doneMessage: 'The board changes from LIQUID to GAS. A helper gives Zara some gems to say thanks.',
+    success: 'Correct. The water turned into a gas, like steam.',
+    doneMessage: 'Board says LIQUID to GAS. Here are gems!',
   },
 
   bonus_ratio: {
     subject: 'Groups and ratio',
     difficulty: 'Level 1 • repeated groups',
-    prompt: 'The fuel recipe is 1 scoop of POWDER for every 2 scoops of WATER. Zara uses 4 scoops of powder. How many scoops of water does she need?',
+    prompt: '1 powder needs 2 water. Zara uses 4 powder. How much water?',
     visual: {
       rows: [
         { label: 'Rule', tiles: ['1 powder', '=', '2 water'], arrow: true },
@@ -402,76 +359,71 @@ export const LEVEL1_QUESTIONS = {
       ],
     },
     answers: ['8', 'eight', '8 scoops', 'eight scoops'],
-    hint: 'Each scoop of powder needs two of water. Count the water in twos: 2, 4, …',
+    hint: 'Hint: count the water in 2s, 4 times.',
     parentHint: 'Four groups of two. Same shape as the fuel mixture question, bigger numbers.',
-    success: 'Correct — 4 scoops of powder means 4 pairs of water, so 8.',
+    success: 'Correct. 4 pairs of water make 8 scoops.',
     title: '★ Bonus: Mixing the Fuel',
-    doneMessage: 'A new drum of fuel rolls onto the rack. A helper nods. Good job!',
+    doneMessage: 'A new drum of fuel arrives. Good job!',
   },
 
   bonus_angle: {
     subject: 'Turns',
     difficulty: 'Level 1 • Kangaroo turns',
-    prompt:
-      'Zara turns the steering fin a HALF turn. How many QUARTER turns is that?',
+    prompt: 'How many quarter turns make one whole turn?',
     visual: {
       rows: [
-        { label: 'Turn', tiles: ['½ turn'], arrow: true },
-        { label: 'Quarter turns?', tiles: ['?'] },
+        { label: 'Quarter turns', tiles: ['↻', '↻', '↻', '↻'], arrow: true },
+        { label: 'Whole turn?', tiles: ['?'] },
       ],
     },
     choices: [
-      { text: '2', correct: true },
-      { text: '1' },
       { text: '3' },
-      { text: '4' },
+      { text: '4', correct: true },
+      { text: '2' },
     ],
-    hint: 'Four quarter turns make a whole turn. So how many make half of one?',
+    hint: 'Hint: count the quarter turns as you go round.',
     parentHint:
-      'Halves and quarters on a turn instead of on a cake. If she knows two quarters make a half, '
-      + 'she already has it.',
-    success: 'Correct — two quarter turns make a half turn.',
-    doneMessage: 'The fin turns into place. An engineer leaves some spare circuits for you.',
+      'Turns on a circle instead of on a cake. Four quarter turns go all the way round, so '
+      + 'counting them as she turns is the whole answer.',
+    success: 'Correct. Four quarter turns make one whole turn.',
+    doneMessage: 'The fin turns into place. Spare circuits!',
   },
 
   bonus_gravity: {
     subject: 'Gravity',
     difficulty: 'Level 1 • predict',
-    prompt: 'On the Moon, gravity pulls much less than on Earth. If Zara jumps as hard as she can on the Moon, what happens?',
+    prompt: 'On the Moon, Zara jumps as high as she can. What happens?',
     choices: [
-      { text: 'She goes much higher than on Earth', correct: true },
-      { text: 'She does not get off the ground' },
-      { text: 'She goes exactly as high as on Earth' },
-      { text: 'She floats away and never comes down' },
+      { text: 'Just as high' },
+      { text: 'Stays down' },
+      { text: 'Much higher', correct: true },
     ],
-    hint: 'Less pull down means her jump carries her further up.',
+    hint: 'Hint: less pull means a higher jump.',
     parentHint:
       'Worth heading off the last option: Moon gravity is weaker, not absent — she still comes '
       + 'back down, just slowly.',
-    success: 'Correct. A weaker pull means the same jump goes much higher.',
-    doneMessage: 'The telescope turns to the Moon. A sky watcher gives Zara some gems.',
+    success: 'Correct. Less pull means she goes higher.',
+    doneMessage: 'The telescope turns to the Moon. Gems!',
   },
 
   bonus_liftoff_mass: {
-    subject: 'Two-step counting',
-    difficulty: 'Level 1 • Kangaroo two-step',
-    prompt:
-      'Zara loads 3 boxes onto the rocket. Each box holds 4 bolts. ' +
-      'Then she takes 2 bolts back out to save weight. How many bolts are on the rocket now?',
+    subject: 'Taking away',
+    difficulty: 'Level 1 • taking away',
+    prompt: '12 bolts. Zara takes 2 away. How many are left?',
     visual: {
       rows: [
-        { label: 'Boxes', tiles: ['4 bolts', '4 bolts', '4 bolts'], arrow: true },
-        { label: 'Takes out', tiles: ['− 2 bolts'], arrow: true },
-        { label: 'On board', tiles: ['?'] },
+        { label: 'Start', tiles: ['12 bolts'], arrow: true },
+        { label: 'Takes away', tiles: ['− 2'], arrow: true },
+        { label: 'Left?', tiles: ['?'] },
       ],
     },
     answers: ['10', 'ten', '10 bolts', 'ten bolts'],
-    hint: 'First count all the bolts in the boxes. THEN take 2 away.',
+    hint: 'Hint: start at 12, then count back 2.',
     parentHint:
-      'Two steps in order — 3 groups of 4, then subtract 2. Doing the subtraction first gives 10 '
-      + 'as well by luck here, so ask her to say which she did and why.',
-    success: 'Correct — 4, 8, 12 bolts in the boxes, then take 2 away leaves 10.',
-    doneMessage: 'The crew weighs the rocket. Zara was right! They leave two spare rocket parts.',
+      'One step, a take-away within twenty. Ask her to count back from 12 on her fingers and say '
+      + 'where she stops.',
+    success: 'Correct. 12 take away 2 leaves 10.',
+    doneMessage: 'The crew weighs the rocket. Zara was right!',
   },
 };
 

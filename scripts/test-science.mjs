@@ -95,11 +95,11 @@ ok(!pick(q4.force, 'The sky pulled the ball forward.') && !pick(q4.energy, 'Only
 eq([q4.m1, q4.m2, q4.m3, q4.key, q4.force, q4.energy].map((q) => q.reward.science), [2, 2, 3, 4, 3, 4], 'L4 rewards');
 
 ok(text(q1.m1, '8') && text(q1.m1, 'eight') && !text(q1.m1, '6'), 'L1 m1 = 8');
-ok(text(q1.m2, '24') && text(q1.m2, 'twenty-four') && text(q1.m2, 'twenty four') && !text(q1.m2, '16'), 'L1 m2 = 24');
+ok(text(q1.m2, '11') && text(q1.m2, 'eleven') && !text(q1.m2, '9'), 'L1 m2 = 11');
 ok(text(q1.m3, '6') && text(q1.m3, 'six') && !text(q1.m3, '5'), 'L1 m3 = 6');
 ok(text(q1.key, '63') && text(q1.key, 'sixty-three') && text(q1.key, 'Sixty Three') && !text(q1.key, '36'), 'L1 key = 63');
 ok(pick(q1.force, 'To the right →'), 'L1 force answer');
-ok(pick(q1.energy, 'Plant A near the sunny window.'), 'L1 energy answer');
+ok(pick(q1.energy, 'Plant A (sunny)'), 'L1 energy answer');
 eq([q1.m1, q1.m2, q1.m3, q1.key, q1.force, q1.energy].map((q) => q.reward.science), [3, 3, 4, 5, 3, 4], 'L1 rewards');
 ok(q1.m1.title !== q4.m1.title && q1.energy.title !== q4.energy.title, 'levels have different wording');
 ok(q1.m1.visual.rows[1].tiles.length === 4 && q1.m2.visual.rows[0].tiles.length === 9, 'L1 visuals keep their tiles');
