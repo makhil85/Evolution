@@ -91,7 +91,7 @@ ok(pick(q4.power, 'Same toy car, same floor, same starting line'), 'L4 power ans
 ok(pick(q4.solar, 'West, away from the Sun'), 'L4 solar answer');
 ok(pick(q4.magnet, 'The magnet attracts some metals, especially iron or steel'), 'L4 magnet answer');
 
-ok(text(q1.water, '14') && text(q1.water, 'fourteen') && !text(q1.water, '12'), 'L1 water = 14');
+ok(text(q1.water, '6') && text(q1.water, 'six') && !text(q1.water, '12'), 'L1 water = 6');
 ok(pick(q1.gear, 'Clockwise ↻'), 'L1 gear = Clockwise');
 ok(pick(q1.power, 'A only'), 'L1 power = A only');
 ok(pick(q1.tile, 'Circle ○'), 'L1 tile = Circle');
