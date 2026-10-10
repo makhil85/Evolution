@@ -263,14 +263,43 @@ function filmMarkers(on) {
   nav.setBeacon(on ? false : mode.targetBeacon);
 }
 
+/**
+ * A structure rising on her spot would close round her, and its walls would
+ * hold her inside. Move her to the nearest free ground just outside its
+ * footprint, facing the building. A quick step, not a walk.
+ */
+function clearOfStructure(target) {
+  const fp = world.siteFootprint(target);
+  const p = player.position;
+  if (!fp || p.x < fp.minX || p.x > fp.maxX || p.z < fp.minZ || p.z > fp.maxZ) return;
+  // Four ways out (one per side), each a body's width clear of the wall, then wider.
+  let best = null;
+  let bestD = Infinity;
+  for (const m of [0.45, 0.9, 1.5]) {
+    for (const c of [
+      { x: fp.minX - m, z: p.z }, { x: fp.maxX + m, z: p.z },
+      { x: p.x, z: fp.minZ - m }, { x: p.x, z: fp.maxZ + m },
+    ]) {
+      const d = Math.hypot(c.x - p.x, c.z - p.z);
+      if (d < bestD && !world.blocked(c.x, c.z)) { best = c; bestD = d; }
+    }
+    if (best) break;
+  }
+  if (!best) return;
+  controller.teleport(best.x, world.heightAt(best.x, best.z), best.z);
+  player.rotation.y = Math.atan2((fp.minX + fp.maxX) / 2 - best.x, (fp.minZ + fp.maxZ) / 2 - best.z);
+}
+
 /** Raise a structure piece by piece, like the old game (330 ms a piece). */
 function riseStructure(target, pieces, doneMessage, questKey) {
   if (questKey) building.add(questKey);
   let n = 0;
+  clearOfStructure(target);
   rules.setBuilt(target, 0);
   world.setBuilt(target, 0);
   const timer = setInterval(() => {
     n += 1;
+    clearOfStructure(target);
     rules.setBuilt(target, Math.min(n, pieces));
     world.setBuilt(target, Math.min(n, pieces));
     refreshStaticShadows(sun);
@@ -420,6 +449,10 @@ async function main() {
   const p0 = rules.state.player && Number.isFinite(rules.state.player.x) ? rules.state.player : { x: START_TILE.tx, y: START_TILE.ty };
   const start = tileToWorld(p0.x, p0.y);
   controller.teleport(start.x, world.heightAt(start.x, start.z), start.z);
+  // The camera starts behind her looking north: she faces away from it (heading PI), not into the lens.
+  player.rotation.y = Math.PI;
+  // A saved structure that stands where she was saved would hold her inside it.
+  for (const target of Object.keys(rules.state.built)) clearOfStructure(target);
 
   newton = createNewtonTree({
     scene, at: newtonSpot(), heightAt: world.heightAt, level: LEVEL,
@@ -471,7 +504,7 @@ async function main() {
   document.getElementById('boot')?.classList.add('done');
   window.__city = {
     scene, renderer, camera, world, rules, controller, hud, avatar, player, THREE, interact, nearestUsable, newton,
-    nav, miner, hunt, nextObjective, applyMode, getMode: () => mode, emotes, filmMarkers,
+    nav, miner, hunt, nextObjective, applyMode, getMode: () => mode, emotes, filmMarkers, clearOfStructure,
   };
   say(`Chapter 2 ready - Level ${LEVEL}`);
   // Unlock mode only: the grown-up "Jump" panel.
@@ -547,12 +580,12 @@ let elapsed = 0;
 let lastNear = '';
 function tick(dt) {
   elapsed += dt;
-  // A reading pause (a line on screen, the OK card) freezes her walk and the game's own
-  // timers (nav, mining, the tools, the apple); the ambient world and camera keep dt.
-  const gdt = hud && hud.isReadPaused() ? 0 : dt;
+  // A line on screen (a toast, the read card) stays up its reading time but freezes nothing:
+  // she walks, mines and uses the tools while it shows (lead 2026-10-09).
+  const gdt = dt; // a line on screen no longer stops the game (lead 2026-10-09): she plays on while it shows
   let motion = null;
   if (controller) {
-    motion = controller.step(gdt, emotes ? emotes.input(readInput(), gdt) : readInput());
+    motion = controller.step(dt, emotes ? emotes.input(readInput(), dt) : readInput());
     if (!story?.update(dt)) updateCamera(dt);
   }
   if (avatar) avatar.update(dt, motion);

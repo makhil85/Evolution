@@ -336,6 +336,8 @@ export async function buildCityWorld({ scene, level = 4, renderer, shadowExtent 
     root,
     heightAt,
     blocked,
+    /** The footprint a structure closes once it stands (the box `blocked` uses), or null (bridge, unknown). */
+    siteFootprint: (target) => siteRects.find((r) => r.id === target) || null,
     setBuilt,
     setStationVisible,
     setBridgeLock,

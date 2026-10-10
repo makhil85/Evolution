@@ -381,6 +381,8 @@ async function main() {
   const p0 = rules.state.player && Number.isFinite(rules.state.player.x) ? rules.state.player : { x: START_TILE.tx, y: START_TILE.ty };
   const start = tileToWorld(p0.x, p0.y);
   controller.teleport(start.x, world.heightAt(start.x, start.z), start.z);
+  // The camera starts behind her looking north: she faces away from it (heading PI), not into the lens.
+  player.rotation.y = Math.PI;
 
   hud = createHud({ mount: document.body, title: 'Chapter 1 - Science Village', resourceRows: RESOURCE_ROWS, missionGoal: 'Build the Science Center.', rank: false, signpostKey: false });
   // Two wrong tries on a question (lead rule): the chapter starts again.
@@ -525,12 +527,12 @@ let elapsed = 0;
 let lastNear = '';
 function tick(dt) {
   elapsed += dt;
-  // A reading pause (a line on screen, the OK card) freezes her walk and the game's own
-  // timers (nav, mining, the tools); the ambient world and camera keep dt.
-  const gdt = hud && hud.isReadPaused() ? 0 : dt;
+  // A line on screen (a toast, the read card) stays up its reading time but freezes nothing:
+  // she walks, mines and uses the tools while it shows (lead 2026-10-09).
+  const gdt = dt; // a line on screen no longer stops the game (lead 2026-10-09): she plays on while it shows
   let motion = null;
   if (controller) {
-    motion = controller.step(gdt, emotes ? emotes.input(readInput(), gdt) : readInput());
+    motion = controller.step(dt, emotes ? emotes.input(readInput(), dt) : readInput());
     if (!story?.update(dt)) updateCamera(dt);
   }
   if (avatar) avatar.update(dt, motion);
