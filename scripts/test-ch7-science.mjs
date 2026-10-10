@@ -239,7 +239,8 @@ ok('every question is a number question on act 3, with answers, a hint and a par
       assert.equal(q.type, 'text');
       assert.equal(q.act, 3, id);
       assert.ok(q.answers.length >= 1 && q.hint && q.prompt && q.success, `${id} fields at Level ${level}`);
-      assert.ok(q.prompt.includes('(Type a number.)'), `${id} says to type a number`);
+      // Level 1 drops the suffix to save words: the answer box already takes a typed number
+      if (level === 4) assert.ok(q.prompt.includes('(Type a number.)'), `${id} says to type a number`);
     }
   }
 });
@@ -271,7 +272,8 @@ ok('bones: Level 4 says the loss is with no exercise (the no-exercise rate); Lev
   assert.doesNotMatch(q1.prompt, /%|percent/);
   assert.match(q1.prompt, /blocks/);
   assert.match(q1.prompt, new RegExp(`${L.BONES.blocks.start} bone blocks`));
-  assert.match(q1.prompt, new RegExp(`lose ${L.BONES.blocks.lossBlocks[0]} blocks each month`));
+  assert.match(q1.prompt, new RegExp(`lose ${L.BONES.blocks.lossBlocks[0]} each month`));
+  assert.match(q1.prompt, /How many blocks after 3 months\?/);
   assert.deepEqual(q1.answers.slice(0, 1), [String(L.blocksLeft([0, 0, 0]))]);
 });
 ok('no hint gives its answer as a number (the parent hint may)', () => {
