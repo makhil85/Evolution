@@ -955,12 +955,13 @@ function tick(dt, now = performance.now()) {
   if (effects) effects.update();
   if (village) village.update(elapsed);
   if (villagers) villagers.update(dt, elapsed);
-  if (nameSigns) nameSigns.update(player.position, camera.position);
+  const goalSpot = playMode.navArrow || playMode.targetBeacon ? objective() : null;
+  if (nameSigns) nameSigns.update(player.position, camera.position, camera, goalSpot);
   if (pickups) pickups.update(gameTime, player.position);
   if (miner) miner.update(gdt);
   if (tools) tools.update(gdt);
   if (nav) {
-    nav.setTarget(playMode.navArrow || playMode.targetBeacon ? objective() : null);
+    nav.setTarget(goalSpot);
     nav.update(gdt, player.position);
   }
   if (stations) {

@@ -127,6 +127,7 @@ let miner = null;
 let hunt = null;
 let modeChip = null;
 let navTimer = 0;
+let navGoal = null; // the target the arrow shows (its sign is kept on screen first)
 let filming = false;        // a film is playing: no name tags, beacons, glows, arrow or E hint
 
 const RESOURCE_ROWS = [
@@ -593,7 +594,7 @@ function tick(dt) {
   if (avatar) avatar.update(dt, motion);
   if (nav && world && rules) {
     navTimer -= gdt;
-    if (navTimer <= 0) { navTimer = 0.2; nav.setTarget(currentTarget()); }
+    if (navTimer <= 0) { navTimer = 0.2; navGoal = currentTarget(); nav.setTarget(navGoal); }
     nav.update(gdt, player.position);
   }
   if (miner) miner.update(gdt);
@@ -601,6 +602,7 @@ function tick(dt) {
   if (tools) tools.update(gdt);
   if (world) {
     world.update(dt, elapsed, player.position, camera.position);
+    world.fitLabels(camera, navGoal);
     const n = !filming && rules && nearestUsable(player.position.x, player.position.z);
     const key = n ? `${n.kind}:${n.id}` : '';
     if (key !== lastNear) {

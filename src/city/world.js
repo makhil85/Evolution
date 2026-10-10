@@ -23,6 +23,7 @@ import { buildTown, buildStations, buildLock } from './worldTown.js';
 import { buildSites, buildQuay, P } from './worldSites.js';
 import { buildPickups, buildNpcs } from './worldPeople.js';
 import { makeLabel, makePanel } from './worldKit.js';
+import { fitLabels } from '../game/labelFit.js';
 import { buildPickupGlow, buildKeyBlock } from './worldPlay.js';
 
 const DECK_TOP = 0.165; // the planks' top (measured), so her feet rest on them
@@ -356,7 +357,7 @@ export async function buildCityWorld({ scene, level = 4, renderer, shadowExtent 
         a *= THREE.MathUtils.clamp((dc - 4) / 3, 0, 1);
       }
       sprite.material.opacity = a;
-      sprite.visible = labelsOn && !hide && a > 0.02;
+      sprite.userData.want = labelsOn && !hide && a > 0.02;
     }
   }
 
@@ -399,5 +400,7 @@ export async function buildCityWorld({ scene, level = 4, renderer, shadowExtent 
     stats: () => ({ counts: scenery.counts, solids: scenery.solids.length }),
     /** Show / hide every floating sign (for clean screenshots). */
     setLabelsVisible: (v) => { labelsOn = v; },
+    /** Show the wanted name signs that fit (labelFit.js): off the HUD, not cut, not on each other. */
+    fitLabels: (camera, goal) => fitLabels(labels, camera, goal),
   };
 }

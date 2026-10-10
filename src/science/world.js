@@ -18,6 +18,7 @@ import {
 import { MAP_W, MAP_H, SCIENCE_CENTER_PIECES, tileToWorld, worldToTile, inMap } from './contracts.js';
 import { KEY_GATE, IRON_ROOM, isRoomWall, BUILD_TILE, START_TILE, PICKUPS } from './layout.js';
 import { makeLabel } from '../city/worldKit.js';
+import { fitLabels } from '../game/labelFit.js';
 import { buildPickupGlow, buildKeyBlock } from '../city/worldPlay.js';
 import { buildGround } from './worldGround.js';
 import { buildVillage, buildWell, buildStations } from './worldTown.js';
@@ -312,7 +313,7 @@ export async function buildScienceWorld({ scene, level = 4, renderer, shadowExte
         a *= THREE.MathUtils.clamp((dc - 4) / 3, 0, 1);
       }
       sprite.material.opacity = a;
-      sprite.visible = labelsOn && !hide && a > 0.02;
+      sprite.userData.want = labelsOn && !hide && a > 0.02;
     }
   }
 
@@ -344,6 +345,8 @@ export async function buildScienceWorld({ scene, level = 4, renderer, shadowExte
     stationPosition: (q) => { const s = stations.get(q); return s ? { x: s.x, z: s.z } : null; },
     pickupPosition: (id) => trees.position(Number(id)) || items.position(Number(id)),
     setLabelsVisible: (v) => { labelsOn = v; },
+    /** Show the wanted name signs that fit (labelFit.js): off the HUD, not cut, not on each other. */
+    fitLabels: (camera, goal) => fitLabels(labels, camera, goal),
     // --- additions beyond the plan -------------------------------------------------
     gatePosition: { x: room.x, z: room.z },
     foundationPosition: center.site.buildPos,
