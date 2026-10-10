@@ -49,7 +49,7 @@ function make(id, spec) {
 
 const LEVEL4 = {
   m1: make('m1', {
-    title: 'Medium Puzzle 1 — Wood Carts',
+    title: 'Puzzle 1 — Wood Carts',
     text: 'Four carts carry logs. Each cart after the first has 2 more logs than the cart before it. Altogether there are 44 logs. How many logs are in the LAST cart?',
     answers: ['14'],
     hint: 'Hint: write four boxes, each 2 more than the one before. Guess the first cart, fill in the rest, and check whether the total is 44.',
@@ -58,7 +58,7 @@ const LEVEL4 = {
     reward: 2,
   }),
   m2: make('m2', {
-    title: 'Medium Puzzle 2 — Stone Rows',
+    title: 'Puzzle 2 — Stone Rows',
     text: 'A stone path has 5 rows. Row 1 has 2 stones, row 2 has 4, row 3 has 6, and the pattern continues. How many stones are in all 5 rows?',
     answers: ['30'],
     hint: 'Hint: the row sizes are even numbers. List all 5 rows first: 2, 4, 6, 8, __. Then add them.',
@@ -67,7 +67,7 @@ const LEVEL4 = {
     reward: 2,
   }),
   m3: make('m3', {
-    title: 'Medium Puzzle 3 — Science Filter',
+    title: 'Puzzle 3 — Science Filter',
     text: 'A scientist keeps numbers from 1 to 9. She removes every even number and every multiple of 3. What is the sum of the numbers left?',
     answers: ['13'],
     hint: 'Hint: start with 1,2,3,4,5,6,7,8,9. Cross out even numbers. Then cross out 3, 6, and 9. Add what is left.',
@@ -114,7 +114,7 @@ const LEVEL4 = {
 
 const LEVEL1 = {
   m1: make('m1', {
-    title: 'Medium Puzzle 1 — Pattern Garden',
+    title: 'Puzzle 1 — Pattern Garden',
     text: 'Look at the rows. How many flowers are in Row 4?',
     rows: [
       { label: 'Row 1', tiles: ['🌸', '🌸'] },
@@ -129,7 +129,7 @@ const LEVEL1 = {
     reward: 3,
   }),
   m2: make('m2', {
-    title: 'Medium Puzzle 2 — Frog Jump Sum',
+    title: 'Puzzle 2 — Frog Jump Sum',
     text: 'The frog lands on 3, 5, 7, 9. What number comes next?',
     rows: [
       { label: '', tiles: ['🐸', '→', '3', '→', '5', '→', '7', '→', '9'] },
@@ -142,7 +142,7 @@ const LEVEL1 = {
     reward: 3,
   }),
   m3: make('m3', {
-    title: 'Medium Puzzle 3 — Science Sticker Boxes',
+    title: 'Puzzle 3 — Science Sticker Boxes',
     text: 'Look at the boxes. How many stickers are in Box B?',
     rows: [
       { label: 'Box C', tiles: ['4 stickers'] },

@@ -22,7 +22,7 @@ import { questionsFor } from './questions.js';
 
 const DEFAULT_MESSAGES = {
   4: 'Solve any 3 medium quests or the hard problem. Then the golden bridge lock at the moat opens. The bridge puzzle builds 5 planks.',
-  1: '3 medium quests or the hard one. Then the gold lock at the moat opens.',
+  1: 'Solve 3 puzzles to open the bridge. Then the gold lock at the moat opens.',
 };
 
 /** Old collect() labels, by pickup type. */
@@ -48,21 +48,21 @@ const BADGE_LABELS = [
   ['key', 'Hard Route'],
 ];
 
-/** Names used in the "Medium option" mission lines: the quest titles at each Level. */
+/** Names used in the "next puzzle" mission lines: the quest titles at each Level. */
 const MEDIUM_OPTION_TEXT = {
   1: {
-    water: 'Medium: Water Wheel Drops',
-    gear: 'Medium: Five Gears',
-    power: 'Medium: Light the Bulb',
-    tile: 'Medium: Shape Grid',
+    water: 'Water Wheel Drops',
+    gear: 'Five Gears',
+    power: 'Light the Bulb',
+    tile: 'Shape Grid',
   },
   4: {
-    water: 'Medium: Water Tower Pattern',
-    gear: 'Medium: Gear Tooth Pattern',
-    power: 'Medium: Fair Battery Test',
-    tile: 'Medium: Shortest Path Count',
-    solar: 'Medium: Solar Shadow Lab',
-    magnet: 'Medium: Magnet Material Sort',
+    water: 'Water Tower Pattern',
+    gear: 'Gear Tooth Pattern',
+    power: 'Fair Battery Test',
+    tile: 'Shortest Path Count',
+    solar: 'Solar Shadow Lab',
+    magnet: 'Magnet Material Sort',
   },
 };
 
@@ -240,7 +240,7 @@ export function createCityRules({ level, storage } = {}) {
       return {
         ok: false,
         text: say(lvl === 1
-          ? 'The gold lock is closed. Solve the hard one or 3 medium quests.'
+          ? 'The gold lock is closed. Solve 3 puzzles to open it.'
           : 'The single golden bridge lock is still closed. Solve the hard Olympiad problem or any 3 medium Olympiad quests first.'),
       };
     }
@@ -298,7 +298,7 @@ export function createCityRules({ level, storage } = {}) {
       return {
         ok: false,
         text: L('The workshop needs the unlocked bridge route first: solve the hard problem or any 3 medium quests, then solve the 5-plank bridge puzzle.',
-          'Workshop needs the bridge. First the hard one or 3 mediums, then the bridge puzzle.'),
+          'Workshop needs the bridge. First solve 3 puzzles, then the bridge puzzle.'),
         missing: [],
       };
     }
@@ -350,9 +350,9 @@ export function createCityRules({ level, storage } = {}) {
   function missionLines() {
     const next = [];
     if (!bridgeUnlocked()) {
-      next.push(L(`Open the bridge: solve any 3 medium quests (${mediumSolvedCount()}/3) or the hard one.`, `Open bridge: 3 medium (${mediumSolvedCount()}/3) or the hard one.`));
+      next.push(L(`Open the bridge: solve any 3 medium quests (${mediumSolvedCount()}/3) or the hard one.`, `Solve 3 puzzles to open the bridge (${mediumSolvedCount()}/3).`));
       for (const m of mediums) if (!state.solved[m]) next.push(MEDIUM_OPTION_TEXT[lvl][m]);
-      if (!state.solved.key) next.push('Hard: Blueprint Lock outside the moat');
+      if (!state.solved.key) next.push('Blueprint Lock outside the moat');
     }
     if (bridgeUnlocked() && !state.solved.bridge) next.push(L('The golden lock at the moat is open: solve Bridge Builder for 5 planks.', 'The gold lock is open! Solve the bridge puzzle.'));
     if (state.solved.bridge && !state.builtFinal) next.push(L('Cross the bridge, collect resources and build the Engineering Workshop.', 'Cross the bridge. Get what you need. Build the Workshop.'));
@@ -383,7 +383,7 @@ export function createCityRules({ level, storage } = {}) {
     bridgeHint: () => (bridgeUnlocked()
       ? L('The bridge station is unlocked at the moat entrance. Solve it to place 5 planks.', 'The bridge puzzle is open at the water. Solve it to build the bridge.')
       : (lvl === 1
-        ? 'The gold lock is by the water. Solve the hard one or 3 medium quests.'
+        ? 'The gold lock is by the water. Solve 3 puzzles to open it.'
         : 'The single golden lock is at the 3-block-wide moat entrance. Solve the hard Olympiad problem or any 3 medium Olympiad quests first.')),
     workshopHint: L('The Engineering Workshop foundation is inside the corner moat. Unlock the bridge route, build 5 planks, collect resources, then build it.', 'The Workshop goes on the island. Build the bridge first.'),
   };

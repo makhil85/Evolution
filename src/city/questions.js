@@ -171,7 +171,7 @@ const LEVEL4 = {
 // Level 1 has no solar / magnet quests and its own wording.
 const LEVEL1 = {
   water: make('water', {
-    title: 'Medium Quest 1 — Water Wheel Drops',
+    title: 'Quest 1 — Water Wheel Drops',
     text: 'One turn takes 3 drops. How many drops in 2 turns?',
     rows: [
       { label: '1 turn', tiles: ['💧', '💧', '💧'] },
@@ -185,7 +185,7 @@ const LEVEL1 = {
     reward: { energy: 3, blueprints: 1, science: 2 },
   }),
   gear: make('gear', {
-    title: 'Medium Quest 2 — Five Gears',
+    title: 'Quest 2 — Five Gears',
     text: 'Gear 1 turns clockwise. Gear 2 turns back. What about Gear 5?',
     rows: [
       { label: '', tiles: ['1 ↻', 'touch', '2 ?', 'touch', '3 ?', 'touch', '4 ?', 'touch', '5 ?'] },
@@ -197,7 +197,7 @@ const LEVEL1 = {
     reward: { metal: 6, blueprints: 1, science: 2 },
   }),
   power: make('power', {
-    title: 'Medium Quest 3 — Light the Bulb',
+    title: 'Quest 3 — Light the Bulb',
     text: 'Which path has no gaps? The bulb lights up there.',
     rows: [
       { label: 'A', tiles: ['battery → wire → bulb → wire → battery'] },
@@ -211,7 +211,7 @@ const LEVEL1 = {
     reward: { energy: 6, blueprints: 1, science: 2 },
   }),
   tile: make('tile', {
-    title: 'Medium Quest 4 — Shape Grid',
+    title: 'Quest 4 — Shape Grid',
     text: 'Each row has all three shapes. Which one is missing?',
     rows: [
       { label: '', tiles: ['○', '□', '△'] },

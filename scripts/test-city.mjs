@@ -332,7 +332,7 @@ for (const level of [1, 4]) {
   eq(r.progress(), { pct: 0, status: level === 1 ? 'Build the Workshop' : 'Build the Engineering Workshop' }, `${tag}: progress at start`);
   let lines = r.missionLines();
   eq(lines.length, 3, `${tag}: 3 mission lines at start`);
-  ok(lines[0] === (level === 1 ? 'Open bridge: 3 medium (0/3) or the hard one.' : 'Open the bridge: solve any 3 medium quests (0/3) or the hard one.'), `${tag}: first mission line`);
+  ok(lines[0] === (level === 1 ? 'Solve 3 puzzles to open the bridge (0/3).' : 'Open the bridge: solve any 3 medium quests (0/3) or the hard one.'), `${tag}: first mission line`);
   r.solveQuest(MEDIUM_QUESTS[level][0]);
   eq(r.progress().pct, 20, `${tag}: 1 medium = 20%`);
   r.solveQuest(MEDIUM_QUESTS[level][1]);

@@ -17,7 +17,7 @@ export const LEVEL1_QUESTIONS = {
   cadet_oath: {
     subject: 'How science works',
     difficulty: 'Level 1 • fair tests',
-    prompt: 'Two rockets, one with wings. Why keep the chair the same?',
+    prompt: 'Winged and plain rockets drop from one chair. Why the same chair?',
     choices: [
       { text: 'To finish faster' },
       { text: 'Only wings change', correct: true },
