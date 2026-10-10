@@ -756,3 +756,20 @@ lines are in place but not tuned.
 - Open: the starship flame on screen; crew and robots in Ch6 not checked; the oval cut-away hole in a green
   station tube; a 0.35 step on the Ch3 east-bridge bank; the touch Jump badge over the left arrow on foot;
   the Ch3 homes and wide views over budget; long success lines.
+
+## Session 2026-10-10 (evening): revert, Level 1 for 1st-2nd graders, piñata, Ch1-3 polish
+
+- **#55** reverted #52 (the ship walk's follow view hid her in the real Ch6 game). The lead dropped the
+  extra view.
+- **#56, #57** (and Ch4 / Ch7 PRs after them): Level 1 questions for a 6-7 year old: prompts of 12 words or
+  fewer, numbers to 20 with + or -, 2-3 short choices, short success lines. The rules are in the PR bodies.
+  The lead kept north/south (Ch3) and Voyager's 1977/1980 (Ch5).
+- **#58** Ch1 Level 1 ending: a playable piñata (a stick in her hand, Space/Enter/tap swings, 10 hits, a
+  counter, then a burst of candy). Hook: `window.__science.pinataHit()`.
+- **#59** Ch3 road edge eases into the bridge-end edge (no step on the banks).
+- **#60** Ch1-3 kid words (no "Medium"/"hard one" at Level 1, "+3 science", the chair question).
+- **#61** Ch1-3 floating labels fit (`labelFit.js`).
+- HUD declutter (Ch1-3) in its own PR: the goal shown once, the legend inside the Quest list, a short View
+  pill, solid panels, no pre-focused first choice.
+- PLAN.md is gone: the work list is `AGENT_HANDOFF.md` section 8; the hard-won lessons are section 12.
+

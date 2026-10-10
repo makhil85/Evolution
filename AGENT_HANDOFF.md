@@ -329,9 +329,14 @@ Small (one PR each):
 5. Level 1 tuning of Chapters 5-6 mini-games (`npm run reading`); a real-screen pass of the Ch6 walk and
    cutscenes.
 6. Open from 10-10: the starship flame on screen; crew and robots present in Ch6 (not checked); the oval
-   cut-away hole in a green station tube; a 0.35 step on the Ch3 east-bridge bank; the touch Jump badge
-   over the left arrow on foot; Ch3 homes (156 calls / 305k tris) and wide (171 / 331k) views over budget;
-   long question success lines.
+   cut-away hole in a green station tube; the touch Jump badge over the left arrow on foot; Ch3 homes
+   (156 calls / 305k tris) and wide (171 / 331k) views over budget, to split into 2-3 small PRs; long
+   question success lines. From the Ch1-3 play-test (10-10, not yet fixed): the Ch1 history film is a
+   small picture inside its card (fill the card at 16:9, `src/lesson/card.js`); wavy moire bands on the
+   Ch1-2 grass; the Ch2 film's "Press any key to skip" is tiny; a villager can stand between the camera
+   and her in Ch3. Level 1 lessons are not rewritten yet (lead: a short text to read, then a question
+   answered from it). The ship walk's extra "right behind her" view was tried twice and dropped by the
+   lead (#52 reverted in #55); don't re-add it without the lead asking.
 7. Open design questions (10-07): Sun dive at 4 Sun-widths (block it?); "Sun dive + 2 planets" was built as
    Jupiter-then-Sun (add a second planet?); the Sun dive wins at 10 t and 100 t (OK?).
 
@@ -621,4 +626,25 @@ From the PRs of 10-07 to 10-10. Read these before touching the same area.
 - Keys are ignored while a card or reading pause holds the game: wait for `_pausedBy` empty and no
   `playModal`, or drive state directly (`ship.angle`, `shipView.setThrottle`) to test drawing.
 - Ch2's opening film can hold the play lock for minutes there: test Ch1 or Ch3 first.
+
+**From the 10-10 evening PRs (#55-#61)**
+- *A view checked only in a lab broke the real game.* #52's follow view passed the ship lab and its tests but
+  hid the girl in the real Ch6 walk; reverted in #55. Rule: check every camera or scene change in the real
+  chapter page (`chapterN.html?unlock=all`, jump to the step), not just a lab page.
+- *A commit pushed after its PR merged never reached main.* The PLAN.md fold-in and this section sat on a
+  merged branch for a while. Rule: after pushing to a PR's branch, check the PR is still open; if it merged,
+  open a new PR.
+- *GitHub Pages deploys only `main`* (its environment rule): a `workflow_dispatch` on another branch fails.
+  Test a branch locally (`git checkout <branch>`, `npm run dev`). Don't deploy test builds to the live site
+  without the lead's OK.
+- *Killing by pattern killed the shell again* (a loop over /proc matching "node probe.mjs" matched its own
+  command line). Kill by PID only.
+- *The cloud machine is shared:* with 5 makers testing, a browser probe of a space chapter took over
+  15 minutes. Run browser checks when makers are idle, and stop leftover vite servers.
+- *Playable film beats* (the Ch1 piñata, #58): hold the film with `scene.holding(dt)` (chapterStory.js) and
+  read input on key-up, since the first Space keydown is swallowed by a card's `captureKeys`.
+- *Level 1 rewrites hit test pins:* tests pinned the old Level 1 numbers and words (120, "50 metres per
+  second"). Let the maker update Level 1 pins only, keeping each test checking something real.
+- *Floating labels* go through `src/game/labelFit.js` (#61): at most 4, nearest first, the goal first,
+  never under the HUD or each other. New Ch1-3 labels must join it.
 
