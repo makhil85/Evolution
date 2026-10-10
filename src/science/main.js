@@ -16,7 +16,7 @@ import { createEmotes } from '../game/emotes.js';
 import { guardContext } from '../game/contextGuard.js';
 import { createFrameMonitor } from '../game/frameMonitor.js';
 import { createChapterStory, heroName, confetti } from '../game/chapterStory.js';
-import { playOpening, playEnding } from './cutscenes.js';
+import { playOpening, playEnding, pinataHit } from './cutscenes.js';
 import { createHud } from '../game/hud.js';
 import { createNavArrow } from '../play/navArrow.js';
 import { createMiner } from '../play/mining.js';
@@ -432,6 +432,8 @@ async function main() {
     nav, miner, hunt, nextObjective, applyMode, getMode: () => mode, emotes,
     // Test hook: play the ending scene now (the Science Center's completion, without building it).
     playEnding: () => { story?.outro({ title: 'The Science Center is built!', line: 'Test: the ending.', next: null, scene: playEnding(cutCtx()) }); },
+    // Test hook: one press at the piñata (a swing; the tenth hit breaks it). Level 1 only.
+    pinataHit,
   };
   say(`Chapter 1 ready - Level ${LEVEL}`);
   // Unlock mode only: the grown-up "Jump" panel.

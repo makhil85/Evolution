@@ -200,6 +200,7 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
   let capNext;              // the caption waiting for capUntil (undefined: none)
   let settleWaiters = [];   // captionDone() callers
   let holdCamera = false;   // the film is over but its last caption is still up
+  let filmHolder = null;    // an outro scene that holds the film clock (scene.holding(dt)), see outro()
   function showCaption(text) {
     capShown = text || null;
     capUntil = capClock + (text ? readMs(text) / 1000 : 0);
@@ -262,6 +263,7 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
     capNext = undefined;
     capUntil = capClock;
     if (filmLocked) { unlockPlayInput(); filmLocked = false; }
+    filmHolder = null;
     document.body.classList.remove('cs-cinematic');
     bars.classList.remove('is-on');
     for (const n of nodes.splice(0)) { n.classList.remove('is-on'); setTimeout(() => n.remove(), 900); }
@@ -282,7 +284,8 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
       if (!shot && !holdCamera) return false;
       // The caption on screen has not had its time yet: the film waits, camera held.
       if (capNext !== undefined || !shot) return true;
-      shot.t += dt;
+      // A scene may hold the film's clock (Level 1's piñata waits for the kid); it still steps.
+      if (!filmHolder?.holding(dt)) shot.t += dt;
       shot.step(shot.t);
       return true;
     },
@@ -386,6 +389,9 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
      * @returns {Promise<'next'|'stay'>}
      */
     outro({ title, line, focus = null, next = null, scene = null }) {
+      // A scene object may hold the film clock and take some keys (holding, takesInput); see the piñata.
+      const holder = scene && typeof scene === 'object' && typeof scene.holding === 'function' ? scene : null;
+      filmHolder = holder;
       scene = asFilm(scene);
       begin();
       const after = () => {
@@ -450,18 +456,19 @@ export function createChapterStory({ camera, chasePose, getAvatar, getPlayerPos,
       };
       if (!scene) return after();
       // The film first: any key or click ends the film (the card still comes).
-      const hint = el('div', 'cs-skip is-on', 'Press any key to skip');
-      document.body.appendChild(hint);
+      // (A film that takes the keys has no skip hint: its own controls are the words on screen.)
+      const hint = holder ? null : el('div', 'cs-skip is-on', 'Press any key to skip');
+      if (hint) document.body.appendChild(hint);
       let armed = false;
       setTimeout(() => { armed = true; }, 1000);
-      const skipFilm = (e) => { if (!armed) return; e.stopPropagation(); if (e.type === 'keydown') e.preventDefault(); endRun(); };
+      const skipFilm = (e) => { if (!armed || holder?.takesInput?.(e)) return; e.stopPropagation(); if (e.type === 'keydown') e.preventDefault(); endRun(); };
       addEventListener('keydown', skipFilm, true);
       addEventListener('pointerdown', skipFilm, true);
       return (async () => {
         await playFilm(scene);
         removeEventListener('keydown', skipFilm, true);
         removeEventListener('pointerdown', skipFilm, true);
-        hint.remove();
+        hint?.remove();
         return after();
       })();
     },

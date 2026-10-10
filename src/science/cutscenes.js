@@ -20,6 +20,9 @@
 //   12.6-18.6 the villagers walk in from their homes and gather in front of her.
 //   18.6-29.8 the camera looks west down the road, over the bridge, to the far
 //          city (Chapter 2, Forces and Machines: bridges and gears).
+//   Level 1 only: at 17.6 (after the villagers gather) the film holds for a
+//          piñata she hits with a stick: ten hits (Space, Enter or a tap), then
+//          it bursts into candy and the road west goes on.
 //
 // Captions are timed so each one has its reading time (readMs, src/play/readTime.js)
 // before the next starts; chapterStory.js holds the film if a gap is too short.
@@ -454,11 +457,286 @@ export function playOpening(ctx) {
   };
 }
 
+// --- Level 1's piñata (the ending holds here until she has hit it ten times) --------
+
+const UP = new THREE.Vector3(0, 1, 0);
+const PINATA_R = 0.34;
+const HITS_TO_BREAK = 10;
+const SWING_LEAD = 0.31;     // the chop clip's strike comes 0.31 s into the swing (clips.js chopPose)
+const SWING_LEN = 0.4;       // a swing takes this long; a press during one queues one more
+const BREAK_HOLD = 2.4;      // the burst and fade after the last hit, then the film carries on
+const BITS = 90;             // candies (60) and confetti (30); 30 on reduced motion
+const GRAVITY = 9.8;
+const CANDY_COLORS = [0xff6b9a, 0x4dd0e1, 0xffd43b, 0x9be564, 0xb388ff];
+const _p = new THREE.Vector3();
+const _v = new THREE.Vector3();
+const _s = new THREE.Vector3();
+const _q = new THREE.Quaternion();
+const _b = new THREE.Quaternion();
+const _m = new THREE.Matrix4();
+
+/** The beat's words and key picture and the grown-up Skip: DOM, shown only during the beat. */
+function beatUi(onSkip) {
+  const css = document.createElement('style');
+  css.textContent = `
+@keyframes pn-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+.pn-count { position: fixed; left: 50%; top: 9vh; transform: translateX(-50%); z-index: 9001; pointer-events: none;
+  font: 800 clamp(30px, 5vw, 48px)/1 'Segoe UI', 'Trebuchet MS', system-ui, Arial, sans-serif; color: #fff; text-shadow: 0 2px 14px rgba(0,0,0,.6); }
+.pn-key { position: fixed; right: 6vw; top: 40vh; z-index: 9001; pointer-events: none; padding: 10px 18px; border-radius: 12px;
+  background: #fffdf7; color: #1d2433; font: 800 18px/1 'Segoe UI', 'Trebuchet MS', system-ui, Arial, sans-serif;
+  box-shadow: 0 6px 0 #b9b2a0, 0 10px 24px rgba(0,0,0,.35); animation: pn-pulse 1s ease-in-out infinite; }
+.pn-skip { position: fixed; right: 18px; bottom: calc(11vh + 12px); z-index: 9001; padding: 6px 12px; border: 0; border-radius: 10px;
+  background: rgba(5,7,13,.55); color: #c9d2e8; font: 600 13px/1 'Segoe UI', 'Trebuchet MS', system-ui, Arial, sans-serif; cursor: pointer; }`;
+  document.head.appendChild(css);
+  const count = document.createElement('div');
+  count.className = 'pn-count';
+  const key = document.createElement('div');
+  key.className = 'pn-key';
+  key.textContent = 'Space';
+  const skip = document.createElement('button');
+  skip.className = 'pn-skip';
+  skip.textContent = 'Skip';
+  skip.addEventListener('click', onSkip);
+  const nodes = [count, key, skip];
+  document.body.append(...nodes);
+  return {
+    count(n) { count.textContent = `${n} / ${HITS_TO_BREAK}`; },
+    show(on) { for (const n of nodes) n.style.display = on ? '' : 'none'; },
+    waiting(on) { key.style.display = on ? '' : 'none'; skip.style.display = on ? '' : 'none'; },
+    remove() { for (const n of nodes) n.remove(); css.remove(); },
+  };
+}
+
+/**
+ * The piñata: a spiky toon star-ball on a rope from a branch on a post, just in
+ * front of her, with a stick in her right hand. The film holds here (tick(dt)
+ * advances the beat's clock) until she has hit it ten times: a press (Space,
+ * Enter or a tap on the canvas) swings the stick, and the strike a moment in
+ * is a hit. Each hit wobbles it and throws a few candies; the tenth breaks it
+ * into three pieces and throws the rest. `hero` is her feet and `fwd` her
+ * facing (x, z). Nothing allocates per frame. Reduced motion: no sway.
+ */
+function buildPinata({ hero, fwd, avatar, reduced }) {
+  const group = new THREE.Group();
+  group.visible = false;
+  const gY = hero.y;
+  const side = new THREE.Vector3(fwd.z, 0, -fwd.x);
+  const at = (f, s, h) => new THREE.Vector3(hero.x + fwd.x * f + side.x * s, gY + h, hero.z + fwd.z * f + side.z * s);
+  const vel = (f, s, up) => new THREE.Vector3(fwd.x * f + side.x * s, up, fwd.z * f + side.z * s);
+  const A = at(1.0, 0, 1.71);   // the rope's top, on the branch (the piñata's centre hangs 0.76 below, at her stick-tip height)
+
+  // The post and the branch (still).
+  const wood = new Mesher({ outlineT: 0.03 });
+  const foot = at(2.1, -0.9, 0), top = at(2.1, -0.9, 2.1);
+  wood.cyl(0.075, 0.075, 2.1, foot.x, foot.y, foot.z, 0x8a5a34, { seg: 8 });
+  wood.tube(top.x, top.y, top.z, A.x, A.y, A.z, 0.05, 0x8a5a34, { seg: 6 });
+  group.add(wood.build());
+
+  // The rope and the piñata hang from A. The yaw turns local +z to her facing,
+  // and the sway swings the piñata in that plane, so the stick meets it head on.
+  const yaw = new THREE.Group();
+  yaw.position.copy(A);
+  yaw.rotation.y = Math.atan2(fwd.x, fwd.z);
+  const pend = new THREE.Group();
+  yaw.add(pend);
+  group.add(yaw);
+  const rope = new Mesher();
+  rope.tube(0, 0, 0, 0, -0.42, 0, 0.018, 0xd9b87a, { seg: 5 });
+  pend.add(rope.build());
+  const body = new THREE.Group();
+  body.position.y = -0.76;
+  body.name = 'pinataBody';
+  pend.add(body);
+
+  // Three pieces: the top half with three spikes, the bottom half with one, and two loose spikes.
+  const pink = new THREE.MeshToonMaterial({ color: 0xff7eb6, gradientMap: toonRamp, transparent: true });
+  const spikeMats = [0xffd43b, 0x4dd0e1, 0x9be564].map((c) => new THREE.MeshToonMaterial({ color: c, gradientMap: toonRamp, transparent: true }));
+  const cone = new THREE.ConeGeometry(0.11, 0.26, 8);
+  const spike = (x, y, z, mat) => {
+    const dir = new THREE.Vector3(x, y, z);
+    const m = new THREE.Mesh(cone, mat);
+    m.position.copy(dir).multiplyScalar(PINATA_R + 0.08);
+    m.quaternion.setFromUnitVectors(UP, dir);
+    return m;
+  };
+  const half = (thetaStart) => new THREE.Mesh(new THREE.SphereGeometry(PINATA_R, 16, 10, 0, Math.PI * 2, thetaStart, Math.PI / 2), pink);
+  const topPiece = new THREE.Group();
+  topPiece.add(half(0), spike(0, 1, 0, spikeMats[0]), spike(1, 0, 0, spikeMats[1]), spike(-1, 0, 0, spikeMats[2]));
+  const bottomPiece = new THREE.Group();
+  bottomPiece.add(half(Math.PI / 2), spike(0, -1, 0, spikeMats[0]));
+  const sidePiece = new THREE.Group();
+  sidePiece.add(spike(0, 0, 1, spikeMats[1]), spike(0, 0, -1, spikeMats[2]));
+  body.add(topPiece, bottomPiece, sidePiece);
+  const pieces = [
+    { obj: topPiece, v: vel(0.9, 0.5, 1.6), axis: new THREE.Vector3(0.3, 1, 0.2).normalize(), w: 6 },
+    { obj: bottomPiece, v: vel(0.5, -0.6, 0.9), axis: new THREE.Vector3(1, 0.2, 0.4).normalize(), w: -7 },
+    { obj: sidePiece, v: vel(0.2, 1.2, 2.1), axis: new THREE.Vector3(0, 0, 1), w: 9 },
+  ].map((p) => ({ ...p, p0: new THREE.Vector3(), q0: new THREE.Quaternion() }));
+
+  // The candies and confetti: one instanced mesh. Each bit has a throw speed, a spin and a colour,
+  // and is thrown (t0 = the beat's clock when it was thrown, from where) by a hit or by the break.
+  const rng = makeRng(91);
+  const count = reduced ? 30 : BITS;
+  const bitMat = new THREE.MeshToonMaterial({ color: 0xffffff, gradientMap: toonRamp, transparent: true });
+  const bits = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), bitMat, BITS);
+  bits.count = count;
+  bits.frustumCulled = false;
+  const scl = new Float32Array(BITS * 3);
+  const launch = new Float32Array(BITS * 3);
+  const base = new Float32Array(BITS * 4);
+  const spin = new Float32Array(BITS);
+  const t0 = new Float32Array(BITS).fill(-1);
+  const from = new Float32Array(BITS * 3);
+  const col = new THREE.Color();
+  for (let i = 0; i < BITS; i++) {
+    const confetti = i >= 60;   // the last 30 are flat confetti, the rest little sweets
+    const k = 0.8 + 0.4 * rng();
+    _s.set(confetti ? 0.11 * k : 0.07 * k, confetti ? 0.012 : 0.07 * (0.8 + 0.4 * rng()), confetti ? 0.06 * (0.8 + 0.4 * rng()) : 0.07 * (0.8 + 0.4 * rng()));
+    _s.toArray(scl, i * 3);
+    const ang = rng() * Math.PI * 2;
+    const hs = confetti ? 0.4 + 0.5 * rng() : 0.6 + 1.6 * rng();
+    const up = confetti ? 0.9 + 0.6 * rng() : 2.2 + 2.0 * rng();
+    launch.set([Math.cos(ang) * hs, up, Math.sin(ang) * hs], i * 3);
+    _q.setFromEuler(new THREE.Euler(rng() * 6, rng() * 6, rng() * 6)).toArray(base, i * 4);
+    spin[i] = (rng() - 0.5) * 16;
+    bits.setColorAt(i, col.setHex(CANDY_COLORS[i % CANDY_COLORS.length]));
+    bits.setMatrixAt(i, _m.compose(_p.set(0, 0, 0), _q.identity(), _s.set(0, 0, 0)));   // hidden until thrown
+  }
+  group.add(bits);
+  const fadeMats = [pink, bitMat, ...spikeMats];
+
+  // Her stick, in her right hand (the rig's handR bone; a fixed spot if the avatar has none).
+  const stickMesh = new Mesher({ outlineT: 0.02 });
+  stickMesh.cyl(0.035, 0.035, 0.75, 0, -0.75, 0, 0x8a5a34, { seg: 6 });
+  stickMesh.box(0.09, 0.14, 0.03, 0, -0.62, 0, 0xff6b9a, { outline: false });   // a ribbon
+  const stick = stickMesh.build();
+  stick.name = 'pinataStick';
+  stick.visible = false;
+  const hand = avatar?.group?.getObjectByName('handR');
+  if (hand) hand.add(stick);
+  else if (avatar?.group) { stick.position.set(0.3, 1.0, 0.1); avatar.group.add(stick); }
+
+  const ui = beatUi(() => skipBeat());
+  let clock = 0, started = false, hits = 0, broke = false, breakAt = 0;
+  let swing = -1, impacted = false, queued = false, wobbleAt = -10;
+  const origin = new THREE.Vector3();
+  let cursor = 0;
+
+  const throwAt = (i, world) => { t0[i] = clock; from.set([world.x, world.y, world.z], i * 3); };
+  function startSwing() {
+    swing = 0;
+    impacted = false;
+    avatar?.play?.('chop', { fade: 0.1 });
+  }
+  function breakNow() {
+    broke = true;
+    breakAt = clock;
+    body.getWorldPosition(origin);
+    for (const p of pieces) { group.attach(p.obj); p.p0.copy(p.obj.position); p.q0.copy(p.obj.quaternion); }
+    for (let i = 0; i < count; i++) throwAt(i, origin);
+    swing = -1;
+    queued = false;
+    ui.count(HITS_TO_BREAK);
+    ui.waiting(false);
+  }
+  function hit() {
+    hits += 1;
+    wobbleAt = clock;
+    ui.count(hits);
+    if (hits >= HITS_TO_BREAK) { breakNow(); return; }
+    body.getWorldPosition(origin);
+    for (let k = 0; k < 4; k++) { throwAt(cursor % count, origin); cursor += 1; }
+  }
+  function skipBeat() { if (!broke) breakNow(); }
+
+  /** A press: a swing, or one queued behind the swing in progress. */
+  function press() {
+    if (!started || broke) return;
+    if (swing < 0) startSwing();
+    else queued = true;
+  }
+  // Keys count on key-up: a modal's key capture can swallow a key-down (the first Space was lost).
+  const onKey = (e) => { if (e.code === 'Space' || e.key === 'Enter') { e.preventDefault(); press(); } };
+  const onPointer = (e) => { if (e.target?.tagName === 'CANVAS') press(); };
+  globalThis.addEventListener?.('keyup', onKey);
+  globalThis.addEventListener?.('pointerdown', onPointer);
+
+  const pieceFade = (tau) => { const f = 1 - smooth((tau - 1.0) / 1.2); for (const m of fadeMats) m.opacity = f; };
+
+  /** Advance the beat's clock by dt (the film holds meanwhile). */
+  function tick(dt) {
+    started = true;
+    clock += dt;
+    if (swing >= 0) {
+      swing += dt;
+      if (!impacted && swing >= SWING_LEAD) { impacted = true; hit(); }
+      if (swing >= SWING_LEN && swing >= 0) {
+        swing = -1;
+        if (queued && !broke) { queued = false; startSwing(); }
+      }
+    }
+    if (!broke) {
+      const d = clock - wobbleAt;
+      pend.rotation.x = (reduced ? 0 : 0.06 * Math.sin(1.6 * clock)) + (d > 0 ? 0.2 * Math.sin(15 * d) * Math.exp(-5 * d) : 0);
+    } else {
+      const tau = clock - breakAt;
+      for (const p of pieces) {
+        const ta = Math.min(tau, 0.6);
+        p.obj.position.set(p.p0.x + p.v.x * ta, Math.max(gY + 0.14, p.p0.y + p.v.y * tau - 0.5 * GRAVITY * tau * tau), p.p0.z + p.v.z * ta);
+        p.obj.quaternion.copy(p.q0).multiply(_q.setFromAxisAngle(p.axis, p.w * ta));
+      }
+      pieceFade(tau);
+    }
+    for (let i = 0; i < count; i++) {
+      if (t0[i] < 0) continue;
+      const k = i * 3;
+      const tau = clock - t0[i];
+      const ca = Math.min(tau, 1.1);
+      _p.set(from[k] + launch[k] * ca, Math.max(gY + 0.05, from[k + 1] + launch[k + 1] * tau - 0.5 * GRAVITY * tau * tau), from[k + 2] + launch[k + 2] * ca);
+      _b.fromArray(base, i * 4);
+      _q.setFromAxisAngle(UP, spin[i] * Math.min(tau, 0.6)).multiply(_b);
+      _s.fromArray(scl, k);
+      bits.setMatrixAt(i, _m.compose(_p, _q, _s));
+    }
+    bits.instanceMatrix.needsUpdate = true;
+    if (broke && clock - breakAt > BREAK_HOLD) ui.show(false);
+  }
+
+  return {
+    group,
+    stick,
+    camera: { pos: at(0.6, 4.2, 2.1), look: at(0.5, 0, 1.0) },   // from her side, both in shot
+    tick,
+    press,
+    skip: skipBeat,
+    clock: () => clock,
+    broke: () => broke,
+    done: () => broke && clock - breakAt > BREAK_HOLD,
+    /** Show the beat's pieces (the piñata, stick, counter and key) only while it is on. */
+    setVisible(on) {
+      group.visible = on;
+      stick.visible = on;
+      ui.show(on);
+      ui.waiting(on && !broke);
+    },
+    dispose() {
+      globalThis.removeEventListener?.('keyup', onKey);
+      globalThis.removeEventListener?.('pointerdown', onPointer);
+      ui.remove();
+      stick.removeFromParent();
+      disposeTree(stick);
+      disposeTree(group);
+      bits.dispose();
+    },
+  };
+}
+
 // --- the ending ---------------------------------------------------------------------
 
-/** Seconds: the ending's scene (the "Chapter complete" card follows it). */
+/** Seconds: the ending's scene (the "Chapter complete" card follows it). Level 1 holds at BEAT_AT for the piñata. */
 export const ENDING_LENGTH = 29.8;
 const END_LEN = ENDING_LENGTH;
+const BEAT_AT = 17.6;   // Level 1: the piñata holds the film here (the villagers have gathered and their caption has had its time)
 /** The ending's captions: [start time, [Level 4, Level 1]]. */
 export const CAPS_END = [
   [0, ['The Science Center is finished! Dusk falls over the village.', 'The Science Center is done! The sun goes down.']],
@@ -467,6 +745,14 @@ export const CAPS_END = [
   [18.6, ['Cheers, scientist! The road goes west, over the bridge, to a great city.', 'Hooray! The road goes to a big city.']],
   [24.6, ['Next: Chapter 2, Forces and Machines: bridges and gears!', 'Next: bridges and gears!']],
 ];
+const PINATA_CAP = 'Hit the piñata!';
+const PINATA_DONE_CAP = 'Hooray! You did it!';
+/** Level 1 after the piñata breaks: its own caption first, then the film's captions from BEAT_AT on. */
+const CAPS_AFTER = [[BEAT_AT, [PINATA_DONE_CAP, PINATA_DONE_CAP]], ...CAPS_END.filter(([t0]) => t0 >= BEAT_AT)];
+/** The test hook's handle on the playing piñata (Level 1 only). */
+let activeBeat = null;
+/** Level 1's test hook: one press (a swing), as if she had pressed Space. */
+export function pinataHit() { activeBeat?.press(); }
 const DOME_Y = CENTER.slabTop + 2.4 + 0.14 + 1.1 + 0.14;   // the Science Center's dome base (centre.js)
 const MOON_AT = { x: CENTER.x - 20, y: 40, z: CENTER.z - 120 };
 const SCOPE_BASE = { x: -0.5, y: DOME_Y + 1.62, z: 0.3 };  // telescope pivot, in the piece's frame
@@ -499,6 +785,12 @@ export function playEnding(ctx) {
   const sunDisc = buildDisc(11, 0xffa45a, 18, 0.2);
   const shore = buildShore();
   root.add(sea, shore, city.group, stars, moon, sunDisc);
+  // Level 1's beat: she faces the way her player does (the avatar sits under it).
+  const heading = getAvatar()?.group?.parent?.rotation?.y ?? 0;
+  const pinata = LEVEL === 1 ? buildPinata({ hero, fwd: new THREE.Vector3(Math.sin(heading), 0, Math.cos(heading)), avatar: getAvatar(), reduced }) : null;
+  if (pinata) root.add(pinata.group);
+  activeBeat = pinata;
+  let lastT = 0;   // the film's time at the last step
   scene.add(root);
 
   // The dome opens (two halves slide apart over a dark drum) and the telescope
@@ -567,9 +859,27 @@ export function playEnding(ctx) {
 
   return {
     duration: END_LEN,
+    // Level 1: the film holds at BEAT_AT while the piñata is played (the film clock waits for her).
+    holding(dt) {
+      if (!pinata || lastT < BEAT_AT || pinata.done()) return false;
+      pinata.tick(dt);
+      return !pinata.done();
+    },
+    // While the piñata is up, her presses (Space, Enter, a tap) are hers, not a skip.
+    takesInput(e) {
+      return !!pinata && lastT >= BEAT_AT && !pinata.done() && (e.type === 'pointerdown' || e.code === 'Space' || e.key === 'Enter');
+    },
     step(t, say) {
+      lastT = t;
+      // Reduced motion: stills every 6 s.
       const tq = reduced ? Math.floor(t / 6) * 6 : t;
       track(KEYS, tq, pos, look);
+      // The piñata's camera: eases in as she gets ready, and out after the break.
+      if (pinata && t >= BEAT_AT) {
+        const w = pinata.broke() ? (reduced ? (t < BEAT_AT + 1 ? 1 : 0) : 1 - smooth((t - BEAT_AT) / 1)) : (reduced ? 1 : smooth(Math.min(pinata.clock(), 1)));
+        pos.lerp(pinata.camera.pos, w);
+        look.lerp(pinata.camera.look, w);
+      }
       camera.position.copy(pos);
       camera.lookAt(look);
 
@@ -608,7 +918,9 @@ export function playEnding(ctx) {
       }
       if (!cheered && tq >= 18) { cheered = true; getAvatar()?.play?.('cheer', { hold: 4 }); }
 
-      say(captionAt(CAPS_END, t));
+      if (pinata) pinata.setVisible(t >= BEAT_AT && !pinata.done());
+      // Level 1 after the piñata's start: "Hit the piñata!", then "Hooray!" once it has broken.
+      say(!pinata || t < BEAT_AT ? captionAt(CAPS_END, t) : pinata.broke() ? captionAt(CAPS_AFTER, t) : PINATA_CAP);
     },
     dispose() {
       if (done) return;
@@ -621,6 +933,8 @@ export function playEnding(ctx) {
       disposeTree(moon);
       disposeTree(sunDisc);
       disposeTree(wrap);
+      pinata?.dispose();
+      if (activeBeat === pinata) activeBeat = null;
       for (const f of folk) disposeTree(f.p.g);
       shellMat.dispose();
       restoreVillage();
