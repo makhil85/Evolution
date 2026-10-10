@@ -9,19 +9,132 @@
 // playthrough (science and city rules), and every literal in the Chapter 1-3
 // files (hunt clues, rules, Newton's tree, play modes, pickups), taking each
 // Level's side of t() / L() / level ternaries / {4, 1} objects.
+// Also the Chapter 1-3 camera (src/game/cameraView.js), once, before the Levels:
+// the default view is unchanged, the follow view turns her 1.8-2.2 rad in a
+// second of A/Left, the camera stays within 5 degrees of right behind her
+// through the turn (the ease is simulated), W walks her along her heading,
+// a drag looks round and eases back, and the choice is remembered.
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { parseAst } from 'rolldown/parseAst';
+import { createServer } from 'vite';
 
 const SELF = fileURLToPath(import.meta.url);
 const ROOT = path.resolve(path.dirname(SELF), '..');
 const LEVEL = Number(process.env.CH123_TEXT_LEVEL || 0);
 
+/** The camera views (src/game/cameraView.js), run once in the parent process. */
+async function cameraChecks() {
+  // physics.js reads import.meta.env (through contracts.js), so it loads through Vite.
+  const server = await createServer({ root: ROOT, logLevel: 'silent', server: { middlewareMode: true, hmr: false }, appType: 'custom' });
+  const { createCameraView, LOOK_HOLD } = await server.ssrLoadModule('/src/game/cameraView.js');
+  const { createCharacterController } = await server.ssrLoadModule('/src/game/physics.js');
+  const failures = [];
+  let count = 0;
+  const check = (cond, name) => { count += 1; if (!cond) failures.push(name); };
+  const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+  const DT = 1 / 60;
+  const still = (o = {}) => ({ forward: 0, strafe: 0, run: false, jump: false, ...o });
+  const store = new Map();
+  globalThis.sessionStorage = {
+    getItem: (k) => (store.has(k) ? store.get(k) : null),
+    setItem: (k, v) => { store.set(k, String(v)); },
+  };
+  const girl = (heading = 0.3) => ({ position: { x: 0, y: 0, z: 0 }, rotation: { y: heading } });
+  try {
+
+  // The default view: keys pass through, she is not turned, a drag swings the camera.
+  let p = girl();
+  let cv = createCameraView(p);
+  check(cv.view === 'chase', 'default view is the chase camera');
+  let k = cv.input(still({ forward: 1 }), DT);
+  check(k.forward === 1 && k.cameraYaw === 0 && !k.keepFacing && p.rotation.y === 0.3, 'chase: keys pass through and she is not turned');
+  cv.drag(-100);
+  check(Math.abs(cv.yaw - 0.6) < 1e-9, 'chase: a drag swings the camera 0.006 rad a pixel');
+  check(cv.ease(DT) === 1 - Math.pow(0.0001, DT), 'chase: the camera eases exactly as it always did');
+
+  // Switch to follow; the choice is remembered for the session.
+  cv = createCameraView(p = girl());
+  const before = cv.yaw;
+  check(cv.toggle() === 'follow' && cv.view === 'follow', 'toggle switches to follow');
+  check(Math.abs(wrap(cv.yaw - before)) < 1e-9, 'toggle does not jump the camera');
+  check(createCameraView(girl()).view === 'follow', 'follow is remembered for the session');
+
+  // A/Left held one second: she turns about 2 rad, and the camera stays within 5 degrees of behind her.
+  // The camera has settled behind her first (a toggle swings it round in about a second).
+  store.clear();
+  cv = createCameraView(p = girl(0));
+  cv.toggle();
+  for (let i = 0; i < 90; i += 1) cv.input(still(), DT);
+  const dist = 7.2;
+  let c = { x: Math.sin(cv.yaw) * dist, z: Math.cos(cv.yaw) * dist };
+  const h0 = p.rotation.y;
+  let worst = 0;
+  for (let i = 0; i < 60; i += 1) {
+    cv.input(still({ strafe: -1 }), DT);
+    const y = cv.yaw;
+    const t = { x: Math.sin(y) * dist, z: Math.cos(y) * dist };
+    const e = cv.ease(DT);
+    c = { x: c.x + (t.x - c.x) * e, z: c.z + (t.z - c.z) * e };
+    worst = Math.max(worst, Math.abs(wrap(Math.atan2(c.x, c.z) - (p.rotation.y + Math.PI))));
+  }
+  const turned = p.rotation.y - h0;
+  check(turned > 1.8 && turned < 2.2, `follow: A for 1 s turns her ${turned.toFixed(3)} rad (1.8-2.2)`);
+  check(worst < 5 * Math.PI / 180, `follow: camera within 5 degrees of behind her through the turn (worst ${(worst * 180 / Math.PI).toFixed(2)} deg)`);
+
+  // D turns her back; the walk is along her heading and does not turn her.
+  for (let i = 0; i < 60; i += 1) cv.input(still({ strafe: 1 }), DT);
+  check(Math.abs(p.rotation.y - h0) < 1e-6, 'follow: D turns her back the same amount');
+  const body = girl(1.1);
+  const ctl = createCharacterController({ target: body, walkSpeed: 5.4 });
+  store.clear();
+  cv = createCameraView(body);
+  cv.toggle();
+  for (let i = 0; i < 60; i += 1) ctl.step(DT, cv.input(still({ forward: 1 }), DT));
+  const dx = body.position.x;
+  const dz = body.position.z;
+  const len = Math.hypot(dx, dz);
+  check(len > 1 && Math.abs(dx / len - Math.sin(1.1)) < 0.01 && Math.abs(dz / len - Math.cos(1.1)) < 0.01, 'follow: W walks her along her heading');
+  check(body.rotation.y === 1.1, 'follow: walking does not turn her (keepFacing)');
+
+  // A scripted move (an emote) keeps its own camera yaw and does not turn her.
+  store.clear();
+  cv = createCameraView(p = girl());
+  cv.toggle();
+  k = cv.input(still({ forward: 1, strafe: 1, cameraYaw: 2.0 }), DT);
+  check(k.cameraYaw === 2.0 && p.rotation.y === 0.3, 'follow: an emote move keeps its own yaw and does not turn her');
+
+  // A drag looks round, holds about 1.5 s, then eases back behind her.
+  store.clear();
+  cv = createCameraView(p = girl());
+  cv.toggle();
+  for (let i = 0; i < 120; i += 1) cv.input(still(), DT);
+  cv.drag(200);
+  const behind = () => p.rotation.y + Math.PI;
+  check(Math.abs(wrap(cv.yaw - behind()) + 1.2) < 0.01, 'follow: a drag swings the look');
+  for (let i = 0; i < 60; i += 1) cv.input(still(), DT);
+  check(Math.abs(wrap(cv.yaw - behind()) + 1.2) < 0.01, `follow: the look holds for ${LOOK_HOLD} s after a drag`);
+  for (let i = 0; i < 240; i += 1) cv.input(still(), DT);
+  check(Math.abs(wrap(cv.yaw - behind())) < 0.01, 'follow: the look eases back behind her');
+
+  // Back to chase: the camera keeps where it is.
+  const at = cv.yaw;
+  check(cv.toggle() === 'chase' && Math.abs(wrap(cv.yaw - at)) < 1e-9, 'toggle back to chase keeps the camera where it is');
+  check(createCameraView(girl()).view === 'chase', 'chase is remembered too');
+
+  } finally {
+    await server.close();
+  }
+  for (const name of failures) console.error(`FAIL: camera: ${name}`);
+  console.log(failures.length ? `  ${failures.length} of ${count} camera checks failed` : `  ok  camera views (${count} checks)`);
+  return failures.length === 0;
+}
+
 // One process per Level.
 if (!LEVEL) {
-  let failed = 0;
+  let failed = (await cameraChecks()) ? 0 : 1;
   for (const level of [4, 1]) {
     const r = spawnSync(process.execPath, [SELF], {
       env: { ...process.env, CH123_TEXT_LEVEL: String(level) }, stdio: 'inherit',
