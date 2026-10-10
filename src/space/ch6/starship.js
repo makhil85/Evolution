@@ -400,8 +400,8 @@ export function createStarship({ detail = 'near' } = {}) {
     plumeOuter.scale.set(w, w, Math.max(0.001, 140 * k));
     const c = 4.5 * flick;
     plumeCore.scale.set(c, c, Math.max(0.001, 90 * k));
-    plumeOuterMat.opacity = 0.18 * k;
-    plumeCoreMat.opacity = 0.22 * k;
+    plumeOuterMat.opacity = 0.5 * k;
+    plumeCoreMat.opacity = 0.55 * k;
   };
 
   const blinkOn = (t, l) => {
