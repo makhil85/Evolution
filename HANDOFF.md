@@ -728,3 +728,31 @@ lines are in place but not tuned.
   (156 calls / 305k triangles) and the wide view (171 / 331k) are still over.
 - Open: some question-bank success lines are long (up to 63 words); they
   show as OK cards for now. Shorten them in a later round.
+
+## Session 2026-10-10: short PRs #44-#53 (play-test fixes)
+
+- **#44 Ch1-3 messages don't freeze play**: a toast or read card no longer takes the play lock
+  (`markReading` / `isReading` in `src/play/ui.js`); she walks, mines and uses stations while it shows,
+  and a click clears it. Cards, choosers, lessons and films still lock.
+- **#45 Ch2 building and start direction**: `clearOfStructure` (`src/city/main.js`) steps her out of a
+  rising building's footprint; Ch1-2 start facing away from the camera.
+- **#46 Ch6-7 ship walk camera**: the old pull-in / lift / auto-turn / fade camera is gone. A simple follow
+  camera 3 m behind, 1.5 m up; walls on the sight line are cut away by a shader tube (`cutAway` in
+  `ch6/interior/ship.js`); the Ch1-3 guide chevron points to the next station or the lift.
+- **#47, #49 Ch3 bridge and road**: the deck ramps to the bank (`deckTopAt`), and the road is clipped to a
+  straight river edge at crossings (`riverEdgeAt`, `clipPolygon` in `src/game/village.js`), flush with
+  the deck ends.
+- **#48 Ch1-2 walls**: `bodyBlocked` / `moveBody` (science and city `world.js`) check her body (r 0.3),
+  not her centre; she slides along walls. Every station stays reachable (flood fill, browser probe).
+- **#50 Engine flame**: the plume stays lit end-on from the chase camera and starts at the bell
+  (`shipFx.js`, `uFloor`, a rim flare). The starship's plume is brighter but not checked on screen yet.
+- **#51 Ch6 flying camera**: the ship was drawn mirrored after Ch6's engine step replayed the Ch5 ending
+  (a `quaternion.copy` leaves Euler x = z = PI for a heading past 90 degrees, and the loop set only
+  `rotation.y`). The loop now sets the whole rotation: `rotation.set(0, yawFor(angle), 0)`. Films still
+  tilt the ship, since `cinematic.apply` runs after it.
+- **#52, #53 'Right behind her' view**: a new view in the ship walk (behind -> follow -> over) and in
+  Ch1-3 (`src/game/cameraView.js`, the C key or the Camera pill). Left/Right turn her, Up/Down walk along
+  her heading, and the camera turns with her. The old view stays the default.
+- Open: the starship flame on screen; crew and robots in Ch6 not checked; the oval cut-away hole in a green
+  station tube; a 0.35 step on the Ch3 east-bridge bank; the touch Jump badge over the left arrow on foot;
+  the Ch3 homes and wide views over budget; long success lines.
