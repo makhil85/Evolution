@@ -60,9 +60,11 @@ function box(w, h, d, x, y, z, hex) {
  * @param {number} spec.deckY      top of the deck, world y
  * @param {number} spec.waterY     riverbed/water level, for how far piers drop
  * @param {number} [spec.pieces]   how many quest pieces reveal it
+ * @param {(z:number)=>number} [spec.surfaceAt]  deck top at world z; below deckY
+ *        near each end, where the deck slopes down to the bank
  * @returns {{mesh: THREE.Mesh, showPieces: (n:number)=>boolean, halfWidth:number}}
  */
-export function buildBridge({ x, centre, span, width, deckY, waterY, pieces = 5 }) {
+export function buildBridge({ x, centre, span, width, deckY, waterY, pieces = 5, surfaceAt = () => deckY }) {
   const halfW = width / 2;
   const railY = deckY + 0.78;
   const z0 = centre - span / 2;
@@ -79,7 +81,13 @@ export function buildBridge({ x, centre, span, width, deckY, waterY, pieces = 5 
   const parts = [];
   let indices = 0;
 
+  // Near each end the deck slopes down to the bank, so every part there drops
+  // by the same amount as the planks under it (rails stay at the same height
+  // above the deck). Normals are recomputed, so the slope catches the light.
   const push = (geo) => {
+    const pos = geo.attributes.position;
+    for (let i = 0; i < pos.count; i++) pos.setY(i, pos.getY(i) - (deckY - surfaceAt(pos.getZ(i))));
+    geo.computeVertexNormals();
     parts.push(geo);
     indices += geo.index ? geo.index.count : geo.attributes.position.count;
   };
