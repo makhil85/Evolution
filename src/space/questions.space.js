@@ -873,233 +873,228 @@ const LEVEL4_SPACE_QUESTIONS = {
 export const SPACE_QUESTION_ORDER = Object.keys(LEVEL4_SPACE_QUESTIONS);
 
 /**
- * LEVEL 1 overlay (1st grade): same ids, same answer types, same story beats
- * and rewards as Level 4; only the content is replaced (the Chapter 3 trick,
- * src/game/questions.level1.js). The brief is the same as Chapter 3's:
- * not easy, but 1st-grade numbers (counting, skip counting, within 20) with
- * the difficulty in the reasoning: two steps, or an obvious answer that is
- * wrong for a reason worth learning (the fence-post day count, "space has no
- * gravity", "the rock got smaller on the Moon"). Every question is still
- * about something she has just done or seen. Numeric answers are re-derived
- * in scripts/test-space-questions.mjs.
+ * LEVEL 1 overlay (1st grade, RULES.md of 2026-10-10): same ids, same answer
+ * types, same story beats and rewards as Level 4. Only what the child reads
+ * is replaced: prompt, choices, hint, success and doneMessage. One idea per
+ * question, short everyday words, whole numbers up to 20 with one + or - step,
+ * and a picture (visual tiles) where it helps. Made-up numbers say "pretend".
+ * The numeric answers are the same as before; they are checked in
+ * scripts/test-space-questions.mjs.
  */
 export const LEVEL1_SPACE_QUESTIONS = {
   wings_fold: {
     subject: 'Forces and air',
     difficulty: 'Level 1 • air and wings',
-    prompt: 'A paper plane glides far across the room. Now Zara throws the SAME plane inside a big jar. All the air is sucked out of the jar. What happens?',
+    prompt: 'Space has no air. Can a ship’s wings work there?',
     choices: [
-      { text: 'It drops down, because its wings have no air to lean on', correct: true },
-      { text: 'It glides even farther, because nothing is in the way' },
-      { text: 'It floats in the middle of the jar' },
-      { text: 'It flies up to the lid' },
+      { text: 'Yes, very well' },
+      { text: 'Yes, they fly' },
+      { text: 'No, no air', correct: true },
+      { text: 'Only at night' },
     ],
-    hint: 'Wings work by leaning on air. Is there any air in the jar? And is the ground still pulling on the plane?',
+    hint: 'Wings push on air. Is there any air in space?',
     parentHint:
-      'Wings need air to push against; gravity doesn’t need air at all. The tempting “it floats” mixes up “no air” with “no gravity”.',
-    success: 'Right! No air, no gliding. So in space the ship folds its wings. It turns with little puffs of gas.',
+      'Wings need air to push against. Gravity needs no air at all, and Earth still pulls the ship up here.',
+    success: 'Right! Wings need air to push on. Space has none.',
     doneMessage: 'Turn left and right to turn the ship.',
   },
 
   zero_g: {
     subject: 'Gravity',
     difficulty: 'Level 1 • falling together',
-    prompt: 'Zara lets go of her pencil in the ship. It floats next to her face. Is Earth still pulling on the pencil?',
+    prompt: 'Zara’s pencil floats in the ship. Does Earth still pull on it?',
     choices: [
-      { text: 'Yes. The pencil, Zara and the ship all fall around Earth together', correct: true },
-      { text: 'No. There is no pulling in space' },
-      { text: 'No. The air in the cabin holds it up' },
-      { text: 'Only on Zara, not on the pencil' },
+      { text: 'No, Earth is gone' },
+      { text: 'Yes, it falls', correct: true },
+      { text: 'Only Zara falls' },
+      { text: 'Nothing falls at all' },
     ],
-    hint: 'Jump off a step with a ball in your hand. As you fall, does the ball fall away from you, or stay with you?',
+    hint: 'Jump with a ball. Does the ball fall with you?',
     parentHint:
       'Everything in the ship falls at the same rate, so nothing falls relative to anything else, and it looks like floating. Earth’s pull up here is still about 9/10 of what it is on the ground.',
-    success: 'Yes! Earth still pulls. Everything falls together, so nothing hits the floor. That is how an orbit feels.',
-    doneMessage: 'Now go around Earth once. Watch the dotted line.',
+    success: 'Yes! Earth still pulls. The ship and pencil fall together.',
+    doneMessage: 'Now go around Earth. Watch the dotted line.',
   },
 
   sunrises: {
     subject: 'Time and skip counting',
     difficulty: 'Level 1 • skip counting',
-    prompt: 'Zara’s ship goes around Earth once in 2 hours. She sees 1 sunrise each time around. She sleeps for 8 hours. How many sunrises does she miss?',
+    prompt: 'Pretend a lap takes 2 hours. Zara sleeps 8 hours. How many sunrises?',
     visual: {
       rows: [
-        { label: 'One lap', tiles: ['2 hours', '1 sunrise'], arrow: true },
+        { label: 'Lap', tiles: ['2 hours', '1 sunrise'], arrow: true },
         { label: 'Sleep', tiles: ['8 hours', '? sunrises'] },
       ],
     },
     answers: ['4', 'four', '4 sunrises'],
-    hint: 'Count by twos up to 8 on your fingers. Each “2” is one lap, and one sunrise.',
+    hint: 'Count by 2s up to 8. How many 2s?',
     parentHint: '8 ÷ 2 = 4, done as skip counting. (The real space station laps every 90 minutes, so its crew sees 16 sunrises a day.)',
-    success: 'Four! Real astronauts go around even faster. They see 16 sunrises a day!',
-    doneMessage: 'A satellite is coming. One of its wings is broken!',
+    success: 'Four! Real astronauts see about 16 sunrises a day!',
+    doneMessage: 'A satellite is coming with a broken wing!',
   },
 
   solar_source: {
     subject: 'Energy',
     difficulty: 'Level 1 • what makes it go',
-    prompt: 'This satellite has flown for years. Nobody ever fills it up. Its flat blue wings always point at the Sun. What do the blue wings do?',
+    prompt: 'This satellite’s blue wings face the Sun. What do they do?',
     choices: [
-      { text: 'They turn sunlight into power', correct: true },
-      { text: 'They flap to make it fly' },
-      { text: 'They keep it warm like a blanket' },
-      { text: 'They catch rain to drink' },
+      { text: 'Light makes power', correct: true },
+      { text: 'Flap to fly' },
+      { text: 'Keep it warm' },
+      { text: 'Catch rain to drink' },
     ],
-    hint: 'Nobody fills it up. But something from the Sun reaches it each day. And there is no air up here to flap in!',
+    hint: 'Nobody fills it. What does sunlight give it?',
     parentHint: 'The “wings” are solar panels: cells that turn light straight into electricity. The tempting answer is “flap”, because we call them wings.',
-    success: 'Correct! They are solar panels. Sunlight goes in. Power comes out.',
+    success: 'Correct! They are solar panels that catch sunlight.',
     doneMessage: 'Turn the broken wing to face the Sun!',
   },
 
   solar_night: {
     subject: 'Counting and patterns',
     difficulty: 'Level 1 • patterns',
-    prompt: 'Each trip around Earth has 3 parts. 2 parts are sunny. 1 part is in Earth’s shadow, where the panels make nothing. In 3 trips, how many parts are in the shadow?',
+    prompt: 'Each trip has 1 dark part. In 3 trips, how many dark?',
     visual: {
       rows: [
-        { label: 'One trip', tiles: ['☀', '☀', '●'] },
+        { label: 'Trip', tiles: ['☀', '☀', '🌑'] },
       ],
     },
     choices: [
-      { text: '3 parts', correct: true },
-      { text: '6 parts' },
-      { text: '9 parts' },
-      { text: '1 part' },
+      { text: '6 dark' },
+      { text: '3 dark', correct: true },
+      { text: '9 dark' },
+      { text: '1 dark' },
     ],
-    hint: 'Draw the pattern once for each trip around. Count only the dark ones.',
+    hint: 'Count only the dark ones, once for each trip.',
     parentHint: 'One dark part per trip, 3 trips, so 3. The tempting 6 counts the sunny parts, and 9 counts all of them.',
-    success: 'Three! One dark part each trip. So satellites carry batteries for the dark part.',
+    success: 'Three! Satellites carry batteries for the dark part.',
     doneMessage: 'Fixed! Mission Control says thank you.',
   },
 
   raise_orbit: {
     subject: 'Orbits',
     difficulty: 'Level 1 • watch and notice',
-    prompt:
-      'Zara is going around Earth in a circle. She pushes the engine forward for a moment. Look at the dotted line! Which part of her path gets bigger?',
+    prompt: 'Zara pushes forward once. Which part of the path gets bigger?',
     choices: [
-      { text: 'The far side, across Earth from where she pushed', correct: true },
-      { text: 'Only the spot where she pushed' },
+      { text: 'The far side', correct: true },
+      { text: 'Only where she pushed' },
       { text: 'Nothing changes' },
-      { text: 'The whole path gets smaller' },
+      { text: 'The whole path shrinks' },
     ],
-    hint: 'Try it! Give a tiny push and watch the dotted line. Where does it stretch out?',
+    hint: 'Where does the dotted line stretch out?',
     parentHint: 'A forward burn raises the opposite side of the orbit. The burn point stays at the same height, because she is already there.',
-    success: 'Yes! Pushing forward stretches the far side. Push enough and the far side reaches the Moon.',
-    doneMessage: 'Now wait for the BURN NOW sign to go to the Moon!',
+    success: 'Yes! Pushing forward stretches the far side of the path.',
+    doneMessage: 'Wait for the BURN NOW sign!',
   },
 
   moon_face: {
     subject: 'Shapes and turning',
     difficulty: 'Level 1 • turning around',
-    prompt: 'Zara walks all the way around a tree. She always looks AT the tree. When she gets back to the start, how many times has she turned around?',
+    prompt: 'Zara walks around a tree, always facing it. How many turns?',
     choices: [
-      { text: '1 time', correct: true },
-      { text: '0 times' },
-      { text: '2 times' },
-      { text: '4 times' },
+      { text: '2 turns' },
+      { text: '1 turn', correct: true },
+      { text: '4 turns' },
+      { text: '0 turns' },
     ],
-    hint: 'Try it with a chair! Notice which wall you face at the start, halfway, and at the end.',
+    hint: 'Walk around a chair. Count how many times you turned.',
     parentHint:
       'Facing the tree the whole way means she faces every direction once: one full turn. The Moon does the same with Earth, which is why we always see the same side.',
-    success: 'Once! The Moon does this too. It turns once each time it goes around Earth. So we always see the same side.',
-    doneMessage: 'Now land slowly. Keep the speed in the green.',
+    success: 'Once! The Moon turns once each time it circles Earth.',
+    doneMessage: 'Land slowly. Keep the speed in the green.',
   },
 
   moon_jump: {
     subject: 'Gravity and skip counting',
     difficulty: 'Level 1 • skip counting',
-    prompt:
-      'On Earth, Zara can jump over a stack of 2 books. On the Moon she can jump 6 times as high. How many books tall is her Moon jump?',
+    prompt: 'Pretend Zara jumps 6 books. On the Moon, 6 more. How many?',
     visual: {
       rows: [
-        { label: 'Earth jump', tiles: ['📚', '📚'], arrow: true },
-        { label: 'Moon jump', tiles: ['6 times as high', '? books'] },
+        { label: 'Earth', tiles: ['📚', '📚', '📚', '📚', '📚', '📚'], arrow: true },
+        { label: 'Moon', tiles: ['6 more', '?'] },
       ],
     },
     answers: ['12', 'twelve', '12 books'],
-    hint: 'Count by twos, six times: 2, 4, 6, ...',
-    parentHint: '2 × 6 = 12, as skip counting. The Moon pulls about 6 times more weakly than Earth.',
-    success: 'Twelve books! The Moon pulls on her much less. So the same jump goes much higher. Try it with Space!',
+    hint: 'Count 6 books, then 6 more. How many in all?',
+    parentHint: '6 + 6 = 12, as skip counting. The “6 more” is a pretend number. Real Moon jumps are about 6 times higher, because the Moon pulls about 6 times more weakly than Earth.',
+    success: 'Twelve! The Moon pulls less, so jumps go higher.',
     doneMessage: 'Now pick up a Moon rock!',
   },
 
   mass_weight: {
     subject: 'Mass and weight',
     difficulty: 'Level 1 • what changes',
-    prompt: 'Zara’s bag holds 5 rocks. On the Moon, the bag feels much lighter. How many rocks are in the bag now?',
+    prompt: 'Zara has 5 rocks. On the Moon they feel light. How many?',
     choices: [
-      { text: '5 rocks. The Moon just pulls on them less', correct: true },
-      { text: '1 rock' },
-      { text: '0 rocks' },
+      { text: 'No rocks at all' },
+      { text: 'Lots more rocks' },
       { text: '6 rocks' },
+      { text: 'Still 5 rocks', correct: true },
     ],
-    hint: 'Did she take any rocks out? Then how many are still in there?',
-    parentHint: 'The amount of stuff (mass) never changed; only the pull on it (weight) did. The tempting 1 comes from “lighter” meaning “fewer”.',
-    success: 'Five! The same rocks, just pulled on less. How much stuff never changes; how heavy it feels does.',
+    hint: 'Did she take any rocks out? Count them again.',
+    parentHint: 'The amount of stuff (mass) never changed; only the pull on it (weight) did. Lighter does not mean fewer.',
+    success: 'Five! The same rocks, just pulled on less.',
     doneMessage: 'Now find the old footprints!',
   },
 
   moon_footprints: {
     subject: 'Earth and space science',
     difficulty: 'Level 1 • what is missing',
-    prompt:
-      'On the beach, Zara’s footprints are gone by the next morning. On the Moon, footprints from long, long ago are still there. Why?',
+    prompt: 'Beach footprints wash away. Why do Moon footprints stay?',
     choices: [
-      { text: 'The Moon has no wind, no rain and no waves to rub them out', correct: true },
-      { text: 'Moon dust is sticky like glue' },
-      { text: 'The astronauts drew them on' },
-      { text: 'The Moon is too dark to see them go' },
+      { text: 'A dog ate them' },
+      { text: 'Too dark to see' },
+      { text: 'Astronauts drew them' },
+      { text: 'No wind or rain', correct: true },
     ],
-    hint: 'What rubs out footprints on a beach? Does the Moon have any of those things?',
+    hint: 'What rubs footprints away at the beach?',
     parentHint: 'No air means no wind or weather. Footprints on the Moon can last millions of years.',
-    success: 'Yes! No air, so no wind and no rain. Your footprints here could last for millions of years.',
+    success: 'Yes! No wind or rain, so footprints last for ages.',
     doneMessage: 'Back to the ship. Next: take off!',
   },
 
   moon_escape: {
     subject: 'Gravity',
     difficulty: 'Level 1 • why is it easy',
-    prompt: 'Leaving Earth took a giant rocket. Leaving the Moon took only Zara’s small engine. Why was the Moon so easy to leave?',
+    prompt: 'Zara leaves the Moon with a small engine. Why is that easy?',
     visual: {
       rows: [
-        { label: 'Earth pull', tiles: ['big'], arrow: true },
-        { label: 'Moon pull', tiles: ['small'] },
+        { label: 'Earth', tiles: ['big pull'], arrow: true },
+        { label: 'Moon', tiles: ['small pull'] },
       ],
     },
     choices: [
-      { text: 'The Moon is small, so it pulls much less', correct: true },
-      { text: 'The Moon is closer to the Sun' },
-      { text: 'Rockets like the cold' },
-      { text: 'The Moon pushes rockets away' },
+      { text: 'It is very hot' },
+      { text: 'It pushes rockets' },
+      { text: 'It is small', correct: true },
+      { text: 'It is loud' },
     ],
-    hint: 'Remember how high you jumped on the Moon. Is the Moon’s pull big or small?',
+    hint: 'Remember your Moon jump? Was its pull big or small?',
     parentHint: 'The Moon’s gravity is about 1/6 of Earth’s, so leaving it takes only about 1/20 of the energy.',
-    success: 'Yes! The Moon pulls only about 1/6 as hard as Earth. So leaving it takes much, much less fuel: about 1/20!',
-    doneMessage: 'On your way to Mars! The time-warp buttons make time go fast.',
+    success: 'Yes! The Moon’s pull is small, so leaving is easy.',
+    doneMessage: 'On your way to Mars!',
   },
 
   mars_day: {
     subject: 'Time and counting',
     difficulty: 'Level 1 • counting days (tricky!)',
-    prompt: 'A day on Mars is a bit longer than on Earth. So Zara’s Mars robot wakes up later each day. On Monday it wakes at 6 o’clock. Pretend it wakes 1 hour later each day. When does it wake on Friday?',
+    prompt: 'Pretend the robot wakes 1 hour later each day. What time on Friday?',
     visual: {
       rows: [
         { label: 'Days', tiles: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] },
-        { label: 'Wakes at', tiles: ['6', '?', '?', '?', '?'] },
+        { label: 'Wakes', tiles: ['6', '?', '?', '?', '?'] },
       ],
     },
     answers: ['10', 'ten', '10 o clock', '10 oclock', '10 o’clock', "10 o'clock", '10:00'],
-    hint: 'Fill in the row one day at a time: Monday 6, Tuesday 7, ...',
+    hint: 'Count up one hour for each day after Monday.',
     parentHint: 'Monday to Friday is 4 steps later, not 5: 6 + 4 = 10. The tempting 11 counts the days instead of the gaps between them (a fence-post puzzle). The hour is a pretend number: a Mars day is really about 40 minutes longer than ours.',
-    success: 'Ten o’clock! Monday to Friday is only 4 “one hour later” steps. Mars teams really do shift their clocks, about 40 minutes each day.',
-    doneMessage: 'Mars is red because its dust is rusty! Next: the asteroid belt.',
+    success: 'Ten o’clock! Only 4 one-hour steps from Monday to Friday.',
+    doneMessage: 'Mars is red. Next: the asteroid belt!',
   },
 
   inverse_square: {
     subject: 'Light and distance',
     difficulty: 'Level 1 • spreading out',
-    prompt: 'Zara shines a flashlight at a wall up close. She sees a small, bright circle. She steps far back. The circle gets much BIGGER. What happens to how bright it is?',
+    prompt: 'Zara steps back. The light circle gets bigger. Brighter or dimmer?',
     visual: {
       rows: [
         { label: 'Close', tiles: ['■'], arrow: true },
@@ -1107,50 +1102,48 @@ export const LEVEL1_SPACE_QUESTIONS = {
       ],
     },
     choices: [
-      { text: 'It gets dimmer, because the same light is spread out wider', correct: true },
-      { text: 'It gets brighter, because the circle is bigger' },
-      { text: 'It stays exactly the same' },
-      { text: 'It goes all dark' },
+      { text: 'It gets brighter' },
+      { text: 'It gets dimmer', correct: true },
+      { text: 'It stays the same' },
+      { text: 'It goes dark' },
     ],
-    hint: 'Spread the same spoonful of jam over a bigger piece of toast. Is it thicker or thinner?',
+    hint: 'Same jam, bigger toast. Is it thicker or thinner?',
     parentHint: 'The same light covering more area is dimmer on each spot. Sunlight does the same as she flies away from the Sun, so her power meter drops.',
-    success: 'Right! The same light, spread wider, is dimmer. That is why your power meter drops as you fly away from the Sun.',
-    doneMessage: 'Look at your Power bar. It goes down as you fly away from the Sun.',
+    success: 'Right! The same light, spread wider, is dimmer.',
+    doneMessage: 'Your Power bar drops as you fly away.',
   },
 
   belt_spacing: {
     subject: 'Scale',
     difficulty: 'Level 1 • movies vs. real',
-    prompt: 'In movies, the rocks in the asteroid belt are packed close. In the real belt, the rocks are very far apart. What would Zara see out of her window?',
+    prompt: 'Zara looks out of her window in space. What does she see?',
     choices: [
-      { text: 'Mostly empty black space', correct: true },
-      { text: 'Rocks bumping into each other everywhere' },
-      { text: 'A solid wall of rock' },
-      { text: 'Rocks as close as cars on a busy road' },
+      { text: 'Mostly empty space', correct: true },
+      { text: 'A wall of rock' },
+      { text: 'Rocks bump everywhere' },
+      { text: 'A crowded road' },
     ],
-    hint: 'The rocks are very far apart. So how many would be next to her window?',
+    hint: 'Rocks are very far apart. Few are near her window.',
     parentHint: 'The real belt is mostly empty; probes fly through without dodging. We packed the game’s rocks closer so there is something to mine.',
-    success: 'Correct! The real belt is mostly empty. We squeezed the rocks closer together so you can mine them.',
-    doneMessage: 'Fly close to rocks and press E to grab them.',
+    success: 'Correct! Real space is mostly empty, with rocks far apart.',
+    doneMessage: 'Fly close to a rock and press E.',
   },
 
   cargo_fma: {
     subject: 'Push and heavy things',
-    difficulty: 'Level 1 • halving',
-    prompt:
-      'When the ship is empty, one push of the engine makes it 8 steps faster. Now it is full of rocks and TWICE as heavy. How many steps faster does the SAME push make it now?',
+    difficulty: 'Level 1 • full ships are slow',
+    prompt: 'Pretend an empty ship goes 8 steps. Full: 4 fewer. How many?',
     answers: ['4', 'four', '4 steps', '4 steps faster'],
-    hint: 'Push an empty wagon, then the same wagon with a friend in it. Twice as heavy gets half the speed-up. What is half of 8?',
-    parentHint: 'Same push, double the mass, half the speed-up: 8 ÷ 2 = 4.',
-    success: 'Four! Twice as heavy, half the speed-up. That is why the ship feels slow when it is full.',
-    doneMessage: 'A full ship is slow. Use your rocks in the upgrade bay to make it light again.',
+    hint: 'Start at 8. Count back 4. Where do you land?',
+    parentHint: 'Same push, twice the mass, half the speed-up. Here the sum is simply 8 − 4 = 4. The tempting 8 forgets that a full ship is slower.',
+    success: 'Four! A full ship is slower. More stuff, less speed-up.',
+    doneMessage: 'Use the upgrade bay to make it light.',
   },
 
   mining_logic: {
     subject: 'Logic',
     difficulty: 'Level 1 • what is left',
-    prompt:
-      'Zara has 3 crates labelled STONE, METAL and ICE, but the labels got mixed up. The ICE crate has metal in it. The METAL crate has stone in it. What is in the STONE crate?',
+    prompt: 'Every label is wrong. What is really in the STONE crate?',
     visual: {
       rows: [
         { label: 'Labels', tiles: ['STONE', 'METAL', 'ICE'] },
@@ -1158,14 +1151,14 @@ export const LEVEL1_SPACE_QUESTIONS = {
       ],
     },
     choices: [
-      { text: 'Ice', correct: true },
-      { text: 'Stone' },
       { text: 'Metal' },
+      { text: 'Ice', correct: true },
       { text: 'Nothing' },
+      { text: 'Stone' },
     ],
-    hint: 'Metal and stone are already found. Which one is left over?',
+    hint: 'Stone and metal are in other crates. What is left?',
     parentHint: 'Elimination: two of the three are placed, so the last crate holds the last thing. The tempting answer just reads the label.',
-    success: 'Ice! Metal and stone were found, so only ice was left. Don’t trust a wrong label!',
+    success: 'Ice! The other two crates already hold stone and metal.',
     doneMessage: 'Crates sorted! One more thing to see: Ceres.',
     title: 'The wrong labels',
   },
@@ -1173,231 +1166,107 @@ export const LEVEL1_SPACE_QUESTIONS = {
   belt_why: {
     subject: 'The solar system',
     difficulty: 'Level 1 • cause and effect',
-    prompt: 'Big Jupiter is next to the asteroid belt. Its strong pull keeps tugging on the rocks. What happens to the rocks?',
+    prompt: 'Jupiter tugs on the rocks all the time. What happens to them?',
     choices: [
-      { text: 'They keep bumping and breaking. They never stick together to make a planet', correct: true },
-      { text: 'They all fly to Earth' },
-      { text: 'They melt' },
-      { text: 'They stick together into a new planet' },
+      { text: 'Fly to the Sun' },
+      { text: 'They melt away' },
+      { text: 'They turn to ice' },
+      { text: 'They keep crashing', correct: true },
     ],
-    hint: 'Try to stack blocks while someone shakes the table. Does the tower get built?',
+    hint: 'Stack blocks while the table shakes. Can you build?',
     parentHint: 'Jupiter’s gravity stirred the belt so much that collisions broke rocks apart instead of letting them clump into a planet.',
-    success: 'Yes! Jupiter kept shaking the rocks. So they never made a planet.',
+    success: 'Yes! Jupiter keeps shaking the rocks. No planet can form.',
   },
 
   ceres: {
     subject: 'Sorting',
     difficulty: 'Level 1 • sorting by rules',
-    prompt: 'A planet needs 3 things. It is round. It goes around the Sun. It has its path all to itself. Ceres is round and goes around the Sun. But it shares its path with lots of rocks. So Ceres is...',
+    prompt: 'Ceres is round, but shares its path with rocks. What is it?',
     choices: [
-      { text: 'A dwarf planet', correct: true },
-      { text: 'A planet' },
+      { text: 'A giant rocky moon' },
       { text: 'A star' },
-      { text: 'A moon' },
+      { text: 'A big cloud' },
+      { text: 'A dwarf planet', correct: true },
     ],
-    hint: 'Count the rules Ceres keeps. Does it keep all 3?',
-    parentHint: 'Ceres keeps 2 of the 3 rules, so it is a dwarf planet, just like Pluto.',
-    success: 'A dwarf planet! It keeps 2 of the 3 rules. Pluto is a dwarf planet for the same reason.',
-    doneMessage: 'Time to build Big Solar Wings. Sunlight is weak at Jupiter.',
+    hint: 'A planet has its own path. Does Ceres?',
+    parentHint: 'A planet is round, circles the Sun, and has its path all to itself. Ceres does 2 of the 3, so it is a dwarf planet, just like Pluto.',
+    success: 'A dwarf planet! It is round, but shares its path.',
+    doneMessage: 'Build Big Solar Wings for Jupiter!',
   },
 
   jupiter_panels: {
     subject: 'Skip counting',
-    difficulty: 'Level 1 • groups of 5',
-    prompt: 'At Jupiter the sunlight is weak. Pretend that for each 1 panel near Earth, Zara needs 5 panels at Jupiter. Her ship had 3 panels near Earth. How many panels does she need now?',
+    difficulty: 'Level 1 • more panels',
+    prompt: 'Pretend she needs 10 panels at Jupiter. She adds 5. How many?',
     visual: {
       rows: [
-        { label: 'Near Earth', tiles: ['▭', '▭', '▭'], arrow: true },
-        { label: 'At Jupiter', tiles: ['5 for each one', '?'] },
+        { label: 'Start', tiles: ['10 panels'], arrow: true },
+        { label: 'Add', tiles: ['5 more'], arrow: true },
+        { label: 'Total', tiles: ['?'] },
       ],
     },
     answers: ['15', 'fifteen', '15 panels'],
-    hint: 'Count by fives, once for each panel: 5, 10, ...',
-    parentHint: '3 × 5 = 15, as skip counting. The 5 is a pretend number for small hands: sunlight at Jupiter is really about 25 times weaker than at Earth, so a real ship needs about 25 panels for each one.',
-    success: 'Fifteen! That is why her Big Solar Wings are so big. They open up now.',
+    hint: 'Start at 10, then count on 5.',
+    parentHint: '10 + 5 = 15, as a pretend count. Real sunlight at Jupiter is about 25 times weaker than at Earth, so a real ship needs far more panels.',
+    success: 'Fifteen! Her Big Solar Wings need that many panels.',
     doneMessage: 'Big Solar Wings built. Off to Jupiter!',
   },
 
   jupiter_size: {
     subject: 'Big and small',
     difficulty: 'Level 1 • big and small',
-    prompt: 'Pretend Jupiter is as big as a basketball. How big is Earth?',
+    prompt: 'Pretend Jupiter is a basketball. How big is Earth?',
     visual: null,
     choices: [
-      { text: 'About as big as a grape', correct: true },
-      { text: 'About as big as another basketball' },
-      { text: 'About as big as a soccer ball' },
-      { text: 'About as big as a car' },
+      { text: 'A soccer ball' },
+      { text: 'A grape', correct: true },
+      { text: 'Another basketball' },
+      { text: 'A car' },
     ],
-    hint: 'Jupiter is the BIGGEST planet. About 11 Earths could sit side by side across it. Would Earth be big or small next to it?',
+    hint: 'Jupiter is the biggest. Is Earth big or small?',
     parentHint: 'Jupiter is about 11 times as wide as Earth: a 24 cm basketball makes Earth about 2 cm, grape-sized. More than 1,000 Earths would fit inside.',
-    success: 'A grape! More than a thousand Earths could fit inside Jupiter.',
-    doneMessage: 'Careful: Jupiter has bad rays. You need your shield.',
+    success: 'A grape! About 11 Earths fit across Jupiter.',
+    doneMessage: 'Careful! Jupiter has bad rays. Get your shield.',
   },
 
   jupiter_shield: {
     subject: 'The solar system',
     difficulty: 'Level 1 • cause and effect',
-    prompt: 'A big comet flew toward the Sun. Jupiter’s strong pull grabbed it. It crashed into Jupiter. How does that help Earth?',
+    prompt: 'Jupiter grabbed a big comet. How does that help Earth?',
     choices: [
-      { text: 'That comet can never come near Earth now', correct: true },
+      { text: 'Earth is safer', correct: true },
       { text: 'Jupiter gets smaller' },
       { text: 'Earth gets warmer' },
       { text: 'The Sun gets brighter' },
     ],
-    hint: 'Where did the comet end up? Can it still go anywhere else?',
+    hint: 'Where did the comet go? Can it come here now?',
     parentHint: 'In 1994 a comet really did smash into Jupiter. Jupiter’s gravity catches or flings away many comets.',
-    success: 'Yes! Jupiter caught it. A real comet hit Jupiter in 1994. It left marks as big as Earth!',
+    success: 'Yes! Jupiter caught it. Earth is safer.',
     doneMessage: 'Now fly around Jupiter to reach Europa.',
   },
 
   moon_resonance: {
     subject: 'Patterns',
-    difficulty: 'Level 1 • doubling patterns',
-    prompt: 'Jupiter’s moons go around in step. Ganymede goes around 1 time. In that time, Io goes around 4 times. Ganymede goes around 2 times. How many times does Io go around?',
-    answers: ['8', 'eight', '8 times'],
-    hint: 'For each Ganymede lap, Io makes 4 laps. Two Ganymede laps: 4 and 4 more.',
+    difficulty: 'Level 1 • lap patterns',
+    prompt: 'Ganymede makes 2 laps. Io makes 4 laps each time. How many?',
+    visual: {
+      rows: [
+        { label: 'Ganymede', tiles: ['lap 1', 'lap 2'], arrow: true },
+        { label: 'Io', tiles: ['4 laps', '4 laps'], arrow: true },
+        { label: 'Total', tiles: ['?'] },
+      ],
+    },
+    answers: ['8', 'eight', '8 times', '8 laps'],
+    hint: 'Each Ganymede lap, Io makes 4. Add 4 twice.',
     parentHint: '4 + 4 = 8. This 1-2-4 rhythm is real, and its tugging keeps Europa warm inside.',
-    success: 'Eight! This 1-2-4 dance is real, and its tugging keeps Europa warm inside.',
+    success: 'Eight! This dance is real. It warms Europa inside.',
     doneMessage: 'Europa is close. Get ready to land!',
   },
 
-  fuel_backwards: {
-    subject: 'Working backwards',
-    difficulty: 'Level 1 • work backwards (tricky!)',
-    prompt:
-      'Zara made 2 big burns. Each burn used up HALF the fuel in her tank. She arrived with 3 tonnes left. How many tonnes did she have before the first burn?',
-    visual: {
-      rows: [
-        { label: 'Start', tiles: ['?'], arrow: true },
-        { label: 'Burn 1', tiles: ['½'], arrow: true },
-        { label: 'Burn 2', tiles: ['½'], arrow: true },
-        { label: 'Europa', tiles: ['3 t'] },
-      ],
-    },
-    answers: ['12', 'twelve', '12 t', '12 tonnes', '12 tons'],
-    hint: 'Start at the end. Before the last burn she had double 3. Then double again.',
-    parentHint: '3 → 6 → 12. Doubling backwards undoes each halving. The tempting 6 undoes only one burn.',
-    success: 'Twelve: 12 → 6 → 3. Working backwards is a great trick!',
-    doneMessage: 'Time to land. Slow and gentle!',
-  },
-
-  europa_ocean: {
-    subject: 'Heat',
-    difficulty: 'Level 1 • rubbing and bending',
-    prompt: 'Rub your hands fast. They get warm! Jupiter squeezes and bends Europa all the time. What does that do inside Europa?',
-    choices: [
-      { text: 'It warms it, so the water under the ice stays liquid', correct: true },
-      { text: 'It makes it colder' },
-      { text: 'It turns the ice into rock' },
-      { text: 'Nothing at all' },
-    ],
-    hint: 'What did your hands do when you rubbed them? Bending and squeezing do that too.',
-    parentHint: 'Tidal heating: Jupiter’s changing pull flexes Europa, and flexing makes heat, like a bent paperclip.',
-    success: 'Yes! All that squeezing warms Europa inside. So an ocean of water can hide under the ice.',
-    doneMessage: 'Walk to the crack in the ice and start the drill.',
-  },
-
-  habitability: {
-    subject: 'Life science',
-    difficulty: 'Level 1 • what life needs',
-    prompt: 'Deep in Earth’s ocean, it is always dark. Crabs and worms live there, next to warm vents. They get no sunlight at all. So what does life need?',
-    choices: [
-      { text: 'Water, energy, and the right food', correct: true },
-      { text: 'Sunshine and green grass' },
-      { text: 'Snow and ice' },
-      { text: 'Dry land and wind' },
-    ],
-    hint: 'The crabs live in the dark, under water. What do they have, and what do they NOT need?',
-    parentHint: 'Deep-sea vent life needs water, chemical energy and the right elements, but no sunlight or air. Europa may have all three.',
-    success: 'Correct! Water, energy and the right food. Europa may have all three. So it is a great place to look for life.',
-    doneMessage: 'Mission complete, scientist!',
-  },
-
-  signal_sequence: {
-    difficulty: 'Level 1 • number pattern',
-    prompt: 'The satellite beeps a number code: 1, 2, 4, 7, 11, … What is the next number?',
-    visual: {
-      rows: [
-        { label: 'Code', tiles: ['1', '2', '4', '7', '11', '?'] },
-      ],
-    },
-    answers: ['16', 'sixteen'],
-    hint: 'How much does it grow each time? +1, +2, +3, +4, … What comes next?',
-    parentHint: 'The jumps grow by one each time: +1, +2, +3, +4, then +5, so 11 + 5 = 16. The tempting 15 adds 4 again.',
-    success: '16! The jumps get one bigger each time: +1, +2, +3, +4, +5.',
-    doneMessage: 'Message received! Next: the Moon.',
-  },
-
-  shape_arrows: {
-    difficulty: 'Level 1 • what comes next',
-    prompt: 'Zara’s landing lights flash a pattern of arrows. What comes next?',
-    visual: {
-      rows: [
-        { label: 'Lights', tiles: ['▲', '▶', '▼', '◀', '▲', '▶', '?'] },
-      ],
-    },
-    choices: [
-      { text: '▼', correct: true },
-      { text: '▲' },
-      { text: '◀' },
-      { text: '▶' },
-    ],
-    hint: 'Watch the arrow turn: up, right, down, left… and then it starts again.',
-    parentHint: 'The arrow turns a quarter turn each time and repeats every 4. After ▲ ▶ comes ▼.',
-    success: 'Yes! Up, right, down, left, and around again. Next is down.',
-    title: 'The light pattern',
-  },
-
-  crater_sequence: {
-    difficulty: 'Level 1 • number pattern',
-    prompt: 'Zara counts holes on Mars: 20, 18, 15, 11, … What number comes next?',
-    visual: {
-      rows: [
-        { label: 'Craters', tiles: ['20', '18', '15', '11', '?'] },
-      ],
-    },
-    answers: ['6', 'six'],
-    hint: 'How many fewer each time? 20 to 18 is 2 fewer. 18 to 15 is 3 fewer. Then?',
-    parentHint: 'It goes down by 2, 3, 4, then 5: 11 − 5 = 6. The tempting 7 takes away 4 again.',
-    success: 'Six! It takes away one more each time: −2, −3, −4, −5.',
-  },
-
-  asteroid_count: {
-    difficulty: 'Level 1 • careful counting',
-    prompt: 'Zara’s list has rocks with numbers 1 to 20. Rocks 5, 6, 7, 8 and 9 drift away. How many rocks are still on her list?',
-    visual: {
-      rows: [
-        { label: 'Gone', tiles: ['5', '6', '7', '8', '9'] },
-      ],
-    },
-    answers: ['15', 'fifteen', '15 asteroids'],
-    hint: 'How many numbers are in the “gone” list? Count them on your fingers. Take that many away from 20.',
-    parentHint: '5 to 9 is 5 numbers (not 4!), so 20 − 5 = 15.',
-    success: '15! Five asteroids left (5, 6, 7, 8, 9), and 20 − 5 = 15.',
-    doneMessage: 'List done. Time to mine!',
-  },
-
-  mining_points: {
-    difficulty: 'Level 1 • think it through',
-    prompt: 'In the Space Miners game, a small rock is 1 point. A big rock is 2 points. Zara got 4 small ones and some big ones. She got 10 points. How many BIG rocks did she get?',
-    visual: {
-      rows: [
-        { label: 'Small', tiles: ['1 point', '4 caught'] },
-        { label: 'Big', tiles: ['2 points', '? caught'] },
-        { label: 'Total', tiles: ['10 points'] },
-      ],
-    },
-    answers: ['3', 'three', '3 big'],
-    hint: 'The small ones gave 4 points. How many points are left for the big ones? Each big one is 2 points.',
-    parentHint: '4 small = 4 points, so 6 points came from big ones: 6 ÷ 2 = 3. The tempting 6 forgets that each big one is worth 2.',
-    success: 'Three big ones! 4 points from the small ones, and 2 + 2 + 2 = 6 from the big ones: 10 in all.',
-    subject: 'Logic and times tables',
-  },
-
   moon_positions: {
+    subject: 'Patterns',
     difficulty: 'Level 1 • what comes next',
-    prompt: 'Europa ● moves along a track of 3 spaces, bouncing back at each end. What comes next?',
+    prompt: 'Europa’s dot bounces back and forth. What comes next?',
     visual: {
       rows: [
         { label: 'Step 1', tiles: ['●', '·', '·'] },
@@ -1408,14 +1277,145 @@ export const LEVEL1_SPACE_QUESTIONS = {
       ],
     },
     choices: [
-      { text: '● □ □', correct: true },
-      { text: '□ □ ●' },
-      { text: '□ ● □' },
       { text: '● ● □' },
+      { text: '● □ □', correct: true },
+      { text: '□ ● □' },
+      { text: '□ □ ●' },
     ],
-    hint: 'Which way was Europa moving in step 4? Keep going the same way.',
+    hint: 'The dot is going left now. Keep going left.',
     parentHint: 'It bounces: right, right, then back left, left. After the middle it reaches the left end again.',
-    success: 'Yes! It bounced off the end and keeps going left, back to the start.',
+    success: 'Yes! It bounced at the end, then went left.',
+    doneMessage: 'The moons are right where you said.',
+  },
+
+  fuel_backwards: {
+    subject: 'Working backwards',
+    difficulty: 'Level 1 • work backwards (tricky!)',
+    prompt: 'Zara burned 9 cans. 3 cans are left. How many at first?',
+    visual: {
+      rows: [
+        { label: 'Start', tiles: ['?'], arrow: true },
+        { label: 'Burned', tiles: ['9 cans'], arrow: true },
+        { label: 'Left', tiles: ['3 cans'] },
+      ],
+    },
+    answers: ['12', 'twelve', '12 cans'],
+    hint: 'Count up from 3: add the 9 that were burned.',
+    parentHint: '3 + 9 = 12: start from what is left and add back what was burned. The tempting 6 subtracts 3 from 9 instead.',
+    success: 'Twelve! 9 burned plus 3 left makes 12.',
+    doneMessage: 'Time to land. Slow and gentle!',
+  },
+
+  europa_ocean: {
+    subject: 'Heat',
+    difficulty: 'Level 1 • rubbing and bending',
+    prompt: 'Rubbing makes hands warm. Jupiter squeezes Europa. What might that do?',
+    choices: [
+      { text: 'Makes it colder' },
+      { text: 'Warms the inside', correct: true },
+      { text: 'Turns ice to rock' },
+      { text: 'Nothing at all' },
+    ],
+    hint: 'What did your hands do? Squeezing does that too.',
+    parentHint: 'Tidal heating: Jupiter’s changing pull flexes Europa, and flexing makes heat, like a bent paperclip.',
+    success: 'Yes! Squeezing warms Europa. So water can hide under ice.',
+    doneMessage: 'Walk to the ice crack. Start the drill!',
+  },
+
+  habitability: {
+    subject: 'Life science',
+    difficulty: 'Level 1 • what life needs',
+    prompt: 'Crabs live in the dark sea. What do they need?',
+    choices: [
+      { text: 'Water, energy, food', correct: true },
+      { text: 'Sunshine on green grass' },
+      { text: 'Snow and ice' },
+      { text: 'Dry land and wind' },
+    ],
+    hint: 'Crabs live in the dark, under water. No grass there!',
+    parentHint: 'Deep-sea vent life needs water, chemical energy and the right elements, but no sunlight or air. Europa may have all three.',
+    success: 'Correct! Water, energy and food. Europa may have all three.',
+    doneMessage: 'Mission complete, scientist!',
+  },
+
+  signal_sequence: {
+    difficulty: 'Level 1 • number pattern',
+    prompt: 'The satellite beeps 1, 2, 4, 7, 11. What number comes next?',
+    visual: {
+      rows: [
+        { label: 'Code', tiles: ['1', '2', '4', '7', '11', '?'] },
+      ],
+    },
+    answers: ['16', 'sixteen'],
+    hint: 'Jumps: 1, 2, 3, 4. What is the next one?',
+    parentHint: 'The jumps grow by one each time: +1, +2, +3, +4, then +5, so 11 + 5 = 16. The tempting 15 adds 4 again.',
+    success: '16! Each jump is 1 bigger than the last.',
+    doneMessage: 'Message received! Next: the Moon.',
+  },
+
+  shape_arrows: {
+    difficulty: 'Level 1 • what comes next',
+    prompt: 'The lights flash arrows in a pattern. What comes next?',
+    visual: {
+      rows: [
+        { label: 'Lights', tiles: ['▲', '▶', '▼', '◀', '▲', '▶', '?'] },
+      ],
+    },
+    choices: [
+      { text: '▲' },
+      { text: '▼', correct: true },
+      { text: '◀' },
+      { text: '▶' },
+    ],
+    hint: 'Up, right, down, left. Then it starts again.',
+    parentHint: 'The arrow turns a quarter turn each time and repeats every 4. After ▲ ▶ comes ▼.',
+    success: 'Yes! Up, right, down, left, then again. Next is down.',
+    title: 'The light pattern',
+  },
+
+  crater_sequence: {
+    difficulty: 'Level 1 • number pattern',
+    prompt: 'Zara counts holes: 20, 18, 15, 11. What comes next?',
+    visual: {
+      rows: [
+        { label: 'Craters', tiles: ['20', '18', '15', '11', '?'] },
+      ],
+    },
+    answers: ['6', 'six'],
+    hint: 'Each time, how many less? Take away one more.',
+    parentHint: 'It goes down by 2, 3, 4, then 5: 11 − 5 = 6. The tempting 7 takes away 4 again.',
+    success: 'Six! Each time it takes away one more.',
+  },
+
+  asteroid_count: {
+    difficulty: 'Level 1 • careful counting',
+    prompt: '20 rocks. Rocks 5 to 9 drift away. How many are left?',
+    visual: {
+      rows: [
+        { label: 'Gone', tiles: ['5', '6', '7', '8', '9'] },
+      ],
+    },
+    answers: ['15', 'fifteen', '15 asteroids'],
+    hint: 'Count the gone rocks. Take that many from 20.',
+    parentHint: '5 to 9 is 5 numbers (not 4!), so 20 − 5 = 15.',
+    success: '15! Five rocks drifted away from 20.',
+    doneMessage: 'List done. Time to mine!',
+  },
+
+  mining_points: {
+    subject: 'Counting by twos',
+    difficulty: 'Level 1 • think it through',
+    prompt: 'Big rocks are 2 points each. Zara got 6 points. How many?',
+    visual: {
+      rows: [
+        { label: 'Big', tiles: ['2 points', '? rocks'] },
+        { label: 'Total', tiles: ['6 points'] },
+      ],
+    },
+    answers: ['3', 'three', '3 big', '3 rocks'],
+    hint: 'Count by 2s until you reach 6. How many jumps?',
+    parentHint: '2, 4, 6 is 3 big rocks, each worth 2. The tempting 6 forgets that each big rock is worth 2 points.',
+    success: 'Three! 2 + 2 + 2 makes 6 points.',
   },
 };
 
